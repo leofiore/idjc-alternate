@@ -1,0 +1,74 @@
+.TH "IDJC" 1 "2008-04-26" "VERSION" "Internet DJ Console"
+.SH NAME
+idjc - Be a DJ on the internet.
+.SH SYNOPSIS
+.BR "idjc [\-vh] [\-p " profile "] [\-j " jackserver "] [\-m " microphone "] [\-a " auxiliary "] [\-t " voipmode "] [\-s " serverstart "]"
+.SH DESCRIPTION
+.B idjc
+launches a graphical shoutcast/icecast client that runs under GTK+ and the JACK audio connection kit. It's an Internet radio application for making live radio shows and or podcasts. Features include two main media players with a crossfader, a jingles player, microphone signal processing (compressor, noise gate), IRC track announcements with X-Chat, automatic stream start and shut-off, simultaneous mp3 and Ogg streaming to multiple servers at differing bit and sample rates, an extra input for connecting external JACK aware applications, a VOIP integration feature, audio level meters, and a dual recording facility.
+.SH OPTIONS
+.B
+.IP \-v
+Output version information and exit.
+.B
+.IP \-h
+Display a brief help message and exit.
+.HP
+.BR \-p " profile"
+.br
+The user
+.I profile
+that
+.B idjc
+is to be run with. A different profile means a different set of user settings. Useful for people who want to DJ for different stations or just want to experiment.
+.HP
+.BR \-j " jackserver"
+.br
+To choose which
+.I JACK server
+to connect to. Useful only if you intend to run more than one JACK server simultaneously, which in turn allows you to run more than one instance of
+.I idjc
+, albeit with a different profile
+.RB "(see option " \-p "). If the " \-j " option is not specified,"
+.IR default " will be used."
+.HP
+.BR \-m " microphone"
+.br
+.RB "Select which microphone inputs you wish to be active e.g. " -m " " 12 " activates both the left and right microphone inputs and " -m " " 2 ", just the right."
+.HP
+.BR \-a " auxiliary"
+.br
+Select which auxiliary inputs to have open. At present only 1 such input exists.
+.HP
+.BR \-t " voipmode"
+.br
+.RB "Select which VOIP mode to be using. Modes are " 0 " = None, " 1 " = Green Phone, " 2 " = Red Phone."
+.HP
+.BR \-s " serverstart"
+.br
+.RB "Select which servers to connect to at startup e.g. " -s " " 13 " will try to connect with servers " 1 " and " 3 "."
+.SH ENVIRONMENT
+If the
+.I ~/.jackdrc
+file is not present depending on how recent a version of jackd you have JACK will either not start automatically or will start but configure itself with a sample rate of 48000 which is suboptimal for streaming CD audio. It is recommended to create such a file by this method within a console.
+.PP
+.B $
+echo "/usr/bin/jackd \-d alsa \-r 44100 \-p 2048" > ~/.jackdrc
+.PP
+If you prefer to start the JACK sound server manually you can so so like this.
+.PP
+.BR $ " jackd \-d alsa \-r 44100 \-p 2048"
+.PP
+.RB Refer\ to\  jackd (1)\ for\ further\ details.
+.PP
+.B idjc
+takes account of the
+.I LANG
+environment variable and has language translations for
+.BR en_GB ,\  en_US ,\ and\  de_DE .
+.RB Type\  locale\ \-a
+in a console to see which locales are supported on your system.
+.SH SEE ALSO
+.I http://idjc.sourceforge.net
+.PP
+.BR jackd (1), " idjcctrl" (1)

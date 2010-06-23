@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<link rel="stylesheet" href="style.css" type="text/css" />
+<style type="text/css">br {clear: left } </style>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="Generator" content="Kate, the KDE Advanced Text Editor" />
+<title>Homepage of Internet DJ Console</title>
+<link rel="icon" href="favicon.png.jpg" />
+<link rel="shortcut icon" href="favicon.png.jpg" />
+</head>
+<body>
+<img align="left" hspace="20" width="492" height="564" src="killerlogo.jpg" alt="Internet DJ Console Logo" />
+<h3>Introduction</h3>
+<p>Firstly, welcome to the home page of Internet DJ Console, and so you don't have to go looking around for the download page, here it is: <a href="download.html">Download page and compilation instructions</a>.</p>
+<p>Performance tuners and power users may want to check out the <a href="realtime.html">Low Latency Operation</a> page.</p>
+<p>Click <a href="http://www.softpedia.com/reviews/linux/Internet-DJ-Console-Review-27569.shtml">here</a> to read the <a href="http://www.softpedia.com/reviews/linux/Internet-DJ-Console-Review-27569.shtml">editor's review</a> at <a href="http://www.softpedia.com">www.softpedia.com</a>.</p>
+<h3>Foreward</h3>
+<p>Internet DJ Console is a program that I started writing in March of 2005 after discovering the lack of DJ software on Linux that suited me.  The programs that I did find were either feature poor, full of bugs, suited more towards the live side of things, or sadly did not even compile.  It dawned on me that something needed to be done and that having some coding skills of my own that I may as well have a go myself.  The basics of the different components of the project and how they would fit together came to me almost with ease so after pondering the sketch I drew a few days later I started coding.  The result is Internet DJ Console.  I hope you like it, and if you want to make any suggestions for features or have a gripe or bug report, you can contact me at <u>putidjc<notag />inthesubjectline@bethere.co.uk</u>.</p>
+<h3 style="clear:left">Overview</h3>
+<img align="left" hspace="20" width="816" height="568" src="mainwindow.png.jpg" alt="Screenshot of Internet DJ Console: main window" title="Screenshot of Internet DJ Console: main window" /><p><b>The Internet DJ Console main application window.</b></p><p>Note the twin media players, the common volume control, the crossfader, the audio level meters, and the microphone button</p>
+<p>The Prefs, Output, and Jingles buttons in the bottom left corner open their own respective windows.</p><p>The <b>Tracks Played</b> pane (shown closed) contains a list of tracks that have been played recently.  <em>Playlist embeddable controls</em> enable a show to be pre-programmed to a certain extent and are accessible from the playlist popup menu.</p>
+<br />
+<p>The playlist windows support drag and drop of individal or folders containing music files, they also support m3u playlists.  Below the playlist is a row of buttons that are for as follows:</p>
+<div id="nifty">
+<b class="rtop">
+ <b class="r1"></b> <b class="r2"></b> <b class="r3"></b> <b class="r4"></b>
+</b>
+<ul><br />
+<dt><li>Playlist mode</li></dt>
+<ul>
+	<li type="circle"><strong>Play All</strong> - Play the tracks through once and stop</li>
+	<li type="circle"><strong>Loop All</strong> - Keep playing and restart at the beginning.</li>
+	<li type="circle"><strong>Random</strong> - Tracks are chosen at random.</li>
+	<li type="circle"><strong>Manual</strong> - No tracks are chosen and the player stops at the end of the track.</li>
+	<li type="circle"><strong>Cue Up</strong> - Player stops at the end of the track and the next playlist item is selected.</li>
+        <li type="circle"><strong>External</strong> - Sequence through a playlist without incorporating the entire thing.</li>
+        <li type="circle"><strong>Alternate</strong> - Switch to the other player when the track has finished.
+</ul><br />
+<dt><li><strong>Fade</strong></li></dt>
+   <ul>Controls the amount of fade between songs</ul><br/>
+<dt><li><strong>Stream</strong></li></dt>
+	<ul>Makes the player's audio available for streaming</ul><br />
+<dt><li><strong>Listen</strong></li></dt>
+	<ul>Allows the DJ to hear or more importantly mute that player, but not from the stream.</ul><br />
+</ul>
+<b class="rbottom">
+   <b class="r4"></b> <b class="r3"></b> <b class="r2"></b> <b class="r1"></b>
+ </b>
+</div>
+<p>Below the media players is the crossfader cluster.  In it are the crossfader itself and buttons to move the crossfader to various positions.  Next to the crossfader on the right is a dropdown box where you can select the crossfader response curve and to the right of that is a box in which you can set a number in seconds and a <strong>Pass</strong> button with a double ended arrow icon. This moves the crossfader to the other side in the specified time span.</p>
+<p>To the left of the crossfader is a dropdown box where you can select the metadata source, one of Left Player, Right Player, Last Played, Crossfader, or None. The crossfader option results in metadata being chosen from the player indicated by the crossfader's position.</p>
+<p>Regarding the <strong>Monitor Mix</strong> feature which is situated to the left of the crossfader, a whole subsection follows describing it's operation since it is critical to understanding how IDJC mixes audio:</p>
+
+<div id="nifty">
+<b class="rtop">
+ <b class="r1"></b> <b class="r2"></b> <b class="r3"></b> <b class="r4"></b>
+</b>
+<ul><br />
+<dt><strong>Information regarding usage and uses of the Monitor Mix feature:</strong></dt>
+<br />
+<ul>In IDJC there are two audio paths.  The one the DJ hears (the <strong>DJ</strong> audio path), and the one the listeners hear (the <strong>Stream</strong> audio path). Choose <strong>Stream</strong> and you will be hearing the same audio mix that your listeners are hearing (with the exception of the <em>DJ alarm</em> which will be dubbed over but not audible to the listeners). The main difference you will notice is the crossfader effect can be heard when <strong>Stream</strong> is selected. A DJ who is waiting for the right moment to crossfade will want to choose <strong>DJ</strong> so he/she can hear both players simultaneously.</ul>
+<p />
+<ul>With the <strong>DJ</strong> mode selected you can listen to music other than that which you are streaming.  To do this turn off <strong>Listen</strong> on the streaming player.  The streaming player is the one that the <strong>Crossfader</strong> is currently under.  Now listen to music on the other player.  Don't worry, the listeners can't hear it provided the <strong>crossfader</strong> is all the way over. You can verify this by briefly choosing <strong>Stream</strong> mode.</ul>
+<br /></ul>
+<b class="rbottom">
+   <b class="r4"></b> <b class="r3"></b> <b class="r2"></b> <b class="r1"></b>
+ </b>
+ </div>
+
+<p>At the bottom of the main window, the <a href="prefs.html"><strong>Prefs</strong></a>, <a href="output.html"><strong>Output</strong></a>, and <a href="jingles.html"><strong>Jingles</strong></a> buttons open their own respective windows (likewise clicking on the hyperlinks will take you to the relevant tutorial/walkthroughs).  Now onto the cluster of buttons to their right.  There are two <em>telephone</em> icons which are to do with taking callers on your show.  These trigger different mixer modes and are covered by the <a href="voip.html"><strong>VOIP tutorial</strong></a>.  To the right of these are the <strong>Aux-Input</strong> button (jack plug icon) which turns on audio from the aux input.  This is discussed in the <a href="prefs.html#jackports"><strong>Jack Ports</strong></a> section of the <a href="prefs.html"><strong>Prefs</strong></a> page.  To the right is the <strong>Microphone</strong> mute/unmute button.  Clicking this enables the audio path from the microphone (right clicking the <strong>Microphone</strong> button causes it to split into two for the individual control of two separate microphones.  The last button is the <strong>Advance</strong> button, which advances the track in the currently active player.  The currently active player is not the one that is playing but rather the one that the crossfader is parked at.  A click when the player is off will start it on the highlighted track.  A click when the player is playing will stop the player and select, but not play the next track.  It is next to the <strong>Microphone</strong> button for ergonomic reasons.</p>
+
+<p>Internet DJ Console has a total of five audio level meters (the VU meters are off by default):</p>
+<div id="nifty">
+<b class="rtop">
+ <b class="r1"></b> <b class="r2"></b> <b class="r3"></b> <b class="r4"></b>
+</b>
+<ul><br />
+<dt><li><strong>Str Peak</strong></li><dt>
+	<ul>The stream peak audio level. Keep an eye on this and you will prevent dead-air mishaps.</ul>
+<dt><li><strong>Mic Peak</strong></li></dt>
+	<ul>The microphone peak audio level.</ul>
+<dt><li><strong>Str VU</strong></li></dt>
+	<ul>The stream VU level (basically eye candy and off by default).</ul>
+<dt><li><strong>Mic VU</strong></li></dt>
+	<ul>A VU meter for the microphone.</ul>
+<dt><li><strong>Comp</strong></li></dt>
+	<ul>Indicates the amount of dynamic range compression being applied to the microphone audio.</ul>
+<br /></ul>
+<b class="rbottom">
+   <b class="r4"></b> <b class="r3"></b> <b class="r2"></b> <b class="r1"></b>
+ </b>
+ </div>
+<br />
+<p>That's all the features of the main window covered. Here is the <a href="download.html"><strong>download page</strong></a> again.</p>
+<hr />
+<center><p><strong>Other Windows In IDJC</strong></p></center>
+<p><pre><center><a href="output.html"><strong>Output</strong></a>   <a href="jingles.html"><strong>Jingles</strong></a>   <a href="prefs.html"><strong>Prefs</strong></a></center></pre></p>
+
+</body>
+</html>

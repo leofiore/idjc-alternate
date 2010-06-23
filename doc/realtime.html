@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<link rel="stylesheet" href="style.css" type="text/css" />
+<style type="text/css">br {clear: left } </style>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="Generator" content="Kate, the KDE Advanced Text Editor" />
+<title>Optimising the Linux kernel for JACK</title>
+<link rel="icon" href="favicon.png.jpg" />
+<link rel="shortcut icon" href="favicon.jpg" />
+</head>
+<body>
+<h1>Low Latency Operation and Jack Audio Connection Kit</h1>
+<h4>(...and how to get the most out of IDJC at the same time).</h4>
+<hr />
+<h3>The problem</h3>
+<p>
+I got an email from someone mentioning audio artifacts with IDJC which were eventually identified as being what is known in JACK terminology as a buffer X-runs, a whole series of them in fact.  These occur when the task scheduler in the Linux kernel interrupts the time critical routines that JACK calls within its various audio applications.  JACK being a real-time audio system dumps any audio frames that are out of date in an effort to catch up which manifests itself as an interruption in the audio.</p>
+<hr />
+<h3>A solution</h3>
+<p>
+The best way to prevent buffer X-runs is to run JACK with real-time scheduling, which means that jackd is running under special privileges whereby the Linux kernel will not interrupt jackd while it is operating. In order to make best use of this mode a fully preemptible kernel is required.</p>
+<hr />
+<h3>Performance gains</h3>
+<p>
+On the matter of buffer X-runs versus latency, it is true that buffer X-runs can for the most part be eliminated by increasing the latency.  For a non real-time system, I recommended starting IDJC like this:</p>
+<pre><kbd>	$ jackd -d alsa -r 44100 -p 2048</kbd></pre>
+<p>
+This gives a latency of 2048 / 44100 * 2000 milliseconds.  This is distracting and could make you slur your speech when you hear your time lagged voice in your headphones.</p>
+<p>
+Following the insructions in this guide, in full, you could find yourself being able to start JACK like this.</p>
+<pre><kbd>	$ jackd -R -d alsa -r 44100 -p 64</kbd></pre>
+<p>
+Note the frame size is only 64 in this example.</p>
+<hr />
+<h3>Building a fully preemptible kernel (helpful but can be skipped)</h3>
+<p><em>
+If you have compiled a kernel before then this guide is for you and since any mistakes can result in an unbootable system I won't be answering any emails about how do you compile a kernel nor do I assume any responsibility for any loss of data or inconvenience from following these instructions. You have been warned.</em></p>
+<p>Before attmepting to build a kernel take a look in your Linux distribution's package database to make sure that they don't have a prebuilt kernel on offer.</p>
+<p>If you need to compile your own take a look in <a href="http://www.kernel.org/pub/linux/kernel/projects/rt/">this directory</a> you need to download one of the non broken-out patch files and untar it in your /usr/src directory, then locate the matching kernel <a href="http://www.kernel.org">here</a> and do the same.</p>
+<p>Change into the kernel source directory and enter the following:</p>
+<pre><kbd>        # patch -p1 &lt;../name_of_patchfile<kdb></pre>
+<p>If you have a working kernel '.config' file from a previous kernel compile, copy it over now.</p>
+<p>If you see a symbolic link called linux make it point to your new kernel source directory.</p>
+<p>Next compile and install the kernel (remember to <em>make oldconfig</em> first).</p>
+<p>If you are using a third party graphics driver you'll probably need to compile it against the new kernel.</p>
+<p>Reboot and enjoy. Hopefully your system is still operational.</p>
+<hr />
+<h3>Configuration to allow real-time mode as an ordinary user</h3>
+<p>Make sure you are in the audio group by entering the following in a console and add yourself if not:</p>
+<kbd>$ groups | grep audio</kbd>
+<p>Next, edit the file /etc/security/limits.conf and add the following:</p>
+<pre><kbd>@audio  -       rtprio          100
+@audio  -       nice            -15
+@audio  -       memlock         40000000</kbd></pre>
+<p>Log out and log back in again. Your user privileges should now be updated.</p>
+<p>Find out by trying to start jackd with the -R option.</p>
+<hr />
+<p><pre><center>Back to the <a href="index.html"><strong>Main Page.</strong></a></center></pre></p>
+</body>
+</html>

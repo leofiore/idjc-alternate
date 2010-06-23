@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<link rel="stylesheet" href="style.css" type="text/css" />
+<style type="text/css">br {clear: left } </style>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="Generator" content="Kate, the KDE Advanced Text Editor" />
+<title>Internet DJ Console: Preferences Window</title>
+<link rel="icon" href="favicon.png.jpg" />
+<link rel="shortcut icon" href="favicon.png.jpg" />
+</head>
+<body>
+<img align="right" hspace="20" src="icon.jpg" />
+<h1>Internet DJ Console: The Preferences Window</h1><br />
+
+<p>The preferences window is easily the window most in need of documentation, so here it is:</p>
+<h3>The General Tab:</h3>
+<img align="left" hspace="20" width="474" height="663" title="General Pane" src="prefs-general.png.jpg" />
+<p>The <strong>Feature Set</strong> frame allows you to set the amount of window space to a minimum.  It also minimises CPU usage by doing practically no audio mixing.  You get just one player, no crossfader or microphone when you choose the <strong>Basic Streamer</strong> option. Choosing <strong>Start Mini</strong> will cause IDJC to be in that state automatically when the application is started.</p>
+<p>The <strong>Meters</strong> frame contains options for saving screen space by allowing you to remove sound level meters from the main application window.</p>
+<p>The <strong>Replay Gain</strong> section deals with how <a href="http://www.replaygain.org">Replay Gain</a> is handled. Consider using this in preference to the <strong>Stream Normalizer</strong></p>
+<p>The <strong>Miscellaneous Features</strong> frame is where you can turn on or off some of the optional features of IDJC of which I will mention, the <strong>DJ Alarm</strong> which causes an audible beep to the DJ but not the listeners whenever the music is about to come to an end.</p>
+<p>A <strong>Stream Normalizer</strong> is provided to help even out the sound level between differing audio sources.</p>
+<p>There is an adjustment for the DJ audio level which affects sound to the headphones only and to the right of that a setting for the <strong>Player Resample Quality</strong>. What this does is allow you to set a sound resampling audio quality which does not overload your CPU.</p>
+<p>IDJC provides the ability to connect to a Prokyon 3 song title database. When connected a pane appears in the left hand side of the main application window and tracks can be dragged from there into either of the playlists.</p>
+<p>The <strong>Player Settings At Startup</strong> frame is where you can set which playlist mode or player button settings you prefer that will survive an application restart.</p>
+<br>
+<h3>The Microphones Tab:</h3>
+<img align="left" hspace="20" width="474" height="663" title="Microphones Pane" src="prefs-microphones.png.jpg" />
+<p>Here you can set various controls that affect the microphone audio and others that control the look and behaviour of the <i>open buttons</i> in the main window. I recommend using the record feature to get a clear impression of what your audio is sounding like. Note that unprocessed audio goes to the DJ audio mix in mono because it's less distracting.</p>
+
+<br>
+<h3>XChat:</h3>
+<p>The XChat feature works in conjunction with the XChat plugin, which has an automatic install button here. Track announcements and timed messages are only issued when you are actually streaming.</p>
+<img align="left" hspace="20" width="474" height="663" title="XChat plugin control" src="prefs-xchat.png.jpg" />
+<p>The <strong>Track Announcer</strong> sends a new message whenever the song changes.</p>
+<p><strong>Latency</strong> is the estimated latency in seconds of the server.  Servers like to buffer lots of data so that they can supply a steady stream of audio to the listeners despite the poor connection the DJ may have to the server and the listeners own media players like to do the same. Unfortunately this introduces latency that can be upto around 15 seconds.  Without the latency setting in XChat your announcements could be happening 15 seconds before the listeners hear your song.  Set this number so that your announcements coincide as well as possible to when the listeners actually start hearing your song.</p>
+<p><strong>Nick</strong> needs to match the nick you are logged in as.  This is a precaution for just in case you are logged in under two different nicks. Without this precaution you would end up announcing the track twice or once under an unintended nick.</p><p>The <strong>Message</strong> can consist of placeholders like %s for the song you are playing.  A full list of valid placeholders is shown to help you.</p><p><strong>Channels</strong> is a list of channels in a comma separated list that you want to send your message to.</p>
+<p><strong>IRC Message Timer</strong> will send a new message every so many minutes.</p>
+<p><strong>Interval</strong> is the amount of time in minutes between messages.</p>
+<br />
+<a name="jackports" />
+<h3>JACK Ports:</h3>
+<p>IDJC uses Jack Audio Connection Kit for its audio. The boxes provided for you are for the entering of port names for IDJC to bind to. Naturally the connections between the IDJC mixer and sourceclient modules cannot be unmade here.</p>
+<img align="left" hspace="20" width="474" height="663" title="JACK port connections" src="prefs-jack.png.jpg" />
+<p>The <strong>DSP interface</strong> has been provided so that the stream audio can be processed though an external program like JAMin, for example.</p>
+<p>The other port names are as descriptive as possible in their naming although to get the most out of this feature a familiarity with the design principles of Jack Audio Connection kit would go a long way.</p>
+<br />
+
+<h3>Event</h3>
+<img align="left" hspace="20" width="474" height="663" title="Event management" src="prefs-event.png.jpg" />
+<p>The event feature allows you to make changes to the mixer settings or JACK audio routing linked to events such as the starting or shutting down of IDJC or microphone mute/unmute. Simply type in the appropriate console commands. Suggested programs to consider using would be jack_connect, jack_disconnect, or amixer.</p>
+<br /><br />
+
+<hr />
+<center><p><strong>Other Windows In IDJC</strong></p></center>
+<pre><center><strong><a href="index.html">Main Window</a>   <a href="output.html">Output</a>   <a href="jingles.html">Jingles</a></strong></center></pre>
+
+</body></html>

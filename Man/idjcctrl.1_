@@ -1,0 +1,20 @@
+.TH "IDJCCTRL" 1 "2008-03-21" "VERSION" "Internet DJ Console"
+.SH NAME
+idjcctrl - command line playlist control utility for idjc.
+.SH SYNOPSIS
+idjcctrl [command] [file...]
+.PP
+Commands supported are: \-\-play, \-\-enqueue, \-\-connect, \-\-disconnect
+.PP
+File formats supported are the same as those supported by idjc plus m3u and pls.
+Connect and disconnect refer to server connections.
+.SH EXAMPLES
+idjcctrl \-\-enqueue /path/to/file.mp3 /path/to/playlist.m3u
+.PP
+idjcctrl \-\-connect 1 2 3 5
+.SH DESCRIPTION
+This utility has been provided to allow playlist control from an external music file manager e.g. prokyon3.
+.SH BUGS
+This program only works with the default IDJC profile.
+.SH SEE ALSO
+.BR idjc (1)

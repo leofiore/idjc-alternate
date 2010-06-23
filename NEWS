@@ -1,0 +1,15 @@
+7th September 2006: Project files for version 0.6.6 added to sourceforge.net and screenshot updated.  Hopefully this will guarantee the continued availability of idjc since prior to this I was hosting this project solely on my ISP provided webspace.
+
+24th March 2006: Ogg streaming of song titles is up and running (and you can't have it yet :P).  This has prompted the imminent version bump to 0.6.0 which should also accompany an increase in quality -- thank-you beta testers.
+
+24th March 2006: IDJC is one year old today. :)
+
+23rd February 2006: After a long break a new version with some nasty bugs caught 0.5.8.
+
+21st December 2005: Version 0.5.7 goes live.
+
+3rd December 2005: Released version 0.5.6
+
+28th November 2005: Autoconf w00t!!  New build system installed and working.  The software components go in the correct directories rather than getting stuffed in /usr/lib/idjc.
+
+28th November 2005: I have a NEWS file so I guess I may as well make it my personal journal.  The news is I am off work this week so I plan on doing a lot of coding.

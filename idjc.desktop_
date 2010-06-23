@@ -1,0 +1,24 @@
+[___Desktop Entry]
+Categories=GNOME;Application;Network;
+Comment=Create your live radio show or podcast
+Comment[en_GB]=Create your live radio show or podcast
+Comment[de]=Erstelle deine eigene Radiosendung oder Podcasts
+Comment[fr]=Créez votre spectacle radio en direct ou votre podcast
+Exec=EXECPATHNAME
+GenericName=Graphical shoutcast/icecast client
+GenericName[en_GB]=Graphical shoutcast/icecast client
+GenericName[de]=Grafischer Shoutcast/Icecast Client
+GenericName[fr]=Client graphique shoutcast/icecast
+Icon=ICONPATHNAME
+MimeType=
+Name=Internet DJ Console
+Path=
+StartupNotify=true
+Terminal=false
+TerminalOptions=
+Type=Application
+Version=1.0
+X-DCOP-ServiceType=
+X-KDE-SubstituteUID=false
+X-KDE-Username=
+X-Ubuntu-Gettext-Domain=idjc

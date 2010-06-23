@@ -1,0 +1,517 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<link rel="stylesheet" href="style.css" type="text/css" />
+<style type="text/css">br {clear: left } </style>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="Generator" content="Kate, the KDE Advanced Text Editor" />
+<title>Internet DJ Console ChangeLog</title>
+<link rel="icon" href="favicon.png.jpg" />
+<link rel="shortcut icon" href="favicon.png.jpg" />
+</head>
+<body>
+<h3><center>Changelog for Internet DJ Console</center></h3>
+<p><br /><strong>Changes in version 0.8.3</strong></p>
+<p>Track filenames are now stored for use with Random playlist mode.</p>
+<p>Renamed variable shutdown in the mixer to avoid a reported namespace collision.</p>
+<p><br /><strong>Changes in version 0.8.2</strong></p>
+<p>Fixed an out of bounds memory access in mixer.c.</p>
+<p>Added an install button for the XChat plugin.</p>
+<p>The stream peak meter has its audio source filtered of brief transients.</p>
+<p>The 'Jack Ports' tab is renamed 'JACK ports' reflecting its acronym status. The aux ports are now grouped beneath the mic ports since they are both inputs, leaving output ports similarly grouped.</p>
+<p>The advance button toggles microphones that are configured to automatically open.</p>
+<p>The 'Player Stop' playlist control opens microphones that are configured to automatically open.</p>
+<p>The JACK audio ports have been renamed and are listed as their true names in the Jack Ports tab in the preferences. VOIP users will need to update their .asoundrc file (the docs contain the new configuration).</p>
+<p>Licensed as GPL2 again.</p>
+<p>The two main window button frames at the bottom have been merged so the new mic button arrangement can scale nicely.</p>
+<p>New mic open buttons in the main window. Only buttons for microphones currently set active are shown and the buttons indicate which microphone(s) they control. Freeform text can also be applied to the buttons.</p>
+<p>The profile name now appears in the preferences, output, and jingles window titles (except when using the default profile where it is left blank). This reduces the ambiguity that arises when two instances of IDJC run in the same screen.</p>
+<p>The server window is now called the output window because the user may just want to record without sending station output through a server.</p>
+<p>The mic high pass filter now has a control to set the number of active stages.</p>
+<p>Changes to the meters preferences. Now organised into two columns that can be switched in or out on a column by column basis. Option to hide all inactive mic meters.</p>
+<p>The player volume control now has an inverted (for GTK) ascending level hint for GTK themes that show this.</p>
+<p>Stream VU now appears in the stream indicators column. The mic VU meter is no more.</p>
+<p>New microphone meters. A peak meter paired with a colour coded attenuation indicator to give a hint at the state of the mic signal processing.</p>
+<p>Increased the number of handled microphones to four.</p>
+<p>The microphone detail controls now have a greater degree of control and default to 0 for a flat frequency response.</p>
+<p>The build system now recognizes python 2.6 as the minimum version.</p>
+<p>./configure checks for the legacy location for libavcodec header files.</p>
+<p>Automatic crossfader pass maximum time raised to 20 seconds.</p>
+<p>Fixed an infinite loop bug in the Random playlist mode. Would occur when there was only one item in the playlist.</p>
+<p><br /><strong>Changes in version 0.8.1</strong></p>
+<p>Added the ability to drag and drop tracks from a directory's subdirectory. Two levels deep.</p>
+<p>Added support for wma tagging and playlist metadata.</p>
+<p>Improved transitioning of old playlist data from the 0.7 series.</p>
+<p>Allows addition of mp3 files to the playlist when using old versions of mutagen.</p>
+<p><br /><strong>Changes in version 0.8.0</strong></p>
+<p>Altered some variable names in configure.in to produce better error messages.</p>
+<p>Removed a namespace collision in embedded libshout.</p>
+<p>Documentation updated.</p>
+<p>MP3 playback can now be dithered. Option in the preferences. Default = on.</p>
+<p>Added Replay Gain functionality. </p>
+<p>Untagged tracks are now typically shown with the track number cleaned off (requires track number be on the left).</p>
+<p>Untagged tracks are now shown with black text and a No Tag message alongside in dark red.</p>
+<p>Code to restart the idjcsourceclient module when it crashes has been fixed.</p>
+<p>IDJC now runs in the default MALLOC_CHECK_ mode.</p>
+<p>Fixed a bug where idjcctrl could start an encoder with bad parameters and cause memory to be freed twice.</p>
+<p>Fixed a race condition during encoder shutdown.</p>
+<p>Fixed a file filter preselection bug in the 'Add music' file chooser dialog.</p>
+<p>Added a precautionary recursion limit to oggscan_eos.</p>
+<p>Fixed an Ogg parsing problem where failure to find a valid ogg page in the right hand side caused premature termination of the search.</p>
+<p>Fixed a problem seeking files that are in their last ten seconds of playback. Broken since 0.7.17.</p>
+<p>Fixed the metadata timing for mp3 recordings. A metadata segment of less than ten seconds could be skipped if it was at the end of a file. Broken since 0.7.17.</p>
+<p>Fixed the metadata timing for Ogg recordings. Broken since 0.7.17.</p>
+<p>Tracks with quiet endings are not ended early when a server disconnect is imminent or the playlist has nearly run its course. This is to assist server handovers.</p>
+<p>A cue file is saved for each mp3 recording. Amarok can make use of these.</p>
+<p>./configure stops if the mutagen dependency is not fulfilled.</p>
+<p>Recording of mp3 is now possible when the server list is empty.</p>
+<p>Players are restarted when the current song playing gets retagged (IDJC tagger only). This is to prevent playback failure.</p>
+<p>Dependency list updated.</p>
+<p>Added support for multiple metadata tags.</p>
+<p>Added APEv2 tagging capability. Includes support for monkeys audio and musepack formats.</p>
+<p><br /><strong>Changes in version 0.7.19</strong></p>
+<p>Version bump because the Sourceforge file release system is being a pain.</p>
+<p><br /><strong>Changes in version 0.7.18a</strong></p>
+<p>Workaround for a regression in mutagen-1.17. The mutagen.easyid3 module can't be pulled in without first pulling in mutagen.id3 or mutagen.mp3.</p>
+<p><br /><strong>Changes in version 0.7.18</strong></p>
+<p>Added support for m4b and m4p file extensions. Synonymous with mp4.</p>
+<p>New media metadata tagger added, based on mutagen.</p>
+<p>Dependency removed: libmp4v2</p>
+<p>Dependency removed: eyeD3</p>
+<p>Dependency added: mutagen. This covers the functionality of the removed dependencies.</p>
+<p>ID3 chapter tags lacking null terminators on the TIT2 frame are handled properly.</p>
+<p>Added some Mac portability fixes.</p>
+<p>The advance button now works in accordance with the fade setting.</p>
+<p>The partially working fade in simple mixer mode is now disabled. This is reflected in the fade selector which greys out.</p>
+<p><br /><strong>Changes in version 0.7.17</strong></p>
+<p>Fixed minor layout bug in the connection box.</p>
+<p>Removed the forced inclusion of mp4.h in mp4tag.c.</p>
+<p>MP4 tags API updated in mp4tag.c to prevent deprecation warnings.</p>
+<p>The DJ alarm now triggers off a deeper inspection of playlist controls. This permits correct operation of the alarm when fading to an announcement.</p>
+<p>The DJ alarm now sounds prior to announcements.</p>
+<p>Added playlist controls for fading between tracks. These override the fade speed of the player and can be used to fade announcements.</p>
+<p>Added a new fading-between-tracks in-the-same-playlist feature.</p>
+<p>Fixed a bug where the player could freeze at the end of a track after a progress bar seek that left the bar at the far right hand size.</p>
+<p>Jingles keyboard shortcuts now work when the announcement dialog is active. The shortcut to cancel the dialog (not in editing mode) is BACKSPACE since ESC is used to stop jingles.</p>
+<p>Added record_start and record_stop commands to idcjctrl.</p>
+<p>Prokyon 3 database parse optimisations. Approx 15% speedup.</p>
+<p>Conditional inclusion of jack_set_info_function function call.</p>
+<p>Fixes to catch exceptions when there are problems connecting to a song title database.</p>
+<p><br /><strong>Changes in version 0.7.16</strong></p>
+<p>The application icon and menu entry are now installed according to the ${prefix} value, so it is possible to install to ${HOME}/.local without being root.</p>
+<p>When the prokyon 3 database is being indexed (for the tree view) a progress bar is shown. Also the GUI is not frozen during this time as was the case previously.</p>
+<p>The password for the prokyon 3 database is now non visible.</p>
+<p>When using the prokyon 3 database upon loading IDJC the correct database is now used rather than the default values.</p>
+<p>Added Fkeys control of the jingles player. Escape key is used to stop.</p>
+<p>The scrolled window in the connection pane now has a specified size</p>
+<p>Fixed a segfault that would occur when the main window had focus and the F8 key was pressed.</p>
+<p><br /><strong>Changes in version 0.7.15</strong></p>
+<p>Uses avcodec_decode_audio3 for libavcodec audio decoding when available.</p>
+<p>Fixed bug in avcodecdecode.c, the samples buffer is now aligned on 64 bytes which ensures best performance and the ability to decode formats for which libavcodec uses sse instructions.</p>
+<p>Fixed bug in avcodecdecode.c where freed memory could continue to be used.</p>
+<p>Added some minor fixes supplied by Andrew Suffield.</p>
+<p>Removed the option to not keep passwords over application restarts. Given the extra mouseclicks now requried in order to enter the password and no visible cue to password absence, this feature has been dropped.</p>
+<p>Added a new connection feature to the server window. This allows for listener stats to be gathered from a list of relays as well as the master server. Aslo, stats collection can be turned off on a per server basis.</p>
+<p>Removed directory checks and conditional inclusion for ffmpeg header files to aid compilation on certain distibutions.</p>
+<p>Version 0.7.15_pre1 released as 0.7.14a.</p>
+<p><br /><strong>Changes in version 0.7.14a</strong></p>
+<p>Server stats are now obtained in a threaded manner to prevent the possibility of lockup.</p>
+<p>Added a new admin password entry to the server window so that in instances where the Shoutcast server has an admin password applied the stats can still be obtained.</p>
+<p>Added and option to turn off stats retrieval on a per server basis.</p>
+<p>Stats are additionally now displayed on a per server basis in the server window.</p>
+<p><br /><strong>Changes in version 0.7.14</strong></p>
+<p>Added 'Alternate' playlist mode.</p>
+<p>Added listener stats retrieval. Stats are now displayed below the stream status indicator.</p>
+<p>Dynamic runtime linking supported for libmad. MP3 playback can no longer be completely disabled.</p>
+<p>Added prefs for how to handle faulty server connections.</p>
+<p>Dynamic runtime linking supported for libmp3lame. MP3 streaming can no longer be completely disabled.</p>
+<p>Added audio dumping facility to avcodecdecode.c for removing seek noise.</p>
+<p>Fixed a bug in avcodecdecode.c which was causing delayed stopping of ape tracks.</p>
+<p>Added support for mpc files.</p>
+<p>Added support for ape files.</p>
+<p>Added an external playlist mode. This allows for extremely large playlists without cluttering the playlist box.</p>
+<p><br /><strong>Changes in version 0.7.13</strong></p>
+<p>Fixed behaviour when network congestion is encountered.</p>
+<p><br /><strong>Changes in version 0.7.12a</strong></p>
+<p>Fixed beeping sound that was being triggered by a gtk.Entry being filled beyond it's specified character limit, specifically when playing a track with the progress counter in countdown mode.</p>
+<p>Fixed multiple deprecation warnings for gtk.SpinButton caused by non zero page sizes in their respective gtk.Adjustment.</p>
+<p><br /><strong>Changes in version 0.7.12</strong></p>
+<p>Fixed a problem of idjcctrl being able to crash idjc through specifying a server tab number that does not exist.</p>
+<p>Fixed a problem with the FLAC encoder not properly registering a bitrate resulting in an inability to stream.</p>
+<p>The About pane now displays a list of contributors to IDJC.</p>
+<p>Added code to prevent the DJ alarm triggering twice.</p>
+<p>Playlist menu option Add To Jingles is now greyed out for playlist controls.</p>
+<p>Playlist controls are now processed much more quickly.</p>
+<p>Fixed a segfault in mp3dec.c. Older versions of JACK won't trigger this.</p>
+<p>Added a new announcement feature on the player context menu that provides a dialog box for text prompts. It's also useful as an alternative to the stop-player control. It provides more of a cue that the DJ needs to talk (if the DJ alarm wasn't enough) and opens the mic for the DJ. The keyboard shortcut is U for no particular reason.</p>
+<p>Comp meter updated to indicate noisegate and deess attenuation levels as distinct colours.</p>
+<p>Recordings can now be started when the connection type is set to Shoutcast and the format is set to ogg with flac or speex.</p>
+<p>Contains brand new microphone audio processing code contributed by Stefan Fendt.</p>
+<p>Spacebar now shortcuts for the microphone.</p>
+<p>Added new shortcuts V for VoIP and P for private VoIP.</p>
+<p>Keyboard focus capability has been stripped from all but the playlists which means that whenever the main window has focus that the keyboard shortcuts mechanism will be functional.</p>
+<p>The stream peak meter now red-lines at -2dB and the VU at -7 dB.</p>
+<p>Added a new option to cap the maximum stream audio level at -2dB. This may improve the encoding quality. When active this change is reflected in the Str Peak and Str VU meters by the drawing of a line.</p>
+<p>Tighter timings on the interlude player. Silence detection at the end of tracks is now more aggressive. Compensated for extended quiet intro songs by inhibiting silence detect on the first 15 seconds of any track. </p>
+<p>Now using the python subprocess module for launching the mixer and sourceclient sub-processes to clear a deprecation warning.</p>
+<p>Updated to work with the latest pygtk.</p>
+<p>When LANG environment variable is not set exception TypeError is now caught for Python 2.6</p>
+<p>The CRC is now checked on mp3 files, also sync errors and the like are checked for and not played. This prevents things like the sample rate from being misread.</p>
+<p>Ogg/Vorbis can now be streamed at 8kbps.</p>
+<p><br /><strong>Changes in version 0.7.11a</strong></p>
+<p>Added configure option --disable-static, which forces the use of shared libraries. Currently only libshout, which becomes a dependency when this option is specified.</p>
+<p><br /><strong>Changes in version 0.7.11</strong></p>
+<p>FLAC playback now requires version 1.1.3 or greater.</p>
+<p>Configure will now warn on missing LAME dependency.</p>
+<p>Added the capability to connect to a Prokyon3 database for the retrieval of detailed music collection metadata. Includes search/filter facility, drag and drop.</p>
+<p>Configure options for dependencies are now forced when explicitly specified so --enable-speex="yes" will result in ./configure exiting with an error message if that dependency cannot be met.</p>
+<p>The meter area now responds to a mouse right click by bringing up the application-wide context menu.</p>
+<p>Added new configure options to prevent building against FLAC and speex libraries.</p>
+<p>Added a stream status indicator to the main window.</p>
+<p>Fixed a bug that was preventing certain session data from being saved.</p>
+<p>Fixed a bug with regard to the requested initial state of the Monitor Mix Stream button which was causing a crash on program start.</p>
+<p>Libshout dependency eliminated, linked statically.</p>
+<p>Added shoutcast contact information IRC, AIM, ICQ.</p>
+<p><br /><strong>Changes in version 0.7.10</strong></p>
+<p>Reduced the size of the level meters and their text.</p>
+<p>Changed the level meters to use the DrawingArea widget. This gives a more authentic meter appearance with the different colours on the scale but more importantly reduces CPU load massively when using certain GTK themes.</p>
+<p>Labelled all the widgets in the crossfader bar.</p>
+<p>Updated the Stream Mon. button to something a little less obtuse.</p>
+<p>Added a new 'None' option to the Metadata Source chooser.</p>
+<p>Fixed the media formats list to not show mp4/m4a when IDJC built without ffmpeg support.</p>
+<p>Added new ./configure options to allow building without support for non-free formats:</p>
+<p>   --disable-mad</p>
+<p>   --disable-ffmpeg</p>
+<p>   --disable-mp4</p>
+<p>   --disable-lame</p>
+<p>Removed unused JACK audio ports from the sourceclient.</p>
+<p>Added a DSP interface via JACK which includes a bypass control.</p>
+<p><br /><strong>Changes in version 0.7.9</strong></p>
+<p>New dialog boxes control reconnecting to a server when the connection fails. Reconnection attempts will be made as many as three times after sensible time delays with the user given the option to trigger the reconnection attempt early or to cancel altogether.</p>
+<p>Removed the faad2 dependency. AAC decoding to be done in future by ffmpeg instead. Tagging and metadata readout use libmp4v2.</p>
+<p>Dependency include files avcodec.h and avformat.h have been moved to different directories. The build system now accounts for this.</p>
+<p>Added a mid marker for the crossfader.</p>
+<p>Added a selector for choosing the crossfader response curve.</p>
+<p>Added new buttons for centering the crossfader.</p>
+<p>Included a patch for a metadata source selector.</p>
+<p>Improved the handling of poorly terminated Ogg streams.</p>
+<p>Regression fix: IDJC is now capable of running when the LANG environment variable isn't set.</p>
+<p><br /><strong>Changes in version 0.7.8a</strong></p>
+<p>Fixed oggdec.c to prevent infinite looping when files are added which contain unterminated streams.</p>
+<p>Applied a patch which cleans up superfluous suggested tags in the ogg vorbis tagger when there is a case mismatch e.g. artist vs. ARTIST.</p>
+<p><br /><strong>Changes in version 0.7.8</strong></p>
+<p>Changed mp3 tab label text to upper case.</p>
+<p>Fixed the Speex decoder so it cleanly rejects files that don't have frames_per_packet set to 1 or above.</p>
+<p>Added a Speex encoder.</p>
+<p><br /><strong>Changes in version 0.7.7</strong></p>
+<p>Fixes to oggdec.c in the flac seek and tell callbacks. Fix to oggflacdec.c so that end of tracks are detected.</p>
+<p>Added an OggFlac encoder. Triangular dither is applied when using 16 and 20 bit.</p>
+<p>Fade in/out made consistent across all JACK sample rates for microphone headroom, mic and aux mute/unmute, player mute/unmute.</p>
+<p>Track fadeout now works consistently for all JACK sample rates.</p>
+<p>Increased media player watchdog timeout to 9 seconds to accomodate very large media files.</p>
+<p>An english label on the compressor now reads Release, formerly Decay. Decay was used previously due it being only five letters long.</p>
+<p>A number of compressor, noise gate, and normaliser control values have been changed to units expressed as times and time constants in milliseconds, formerly they were samples and fractions of movement per sample. The former scheme suffered from being dependent upon the JACK sample rate and also it did not follow the example of actual studio equipment.</p>
+<p>Ogg file metadata updates occur instantaneously when using the seek bar.</p>
+<p>Fixed oggscan_eos in oggdec.c so that all ogg/oga files should import correctly.</p>
+<p>Added the keyword 'managed' to the Ogg/vorbis encoder configuration line for when in managed bitrate mode.</p>
+<p>Added a new Ogg/vorbis streaming configurator. Upper and lower limits are now expressed as a percentage. Feature expansion is made possible for alternative types of Ogg stream by this new arrangement. </p>
+<p>Default text in the jack ports tab now reads system instead of alsa_pcm - this is compatible across different jack back ends but only for recent versions of jack.</p>
+<p><br /><strong>Changes in version 0.7.6</strong></p>
+<p>The Radio Server window is now by default larger in order not to obscure the encoding format controls.</p>
+<p>Removed the (mp3 only) text from the Shoutcast dropdown. When Shoutcast is unavailable due to non support of LAME mp3 encoding the Shoutcast dropdown item is set insensitive.</p>
+<p>Builds of IDJC that lack mp3 streaming support now display an mp3 tab with a message where the configuration controls would otherwise be.</p>
+<p>Support for Icecast version 1 servers has been dropped due to lack of support in recent versions of libshout.</p>
+<p>STREAMERS and RECORDERS environment variables now affect ./configure and can be used to set the number of streamers and recorders that will be available.</p>
+<p>The Add Files dialog now reports which media files are supported.</p>
+<p>Removed the EXTM3U option from prefs. The current policy is to write m3u metadata when saving playlists and to ignore it on readback.</p>
+<p>Extended m3u metadata is now Latin1 encoded.</p>
+<p>Cleanups to the playlist populating code.</p>
+<p>Added pls playlist support.</p>
+<p>Single lined m3u files can now pull in directories.</p>
+<p>Added xspf playlist support.</p>
+<p>Added the ability to build with pmake, which is widely used on BSD systems.</p>
+<p>Added file bsdcompat.c to include workalikes for GNU libc extensions with an aim to get IDJC working on BSD.</p>
+<p>Stability fixes to oggdec.c to permit malformed ogg files without locking up.</p>
+<p>Added support for the tagging of speex (.spx) files.</p>
+<p>Removed a line of code that was causing a visual glitch on the play progress bar at the end of a track.</p>
+<p>Added new command line options -m, -a, -t, -s. The man page has been updated to explain what they are for.</p>
+<p>Added a speex audio decoder.</p>
+<p><br /><strong>Changes in version 0.7.5</strong></p>
+<p>Saved Ogg streams now have the oga file extension which is the correct one to use for chained Ogg files.</p>
+<p>Added a FLAC decoder for OggFLAC audio files.</p>
+<p>Added a vorbis decoder replacing the libvorbisfile decoder that was present previously.</p>
+<p>Added support for the oga (Ogg audio) file extension which is the correct one to use for chained ogg audio files.</p>
+<p>Added a general purpose Ogg audio decoder which serves as a base for launching decoders for chained Ogg files (oga). All streams in the file can be of a distinct format and samplerate. It also handles obtaining metadata for the playlist.</p>
+<p>Fixed a regression introduced in 0.7.4 which prevented shoutcast connections from working due to a labelling change.</p>
+<p><br /><strong>Changes in version 0.7.4</strong></p>
+<p>Visual tweaks to Prefs->General.</p>
+<p>Server connnect button will not grey out while streaming Ogg when Shoutcast is later selected.</p>
+<p>Ogg stream serial numbers are now set to an initial random value.</p>
+<p>Ogg streams are now guaranteed to contain at least five ogg page outputs per second. This will prevent listener clients from presuming the stream has gone dead and disconnecting. This means that to stream it is no longer necessary to set a minimum bitrate.</p>
+<p>The record button is now greyed out when the recording directory is not writable due to file permissions etc.</p>
+<p>Ogg recordings now have a meta-header.</p>
+<p>It is now possible to run multiple instances of IDJC.</p>
+<p>JACK server connection is achieved with jack_client_open instead of the deprecated jack_client_new function.</p>
+<p>Minor tweaks to tooltips.</p>
+<p>Connection type chooser now indicates mp3 only for Shoutcast.</p>
+<p>Changes to the Update, Server Connect, and Record tool tip texts to indicate why one of these buttons might be greyed out.</p>
+<p>Record button no longer greyed out when the server connect button is greyed on account of Ogg + Shoutcast widget combination.</p>
+<p>File choosers replaced with their more modern versions.</p>
+<p>Updated the realtime.html documentation page.</p>
+<p>Changed the way command line parameters are handled. Added a new option for specifying which jack server to connect to.</p>
+<p>Added code to clean up double bolding occurrences in the playlist.</p>
+<p>Updated the idjc man page.</p>
+<p>New translation en_US.</p>
+<p>New module ln_text.py to facilitate multi language support, replaces langheader.py, includes maintenance features.</p>
+<p><br /><strong>Changes in version 0.7.3</strong></p>
+<p>Documentation on the website and in the doc folder has been updated.</p>
+<p>Option --disable-tooltips has been added to ./configure</p>
+<p>A window showing the GPL licence text is now included as part of the program.</p>
+<p>Removed usage hint text from the gtk.Entry in the Prefs->Event tab. The tooltip should be sufficient.</p>
+<p>The server connect/disconnect timers deactivate once they have performed their task. They now have a default text of 00:00.</p>
+<p>The Ogg relative upper and lower bitrate spinbuttons are greyed out when deactivated.</p>
+<p>Fixed a bug where mp3 files with a LAME gapless tag would not play if their sample rate differed from that of the the JACK sound server.</p>
+<p>Added a great many tooltips.</p>
+<p>Support for new GTK tooltips API. Tooltips require PyGTK version 2.12 or later.</p>
+<p>Bits and bobs in Prefs->General has been retitled 'Miscellaneous Features' and the various options now have descriptive labels.</p>
+<p>Dead code has been removed.</p>
+<p>The space where the indicator box used to be is properly removed in Basic Streamer mode.</p>
+<p>Reduced the microphone latency to the headphones when in VOIP mode. Direct mixing rather than a jack audio bridge.</p>
+<p>Added the option to turn off microphone audio in the DJ headphones. This is a facility for those suffering with high audio latency.</p>
+<p>Added support for upper and mixed case file extensions. Example: Mp3, oGg, FlAc are accepted into the playlist.</p>
+<p><br /><strong>Changes in version 0.7.2a</strong></p>
+<p>Fix to a regression in file kvpparse.c (memory leak).</p>
+<p>Deactivated the pointless watchdog code in idjcsourceclient.</p>
+<p><br /><strong>Changes in version 0.7.2</strong></p>
+<p>Added gapless mp3 playback.</p>
+<p>IDJC now runs with environment variable MALLOC_CHECK_ set to 2. This prevents IDJC from crashing when minor heap corruption occurs.</p>
+<p>Fixed uninitialised variables bug in the mixer (metadata packet type).</p>
+<p>Fixed uninitialised variables bug in the mixer (fade index).</p>
+<p>Removed obsolete code from the Ogg/vobis encoder.</p>
+<p><br /><strong>Changes in version 0.7.1a</strong></p>
+<p>The pop-up window now has a border.</p>
+<p>DJ aud level now works in 'Basic Streamer' mode.</p>
+<p>Cosmetic change to stream normalizer in prefs.</p>
+<p>Fix for the opening vu meters causing a crash bug.</p>
+<p>Build system fix for Ubuntu 7.10 regarding problems detecting libmp3lame.</p>
+<p>Removed the obsolete LED indicators from the main window.</p>
+<p><br /><strong>Changes in version 0.7.1</strong></p>
+<p>The idjcctrl program now has connect and disconnect commands to allow server connection/disconnection from the command line.</p>
+<p>Added global exception handling to vu_update to ensure thread unlocking occurs.</p>
+<p>Added a fallback mode for decoding m4a files using ffmpeg. FAAD2 versions 2.5 and up are not supported directly by IDJC.</p>
+<p>Added handling for corrupt m4a files in mp4decode.c.</p>
+<p>The update button causes server reconnection when streaming to shoutcast which ensures that shoutcast servers know the correct bit rate.</p>
+<p>Bitrate, samplerate, and number of channels info is now set before the connection is made which should resolve some shoutcast issues.</p>
+<p><br /><strong>Changes in version 0.7.0c</strong></p>
+<p>Fixed regression in the X-Chat announcer which would cause the application to lock up if used.</p>
+<p><br /><strong>Changes in version 0.7.0b</strong></p>
+<p> </p>
+<p>Fixed a regression in the playlist controls 'Stop streaming' and 'Stop recording' which was causing a lock-up to occur.</p>
+<p><br /><strong>Changes in version 0.7.0a</strong></p>
+<p>Updated ebuild.</p>
+<p>Reinstated the MP3meta=utf-8 option.</p>
+<p>Added a DJ audio output level control in the preferences.</p>
+<p>Removed idjcskype and its man page which are obsolete and replaced it with new documentation in the VOIP tutorial. Skype is confirmed working within IDJC.</p>
+<p><br /><strong>Changes in version 0.7.0</strong></p>
+<p>Implemented a new, more powerful streaming architecture with multiple streams possible, greater control over quality settings, ability to change the bitrate live on air, and the ability to stream from a prerecorded file with the metadata preserved.</p>
+<p>Removed the MP3=utf8 option. This option is now always turned on meaning that mp3 metadata is always encoded as utf-8.</p>
+<p>In the mixer altered the way microphone signals are processed when the microphone buttons are muted. This greatly reduces the amount of CPU used since half of all CPU usage by the mixer was going into processing the microphone signal.</p>
+<p>New license: GNU General Public Licence version *3*.</p>
+<p><br /><strong>Changes in version 0.6.12a</strong></p>
+<p>Streaming can now be started automatically by timer.</p>
+<p><br /><strong>Changes in version 0.6.12</strong></p>
+<p>FLAC tags are now read regardless of case.</p>
+<p>Added a decoder for wma files (requires libavcodec and libavformat from ffmpeg).</p>
+<p>Underscores are now allowed in profiles.</p>
+<p>Added a 'Switch To Aux' playlist control to allow the streaming of some defualt audio source via the aux input once the playlist has run its course.</p>
+<p>Fixed end of track detection for right player when left player was playing.</p>
+<p>Fixed metadata reading bug for flac files where lower case tags were not being read.</p>
+<p>MP3 encodes with greater precision. No longer limited to 16 bits audio input.</p>
+<p>Added new executable named idjcctrl to provide a feature that allows a remote application to append files to the playlist. m3u and pls files are allowed.</p>
+<p>Added a control for player resampling quality.</p>
+<p>Code cleanup in xlplayer. All decoders moved to own modules.</p>
+<p>Ogg decodes to float instead of 16 bit integer.</p>
+<p>Added mp3 playback using libmad - optional.</p>
+<p>Added m4a playback support with faad2 - optional.</p>
+<p>Support for FLAC-1.1.3 and beyond has been added - FLAC is now optional.</p>
+<p>Fixed a couple of traceback/race conditions in mixprefs.py.</p>
+<p>The playlist popup window now correctly reports which file is playing when there are untagged files in the playlist.</p>
+<p>Improved handling of missing LAME mp3 encoder by adding a dialog informing the user if they need to install LAME.</p>
+<p>Removed the xine-lib dependancy.</p>
+<p>Timeout will no longer take JACK down with it.</p>
+<p><br /><strong>Changes in version 0.6.11</strong></p>
+<p>Added a tooltip style popup window to the playlists that shows a summary of the playlist contents and indicates the track which is playing (if any).</p>
+<p>EyeD3 is now optional. This means that idjc packages can be made regardless of whether an eyeD3 package is available for that particular distro. Tagging functionality is disabled when eyeD3 is not present and id3 tag reading is performed instead by xine-lib.</p>
+<p>Fixed a bug where xine would be used to read ID3 tags regardless of whether eyeD3 had already done so. This was causing problems with certain files that had id3 version 1 tags and contained accented characters. This bug has also been fixed. Any failure to decode from utf-8 on the tag info xine-lib provides will result in their being decoded from latin1 instead.</p>
+<p>Code cleanup in the limiter.</p>
+<p><br /><strong>Changes in version 0.6.10</strong></p>
+<p>Added a bug workaround so that a seek to the last second of audio of a track when using the xine-lib decoder will not occur. This was added to prevent a mixer crash.</p>
+<p>Added an event driven commands feature in the Prefs, mainly for controlling the mixer. Included tooltips.</p>
+<p>Changed copyright message to read 2005-2007</p>
+<p>Added a popup menu to the prefs, server, jingles, window open buttons that contains a close option.</p>
+<p>The locale in the mixer and server modules is now forced to 'C' to ensure proper operation of sscanf when faced with floating point numbers.</p>
+<p>Added a playlist control for normalising the playback speed. The hotkey for this is N. Added an option to disable this to save CPU cycles and screen space.</p>
+<p>Added playback speed control for main media players. Block size, time remaining, and finish times are appropriately affected.</p>
+<p><br /><strong>Changes in version 0.6.9</strong></p>
+<p>A new context menu puts controls for turning on/off of the various meters into the main window plus gives the ability to quit the application when running from TWM (terminal window manager) which does not display an application close button.</p>
+<p>Cellrenderer code is now prevented from running during shutdown.</p>
+<p>Function write_channel_data will no longer attempt a write when num_samples==0 this is to prevent the possibilitity of dereferencing a null pointer.</p>
+<p>Function demux_channel_data will no longer generate a spurious error message and exit when num_samples==0, this done for compatibility with new libsndfile related code.</p>
+<p>Added libsndfile based media file decoder for wav files. New dependancy libsndfile.</p>
+<p>Replaced deprecated gtk.threads_enter/leave instances.</p>
+<p>A xine config file is now generated automatically by idjc in the ~/.idjc directory. This prevents the loading of the unused audio and video drivers as well as preventing the probing of the most efficient memcpy method. The result is a faster startup time. The mmx memcpy method more than meets the needs of the application. On some machines the probe was causing failure.</p>
+<p>Function xlplayer_create no longer returns before the player is fully initialised.</p>
+<p>The mixer module initialisation is now waited upon directly, after launch by the parent.</p>
+<p><br /><strong>Changes in version 0.6.8</strong></p>
+<p>Added profile support.  To use it launch idjc as follows: idjc profilename.  This causes a dialog box to appear asking if you want to create a new profile.  A further dialog box allows you to import settings from a different profile.  The main window title-bar indicates which profile is in use whenever you are not using default.  If you don't specify a profile the default behaviour is to ask you which profile you want to use.</p>
+<p>Fixed a crash that would occur when attempting to play from an empty playlist.</p>
+<p>Added an option for MP3 metadata to be in UTF-8 encoding instead of the ISO8859-1(latin1).</p>
+<p> </p>
+<p>Updated the X-chat plugin to show a helpful error message within X-chat whenever an announcement message is dropped due to not matching the specified nick in any of the specified channels.</p>
+<p><br /><strong>Changes in version 0.6.7b</strong></p>
+<p>Fixed the pause feature.  It was causing the track silence timeout to trigger.</p>
+<p>Track silence timeout increased from 5 to 9 seconds and the silence threshold has been raised a bit.</p>
+<p><br /><strong>Changes in version 0.6.7a</strong></p>
+<p>Improvements to the compressor de-ess mechanism.</p>
+<p>Bugfix to compressor: de-ess was being fed an uninitialised value.</p>
+<p>Accuracy improvements to the db lookup/conversion tables.</p>
+<p>Improvements to the soft knee compression curve in the compressor.  Values checked with gnuplot. </p>
+<p><br /><strong>Changes in version 0.6.7</strong></p>
+<p>Changed the method used to implement the xlplayer watchdog.</p>
+<p>Added an RMS filter to the microphone compressor.</p>
+<p>Greatly improved the handling of launches of duplicate IDJC instances (the taskbar will flash for the currently running instance and the second instance will exit with a console error message).</p>
+<p>Improvements to the makefiles.</p>
+<p>Fixed the three-mixer-crashes-and-it's-out code.  IDJC will shut down cleanly and will even save the session for later restoration.</p>
+<p>Added a desktop menu item for gnome and kde.</p>
+<p>Major facelift for the idjc homepage which doubles as the documentation in the doc directory.</p>
+<p>Updated the IDJC man page and added a new man page for idjcskype.</p>
+<p><br /><strong>Changes in version 0.6.6</strong></p>
+<p>Added a high quality mp3 streaming control to the server window.  This uses more CPU but the results are much better.  Also added a 24kb/s streaming mode for modem listeners.</p>
+<p>Added a timeout to the media decoders so that the mixer will be restarted in the event of a lock-up resultant of a bad media file.</p>
+<p>Fixed a bug where when streaming ogg with an insufficently tagged file the file metadata would contain html tags.</p>
+<p>Fixed a bug in the Ogg/vorbis decoder where errors in an ogg file could go unhandled resulting in a mixer crash.</p>
+<p><br /><strong>Changes in version 0.6.5</strong></p>
+<p>Option to save and restore the server password added to the preferences.</p>
+<p>The mixer module is now automatically restarted upon a crash.  This means the application will hopefully not freeze.  The main media players are bumped onto the next track so that if a corrupted track had caused the crash it will be skipped.  This feature also works when jackd is closed via killall.</p>
+<p>Application now starts more quickly because the xine config file is used.  This has a downside in that a corrupted config file can cause xine to segfault.</p>
+<p>Added optional support for reading file info directly from mp4/m4a files and for tagging.  This feature is dependant on libmp4ff and its header file mp4ff.h being present.</p>
+<p>Optimisations for playlist stats reduce cpu load, also made it so meters only get updated when the new data differs.</p>
+<p>Regression fix to the playlist controls.</p>
+<p><br /><strong>Changes in version 0.6.4a</strong></p>
+<p>Audio processing is suppressed during FLAC seeking to prevent spurious audio output.</p>
+<p>Made the stream and listen buttons mute/unmute gradually.</p>
+<p><br /><strong>Changes in version 0.6.4</strong></p>
+<p>The metadata tagger window can now be resized.</p>
+<p>Added gapless playback (perfect for concept albums that typically lack silences between tracks).  Also the player skips to the next track after 5 seconds of silence.  This is to counter the obvious downside of having files that contain bonus tracks in your collection.</p>
+<p>When adding controls to the playlist when a track is playing, the playing track is not now reselected afterwards.</p>
+<p>Added a dither option mostly for people with 24 bit capable soundcards.</p>
+<p>When the jingles sequence box is shaded it no longer collects values via doubleclick.</p>
+<p>Implemented a whole new player architecture, dispensing with mplayer and using a simple audio decoding engine within the mixer module itself.  Benefits include quicker player startup/shutdown times and reduced system load when doing so, the ability to add new features in the future, much faster seek times.  Some file formats that worked previously may no longer play, however or may play but not be seekable.  If xine can play it so can idjc.  That means avi files can now be played (audio only).  Implemented alongside the xine decoder a FLAC and Ogg/vorbis decoder so that those formats are seekable.</p>
+<p><br /><strong>Changes in version 0.6.3</strong></p>
+<p>Additional German translation.</p>
+<p>Removed the artificial size restrictions on text strings in the server window.</p>
+<p>Fixed a crash that occurred when disconnecting from the server.</p>
+<p>Fixed a problem with the shutdown code where a segfault could sometimes occur.</p>
+<p>Added session restoration.  On by default, but can be switched off in the prefs.</p>
+<p>Added the ability to transfer focus from one playlist to another using the left and right arrow keys.  You can now move files across using shifted left and right arrow.  Also the delete key removes files, and in addition to the space key which plays files, the backspace key causes play to stop.  M opens the microphone and < and > open left and right mic in split-mic mode. Keys 1 and 2 cause the crossfader to move to the respective player.  The c key passes the crossfader.  The t key activates the metadata [t]agger.  S inserts a [s]top control.  A inserts a transfer [a]cross control.  F inserts a [f]ade across control.</p>
+<p>File requester directory is remembered across application restarts.</p>
+<p><br /><strong>Changes in version 0.6.2b</strong></p>
+<p>Fixed an off-by-one error that resulted in heap corruption and crashes when adding Ogg files to the playlist.</p>
+<p><br /><strong>Changes in version 0.6.2a</strong></p>
+<p>Fixed a freezeup bug triggered when loading an extm3u playlist in extm3u mode.</p>
+<p><br /><strong>Changes in version 0.6.2</strong></p>
+<p>Added a zero cross switch to the pause feature of the recording facility to prevent audible clicks (this makes the automatic pause feature fully usable).</p>
+<p>Changed the digital filters to use variable type double instead of float because of blowup problems.</p>
+<p>Changed the ceiling label in Stream Normalizer to read threshold.</p>
+<p>Fixed a misconfiguration bug in the stream normalizer that resulted in audible clicks on the stream audio when the digital zero threshold was breached and the app had been started with the stream normalizer turned off.</p>
+<p><br /><strong>Changes in version 0.6.1b</strong></p>
+<p>Partial code rewrite for Ogg metadata.  This may fix a bug that results in an infinite loop when a corrupted or non 100% compliant Ogg file is encountered.</p>
+<p><br /><strong>Changes in version 0.6.1a</strong></p>
+<p>Fixed the parsing of track lengths in Ogg files.  Parsing is also much faster now.</p>
+<p><br /><strong>Changes in version 0.6.1</strong></p>
+<p>Added lead-in stripping.  Songs with quiet endings are also cut short when fadeout is on.</p>
+<p>Added an information display for playlist blocks showing the time the block will finish, remaining time, size of any additional selections.</p>
+<p>Now uses the python path from AM_PATH_PYTHON in the launch script.  This is preferable when there are multiple installs of python on your system so the correct one is run.</p>
+<p>Added volume normalization to the stream audio.</p>
+<p>Added a track length column to the playlists.</p>
+<p>Added a history log file.  This file catalogues the song changes and server connections.  It is saved to ~/.idjc/history.log.</p>
+<p>Added automatic module restarting for the server module (idjcserver).  If idjc was streaming at the time the server module failed, the connection will be automatically remade.  Without this feature idjc would freeze up.</p>
+<p>Fixed a regression for when adding playlists with the file requester.</p>
+<p><br /><strong>Changes in version 0.6.0</strong></p>
+<p>Enforced minimum library versions in ./configure.</p>
+<p>The page size for the range widgets is now set to zero which helps with rendering of the range widgets when using the QT rendering engine.</p>
+<p>Added a fix for when the digital progress box is not big enough for its text.  An option in the prefs.</p>
+<p>Fixed idjcserver.c so that it no longer segfaults when libshout is not present.  Added inclusion of string.h to dsp.c and pipereader.c</p>
+<p>Added the ability to tag files live on air.  The effects propagate properly.</p>
+<p>Added ability to stream Ogg metadata.</p>
+<p>The streaming encoding method is now remembered across application restarts.</p>
+<p>Increased the number of different streaming bitrates available.</p>
+<p><br /><strong>Changes in version 0.5.9a</strong></p>
+<p>Fixed a bug where the music would loop if a loop option was specified in ~/.mplayer/config</p>
+<p>Fixed a bug in the jingles player where the Sequence box would become unusable after playing jingles.</p>
+<p>The sequence box now has focus when the jingles window is opened.</p>
+<p><br /><strong>Changes in version 0.5.9</strong></p>
+<p>The automatic crossfade speed adjustment can now be set as high as eight seconds.</p>
+<p>The currently playing track can now be dragged in its playlist without the track stopping.</p>
+<p>Added playlist control elements that are accessible from the playlist pop-up menu for doing such things as automatic crossfades, stopping the player, or even stopping streaming after a certain track is played.  This feature is supported in Play All mode only.</p>
+<p>Crossfader pass-speed is now remembered.</p>
+<p>Fixes to locale code.</p>
+<p>The recorder can now pause automatically when there is silence in the audio.</p>
+<p>Will now install png files for the graphics which significantly reduces the installed size. Xpm graphics will remain available.</p>
+<p>Added dialog windows for when the connection to the radio server has been disconnected.</p>
+<p>Added LED-style indicators in the main window for streaming and recording.</p>
+<p>Added a shutdown confirmation dialog box that appears when you hit the application quit button and you are streaming or recording at the time.</p>
+<p>Player settings at startup now include the Tracks Played window state and the Stream Mon button.</p>
+<p>Drag and drop with Nautilus is now working.  Konqueror drag and drop now supports the # and % characters.</p>
+<p>Added window resizing to the main and jingles window to reduce the need for scrolling in the playlist windows.  Window sizes are preserved across application re-starts.</p>
+<p>The IDJC entry in the documentation directory now includes the package version number as well as the package name.  The documentation files themselves are now g-zipped.  The documention directory is now /prefix/share/doc rather than the non FHS compliant /prefix/doc directory.</p>
+<p><br /><strong>Changes in version 0.5.8</strong></p>
+<p>The locale is no longer set to en_US whenever no locale setting is present.</p>
+<p>Fixed a bug that would cause an application lock-up related to code added in version 0.5.7 for sending metadata upon connection--the newmeta flag is now cleared automatically.  The bug manifested itself whenever a failed login to the radio server occurred upon a repeat connection attempt.</p>
+<p>Added code that calls shout_set_audio_info to declare the bitrate, sample rate, and number of channels.  This should help users of certain clients who may be having problems tuning in.</p>
+<p>Added EXTM3U option to prefs.  This allows the turning off of extended m3u processing for when you add playlists.  It also prevents the saving of extm3u data (when deactivated) when you save a playlist.</p>
+<p>A sensible filename will automatically be chosen when none is specified when saving playlists. A default filename is also provided.</p>
+<p>The application will now work when /dev/shm is present but not world writable which sometimes happens.  Should that be the case pipes will be created in the users home directory instead.</p>
+<p>The file chooser dialog now supports multiple file selections.</p>
+<p>The file chooser dialog now works properly with G_FILENAME_ENCODING set to @locale with files with international characters in the filename.</p>
+<p>Listen and Stream buttons are now respected in Basic Streamer mode.</p>
+<p>Fixed a bug where IDJC could hang when Send Metadata was unselected.</p>
+<p>Added a 192kbps Streaming mode for mp3.</p>
+<p><br /><strong>Changes in version 0.5.7</strong></p>
+<p>The song title metadata is now automatically set upon connection with the server.</p>
+<p>No longer allocates buffers for every frame of data.  The old ones are reused if they are big enough.</p>
+<p>Added a track history so the DJ no longer needs to remember what tracks he played.</p>
+<p>Altered vu_update so it can be used in two modes rather than maintaining two almost identical functions.  Calling it with False as the parameter will prevent thread locking from being used.  I also moved the thread locking to the outermost scope of this function to prevent the two forms of the function from possibly running concurrently and causing a lock with the server module.</p>
+<p>Removed unused variables in the mixer.  Tidied up variable declarations and added comments.  Moved global variables to local ones wherever possible.  Changed one or two variable types in relation to the DJ Alarm mechanism for consistency.  Altered the way the pipe_reader structures are handled--they are now allocated on the heap.</p>
+<p>mIRC style colour entry can be done by pressing Ctrl+k which inserts a character-code-3 into the message entry boxes of the X-Chat announcement feature at the cursor.  The user needs to follow it up with a numerical foreground colour number and an optional comma separated background colour number.  A Ctrl+k not preceding a number will cause colours to revert to default (colours turned off).</p>
+<p>A submenu has been added so that it is now possible to select colours in the X-Chat (announce and timer) message boxes, by right clicking for a pop-up menu, and browsing the "mIRC Colour Chart" submenu.  The first click chooses the foreground, and the second click, the background, which is slightly different to how X-Chat does it.  Colour 99 is for transparent background.</p>
+<p>Modified a couple of german labels to prevent distortion of the GUI.</p>
+<p>Added code for a clean exit when receiving a ^C in the console.</p>
+<p>New labels for most of the widgets in german.  Credit in the AUTHORS file.</p>
+<p>Added infrastructure for multiple language support.  The intention is to initially support english, german, and french.</p>
+<p>JACK error messages generated when starting JACK automatically no longer cause IDJC to fail.  Some of these messages are merely informational so they can all be ignored.  They are now prefixed JACK instead of IDJC and are only treated as information when the client activation fails.</p>
+<p>Now plays mono wav files propery with MPlayer CVS version.</p>
+<p>The pipereader code has been rearranged so that it is now as integrated into its own code module as is practicable.  Added a precautionary mutex on the flushing mechanism.</p>
+<p><br /><strong>Changes in version 0.5.6a</strong></p>
+<p>Bugfix: repaired the track seeking ability of the media players.</p>
+<p><br /><strong>Changes in version 0.5.6</strong></p>
+<p>Added a pause button to the stream recorder.</p>
+<p>Ripped out all the reusable code from the mixer and put it in separate source files.</p>
+<p>Improved microphone icon.  Before it was perfectly horizontal which looked a bit odd.  The shaft colour is now bronze from the slightly greenish anodised look of before.</p>
+<p>Added a man page for IDJC.  It covers advice on configuring JACK.</p>
+<p>Modified the parse routines in idjcmixer and idjcserver to use code in a new common source file kvpdict.c that ensures that no buffer can be overfilled.  A new buffer is allocated every time that new data is received (made perfectly to measure) rather than using fixed size buffers as was done previously.</p>
+<p>Thanks to the GNU autotools libshout is now optional, but recommended of course.  The server window streaming related widgets will appear ghosted if you install IDJC without libshout. </p>
+<p>Added GNU autotools build system.  ./configure and all that.</p>
+<p>Added a feature where the mic button is automatically turned on when in greenphone mode.  The mic was always on in greenphone mode before but the display did not always reflect this.  The microphone stays on after greenphone mode is cancelled.</p>
+<p>The listen buttons go into indeterminate state now and become insensitive when in redphone mode with the microphone off.   Before the listen buttons would just go insensitive and when made sensitive later on they got stuck in pre-light mode until moused over (stupid GTK+ glitch, I suspect).</p>
+<p>Added a control string and an update button for metadata.  You can now update the metadata manually with a button click.</p>
+<p>Added a bandpass filter for the noisegate.  This makes the noisegate much less sensitive to low frequency air effects and mains hum, and shuts off sooner due to high frequency room reverberations also being filtered out.</p>
+<p>Subtle graphical tweak to the phone icons to look a little less flat by adding some shading.</p>
+<p>Optimised the mic and aux fade in/out code to prevent the gain factors from getting too small (it overloads the fpu).  Optimised the compressor and noisegate by doing the above and by eliminating casting and reducing division.  CPU usage on the mixer is now in the 3-4% range when optimised.  Before it would start at this point and rise to around 6-7% (on my machine at least).</p>
+<p>Volume and Aux now fade in/out when the mute/unmute buttons are pressed.  Red button on the jingles player now causes the interlude player volume to be automuted.</p>
+<p>MPlayer is no longer started with -cache option for FLAC and Ogg files due to the extended startup times involved.</p>
+<p>Code tidy-up in the mixer.  Most notably in the buffer flushing code.  Added some comments.</p>
+<p>The track played by the interlude player is now highlighted.</p>
+<p>The sequence box is now ghosted when the jingles player is playing.</p>
+</body></html>

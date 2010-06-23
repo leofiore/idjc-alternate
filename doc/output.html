@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<link rel="stylesheet" href="style.css" type="text/css" />
+<style type="text/css">br {clear: left } </style>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="Generator" content="Kate, the KDE Advanced Text Editor" />
+<title>Internet DJ Console: The Server Window.</title>
+<link rel="icon" href="favicon.png.jpg" />
+<link rel="shortcut icon" href="favicon.png.jpg" />
+</head>
+<body>
+<img align="right" hspace="20" src="icon.jpg" />
+<h1>Internet DJ Console: The Output Window</h1><br />
+
+<p>Here is the output window where the controls for connecting to servers or recording to the hard drive can be found. The bulk of the window is taken up by the server and encoder controls as you might expect.</p>
+<img align="left" hspace="20" width="586" height="889" src="output.png.jpg" title="Screenshot of Internet DJ Console: server window" /><p>The <strong>Connection</strong> frame is concerned with the details necessary for establishing a connection with an Icecast or Shoutcast server. To make an entry, fill in the necessary details in the boxes and click the <strong>Add</strong> button.  The connection <strong>Type</strong> refers to the type of server you are attempting to connect with. The Stats/Relay types are for gathering listener stats only so if you wish to stream you will need to add one and only one master server.  The <strong>Hostname</strong> and <strong>Port</strong> number should be familiar to you, but for Icecast servers there is also the <strong>Mount</strong> point and <strong>Login</strong> username.  If you don't know the <strong>Login</strong> name, try <em>source</em> (it is considered the default login name for an Icecast server source).  Finally <strong>Pass</strong> is an abbreviation of password. If you wish to turn off stats retrieval for a particular server you can do so by unchecking the box in the asterisk column after having added your server to the list.</p>
+<p>The <strong>Format</strong> frame is for setting the samplerate, bitrate, and format of the stream of which you can choose between Ogg and mp3 and a wide selection of bitrates and samplerates, however not all of them are going to be valid, for instance all the valid mp3 samplerates are those listed in the drop down box. Additionally there is a status bar to indicate the state of the <em>stream encoder</em> and an <strong>Update</strong> button for changing the encoder parameters while the stream is running.</p>
+<p>The <strong>Stream Info</strong> pane (not shown but accessible using the scroll bar) is for entering textual information about your stream and station. Be descriptive here if the information is going to be displayed on a listings site.</p>
+<p><strong>Make Public</strong> causes your radio station to be catalogued on whichever listings site the server is configured for, if any. A good example of a listing site is <a href="http://www.shoutcast.com" target="_blank">www.shoutcast.com</a>). Note that it may take a while for your station to appear in the listings.</p>
+<p>The <strong>Shoutcast Contact Info</strong> pane (also not shown) allows for the setting of contact information for the IRC, AIM, and ICQ networks. This feature as the name suggests only works with shoutcast servers and may also be disabled, if that is the case this particular pane will not be shown.</p>
+<p><strong>Server Connect</strong> triggers a connection attempt with the server. Notice the state of the status LED in the <em>stream tab</em>. When it goes solid green you are connected. To disconnect, click the <strong>Server Connect</strong> button once more. Alongside are controls to allow automatic server connection and disconnection based on a 24 hour clock, which can also be set to coincide with the starting of a media player and a recorder.</p>
+<p>The <strong>Metadata</strong> line is for entering custom text to be sent along with the stream. Typically just the song title is sent which can be achieved by entering "%s" in the box and pressing the <strong>Update</strong> button. The checkboxes are for specifying which streams are to be affected by the change.</p>
+<p>Regarding the recorder, left to right we have the <strong>Stream Selector</strong>, the <strong>Save Directory Chooser</strong>, the recording time elapsed counter, the <strong>Stop Button</strong>, the <strong>Record Button</strong>, and finally the <strong>Pause Button</strong>. It is not necessary to be streaming in order to make a recording but you will need to ensure the format settings are correct prior to pressing the <strong>Record</strong> button.</p>
+<br />
+<hr />
+<center><p><strong>Other Windows In IDJC</strong></p></center>
+<p><pre><center><a href="index.html"><strong>Main Window</strong></a>   <a href="jingles.html"><strong>Jingles</strong></a>   <a href="prefs.html"><strong>Prefs</strong></a></center></pre></p>
+</body></html>
