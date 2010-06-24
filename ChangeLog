@@ -2,7 +2,10 @@
 
 * Changes in version 0.8.3 *
 
-Track filenames are now stored for use with Random playlist mode.
+The 'Random' playlist mode now observes a pattern to eliminate repeat
+performance of tracks while still allowing a large element of randomness.
+
+Track filenames are now stored when streaming or recording for use with Random playlist mode.
 
 Renamed variable shutdown in the mixer to avoid a reported namespace collision.
 
