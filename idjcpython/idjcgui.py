@@ -2976,6 +2976,7 @@ class MainWindow:
       self.vucounter = 0
       self.session_filename = self.idjc + "main_session"
       self.files_played = {}
+      self.files_played_offline = {}
       
       # create or empty out the command file which should not exist when idjc is not running
       # This interface should be replaced with D-Bus

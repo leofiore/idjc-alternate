@@ -948,6 +948,8 @@ class IDJC_Media_Player:
          print "player context id is %d\n" % self.player_cid
          if self.player_cid & 1:
             self.timeout_source_id = gobject.timeout_add(200, self.cb_play_progress_timeout, self.player_cid)
+         else:
+            self.invoke_end_of_track_policy()
       return True
 
    def player_shutdown(self):
@@ -1079,15 +1081,18 @@ class IDJC_Media_Player:
             if poolsize > len(self.liststore):
                poolsize = len(self.liststore)
 
-         fp = self.parent.files_played
+         if self.parent.server_window.is_streaming or self.parent.server_window.is_recording:
+            fp = self.parent.files_played
+         else:
+            fp = self.parent.files_played_offline
          timestamped_pathnames = []
          while not timestamped_pathnames:
             random_pathnames = [PlayerRow(*x).filename for x in random.sample(self.liststore, poolsize)]
             timestamped_pathnames = [(fp.get(pn, 0), pn) for pn in random_pathnames if pn]
-         timestamped_pathnames.sort()
-         least_recent_ts = timestamped_pathnames[0][0]
-         timestamped_pathnames = [x for x in timestamped_pathnames if x[0] == least_recent_ts]
-         least_recent = random.choice(timestamped_pathnames)[1]
+            timestamped_pathnames.sort()
+            least_recent_ts = timestamped_pathnames[0][0]
+            timestamped_pathnames = [x for x in timestamped_pathnames if x[0] == least_recent_ts]
+            least_recent = random.choice(timestamped_pathnames)[1]
          
          for path, entry in enumerate(self.liststore):
             entry_filename = PlayerRow(*entry).filename
@@ -1335,7 +1340,9 @@ class IDJC_Media_Player:
                or
                (self.playername == "right" and self.parent.crossadj.value > 10)):
                   # Log the time the file was last played.
-                  self.parent.files_played[self.music_filename] = time.time()
+               self.parent.files_played[self.music_filename] = time.time()
+            else:
+               self.parent.files_played_offline[self.music_filename] = time.time()
 
          self.progress_current_figure = self.playtime_elapsed.value
          self.progressadj.set_value(self.playtime_elapsed.value)
