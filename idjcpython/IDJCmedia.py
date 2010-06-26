@@ -1079,9 +1079,11 @@ class IDJC_Media_Player:
             if poolsize > len(self.liststore):
                poolsize = len(self.liststore)
 
-         random_pathnames = [PlayerRow(*x).filename for x in random.sample(self.liststore, poolsize)]
          fp = self.parent.files_played
-         timestamped_pathnames = [(fp.get(pn, 0), pn) for pn in random_pathnames]
+         timestamped_pathnames = []
+         while not timestamped_pathnames:
+            random_pathnames = [PlayerRow(*x).filename for x in random.sample(self.liststore, poolsize)]
+            timestamped_pathnames = [(fp.get(pn, 0), pn) for pn in random_pathnames if pn]
          timestamped_pathnames.sort()
          least_recent_ts = timestamped_pathnames[0][0]
          timestamped_pathnames = [x for x in timestamped_pathnames if x[0] == least_recent_ts]
