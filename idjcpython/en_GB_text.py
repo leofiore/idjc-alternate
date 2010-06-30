@@ -236,6 +236,8 @@ conn_col_mount = "Mount point"
 
 conn_col_listeners = "Listeners"
 
+connect_disconnect = "Connect To Server"
+
 connected_to_history = "connected to"
 
 connection = " Connection "

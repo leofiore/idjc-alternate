@@ -1246,7 +1246,54 @@ class StreamTab(Tab):
       self.format_page = 0                      # the current format page
       self.subformat_page = 0                   # the Ogg sub-format
       Tab.set_spacing(self, 10)
-      scrolled = gtk.ScrolledWindow()
+      
+      hbox = gtk.HBox()                                 # box containing connect button and timers
+      hbox.set_spacing(30)
+      self.server_connect = gtk.ToggleButton(ln.connect_disconnect)
+      set_tip(self.server_connect, ln.server_connect_tip)
+      self.server_connect.connect("toggled", self.cb_server_connect)
+      hbox.pack_start(self.server_connect, True, True, 0)
+      self.server_connect.show()
+      timerbox = gtk.HBox()
+      timerbox.set_spacing(20)
+      self.start_timer = TimeEntry(ln.start_streaming_time)
+      set_tip(self.start_timer, ln.start_timer_tip)
+      timerbox.pack_start(self.start_timer, False, False, 0)
+      self.start_timer.show()
+      self.stop_timer = TimeEntry(ln.stop_streaming_time)
+      set_tip(self.stop_timer, ln.stop_timer_tip)
+      timerbox.pack_start(self.stop_timer, False, False, 0)
+      self.stop_timer.show()
+      hbox.pack_end(timerbox, False, False, 0)
+      timerbox.show()
+      Tab.pack_start(self, hbox, False, False, 0)
+      hbox.show()
+      hbox = gtk.HBox()                                 # box containing auto action widgets
+      hbox.set_spacing(10)
+      label = gtk.Label(ln.upon_connection)
+      hbox.pack_start(label, False, False, 0)
+      label.show()
+      self.start_player_action = AutoAction(ln.start_player, (
+                ("1", self.source_client_gui.parent.player_left.play.clicked),
+                ("2", self.source_client_gui.parent.player_right.play.clicked)))
+      hbox.pack_start(self.start_player_action, False, False, 0)
+      self.start_player_action.show()
+      set_tip(self.start_player_action, ln.auto_start_player_tip)
+      if num_recorders:
+         vseparator = gtk.VSeparator()
+         hbox.pack_start(vseparator, True, False, 0)
+         vseparator.show()
+      
+      self.start_recorder_action = AutoAction(ln.start_recorder, [ (chr(ord("1") + i), t.record_buttons.record_button.activate) for i, t in enumerate(self.source_client_gui.recordtabframe.tabs) ])
+      
+      hbox.pack_end(self.start_recorder_action, False, False, 0)
+      if num_recorders:
+         self.start_recorder_action.show()
+      set_tip(self.start_recorder_action, ln.auto_start_recorder_tip)
+      Tab.pack_start(self, hbox, False, False, 0)
+      hbox.show()
+      
+      scrolled = gtk.ScrolledWindow()     # Scrollable window for connection details.
       Tab.add(self, scrolled)
       scrolled.show()
       scrolled.set_size_request(-1, 355)
@@ -1538,51 +1585,6 @@ class StreamTab(Tab):
       frame.add(contact_details_pane)
       contact_details_pane.show()
       
-      hbox = gtk.HBox()                                 # box containing connect button and timers
-      hbox.set_spacing(30)
-      self.server_connect = gtk.ToggleButton(ln.server_connect)
-      set_tip(self.server_connect, ln.server_connect_tip)
-      self.server_connect.connect("toggled", self.cb_server_connect)
-      hbox.pack_start(self.server_connect, True, True, 0)
-      self.server_connect.show()
-      timerbox = gtk.HBox()
-      timerbox.set_spacing(20)
-      self.start_timer = TimeEntry(ln.start_streaming_time)
-      set_tip(self.start_timer, ln.start_timer_tip)
-      timerbox.pack_start(self.start_timer, False, False, 0)
-      self.start_timer.show()
-      self.stop_timer = TimeEntry(ln.stop_streaming_time)
-      set_tip(self.stop_timer, ln.stop_timer_tip)
-      timerbox.pack_start(self.stop_timer, False, False, 0)
-      self.stop_timer.show()
-      hbox.pack_end(timerbox, False, False, 0)
-      timerbox.show()
-      Tab.pack_start(self, hbox, False, False, 0)
-      hbox.show()
-      hbox = gtk.HBox()                                 # box containing auto action widgets
-      hbox.set_spacing(10)
-      label = gtk.Label(ln.upon_connection)
-      hbox.pack_start(label, False, False, 0)
-      label.show()
-      self.start_player_action = AutoAction(ln.start_player, (
-                ("1", self.source_client_gui.parent.player_left.play.clicked),
-                ("2", self.source_client_gui.parent.player_right.play.clicked)))
-      hbox.pack_start(self.start_player_action, False, False, 0)
-      self.start_player_action.show()
-      set_tip(self.start_player_action, ln.auto_start_player_tip)
-      if num_recorders:
-         vseparator = gtk.VSeparator()
-         hbox.pack_start(vseparator, True, False, 0)
-         vseparator.show()
-      
-      self.start_recorder_action = AutoAction(ln.start_recorder, [ (chr(ord("1") + i), t.record_buttons.record_button.activate) for i, t in enumerate(self.source_client_gui.recordtabframe.tabs) ])
-      
-      hbox.pack_end(self.start_recorder_action, False, False, 0)
-      if num_recorders:
-         self.start_recorder_action.show()
-      set_tip(self.start_recorder_action, ln.auto_start_recorder_tip)
-      Tab.pack_start(self, hbox, False, False, 0)
-      hbox.show()
       self.stream_resample_frame.resample_no_resample.emit("clicked")   # bogus signal to update mp3 pane
       self.objects = {  "connections" : (self.connection_pane, ("loader", "saver")),
                         "stats_never" : (self.connection_pane.stats_never, "active"),
