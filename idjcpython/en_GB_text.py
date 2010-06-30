@@ -620,6 +620,14 @@ jingles_window = "IDJC Jingles"
 
 jingles_window_open_tip = "Open the jingles player window."
 
+kick_before_start = "Kick Before Start"
+
+kick_before_start_tip = "Disconnect whoever is using the server just before start time."
+
+kick_incumbent = "Kick Incumbent"
+
+kick_incumbent_tip = "This will disconnect whoever is currently using the server, freeing it up for personal use."
+
 l = "L"
 
 label_icecast_master = "Icecast 2 Master"
@@ -1138,7 +1146,7 @@ server_connect = "Server Connect"
 
 server_connect_tip = """Connect to or disconnect from the radio server. If the button does not stay in, the connection failed for some reason.
  
-If the button is greyed out it means you are using unsupported settings. Shoutcast only supports mp3 and mp3 requires that you use one of the sample rates in the drop down box. Ogg only supports certain sample rate, bit rate, and stereo combinations."""
+If the button is greyed out it means you are using unsupported settings. Shoutcast only supports mp3 and mp3 requires that you use one of the sample rates in the drop down box. Ogg only supports certain sample rate, bit rate, and stereo combinations. Also, the connection list must contain details for a master server."""
 
 server_host = "Host:"
 
@@ -1156,7 +1164,7 @@ server_type_icecast2 = "Icecast 2"
 
 server_type_shoutcast = "Shoutcast"
 
-server_type_tip = "IDJC can connect to both Icecast and Shoutcast servers. For connection to be successful you need to specify the type of server that you wish to connect to. Also note, you can specify a relay here for the purpose of stats collection. If a master has already been added to the list above you can't add another one - to stream to more than one server use a different server tab instead."
+server_type_tip = "IDJC can connect to both Icecast and Shoutcast servers. For connection to be successful you need to specify the type of server that you wish to connect to. Also note, you can specify a relay here for the purpose of stats collection. If a master has already been added to the list above you can't add another one - to stream to more than one server use a different stream tab instead."
 
 server_type_codes = ("I2M", "SM", "I2R", "SR")
 
@@ -1172,6 +1180,10 @@ set = "Set"
 set_tip = "Reroute the audio to/from the specified port"
 
 settings_warning_tip = "Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality."
+
+sideline = "Sideline"
+
+sideline_tip = "A user interface clutter removal feature for unused or problematic streams."
 
 silence_killer = "End tracks early: those that have quiet endings"
 
@@ -1328,6 +1340,8 @@ those_active = "Only Those Active"
 threshold = "Thresh."
 
 time = "Time"
+
+timer = "Timer:"
 
 timed_out = ('Automatically disconnected from the server,', 'after the connection timed out.')
 

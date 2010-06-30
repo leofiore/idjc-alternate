@@ -580,7 +580,7 @@ class TimeEntry(gtk.HBox):              # A 24-hour-time entry widget with a che
       self.set_spacing(5)
       self.check = gtk.CheckButton(labeltext)
       self.check.connect("toggled", self.__entry_activate)
-      self.pack_start(self.check)
+      self.pack_start(self.check, False)
       self.check.show()
       self.entry = gtk.Entry(5)
       self.entry.set_sensitive(False)
@@ -588,7 +588,7 @@ class TimeEntry(gtk.HBox):              # A 24-hour-time entry widget with a che
       self.entry.set_text("00:00")
       self.entry.connect("key-press-event", self.__key_validator)
       self.entry.connect("changed", self.__time_updater)
-      self.pack_start(self.entry)
+      self.pack_start(self.entry, False)
       self.entry.show()
       self.seconds_past_midnight = -1
 
@@ -1248,26 +1248,49 @@ class StreamTab(Tab):
       Tab.set_spacing(self, 10)
       
       hbox = gtk.HBox()                                 # box containing connect button and timers
-      hbox.set_spacing(30)
+      hbox.set_spacing(6)
       self.server_connect = gtk.ToggleButton(ln.connect_disconnect)
       set_tip(self.server_connect, ln.server_connect_tip)
       self.server_connect.connect("toggled", self.cb_server_connect)
       hbox.pack_start(self.server_connect, True, True, 0)
       self.server_connect.show()
-      timerbox = gtk.HBox()
-      timerbox.set_spacing(20)
+      
+      self.kick_incumbent = gtk.Button(ln.kick_incumbent)
+      set_tip(self.kick_incumbent, ln.kick_incumbent_tip)
+      hbox.pack_start(self.kick_incumbent, False)
+      self.kick_incumbent.show()
+      
+      self.sideline = gtk.ToggleButton(ln.sideline)
+      set_tip(self.sideline, ln.sideline_tip)
+      hbox.pack_start(self.sideline, False)
+      self.sideline.show()
+      
+      Tab.pack_start(self, hbox, False)
+      hbox.show()
+      
+      hbox = gtk.HBox()
+      hbox.set_spacing(10)
+      label = gtk.Label(ln.timer)
+      hbox.pack_start(label, False)
+      label.show()
+      
       self.start_timer = TimeEntry(ln.start_streaming_time)
       set_tip(self.start_timer, ln.start_timer_tip)
-      timerbox.pack_start(self.start_timer, False, False, 0)
+      hbox.pack_start(self.start_timer, True)
       self.start_timer.show()
       self.stop_timer = TimeEntry(ln.stop_streaming_time)
       set_tip(self.stop_timer, ln.stop_timer_tip)
-      timerbox.pack_start(self.stop_timer, False, False, 0)
+      hbox.pack_start(self.stop_timer, True)
       self.stop_timer.show()
-      hbox.pack_end(timerbox, False, False, 0)
-      timerbox.show()
+      
+      self.kick_before_start = gtk.CheckButton(ln.kick_before_start)
+      set_tip(self.kick_before_start, ln.kick_before_start_tip)
+      hbox.pack_end(self.kick_before_start, False)
+      self.kick_before_start.show()
+      
       Tab.pack_start(self, hbox, False, False, 0)
       hbox.show()
+      
       hbox = gtk.HBox()                                 # box containing auto action widgets
       hbox.set_spacing(10)
       label = gtk.Label(ln.upon_connection)

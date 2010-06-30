@@ -58,7 +58,7 @@ rg_defaultgain_tip = "Set this to the typical track gain values you would expect
 
 server_connect_tip = """Connect to or disconnect from the radio server. If the button does not stay in, the connection failed for some reason.
  
-If the button is grayed out it means you are using unsupported settings. Shoutcast only supports mp3 and mp3 requires that you use one of the samplerates in the drop down box. Ogg only supports certain sample rate, bitrate, and stereo combinations."""
+If the button is grayed out it means you are using unsupported settings. Shoutcast only supports mp3 and mp3 requires that you use one of the samplerates in the drop down box. Ogg only supports certain sample rate, bitrate, and stereo combinations. Also, the connection list must contain details for a master server."""
 
 stream_normalizer = "Stream Normalizer"
 

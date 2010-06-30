@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.3 *
 
+Added new kick feature widgets and rearranged the server connection buttons to be at the top of each stream tab.
+
 Fixed a bug where the player freezes at the end of certain tracks when the player is started with the seek bar all the way to the right.
 
 The 'Random' playlist mode now observes a pattern to eliminate repeat performance of tracks while still allowing a large element of randomness.
