@@ -1339,7 +1339,6 @@ class StreamTab(Tab):
       self.details.show()
      
       scrolled = gtk.ScrolledWindow()     # Scrollable window for connection details.
-      #Tab.add(self, scrolled)
       self.details.add(scrolled)
       scrolled.show()
       scrolled.set_size_request(-1, 355)
@@ -2243,6 +2242,17 @@ class SourceClientGui:
       self.win_y.set_value(event.height)
    def cb_after_realize(self, widget):
       widget.resize(int(self.win_x), int(self.win_y))
+      
+   def cb_stream_details_expand(self, expander, param_spec, next_expander):
+      if expander.get_expanded() == next_expander.get_expanded():
+         if not expander.get_expanded():
+            
+            self.window.resize((int(self.win_x)), 100)
+            
+            print "*********** shrink window *************"
+      else:
+         next_expander.set_expanded(expander.get_expanded())
+      
    def __init__(self, parent):
       self.parent = parent
       parent.server_window = self
@@ -2275,6 +2285,12 @@ class SourceClientGui:
                                                                 ("green", "led_lit_green_black_border_64x64")),
                                                                 gfext,
                                                                 ln.stream_tab_tip)
+         
+      tab = self.streamtabframe.tabs[-1]
+      for next_tab in self.streamtabframe.tabs:
+         tab.details.connect("notify::expanded", self.cb_stream_details_expand, next_tab.details)
+         tab = next_tab
+                                                                
       self.streamtabframe.set_sensitive(True)
       vbox.pack_start(self.streamtabframe, True, True, 0)
       self.streamtabframe.show()
