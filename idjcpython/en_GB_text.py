@@ -1171,6 +1171,10 @@ server_type_codes = ("I2M", "SM", "I2R", "SR")
 server_type_labels = ("Icecast 2 Master", "Shoutcast Master",
                       "Icecast 2 Stats/Relay", "Shoutcast Stats/Relay")
 
+stream_details = "Connection Details & Stream Format"
+
+stream_details_tip = "The user interface for changing server connection details and the stream format, e.g. mp3 or vorbis, is contained within. Be sure to scroll down and enter as much information as is necessary."
+
 output_window_title = "IDJC Output"
 
 output_window_open_tip = "Open the output window."

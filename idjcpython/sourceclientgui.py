@@ -1315,9 +1315,32 @@ class StreamTab(Tab):
       set_tip(self.start_recorder_action, ln.auto_start_recorder_tip)
       Tab.pack_start(self, hbox, False, False, 0)
       hbox.show()
+
+      hbox = gtk.HBox()
+      hbox.set_spacing(6)
+      label = gtk.Label(ln.metadata)
+      hbox.pack_start(label, False)
+      label.show()
+      self.metadata = gtk.Entry()
+      set_tip(self.metadata, ln.metadata_entry_tip)
+      hbox.pack_start(self.metadata)
+      self.metadata.show()
+      self.metadata_update = gtk.Button(ln.update)
+      set_tip(self.metadata_update, ln.metadata_update_tip)
+      hbox.pack_start(self.metadata_update, False)
+      self.metadata_update.show()
       
+      self.pack_start(hbox, False)
+      hbox.show()
+      
+      self.details = gtk.Expander(ln.stream_details)
+      set_tip(self.details, ln.stream_details_tip)
+      self.pack_start(self.details)
+      self.details.show()
+     
       scrolled = gtk.ScrolledWindow()     # Scrollable window for connection details.
-      Tab.add(self, scrolled)
+      #Tab.add(self, scrolled)
+      self.details.add(scrolled)
       scrolled.show()
       scrolled.set_size_request(-1, 355)
       scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
