@@ -2,6 +2,10 @@
 
 * Changes in version 0.8.3 *
 
+The metadata widget is now in each tab so that metadata formatting information can now persist beyond application close.
+
+Added an expander for server connection details which also resizes the window.
+
 Added new kick feature widgets and rearranged the server connection buttons to be at the top of each stream tab.
 
 Fixed a bug where the player freezes at the end of certain tracks when the player is started with the seek bar all the way to the right.

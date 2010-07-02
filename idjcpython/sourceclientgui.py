@@ -1235,6 +1235,22 @@ class StreamTab(Tab):
       else:
          cell.set_property("sensitive", True)
    
+   def cb_sideline(self, widget):
+      if widget.get_active():
+         self.parent.set_tab_label_packing(self, False, False, gtk.PACK_END)
+      else:
+         self.parent.set_tab_label_packing(self, False, False, gtk.PACK_START)
+   
+   def cb_metadata(self, widget):
+      utf8meta = self.metadata.get_text().encode("utf-8", "replace").strip()
+      if self.scg.parent.prefs_window.mp3_utf8.get_active():
+         mp3meta = utf8meta
+      else:
+         mp3meta = self.metadata.get_text().encode("iso8859-1", "replace").strip()
+      if not utf8meta:
+         utf8meta = mp3meta = "%s"
+      self.scg.send("tab_id=%d\ndev_type=encoder\nmetaformat=%s\nmetaformat_mp3=%s\ncommand=new_metaformat\n" % (self.numeric_id, utf8meta, mp3meta))
+   
    def __init__(self, scg, numeric_id, indicator_lookup):
       Tab.__init__(self, scg, numeric_id, indicator_lookup)
       self.scg = scg
@@ -1261,6 +1277,7 @@ class StreamTab(Tab):
       self.kick_incumbent.show()
       
       self.sideline = gtk.ToggleButton(ln.sideline)
+      self.sideline.connect("toggled", self.cb_sideline)
       set_tip(self.sideline, ln.sideline_tip)
       hbox.pack_start(self.sideline, False)
       self.sideline.show()
@@ -1322,6 +1339,7 @@ class StreamTab(Tab):
       hbox.pack_start(label, False)
       label.show()
       self.metadata = gtk.Entry()
+      self.metadata.set_text("%s")
       set_tip(self.metadata, ln.metadata_entry_tip)
       hbox.pack_start(self.metadata)
       self.metadata.show()
@@ -1335,13 +1353,12 @@ class StreamTab(Tab):
       
       self.details = gtk.Expander(ln.stream_details)
       set_tip(self.details, ln.stream_details_tip)
-      self.pack_start(self.details)
+      self.pack_start(self.details, False)
       self.details.show()
      
-      scrolled = gtk.ScrolledWindow()     # Scrollable window for connection details.
-      self.details.add(scrolled)
-      scrolled.show()
-      scrolled.set_size_request(-1, 355)
+      self.scrolled_window = scrolled = gtk.ScrolledWindow()     # Scrollable window for connection details.
+      self.pack_start(scrolled, True)
+      scrolled.set_size_request(-1, 100)
       scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       scrolled.set_shadow_type(gtk.SHADOW_NONE)
       scrolled_vbox = gtk.VBox()
@@ -1631,7 +1648,10 @@ class StreamTab(Tab):
       contact_details_pane.show()
       
       self.stream_resample_frame.resample_no_resample.emit("clicked")   # bogus signal to update mp3 pane
-      self.objects = {  "connections" : (self.connection_pane, ("loader", "saver")),
+      self.objects = {  "metadata"    : (self.metadata, "text"),
+                        "sideline"    : (self.sideline, "active"),
+                        "prekick"     : (self.kick_before_start, "active"),
+                        "connections" : (self.connection_pane, ("loader", "saver")),
                         "stats_never" : (self.connection_pane.stats_never, "active"),
                         "stats_always": (self.connection_pane.stats_always, "active"),
                         "rs_use_jack" : (self.stream_resample_frame.resample_no_resample, "active"),
@@ -2241,15 +2261,19 @@ class SourceClientGui:
       self.win_x.set_value(event.width)
       self.win_y.set_value(event.height)
    def cb_after_realize(self, widget):
-      widget.resize(int(self.win_x), int(self.win_y))
+      widget.resize(int(self.win_x), 1)
       
-   def cb_stream_details_expand(self, expander, param_spec, next_expander):
+   def cb_stream_details_expand(self, expander, param_spec, next_expander, sw):
+      if expander.get_expanded():
+         sw.show()
+      else:
+         sw.hide()
+      
       if expander.get_expanded() == next_expander.get_expanded():
          if not expander.get_expanded():
-            
-            self.window.resize((int(self.win_x)), 100)
-            
-            print "*********** shrink window *************"
+            self.window.resize((int(self.win_x)), 1)
+         else:
+            self.window.resize((int(self.win_x)), 1000)
       else:
          next_expander.set_expanded(expander.get_expanded())
       
@@ -2288,15 +2312,12 @@ class SourceClientGui:
          
       tab = self.streamtabframe.tabs[-1]
       for next_tab in self.streamtabframe.tabs:
-         tab.details.connect("notify::expanded", self.cb_stream_details_expand, next_tab.details)
+         tab.details.connect("notify::expanded", self.cb_stream_details_expand, next_tab.details, tab.scrolled_window)
          tab = next_tab
                                                                 
       self.streamtabframe.set_sensitive(True)
       vbox.pack_start(self.streamtabframe, True, True, 0)
       self.streamtabframe.show()
-      metabar = MetadataBar(self, num_encoders, "%s")
-      vbox.pack_start(metabar, False, False, 0)
-      metabar.show()
       for rectab in self.recordtabframe.tabs:
          rectab.source_dest.populate_stream_selector(ln.stream, self.streamtabframe.tabs)
       vbox.pack_start(self.recordtabframe, False, False, 0)
