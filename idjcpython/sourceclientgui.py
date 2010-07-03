@@ -145,20 +145,25 @@ class ActionTimer(object):
       self.first = first
       self.last = last
 
-class ConnectionFrame(CategoryFrame):
-   frametext = (ln.connection_undefined, ln.connection_icecast2, ln.connection_shoutcast)
-   def set_frame_mode(self, mode):
-      self.set_label(self.frametext[mode])
-      self.mode = mode
-   def get_frame_mode(self):
-      return self.mode
-   def __init__(self):
-      CategoryFrame.__init__(self)
-      self.set_frame_mode(0)
 
-class ConnectionPane(ConnectionFrame):
+class ConnectionPane(CategoryFrame):
    LISTFORMAT = (("check_stats", bool), ("server_type", int), ("host", str), ("port", int), ("mount", str), ("listeners", int), ("login", str), ("password", str))
    ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
+
+   def set_frame_mode(self, mode):
+      self.mode = mode
+      
+   def get_frame_mode(self):
+      return self.mode
+
+   def set_button(self, tab):
+      mode = self.mode
+      if mode:
+         config = self.ListLine(*self.liststore[0])
+         text = "{0.host}:{0.port}{0.mount}".format(config)
+         tab.server_connect.set_label(text)
+      else:
+         tab.server_connect.set_label(ln.connect_disconnect_nonconfig)
    
    def label_item_layout(self, label_item_pairs, sizegroup):    # align vertical colums of label : item
       hbox = gtk.HBox()                                         # label is right justified and narrow as possible
@@ -246,8 +251,8 @@ class ConnectionPane(ConnectionFrame):
          d["mount"] = "/" + d["mount"]
       row = (True, self.server_type.get_active(), d["host"], self.port.get_value(), d["mount"], -1, d["login"], d["password"])
       if self.master:
-         self.set_frame_mode((2, 1)[self.ic2])
          self.master_set(True)
+         self.set_frame_mode((2, 1)[self.ic2])
          self.server_type.set_active(self.server_type.get_active() + 2)
          iter = self.liststore.insert(0, row)
          self.treeview.scroll_to_cell(0)
@@ -293,13 +298,13 @@ class ConnectionPane(ConnectionFrame):
       row = self.ListLine(**_dict)
       t = row.server_type
       if t < 2:                           # check if first line contains master server info
+         self.master_set(True)
          if t == 0:
             self.set_frame_mode(1)
          if t == 1:
             self.set_frame_mode(2)
-         self.server_type.set_active(t + 2)
-         self.master_set(True)
          self.liststore.insert(0, row)
+         self.server_type.set_active(t + 2)
       else:
          self.liststore.append(row)
       return
@@ -383,8 +388,14 @@ class ConnectionPane(ConnectionFrame):
             count += thread.listeners
       self.listeners_display.set_text(str(count))
       self.listeners = count
-   def __init__(self, set_tip):
-      ConnectionFrame.__init__(self)
+   def cell_data_func(self, column, cell, model, iter, index):
+      text = model.get_value(iter, index)
+      cell.set_property("ellipsize", pango.ELLIPSIZE_END)
+      cell.set_property("text", text)
+
+   def __init__(self, set_tip, tab):
+      CategoryFrame.__init__(self)
+      self.set_frame_mode(0)
       self.master_set(False)
       self.streaming_set(False)
       vbox = gtk.VBox()
@@ -395,36 +406,44 @@ class ConnectionPane(ConnectionFrame):
       scrolled = gtk.ScrolledWindow()
       scrolled.set_size_request(-1, 90)
       scrolled.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-      scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
+      scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
       vbox.pack_start(scrolled, False, False, 0)
       scrolled.show()
       self.liststore = gtk.ListStore(*[x[1] for x in self.LISTFORMAT])
+      self.liststore.connect("row-deleted", lambda x, y: self.set_button(tab))
+      self.liststore.connect("row-inserted", lambda x, y, z: self.set_button(tab))
+      self.set_button(tab)
       self.treeview = gtk.TreeView(self.liststore)
       set_tip(self.treeview, ln.connections_table_tip)
       self.treeview.set_enable_search(False)
       rend_enabled = gtk.CellRendererToggle()
       rend_enabled.connect("toggled", self.individual_listeners_toggle_cb)
       col_enabled = gtk.TreeViewColumn("*", rend_enabled, active = 0)
+      col_enabled.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       col_enabled.set_alignment(0.5)
       self.treeview.append_column(col_enabled)
       rend_type = gtk.CellRendererText()
       rend_type.set_property("xalign", 0.5) 
       col_type = gtk.TreeViewColumn(ln.conn_col_type, rend_type)
+      col_type.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       col_type.set_alignment(0.5)
       col_type.set_cell_data_func(rend_type, self.type_renderer_cb)
       self.treeview.append_column(col_type)
       rend_host = gtk.CellRendererText()
-      col_host = gtk.TreeViewColumn(ln.conn_col_host, rend_host, text = 2)
+      col_host = gtk.TreeViewColumn(ln.conn_col_host, rend_host)
+      col_host.set_cell_data_func(rend_host, self.cell_data_func, 2)
       col_host.set_sizing = gtk.TREE_VIEW_COLUMN_FIXED
       col_host.set_expand(True)
       self.treeview.append_column(col_host)
       rend_port = gtk.CellRendererText()
       rend_port.set_property("xalign", 1.0)
       col_port = gtk.TreeViewColumn(ln.conn_col_port, rend_port, text = 3)
+      col_port.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       col_port.set_alignment(0.5)
       self.treeview.append_column(col_port)
       rend_mount = gtk.CellRendererText()
-      col_mount = gtk.TreeViewColumn(ln.conn_col_mount, rend_mount, text = 4)
+      col_mount = gtk.TreeViewColumn(ln.conn_col_mount, rend_mount)
+      col_mount.set_cell_data_func(rend_mount, self.cell_data_func, 4)
       col_mount.set_sizing = gtk.TREE_VIEW_COLUMN_FIXED
       col_mount.set_expand(True)
       self.treeview.append_column(col_mount)
@@ -1250,7 +1269,9 @@ class StreamTab(Tab):
       if not utf8meta:
          utf8meta = mp3meta = "%s"
       self.scg.send("tab_id=%d\ndev_type=encoder\nmetaformat=%s\nmetaformat_mp3=%s\ncommand=new_metaformat\n" % (self.numeric_id, utf8meta, mp3meta))
-   
+
+      print "tab_id=%d\ndev_type=encoder\nmetaformat=%s\nmetaformat_mp3=%s\ncommand=new_metaformat\n" % (self.numeric_id, utf8meta, mp3meta)
+  
    def __init__(self, scg, numeric_id, indicator_lookup):
       Tab.__init__(self, scg, numeric_id, indicator_lookup)
       self.scg = scg
@@ -1265,7 +1286,7 @@ class StreamTab(Tab):
       
       hbox = gtk.HBox()                                 # box containing connect button and timers
       hbox.set_spacing(6)
-      self.server_connect = gtk.ToggleButton(ln.connect_disconnect)
+      self.server_connect = gtk.ToggleButton()
       set_tip(self.server_connect, ln.server_connect_tip)
       self.server_connect.connect("toggled", self.cb_server_connect)
       hbox.pack_start(self.server_connect, True, True, 0)
@@ -1344,6 +1365,7 @@ class StreamTab(Tab):
       hbox.pack_start(self.metadata)
       self.metadata.show()
       self.metadata_update = gtk.Button(ln.update)
+      self.metadata_update.connect("clicked", self.cb_metadata)
       set_tip(self.metadata_update, ln.metadata_update_tip)
       hbox.pack_start(self.metadata_update, False)
       self.metadata_update.show()
@@ -1367,7 +1389,7 @@ class StreamTab(Tab):
       scrolled.add_with_viewport(scrolled_vbox)
       scrolled_vbox.show()
       
-      self.connection_pane = ConnectionPane(set_tip)
+      self.connection_pane = ConnectionPane(set_tip, self)
       self.connection_pane.liststore.connect("row-deleted", self.update_sensitives)
       self.connection_pane.liststore.connect("row-inserted", self.update_sensitives)
       scrolled_vbox.pack_start(self.connection_pane, False, False, 0)
@@ -2277,6 +2299,13 @@ class SourceClientGui:
       else:
          next_expander.set_expanded(expander.get_expanded())
       
+   def update_metadata(self, text=None, filter=None):
+      for tab in self.streamtabframe.tabs:
+         if filter is None or str(tab.numeric_id) in filter:
+            if text is not None:
+               tab.metadata.set_text(text)
+            tab.metadata_update.clicked()
+
    def __init__(self, parent):
       self.parent = parent
       parent.server_window = self

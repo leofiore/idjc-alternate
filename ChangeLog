@@ -2,6 +2,12 @@
 
 * Changes in version 0.8.3 *
 
+The listen URL now appears on the connect button.
+
+Static metadata text now shows with the correct character encoding when streaming mp3 files.
+
+Playlist and hostname/mountpoint info now shows with ellipses (...) when appropriate.
+
 The metadata widget is now in each tab so that metadata formatting information can now persist beyond application close.
 
 Added an expander for server connection details which also resizes the window.

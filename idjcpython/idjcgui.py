@@ -3054,6 +3054,7 @@ class MainWindow:
       self.window.set_focus_chain((self.player_left.scrolllist, self.player_right.scrolllist))
        
       self.prefs_window.appstart_event.activate()       # run user specified commands for application start
+      self.server_window.update_metadata()              # metadata formatting -> backend
       
       self.window.forall(self.strip_focusability)
       self.topleftpane.fuzzyentry.set_flags(gtk.CAN_FOCUS)

@@ -41,13 +41,13 @@ static void live_mp3_build_metadata(struct encoder *encoder, struct lme_data *s)
    if (s->metadata)
       free(s->metadata);
    pthread_mutex_lock(&encoder->metadata_mutex);
-   for (count = 0, r = encoder->metaformat; (r = strstr(r, "%s")); count++, r += 2);
+   for (count = 0, r = encoder->metaformat_mp3; (r = strstr(r, "%s")); count++, r += 2);
    if (count == 0)
-      s->metadata = strdup(encoder->metaformat);
+      s->metadata = strdup(encoder->metaformat_mp3);
    else
-      {
+      { 
       /* handle metadata only contains artist - title */
-      if (count == 1 && !strcmp(encoder->metaformat, "%s"))
+      if (count == 1 && !strcmp(encoder->metaformat_mp3, "%s"))
          {
          if (encoder->artist_title_mp3)
             s->metadata = strdup(encoder->artist_title_mp3);
@@ -59,13 +59,13 @@ static void live_mp3_build_metadata(struct encoder *encoder, struct lme_data *s)
          /* handle a mix of possible multiple "artist - title" and or other text */
          /* in python: artist_title = metaformat.replace("%s", artist_title) */
          /* in C see below LOL */
-         s->metadata = malloc(size = count * strlen(encoder->artist_title_mp3) + strlen(encoder->metaformat) - count * strlen(marker = "%s") + 1);
+         s->metadata = malloc(size = count * strlen(encoder->artist_title_mp3) + strlen(encoder->metaformat_mp3) - count * strlen(marker = "%s") + 1);
          if (!s->metadata)
             fprintf(stderr, "live_mp3_build_metadata: malloc failure\n");
          else
             {
             len = strlen(encoder->artist_title_mp3);
-            r = encoder->metaformat;
+            r = encoder->metaformat_mp3;
             w = s->metadata;
             for (;;)
                {

@@ -2995,6 +2995,7 @@ class IDJC_Media_Player:
       self.rgcellrender = gtk.CellRendererText()
       self.playtimecellrender = gtk.CellRendererText()
       self.cellrender = gtk.CellRendererText()
+      self.cellrender.set_property("ellipsize", pango.ELLIPSIZE_END)
       self.rgtvcolumn = gtk.TreeViewColumn("", self.rgcellrender)
       self.playtimetvcolumn = gtk.TreeViewColumn("Time", self.playtimecellrender)
       self.tvcolumn = gtk.TreeViewColumn("Playlist", self.cellrender)
