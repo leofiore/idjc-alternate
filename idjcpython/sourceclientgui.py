@@ -161,9 +161,9 @@ class ConnectionPane(CategoryFrame):
       if mode:
          config = self.ListLine(*self.liststore[0])
          text = "{0.host}:{0.port}{0.mount}".format(config)
-         tab.server_connect.set_label(text)
+         tab.server_connect_label.set_text(text)
       else:
-         tab.server_connect.set_label(ln.connect_disconnect_nonconfig)
+         tab.server_connect_label.set_text(ln.connect_disconnect_nonconfig)
    
    def label_item_layout(self, label_item_pairs, sizegroup):    # align vertical colums of label : item
       hbox = gtk.HBox()                                         # label is right justified and narrow as possible
@@ -394,7 +394,7 @@ class ConnectionPane(CategoryFrame):
       cell.set_property("text", text)
 
    def __init__(self, set_tip, tab):
-      CategoryFrame.__init__(self)
+      CategoryFrame.__init__(self, ln.connection)
       self.set_frame_mode(0)
       self.master_set(False)
       self.streaming_set(False)
@@ -1254,12 +1254,6 @@ class StreamTab(Tab):
       else:
          cell.set_property("sensitive", True)
    
-   def cb_sideline(self, widget):
-      if widget.get_active():
-         self.parent.set_tab_label_packing(self, False, False, gtk.PACK_END)
-      else:
-         self.parent.set_tab_label_packing(self, False, False, gtk.PACK_START)
-   
    def cb_metadata(self, widget):
       utf8meta = self.metadata.get_text().encode("utf-8", "replace").strip()
       if self.scg.parent.prefs_window.mp3_utf8.get_active():
@@ -1269,8 +1263,28 @@ class StreamTab(Tab):
       if not utf8meta:
          utf8meta = mp3meta = "%s"
       self.scg.send("tab_id=%d\ndev_type=encoder\nmetaformat=%s\nmetaformat_mp3=%s\ncommand=new_metaformat\n" % (self.numeric_id, utf8meta, mp3meta))
+  
+   def cb_kick_incumbent(self, widget, start_after=False):
+      """Try to remove whoever is using the server so that we can connect."""
+      
+      mode = self.connection_pane.get_frame_mode()
+      if mode == 0:
+         return
+      srv = self.connection_pane.ListLine(*self.connection_pane.liststore[0])
+      if mode == 1:
+         url = "http://" + urllib.quote(srv.host) + ":" + str(srv.port) + "/admin/killsource?mount=" + urllib.quote(srv.mount)
+         auth_handler = urllib2.HTTPBasicAuthHandler()
+         auth_handler.add_password("Icecast2 Server", srv.host + ":" + str(srv.port), srv.login, srv.password)
+         opener = urllib2.build_opener(auth_handler)
+         opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+      
+         f = opener.open(url)
+         xmlfeed = f.read()      
 
-      print "tab_id=%d\ndev_type=encoder\nmetaformat=%s\nmetaformat_mp3=%s\ncommand=new_metaformat\n" % (self.numeric_id, utf8meta, mp3meta)
+         print xmlfeed
+      
+         # ToDo: Shoutcast kick and need to thread this so it doesn't lock and stuff.
+         # need to fix timed start once this is threaded.
   
    def __init__(self, scg, numeric_id, indicator_lookup):
       Tab.__init__(self, scg, numeric_id, indicator_lookup)
@@ -1290,18 +1304,17 @@ class StreamTab(Tab):
       set_tip(self.server_connect, ln.server_connect_tip)
       self.server_connect.connect("toggled", self.cb_server_connect)
       hbox.pack_start(self.server_connect, True, True, 0)
+      self.server_connect_label = gtk.Label()
+      self.server_connect_label.set_ellipsize(pango.ELLIPSIZE_MIDDLE)
+      self.server_connect.add(self.server_connect_label)
+      self.server_connect_label.show()
       self.server_connect.show()
       
       self.kick_incumbent = gtk.Button(ln.kick_incumbent)
+      self.kick_incumbent.connect("clicked", self.cb_kick_incumbent)
       set_tip(self.kick_incumbent, ln.kick_incumbent_tip)
       hbox.pack_start(self.kick_incumbent, False)
       self.kick_incumbent.show()
-      
-      self.sideline = gtk.ToggleButton(ln.sideline)
-      self.sideline.connect("toggled", self.cb_sideline)
-      set_tip(self.sideline, ln.sideline_tip)
-      hbox.pack_start(self.sideline, False)
-      self.sideline.show()
       
       Tab.pack_start(self, hbox, False)
       hbox.show()
@@ -1671,7 +1684,6 @@ class StreamTab(Tab):
       
       self.stream_resample_frame.resample_no_resample.emit("clicked")   # bogus signal to update mp3 pane
       self.objects = {  "metadata"    : (self.metadata, "text"),
-                        "sideline"    : (self.sideline, "active"),
                         "prekick"     : (self.kick_before_start, "active"),
                         "connections" : (self.connection_pane, ("loader", "saver")),
                         "stats_never" : (self.connection_pane.stats_never, "active"),
@@ -1986,8 +1998,11 @@ class SourceClientGui:
             diff = time.localtime(time.time() - streamtab.start_timer.get_seconds_past_midnight())
             # check hours, minutes, seconds for midnightness
             if not (diff[3] or diff[4] or diff[5]):
-               streamtab.server_connect.set_active(True)
                streamtab.start_timer.check.set_active(False)
+               if streamtab.kick_before_start.get_active():
+                  streamtab.cb_kick_incumbent(None, start_after=True)
+               else:
+                  streamtab.server_connect.set_active(True)
          if streamtab.stop_timer.get_active():
             diff = time.localtime(int(time.time()) - streamtab.stop_timer.get_seconds_past_midnight())
             if not (diff[3] or diff[4] or diff[5]):

@@ -8,7 +8,7 @@ Static metadata text now shows with the correct character encoding when streamin
 
 Playlist and hostname/mountpoint info now shows with ellipses (...) when appropriate.
 
-The metadata widget is now in each tab so that metadata formatting information can now persist beyond application close.
+The metadata widget is now in each tab so that metadata formatting information can persist beyond application close.
 
 Added an expander for server connection details which also resizes the window.
 
