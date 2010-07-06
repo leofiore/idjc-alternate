@@ -25,6 +25,7 @@ import gobject
 
 import os, time, fcntl, subprocess, urllib, urllib2, base64
 import xml.dom.minidom as mdom
+import xml.etree.ElementTree
 
 from idjc_config import *
 from ln_text import ln
@@ -1270,21 +1271,53 @@ class StreamTab(Tab):
       mode = self.connection_pane.get_frame_mode()
       if mode == 0:
          return
+
+      def post_action():   
+         if start_after:
+            gtk.gdk.threads_enter()
+            try:
+               self.server_connect.set_active(True)
+            finally:
+               gtk.gdk.threads_leave()
+         
       srv = self.connection_pane.ListLine(*self.connection_pane.liststore[0])
+      auth_handler = urllib2.HTTPBasicAuthHandler()
+
       if mode == 1:
          url = "http://" + urllib.quote(srv.host) + ":" + str(srv.port) + "/admin/killsource?mount=" + urllib.quote(srv.mount)
-         auth_handler = urllib2.HTTPBasicAuthHandler()
          auth_handler.add_password("Icecast2 Server", srv.host + ":" + str(srv.port), srv.login, srv.password)
          opener = urllib2.build_opener(auth_handler)
          opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-      
-         f = opener.open(url)
-         xmlfeed = f.read()      
+         def threaded():
+            try:
+               xmlfeed = opener.open(url).read()
+            except urllib2.HTTPError, e:
+               print "kick failed:", e
+            else:
+               elem = xml.etree.ElementTree.fromstring(xmlfeed)
+               if elem.findtext("return") == "1":
+                  print "kick success:",
+               else:
+                  print "kick failed:",
+               print elem.findtext("message")
+            post_action()            
 
-         print xmlfeed
-      
-         # ToDo: Shoutcast kick and need to thread this so it doesn't lock and stuff.
-         # need to fix timed start once this is threaded.
+      if mode == 2:
+         url = "http://" + urllib.quote(srv.host) + ":" + str(srv.port) + "/admin.cgi?mode=kicksrc"
+         auth_handler.add_password("Shoutcast Server", srv.host + ":" + str(srv.port), "admin", srv.password)
+         opener = urllib2.build_opener(auth_handler)
+         opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+         def threaded():
+            try:
+               opener.open(url).read()
+            except urllib2.HTTPError, e:
+               print "kick failed", e
+            else:
+               # Could parse xml stats for <streamstatus> if really wanted.
+               print "kick succeeded"
+            post_action()
+
+      Thread(target=threaded).start()
   
    def __init__(self, scg, numeric_id, indicator_lookup):
       Tab.__init__(self, scg, numeric_id, indicator_lookup)
