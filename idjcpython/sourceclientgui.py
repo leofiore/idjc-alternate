@@ -1265,58 +1265,53 @@ class StreamTab(Tab):
          utf8meta = mp3meta = "%s"
       self.scg.send("tab_id=%d\ndev_type=encoder\nmetaformat=%s\nmetaformat_mp3=%s\ncommand=new_metaformat\n" % (self.numeric_id, utf8meta, mp3meta))
   
-   def cb_kick_incumbent(self, widget, start_after=False):
+   
+   @threadslock
+   def deferred_connect(self):
+      """Intended to be called from a thread."""
+      
+      self.server_connect.set_active(True)
+  
+   def cb_kick_incumbent(self, widget, post_action=lambda : None):
       """Try to remove whoever is using the server so that we can connect."""
       
       mode = self.connection_pane.get_frame_mode()
       if mode == 0:
          return
-
-      def post_action():   
-         if start_after:
-            gtk.gdk.threads_enter()
-            try:
-               self.server_connect.set_active(True)
-            finally:
-               gtk.gdk.threads_leave()
-         
+        
       srv = self.connection_pane.ListLine(*self.connection_pane.liststore[0])
       auth_handler = urllib2.HTTPBasicAuthHandler()
 
       if mode == 1:
          url = "http://" + urllib.quote(srv.host) + ":" + str(srv.port) + "/admin/killsource?mount=" + urllib.quote(srv.mount)
          auth_handler.add_password("Icecast2 Server", srv.host + ":" + str(srv.port), srv.login, srv.password)
-         opener = urllib2.build_opener(auth_handler)
-         opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-         def threaded():
-            try:
-               xmlfeed = opener.open(url).read()
-            except urllib2.HTTPError, e:
-               print "kick failed:", e
-            else:
-               elem = xml.etree.ElementTree.fromstring(xmlfeed)
-               if elem.findtext("return") == "1":
-                  print "kick success:",
-               else:
-                  print "kick failed:",
-               print elem.findtext("message")
-            post_action()            
+         def check_reply(reply):
+            elem = xml.etree.ElementTree.fromstring(reply)
+            rslt = "succeeded" if elem.findtext("return") == "1" else "failed"
+            print "kick %s: %s" % (rslt, elem.findtext("message"))
+            return rslt == "succeeded"
 
-      if mode == 2:
+      elif mode == 2:
          url = "http://" + urllib.quote(srv.host) + ":" + str(srv.port) + "/admin.cgi?mode=kicksrc"
          auth_handler.add_password("Shoutcast Server", srv.host + ":" + str(srv.port), "admin", srv.password)
-         opener = urllib2.build_opener(auth_handler)
-         opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-         def threaded():
-            try:
-               opener.open(url).read()
-            except urllib2.HTTPError, e:
-               print "kick failed", e
-            else:
-               # Could parse xml stats for <streamstatus> if really wanted.
-               print "kick succeeded"
-            post_action()
+         def check_reply(reply):
+            # Could go to lengths to check the XML stats here.
+            # Thats one whole extra HTTP request.
+            print "kick succeeded"
+            return True
 
+      opener = urllib2.build_opener(auth_handler)
+      opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+
+      def threaded():
+         try:
+            reply = opener.open(url).read()
+         except urllib2.URLError, e:
+            print "kick failed:", e
+         else:
+            check_reply(reply)
+            post_action()
+     
       Thread(target=threaded).start()
   
    def __init__(self, scg, numeric_id, indicator_lookup):
@@ -1330,7 +1325,7 @@ class StreamTab(Tab):
       self.format_page = 0                      # the current format page
       self.subformat_page = 0                   # the Ogg sub-format
       Tab.set_spacing(self, 10)
-      
+            
       hbox = gtk.HBox()                                 # box containing connect button and timers
       hbox.set_spacing(6)
       self.server_connect = gtk.ToggleButton()
@@ -2033,7 +2028,7 @@ class SourceClientGui:
             if not (diff[3] or diff[4] or diff[5]):
                streamtab.start_timer.check.set_active(False)
                if streamtab.kick_before_start.get_active():
-                  streamtab.cb_kick_incumbent(None, start_after=True)
+                  streamtab.cb_kick_incumbent(None, streamtab.deferred_connect)
                else:
                   streamtab.server_connect.set_active(True)
          if streamtab.stop_timer.get_active():
@@ -2374,6 +2369,39 @@ class SourceClientGui:
       vbox = gtk.VBox()
       vbox.set_spacing(10)
       self.window.add(vbox)
+      
+      self.groupactionframe = CategoryFrame()
+      gvbox = gtk.VBox()
+      self.groupactionframe.add(gvbox)
+      gvbox.show()
+      self.groupactionframe.show()
+      hbox = gtk.HBox()
+      gvbox.pack_start(hbox, False)
+      self.connect_group = gtk.Button("Connect")
+      hbox.add(self.connect_group)
+      self.connect_group.show()
+      rhbox = gtk.HBox()
+      hbox.add(rhbox)
+      rhbox.show()
+      self.group_safety = gtk.CheckButton()
+      rhbox.add(self.group_safety)
+      self.group_safety.show()
+      frame = gtk.Frame()
+      rhbox.add(frame)
+      frame.show()
+      ihbox = gtk.HBox()
+      frame.add(ihbox)
+      ihbox.show()
+      self.disconnect_group = gtk.Button("Disconnect")
+      ihbox.add(self.disconnect_group)
+      self.disconnect_group.show()
+      self.kick_group = gtk.Button("Kick Incumbents")
+      ihbox.add(self.kick_group)
+      self.kick_group.show()
+      vbox.pack_start(self.groupactionframe, False)      
+      # ToDo move this to new StreamTabFrame, subclass of TabFrame.
+      
+      
       self.recordtabframe = TabFrame(self, ln.record, num_recorders, RecordTab, pkgdatadir, (
                                                                 ("clear", "led_unlit_clear_border_64x64"),
                                                                 ("amber", "led_lit_amber_black_border_64x64"),
