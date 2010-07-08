@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.3 *
 
+New group feature in the output window allows operations on all server tabs simultaneously.
+
 The listen URL now appears on the connect button.
 
 Static metadata text now shows with the correct character encoding when streaming mp3 files.
