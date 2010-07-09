@@ -44,6 +44,9 @@ class ModuleFrame(gtk.Frame):
    def __init__(self, frametext = None):
       gtk.Frame.__init__(self, frametext)
       gtk.Frame.set_shadow_type(self, gtk.SHADOW_ETCHED_OUT)
+      self.vbox = gtk.VBox()
+      self.add(self.vbox)
+      self.vbox.show()
 
 class CategoryFrame(gtk.Frame):
    def __init__(self, frametext = None):
@@ -1687,7 +1690,7 @@ class StreamTab(Tab):
                                               (ln.genre, genre_entry_box)
                                               ), info_sizegroup)
       stream_details_pane.set_border_width(10)
-      frame.add(stream_details_pane)
+      frame.vbox.add(stream_details_pane)
       stream_details_pane.show()
       
       frame = ModuleFrame(ln.contact_info)      # contact information
@@ -1707,7 +1710,7 @@ class StreamTab(Tab):
                                               (ln.icy_icq, self.icq_entry)
                                               ), contact_sizegroup)
       contact_details_pane.set_border_width(10)
-      frame.add(contact_details_pane)
+      frame.vbox.add(contact_details_pane)
       contact_details_pane.show()
       
       self.stream_resample_frame.resample_no_resample.emit("clicked")   # bogus signal to update mp3 pane
@@ -1931,7 +1934,7 @@ class TabFrame(ModuleFrame):
       ModuleFrame.__init__(self, frametext)
       self.notebook = gtk.Notebook()
       self.notebook.set_border_width(8)
-      self.add(self.notebook)
+      self.vbox.add(self.notebook)
       self.notebook.show()
       self.tabs = []
       self.indicator_image_qty = len(indicatorlist)
@@ -1952,6 +1955,108 @@ class TabFrame(ModuleFrame):
          self.notebook.append_page(self.tabs[-1], labelbox)
          labelbox.show()
          scg.parent.tooltips.set_tip(labelbox, tab_tip_text)
+
+class StreamTabFrame(TabFrame):
+   def forall(self, widget, f, *args):
+      for cb, tab in zip(self.togglelist, self.tabs):
+         if cb.get_active():
+            f(tab, *args)
+
+   def cb_metadata_group(self, tab):
+      tab.metadata.set_text(self.metadata_group.get_text())
+      tab.metadata_update.clicked()
+            
+   def cb_connect_toggle(self, tab, val):
+      if tab.server_connect.flags() & gtk.SENSITIVE:
+         tab.server_connect.set_active(val)
+
+   def cb_kick_group(self, tab):
+      tab.kick_incumbent.clicked()
+            
+   def cb_group_safety(self, widget):
+      sens = widget.get_active()
+      for each in (self.disconnect_group, self.kick_group):
+         each.set_sensitive(sens)
+         
+   def __init__(self, scg, frametext, q_tabs, tabtype, path, indicatorlist, file_extension, tab_tip_text):
+      TabFrame.__init__(self, scg, frametext, q_tabs, tabtype, path, indicatorlist, file_extension, tab_tip_text)
+
+      outerframe = gtk.Frame()
+      scg.parent.tooltips.set_tip(outerframe, ln.group_action_tip)
+      outerframe.set_border_width(8)
+      outerframe.set_shadow_type(gtk.SHADOW_OUT)
+      gvbox = gtk.VBox()
+      gvbox.set_border_width(8)
+      gvbox.set_spacing(8)
+      outerframe.add(gvbox)
+      gvbox.show()
+      hbox = gtk.HBox()
+      hbox.set_spacing(5)
+      gvbox.pack_start(hbox, False)
+      hbox.show()
+      self.connect_group = gtk.Button("Connect")
+      self.connect_group.connect("clicked", self.forall, self.cb_connect_toggle, True)
+      hbox.add(self.connect_group)
+      self.connect_group.show()
+      frame = gtk.Frame()
+      hbox.add(frame)
+      frame.show()
+      ihbox = gtk.HBox()
+      ihbox.set_border_width(3)
+      ihbox.set_spacing(6)
+      frame.add(ihbox)
+      ihbox.show()
+      self.group_safety = gtk.CheckButton()
+      self.group_safety.connect("toggled", self.cb_group_safety)
+      ihbox.pack_start(self.group_safety, False)
+      self.group_safety.show()
+      self.disconnect_group = gtk.Button("Disconnect")
+      self.disconnect_group.connect("clicked", self.forall, self.cb_connect_toggle, False)
+      self.disconnect_group.connect("clicked", lambda x: self.group_safety.set_active(False))
+      self.disconnect_group.set_sensitive(False)
+      ihbox.add(self.disconnect_group)
+      self.disconnect_group.show()
+      self.kick_group = gtk.Button("Kick Incumbents")
+      self.kick_group.connect("clicked", self.forall, self.cb_kick_group)
+      self.kick_group.connect("clicked", lambda x: self.group_safety.set_active(False))
+      self.kick_group.set_sensitive(False)
+      ihbox.add(self.kick_group)
+      self.kick_group.show()
+      hbox = gtk.HBox()
+      hbox.set_spacing(6)
+      label = gtk.Label(ln.metadata)
+      hbox.pack_start(label, False)
+      label.show()
+      self.metadata_group = gtk.Entry()
+      self.metadata_group.set_text("%s")
+      hbox.pack_start(self.metadata_group)
+      self.metadata_group.show()
+      self.metadata_group_update = gtk.Button(ln.update)
+      self.metadata_group_update.connect("clicked", self.forall, self.cb_metadata_group)
+      hbox.pack_start(self.metadata_group_update, False)
+      self.metadata_group_update.show()
+      gvbox.pack_start(hbox, False)
+      hbox.show()
+      self.vbox.pack_start(outerframe, False)   
+      outerframe.show()  
+      self.vbox.reorder_child(outerframe, 0)
+      self.objects = { "group_metadata": (self.metadata_group, "text") }
+      self.togglelist = [gtk.CheckButton(str(x + 1)) for x in range(q_tabs)]
+      hbox = gtk.HBox()
+      label = gtk.Label(ln.group_action)
+      hbox.pack_start(label, False)
+      label.show()
+      for i, cb in enumerate(self.togglelist):
+         hbox.pack_start(cb, False)
+         cb.show()
+         self.objects["group_toggle_" + str(i + 1)] = (cb, "active")
+      spc = gtk.HBox()
+      hbox.pack_end(spc, False, False, 2)
+      spc.show()
+      outerframe.set_label_widget(hbox)
+      
+      hbox.show()
+      
 
 class SourceClientGui:
    server_errmsg = "idjc: idjcsourceclient appears to have crashed -- possible segfault"
@@ -2327,6 +2432,7 @@ class SourceClientGui:
       self.win_y.set_value(event.height)
    def cb_after_realize(self, widget):
       widget.resize(int(self.win_x), 1)
+      self.streamtabframe.connect_group.grab_focus()
       
    def cb_stream_details_expand(self, expander, param_spec, next_expander, sw):
       if expander.get_expanded():
@@ -2370,69 +2476,13 @@ class SourceClientGui:
       vbox.set_spacing(10)
       self.window.add(vbox)
       
-      self.groupactionframe = CategoryFrame()
-      gvbox = gtk.VBox()
-      gvbox.set_border_width(6)
-      gvbox.set_spacing(8)
-      self.groupactionframe.add(gvbox)
-      gvbox.show()
-      self.groupactionframe.show()
-      hbox = gtk.HBox()
-      hbox.set_spacing(5)
-      gvbox.pack_start(hbox, False)
-      hbox.show()
-      self.connect_group = gtk.Button("Connect")
-      hbox.add(self.connect_group)
-      self.connect_group.show()
-      frame = gtk.Frame()
-      hbox.add(frame)
-      frame.show()
-      ihbox = gtk.HBox()
-      ihbox.set_border_width(3)
-      ihbox.set_spacing(6)
-      frame.add(ihbox)
-      ihbox.show()
-      self.group_safety = gtk.CheckButton()
-      ihbox.pack_start(self.group_safety, False)
-      self.group_safety.show()
-      self.disconnect_group = gtk.Button("Disconnect")
-      self.disconnect_group.set_sensitive(False)
-      ihbox.add(self.disconnect_group)
-      self.disconnect_group.show()
-      self.kick_group = gtk.Button("Kick Incumbents")
-      self.kick_group.set_sensitive(False)
-      ihbox.add(self.kick_group)
-      self.kick_group.show()
-      
-      hbox = gtk.HBox()
-      hbox.set_spacing(6)
-      label = gtk.Label(ln.metadata)
-      hbox.pack_start(label, False)
-      label.show()
-      self.metadata_group = gtk.Entry()
-      self.metadata_group.set_text("%s")
-      hbox.pack_start(self.metadata_group)
-      self.metadata_group.show()
-      self.metadata_group_update = gtk.Button(ln.update)
-      hbox.pack_start(self.metadata_group_update, False)
-      self.metadata_group_update.show()
-      gvbox.pack_start(hbox, False)
-      hbox.show()
-      
-      
-      
-      
-      vbox.pack_start(self.groupactionframe, False)      
-      # ToDo move this to new StreamTabFrame, subclass of TabFrame.
-      
-      
       self.recordtabframe = TabFrame(self, ln.record, num_recorders, RecordTab, pkgdatadir, (
                                                                 ("clear", "led_unlit_clear_border_64x64"),
                                                                 ("amber", "led_lit_amber_black_border_64x64"),
                                                                 ("red", "led_lit_red_black_border_64x64")),
                                                                 gfext,
                                                                 ln.record_tab_tip)
-      self.streamtabframe = TabFrame(self, ln.stream, num_streamers, StreamTab, pkgdatadir, (
+      self.streamtabframe = StreamTabFrame(self, ln.stream, num_streamers, StreamTab, pkgdatadir, (
                                                                 ("clear", "led_unlit_clear_border_64x64"),
                                                                 ("amber", "led_lit_amber_black_border_64x64"),
                                                                 ("green", "led_lit_green_black_border_64x64")),
@@ -2458,6 +2508,7 @@ class SourceClientGui:
       self.tab_type = "server_window"           #
       self.objects = {  "width" : (self.win_x, "value"),
                         "height": (self.win_y, "value") }
+      self.objects.update(self.streamtabframe.objects)
       self.load_previous_session()
       self.is_streaming = False
       self.is_recording = False

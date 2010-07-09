@@ -500,6 +500,10 @@ green_phone_tip = "Mix voice over IP audio to the output stream."
 
 group = "Group"
 
+group_action = " Group Action "
+
+group_action_tip = "Perform operations on multiple servers in unison."
+
 headroom = "Player headroom when a microphone is open (dB)"
 
 headroom_tip = "The number of dB to reduce the music players' sound level by when the microphone is switched on. A sensible setting would be 3.0 or even higher if you are not going to use ducking."
