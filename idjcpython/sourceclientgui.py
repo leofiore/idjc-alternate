@@ -1773,12 +1773,17 @@ class RecordTab(Tab):
          if userdata == "rec":
             if widget.get_active():
                if not self.recording:
-                  self.parentobject.source_dest.streamtab.start_stop_encoder(ENCODER_START)
+                  sd = self.parentobject.source_dest
+                  if sd.streamtab is not None:
+                     sd.streamtab.start_stop_encoder(ENCODER_START)
+                     num_id = sd.streamtab.numeric_id
+                  else:
+                     num_id = -1
                   self.parentobject.send("record_source=%d\nrecord_folder=%s\ncommand=recorder_start\n" % (
-                                        self.parentobject.source_dest.streamtab.numeric_id,
-                                        self.parentobject.source_dest.file_dialog.get_current_folder()))
-                  self.parentobject.source_dest.file_dialog.response(gtk.RESPONSE_CLOSE)
-                  self.parentobject.source_dest.set_sensitive(False)
+                                        num_id,
+                                        sd.file_dialog.get_current_folder()))
+                  sd.file_dialog.response(gtk.RESPONSE_CLOSE)
+                  sd.set_sensitive(False)
                   self.parentobject.time_indicator.set_sensitive(True)
                   self.recording = True
                   if self.parentobject.receive() == "failed":
@@ -1790,7 +1795,8 @@ class RecordTab(Tab):
                      self.recording = False
                      self.parentobject.send("command=recorder_stop\n")
                      self.parentobject.receive()
-                  self.parentobject.source_dest.streamtab.start_stop_encoder(ENCODER_STOP)
+                  if self.parentobject.source_dest.streamtab is not None:
+                     self.parentobject.source_dest.streamtab.start_stop_encoder(ENCODER_STOP)
                   self.parentobject.source_dest.set_sensitive(True)
                   self.parentobject.time_indicator.set_sensitive(False)
                   if self.pause_button.get_active():
@@ -1870,13 +1876,16 @@ class RecordTab(Tab):
          self.source_combo.set_sensitive(boolean)
          self.file_chooser_button.set_sensitive(boolean)
       def cb_source_combo(self, widget):
-         self.streamtab = self.streamtabs[widget.get_active()]
-         self.parentobject.record_buttons.record_button.set_sensitive(self.cansave and ((self.streamtab.server_connect.flags() & gtk.SENSITIVE) or self.streamtab.recorder_valid_override))
+         if widget.get_active() > 0:
+            self.streamtab = self.streamtabs[widget.get_active() - 1]
+         else:
+            self.streamtab = None
+         self.parentobject.record_buttons.record_button.set_sensitive(self.streamtab is None or (self.cansave and ((self.streamtab.server_connect.flags() & gtk.SENSITIVE) or self.streamtab.recorder_valid_override)))
       def populate_stream_selector(self, text, tabs):
          self.streamtabs = tabs
          for index in range(len(tabs)):
             self.source_combo.append_text(" ".join((text, str(index + 1))))
-         self.source_combo.connect("changed", self.cb_source_combo)
+         self.source_combo.connect_after("changed", self.cb_source_combo)
          self.source_combo.set_active(0)
       def cb_new_folder(self, filechooser):
          self.cansave = os.access(filechooser.get_current_folder(), os.W_OK)
@@ -1887,6 +1896,7 @@ class RecordTab(Tab):
          hbox = gtk.HBox()
          hbox.set_spacing(6)
          self.source_combo = gtk.combo_box_new_text()
+         self.source_combo.append_text(" WAV+CUE")
          hbox.pack_start(self.source_combo, False, False, 0)
          self.source_combo.show()
          arrow = gtk.Arrow(gtk.ARROW_RIGHT, gtk.SHADOW_IN)

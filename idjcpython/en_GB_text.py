@@ -1036,7 +1036,7 @@ rdc_discard_data = "Discard data"
 
 rdc_attempt_reconnection = "Attempt reconnection"
 
-rec_directory_tip = "Choose which directory you want to save to. All file names will be in a timestamp format and have either an ogg or mp3 file extension. Important: you need to select a directory to which you have adequate write permission."
+rec_directory_tip = "Choose which directory you want to save to. All file names will be in a timestamp format and have either an oga or mp3 file extension. Important: you need to select a directory to which you have adequate write permission."
 
 rec_source_tip = "Chooses which stream to record. If the stream isn't running the encoder will be started for you. Remember to make sure the encoder settings are to your liking before you start recording."
 

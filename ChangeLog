@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.3 *
 
+New feature to record wav files and metadata in an accompanying cue file. This does not use one of the server encoders.
+
 New group feature in the output window allows operations on all server tabs simultaneously.
 
 The listen URL now appears on the connect button.
