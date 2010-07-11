@@ -1885,7 +1885,7 @@ class RecordTab(Tab):
          self.streamtabs = tabs
          for index in range(len(tabs)):
             self.source_combo.append_text(" ".join((text, str(index + 1))))
-         self.source_combo.connect_after("changed", self.cb_source_combo)
+         self.source_combo.connect("changed", self.cb_source_combo)
          self.source_combo.set_active(0)
       def cb_new_folder(self, filechooser):
          self.cansave = os.access(filechooser.get_current_folder(), os.W_OK)
