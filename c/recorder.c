@@ -219,10 +219,6 @@ static int recorder_write_vbr_tag(struct recorder *self, FILE *fp)
    if (!fwrite(self->first_mp3_header, 4, 1, fp))
       return FAILED;
 
-   fprintf(stderr, "Frame header in reverse: %08X\n", *(int *)self->first_mp3_header);
-   if (self->first_mp3_header[0] != '\xFF')
-      fprintf(stderr, "~~~~~~~~~~~~~~ Failed to capture mp3 header ~~~~~~~~~~~~~~~~\n");
-
    for (i = 0; i < xing_offset; i++)
       {
       fputc(0x00, fp);
@@ -309,6 +305,18 @@ static void recorder_apply_mp3_tags(struct recorder *self)
       free(tmpname);
       return;
       }
+      
+   if (!fread(self->first_mp3_header, 4, 1, fpr))
+      {
+      fprintf(stderr, "failed to obtain the first four bytes of the recording\n");
+      fclose(fpr);
+      fclose(fpw);
+      unlink(tmpname);
+      free(tmpname);
+      return;
+      } 
+   rewind(fpr);
+      
    if (!(recorder_write_id3_tag(self, fpw) && recorder_write_vbr_tag(self, fpw)))
       {
       fprintf(stderr, "recorder_apply_mp3_tags: failed to tag the mp3 file\n");
@@ -392,22 +400,8 @@ static void recorder_append_metadata2(struct recorder *self, struct encoder_op_p
          self->is_vbr = TRUE;
          fprintf(stderr, "recorder_append_metadata2: the mp3 frame length altered\n");
          }
-      else
-         {
-         if (packet->header.data_size >= 4)
-            memcpy(self->first_mp3_header, packet->data, 4);
-         else
-            {
-            fprintf(stderr, "######### Failed to capture mp3 header ###############\n");
-            fprintf(stderr, "data size is %d\n", packet->header.data_size);
-            }
-         }
       self->oldbitrate = packet->header.bit_rate;
       self->oldsamplerate = packet->header.sample_rate;
-      
-      fprintf(stderr, "bit rate %d\n", packet->header.bit_rate);
-      fprintf(stderr, "sample rate %d\n", packet->header.sample_rate);
-      
       }
    }
 

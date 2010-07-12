@@ -123,10 +123,7 @@ static void mp3decode_eject(struct xlplayer *xlplayer)
    fclose(self->fp);
    free(self->read_buffer);
    free(self);
-
-
-
-fprintf(stderr, "finished eject\n");
+   fprintf(stderr, "finished eject\n");
    }
 
 static void mp3decode_init(struct xlplayer *xlplayer)

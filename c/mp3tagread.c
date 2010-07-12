@@ -424,7 +424,7 @@ static void xing_tag_read(struct mp3taginfo *ti, FILE *fp)
          if (bit_rate == 0 || sample_rate == 0)
             frame_length = 0;
          else
-            frame_length = 144000 * bit_rate / sample_rate + padding;
+            frame_length = samples_per_frame / 8 * bit_rate * 1000 / sample_rate + padding;
  
          while (xing_offset--)  /* check side info is 100% blank */
             if (fgetc(fp) || feof(fp) || ferror(fp))
