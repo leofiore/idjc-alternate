@@ -32,6 +32,7 @@ static int jack_process_callback(jack_nframes_t n_frames, void *arg)
    struct audio_feed *self = arg;
    struct threads_info *ti = self->threads_info;
    struct encoder *e;
+   struct recorder *r;
    sample_t *input_port_buffer[2];
    int i;
    
@@ -65,6 +66,34 @@ static int jack_process_callback(jack_nframes_t n_frames, void *arg)
             fprintf(stderr, "jack_process_callback: unhandled jack_dataflow_control parameter\n");
          }
       }
+      
+   for (i = 0; i < ti->n_recorders; i++)
+      {
+      r = ti->recorder[i];
+      switch (r->jack_dataflow_control)
+         {
+         case JD_OFF:
+            break;
+         case JD_ON:
+            if (jack_ringbuffer_write_space(r->input_rb[1]) >= n_frames * sizeof (sample_t))
+               {
+               jack_ringbuffer_write(r->input_rb[0], (char *)input_port_buffer[0], n_frames * sizeof (sample_t));
+               jack_ringbuffer_write(r->input_rb[1], (char *)input_port_buffer[1], n_frames * sizeof (sample_t));
+               }
+            else
+               /* normally this happens when the CPU is overloaded */
+               r->performance_warning_indicator = PW_AUDIO_DATA_DROPPED;
+            break;
+         case JD_FLUSH:
+            jack_ringbuffer_reset(r->input_rb[0]);
+            jack_ringbuffer_reset(r->input_rb[1]);
+            r->jack_dataflow_control = JD_OFF;
+            break;
+         default:
+            fprintf(stderr, "jack_process_callback: unhandled jack_dataflow_control parameter\n");
+         }   
+      }
+     
    return 0;
    }
 

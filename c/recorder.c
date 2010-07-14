@@ -27,6 +27,10 @@
 
 #define TIMESTAMP_SIZ 23
 
+typedef jack_default_audio_sample_t sample_t;
+
+static const size_t rb_n_samples = 10000;       /* maximum number of samples to hold in the ring buffer */
+
 #if 0
 static void recorder_write_ogg_metaheader(struct recorder *self)
    {
@@ -718,6 +722,19 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
          fprintf(stderr, "recorder_start: unable to initialise FLAC encoder\n");
          return FAILED;
          }
+         
+      self->input_rb[0] = jack_ringbuffer_create(rb_n_samples * sizeof (sample_t));
+      self->input_rb[1] = jack_ringbuffer_create(rb_n_samples * sizeof (sample_t));
+      if (!(self->input_rb[0] && self->input_rb[1]))
+         {
+         fprintf(stderr, "encoder_start: jack ringbuffer creation failure\n");
+         free(self->pathname);
+         free(self->title);
+         fclose(self->fp);
+         fprintf(stderr, "recorder_start: failed to create ringbuffers\n");
+         return FAILED;
+         }
+      self->jack_dataflow_control = JD_ON;  
       self->initial_serial = -1;
       fprintf(stderr, "recorder_start: in FLAC mode\n");
       }

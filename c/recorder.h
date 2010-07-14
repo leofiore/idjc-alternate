@@ -93,6 +93,9 @@ struct recorder
    char first_mp3_header[4];
    SNDFILE *sf;                 /* support for recording with libsndfile */
    SF_INFO sfinfo;
+   enum jack_dataflow jack_dataflow_control;    /* tells the jack callback routine what we want it to do */
+   jack_ringbuffer_t *input_rb[2];      /* circular buffer containing pcm audio data */
+   enum performance_warning performance_warning_indicator; /* indicates ringbuffer overflow condition */
    };
 
 struct recorder *recorder_init(struct threads_info *ti, int numeric_id);
