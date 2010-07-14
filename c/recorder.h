@@ -21,6 +21,7 @@
 #define RECORDER_H
 
 #include <stdio.h>
+#include <sndfile.h>
 #include "sourceclient.h"
 
 enum record_mode { RM_STOPPED, RM_RECORDING, RM_PAUSED, RM_STOPPING };
@@ -90,6 +91,8 @@ struct recorder
    int oldbitrate;
    int oldsamplerate;
    char first_mp3_header[4];
+   SNDFILE *sf;                 /* support for recording with libsndfile */
+   SF_INFO sfinfo;
    };
 
 struct recorder *recorder_init(struct threads_info *ti, int numeric_id);

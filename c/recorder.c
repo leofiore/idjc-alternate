@@ -641,37 +641,47 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
    size_t pathname_size;
    char timestamp[TIMESTAMP_SIZ];
 
-   if (!(self->encoder_op = encoder_register_client(ti, atoi(rv->record_source))))
+   if (!strcmp(rv->record_source, "-1"))
       {
-      fprintf(stderr, "recorder_start: failed to register with encoder\n");
-      return FAILED;
+      file_extension = ".flac";
+      self->encoder_op = NULL;
       }
-   if (!self->encoder_op->encoder->run_request_f)
-      {
-      fprintf(stderr, "recorder_start: encoder is not running\n");
-      encoder_unregister_client(self->encoder_op);
-      return FAILED;
-      }
-   switch (self->encoder_op->encoder->data_format)
-      {
-      case DF_JACK_MP3:
-      case DF_FILE_MP3:
-         self->mp3_mode = TRUE;
-         file_extension = ".mp3";
-         break;
-      case DF_JACK_OGG:
-      case DF_FILE_OGG:
-         file_extension = ".oga";
-         break;
-      default:
-         fprintf(stderr, "recorder_start: data_format is not set to a handled value\n");
+   else
+      {      
+      if (!(self->encoder_op = encoder_register_client(ti, atoi(rv->record_source))))
+         {
+         fprintf(stderr, "recorder_start: failed to register with encoder\n");
+         return FAILED;
+         }
+      if (!self->encoder_op->encoder->run_request_f)
+         {
+         fprintf(stderr, "recorder_start: encoder is not running\n");
          encoder_unregister_client(self->encoder_op);
          return FAILED;
+         }
+      switch (self->encoder_op->encoder->data_format)
+         {
+         case DF_JACK_MP3:
+         case DF_FILE_MP3:
+            self->mp3_mode = TRUE;
+            file_extension = ".mp3";
+            break;
+         case DF_JACK_OGG:
+         case DF_FILE_OGG:
+            file_extension = ".oga";
+            break;
+         default:
+            fprintf(stderr, "recorder_start: data_format is not set to a handled value\n");
+            encoder_unregister_client(self->encoder_op);
+            return FAILED;
+         }
       }
-   if (!(self->pathname = malloc(pathname_size = strlen(rv->record_folder) + strlen(file_extension) + TIMESTAMP_SIZ + 9)))
+
+   if (!(self->pathname = malloc(pathname_size = strlen(rv->record_folder) + strlen(file_extension) + TIMESTAMP_SIZ + 10)))
       {
       fprintf(stderr, "recorder_start: malloc failure\n");
-      encoder_unregister_client(self->encoder_op);
+      if (self->encoder_op)
+         encoder_unregister_client(self->encoder_op);
       return FAILED;
       }
    /* generate a timestamp filename */
@@ -685,13 +695,34 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
       fprintf(stderr, "recorder_start: failed to open file %s\nuser should check file permissions on the particular directory\n", rv->record_folder);
       free(self->pathname);
       free(self->title);
-      encoder_unregister_client(self->encoder_op);
+      if (self->encoder_op)
+         encoder_unregister_client(self->encoder_op);
       return FAILED;
       }
-   self->initial_serial = encoder_client_set_flush(self->encoder_op) + 1;
+   if (self->encoder_op)
+      {
+      self->initial_serial = encoder_client_set_flush(self->encoder_op) + 1;
+      fprintf(stderr, "recorder_start: awaiting serial %d to commence\n", self->initial_serial);
+      }
+   else
+      {
+      /* no encoder implies we are encoding in this module */
+      self->sfinfo.samplerate = ti->audio_feed->sample_rate;
+      self->sfinfo.channels = 2;
+      self->sfinfo.format = SF_FORMAT_FLAC | SF_FORMAT_PCM_24;
+      if (!(self->sf = sf_open_fd(fileno(self->fp), SFM_WRITE, &self->sfinfo, 0)))
+         {
+         free(self->pathname);
+         free(self->title);
+         fclose(self->fp);
+         fprintf(stderr, "recorder_start: unable to initialise FLAC encoder\n");
+         return FAILED;
+         }
+      self->initial_serial = -1;
+      fprintf(stderr, "recorder_start: in FLAC mode\n");
+      }
    //if (file_extension == ".oga")
    //   recorder_write_ogg_metaheader(self);
-   fprintf(stderr, "streamer_main: connected to server - awaiting serial %d\n", self->initial_serial);
    if (self->pause_request == TRUE)
       self->record_mode = RM_PAUSED;
    else 

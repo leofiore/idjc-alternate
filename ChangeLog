@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.3 *
 
+TODO: Finish FLAC recording feature.
+
 Fixed a bug where the mp3 header was not captured resulting in corrupt vbr tags in recordings.
 
 Fixed a frame length bug in mp3 vbr tagger in recorder. Would cause mpeg 2, mpeg 2.5 frames to overrun with their padding. This bug also appeared in the mp3tagread module and was fixed.
