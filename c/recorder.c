@@ -588,21 +588,34 @@ static void *recorder_main(void *args)
                   }
             break;
          case RM_STOPPING:
-            fclose(self->fp);
-            if (self->mp3_mode)
+            if (self->initial_serial == -1)
                {
-               recorder_append_metadata(self, NULL);
-               recorder_append_metadata2(self, NULL);
-               recorder_display_logged_metadata(self->mi_first);
-               recorder_display_logged_metadata2(self->mi2_first);
-               recorder_apply_mp3_tags(self);
-               recorder_create_mp3_cuesheet(self);
-               recorder_free_metadata(self);
-               recorder_free_metadata2(self);
+               sf_close(self->sf);
+               self->jack_dataflow_control = JD_FLUSH;
+               while (self->jack_dataflow_control != JD_OFF)
+                  nanosleep(&ms10, NULL);
+               jack_ringbuffer_free(self->input_rb[0]);
+               jack_ringbuffer_free(self->input_rb[1]);
                }
+            else
+               {
+               if (self->mp3_mode)
+                  {
+                  recorder_append_metadata(self, NULL);
+                  recorder_append_metadata2(self, NULL);
+                  recorder_display_logged_metadata(self->mi_first);
+                  recorder_display_logged_metadata2(self->mi2_first);
+                  recorder_apply_mp3_tags(self);
+                  recorder_create_mp3_cuesheet(self);
+                  recorder_free_metadata(self);
+                  recorder_free_metadata2(self);
+                  }
+               encoder_unregister_client(self->encoder_op);
+               }
+
+            fclose(self->fp);
             free(self->pathname);
             free(self->title);
-            encoder_unregister_client(self->encoder_op);
             memset(self->first_mp3_header, 0x00, 4);
             self->oldbitrate = 0;
             self->oldsamplerate = 0;
