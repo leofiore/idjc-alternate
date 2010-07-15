@@ -30,6 +30,7 @@
 typedef jack_default_audio_sample_t sample_t;
 
 static const size_t rb_n_samples = 10000;       /* maximum number of samples to hold in the ring buffer */
+static const size_t audio_buffer_elements = 256;
 
 #if 0
 static void recorder_write_ogg_metaheader(struct recorder *self)
@@ -516,6 +517,8 @@ static void *recorder_main(void *args)
    struct recorder *self = args;
    struct timespec ms10 = { 0, 10000000 };
    struct encoder_op_packet *packet;
+   char *rl, *rr, *w, *endp;
+   size_t nbytes;
       
    while (!self->thread_terminate_f)
       {
@@ -528,52 +531,89 @@ static void *recorder_main(void *args)
          case RM_RECORDING:
             if (!(self->watchdog_info.tick & 0x3F))
                fprintf(stderr, "recorder_main: recorder %d is recording\n", self->numeric_id);
-            if ((packet = encoder_client_get_packet(self->encoder_op)))
+               
+            if (self->initial_serial == -1)
                {
-               if (packet->header.serial >= self->initial_serial)
+               while ((nbytes = jack_ringbuffer_read(self->input_rb[1], self->right, audio_buffer_elements * sizeof (sample_t))))
                   {
-                  if ((packet->header.flags & PF_INITIAL) && self->mp3_mode)
-                     recorder_append_metadata2(self, packet);
-                  if (packet->header.flags & (PF_OGG | PF_MP3))
+                  jack_ringbuffer_read(self->input_rb[0], self->left, nbytes);
+                  rl = self->left;
+                  rr = self->right;
+                  endp = rl + nbytes;
+                  w = self->combined;
+                  while (rl != endp)
                      {
-                     if (packet->header.data_size != fwrite(packet->data, 1, packet->header.data_size, self->fp))
-                        {
-                        fprintf(stderr, "recorder_main: failed writing to file %s\n", self->pathname);
-                        self->record_mode = RM_STOPPING;
-                        }
-                     else
-                        {
-                        self->recording_length_s = (int)(self->accumulated_time + packet->header.timestamp);
-                        self->recording_length_ms = (int)((self->accumulated_time + packet->header.timestamp) * 1000.0);
-                        self->bytes_written = ftell(self->fp);
-                        }
+                     for (int i = 0; i < sizeof (sample_t); i++)
+                        *w++ = *rl++;
+                     for (int i = 0; i < sizeof (sample_t); i++)
+                        *w++ = *rr++;
                      }
-                  if (packet->header.flags & PF_FINAL)
-                     {
-                     self->accumulated_time += packet->header.timestamp;
-                     if (self->pause_pending && packet->header.serial >= self->final_serial)
-                        {
-                        self->record_mode = RM_PAUSED;
-                        self->pause_pending = FALSE;
-                        fprintf(stderr, "recorder_main: entering pause mode\n");
-                        }
-                     }
+                  sf_writef_float(self->sf, (float *)self->combined, nbytes / sizeof (sample_t));
+
+                  if (self->stop_request || self->pause_request)
+                     break;
                   }
-               if (packet->header.flags & PF_METADATA)
-                  recorder_append_metadata(self, packet);
-               encoder_client_free_packet(packet);
+               
+               if (self->stop_request)
+                  {
+                  self->stop_request = FALSE;
+                  self->record_mode = RM_STOPPING;
+                  }
+               if (self->pause_request)
+                  {
+                  self->pause_request = FALSE;
+                  self->record_mode = RM_PAUSED;
+                  }
                }
-            if (self->stop_request)
+            else
                {
-               self->stop_pending = TRUE;
-               self->pause_request = TRUE;
-               self->stop_request = FALSE;
-               }
-            if (self->pause_request)
-               {
-               self->pause_pending = TRUE;
-               self->final_serial = encoder_client_set_flush(self->encoder_op);
-               self->pause_request = FALSE;
+               if ((packet = encoder_client_get_packet(self->encoder_op)))
+                  {
+                  if (packet->header.serial >= self->initial_serial)
+                     {
+                     if ((packet->header.flags & PF_INITIAL) && self->mp3_mode)
+                        recorder_append_metadata2(self, packet);
+                     if (packet->header.flags & (PF_OGG | PF_MP3))
+                        {
+                        if (packet->header.data_size != fwrite(packet->data, 1, packet->header.data_size, self->fp))
+                           {
+                           fprintf(stderr, "recorder_main: failed writing to file %s\n", self->pathname);
+                           self->record_mode = RM_STOPPING;
+                           }
+                        else
+                           {
+                           self->recording_length_s = (int)(self->accumulated_time + packet->header.timestamp);
+                           self->recording_length_ms = (int)((self->accumulated_time + packet->header.timestamp) * 1000.0);
+                           self->bytes_written = ftell(self->fp);
+                           }
+                        }
+                     if (packet->header.flags & PF_FINAL)
+                        {
+                        self->accumulated_time += packet->header.timestamp;
+                        if (self->pause_pending && packet->header.serial >= self->final_serial)
+                           {
+                           self->record_mode = RM_PAUSED;
+                           self->pause_pending = FALSE;
+                           fprintf(stderr, "recorder_main: entering pause mode\n");
+                           }
+                        }
+                     }
+                  if (packet->header.flags & PF_METADATA)
+                     recorder_append_metadata(self, packet);
+                  encoder_client_free_packet(packet);
+                  }
+               if (self->stop_request)
+                  {
+                  self->stop_pending = TRUE;
+                  self->pause_request = TRUE;
+                  self->stop_request = FALSE;
+                  }
+               if (self->pause_request)
+                  {
+                  self->pause_pending = TRUE;
+                  self->final_serial = encoder_client_set_flush(self->encoder_op);
+                  self->pause_request = FALSE;
+                  }
                }
             break;
          case RM_PAUSED:
@@ -582,9 +622,10 @@ static void *recorder_main(void *args)
             else
                if (self->unpause_request)
                   {
-                  self->initial_serial = encoder_client_set_flush(self->encoder_op) + 1;
-                  self->record_mode = RM_RECORDING;
                   self->unpause_request = FALSE;
+                  if (self->initial_serial != -1)
+                     self->initial_serial = encoder_client_set_flush(self->encoder_op) + 1;
+                  self->record_mode = RM_RECORDING;
                   }
             break;
          case RM_STOPPING:
@@ -596,6 +637,10 @@ static void *recorder_main(void *args)
                   nanosleep(&ms10, NULL);
                jack_ringbuffer_free(self->input_rb[0]);
                jack_ringbuffer_free(self->input_rb[1]);
+               free(self->left);
+               free(self->right);
+               free(self->combined);
+               self->left = self->right = self->combined = NULL;
                }
             else
                {
@@ -662,6 +707,14 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
       {
       file_extension = ".flac";
       self->encoder_op = NULL;
+      self->left = malloc(audio_buffer_elements * sizeof (sample_t));
+      self->right = malloc(audio_buffer_elements * sizeof (sample_t));
+      self->combined = malloc(audio_buffer_elements * sizeof (sample_t) * 2);
+      if (!self->left || !self->right || !self->combined)
+         {
+         fprintf(stderr, "recorder_start: malloc failure\n");
+         return FAILED;
+         }
       }
    else
       {      

@@ -1896,7 +1896,7 @@ class RecordTab(Tab):
          hbox = gtk.HBox()
          hbox.set_spacing(6)
          self.source_combo = gtk.combo_box_new_text()
-         self.source_combo.append_text(" WAV+CUE")
+         self.source_combo.append_text(" FLAC+CUE")
          hbox.pack_start(self.source_combo, False, False, 0)
          self.source_combo.show()
          arrow = gtk.Arrow(gtk.ARROW_RIGHT, gtk.SHADOW_IN)
