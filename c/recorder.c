@@ -549,10 +549,12 @@ static void *recorder_main(void *args)
                         *w++ = *rr++;
                      }
                   sf_writef_float(self->sf, (float *)self->combined, nbytes / sizeof (sample_t));
-
+                  self->sf_samples += nbytes / sizeof (sample_t);
                   if (self->stop_request || self->pause_request)
                      break;
                   }
+               self->recording_length_s = self->sf_samples / self->sfinfo.samplerate;
+               self->recording_length_ms = self->sf_samples * 1000 / self->sfinfo.samplerate;
                
                if (self->stop_request)
                   {
@@ -641,6 +643,7 @@ static void *recorder_main(void *args)
                free(self->right);
                free(self->combined);
                self->left = self->right = self->combined = NULL;
+               self->sf_samples = 0;
                }
             else
                {

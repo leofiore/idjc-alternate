@@ -99,6 +99,7 @@ struct recorder
    char *left;
    char *right;
    char *combined;
+   size_t sf_samples;
    };
 
 struct recorder *recorder_init(struct threads_info *ti, int numeric_id);

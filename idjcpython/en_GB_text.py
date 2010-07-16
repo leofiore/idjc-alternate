@@ -1036,9 +1036,9 @@ rdc_discard_data = "Discard data"
 
 rdc_attempt_reconnection = "Attempt reconnection"
 
-rec_directory_tip = "Choose which directory you want to save to. All file names will be in a timestamp format and have either an oga or mp3 file extension. Important: you need to select a directory to which you have adequate write permission."
+rec_directory_tip = "Choose which directory you want to save to. All file names will be in a timestamp format and have either an oga, mp3, or flac file extension. Important: you need to select a directory to which you have adequate write permission."
 
-rec_source_tip = "Chooses which stream to record. If the stream isn't running the encoder will be started for you. Remember to make sure the encoder settings are to your liking before you start recording."
+rec_source_tip = "Choose which stream to record or the 24 bit FLAC option. If the stream isn't already running the encoder will be started automatically using whatever settings are currently configured."
 
 recon_tip = """A set of controls for managing what happens when the server connection either breaks or suffers prolonged congestion.
  

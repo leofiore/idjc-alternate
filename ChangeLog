@@ -2,7 +2,7 @@
 
 * Changes in version 0.8.3 *
 
-TODO: Update the recording time and generate CUE file in FLAC recording feature.
+TODO: generate CUE file in FLAC recording feature.
 
 Fixed a bug where the mp3 header was not captured resulting in corrupt vbr tags in recordings.
 
