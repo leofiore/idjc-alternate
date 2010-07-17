@@ -151,27 +151,17 @@ static int recorder_write_id3_tag(struct recorder *self, FILE *fp)
 static int recorder_create_mp3_cuesheet(struct recorder *self)
    {
    struct metadata_item *mi;
-   char *cuepathname, *bp;
+   char *bp;
    FILE *fp;
    int i;
    
-   i = strrchr(self->pathname, '.') - self->pathname + 1;
-   if (!(cuepathname = malloc(i + 4)))
-      {
-      fprintf(stderr, "recorder_write_mp3_cue_sheet: malloc failure\n");
-      return FAILED;
-      }
-   else
-      strcpy(strncpy(cuepathname, self->pathname, i) + i, "cue");
-   
-   if (!(fp = fopen(cuepathname, "wb")))
+   if (!(fp = fopen(self->cuepathname, "wb")))
       {
       fprintf(stderr, "recorder_write_mp3_cue_sheet: failed to open cue sheet file for writing\n");
-      free(cuepathname);
       return FAILED;
       }
 
-   fprintf(fp, "TITLE \"%s\"\r\n", self->title);
+   fprintf(fp, "TITLE \"%s\"\r\n", self->timestamp);
    fprintf(fp, "PERFORMER \"Recorded with IDJC\"\r\n");
    fprintf(fp, "FILE \"%s\" MP3\r\n", strrchr(self->pathname, '/') + 1);
    
@@ -194,7 +184,6 @@ static int recorder_create_mp3_cuesheet(struct recorder *self)
       }
    
    fclose(fp);
-   free(cuepathname);
    return SUCCEEDED;
    }
       
@@ -519,6 +508,7 @@ static void *recorder_main(void *args)
    struct encoder_op_packet *packet;
    char *rl, *rr, *w, *endp;
    size_t nbytes;
+   int h, m, s;
       
    while (!self->thread_terminate_f)
       {
@@ -565,6 +555,21 @@ static void *recorder_main(void *args)
                   {
                   self->pause_request = FALSE;
                   self->record_mode = RM_PAUSED;
+                  }
+                  
+               if (self->new_artist_title)
+                  {
+                  fprintf(self->fpcue, "  TRACK %02d AUDIO\r\n", ++self->artist_title_writes);
+                  
+                  pthread_mutex_lock(&self->artist_title_mutex);
+                  self->new_artist_title = FALSE;
+                  fprintf(self->fpcue, "    TITLE \"%s\"\r\n", self->title);
+                  fprintf(self->fpcue, "    PERFORMER \"%s\"\r\n", self->artist);
+                  pthread_mutex_unlock(&self->artist_title_mutex);
+
+                  s = self->recording_length_s % 60;
+                  m = self->recording_length_s / 60;
+                  fprintf(self->fpcue, "    INDEX 01 %02d:%02d:00\r\n", m, s);
                   }
                }
             else
@@ -634,6 +639,7 @@ static void *recorder_main(void *args)
             if (self->initial_serial == -1)
                {
                sf_close(self->sf);
+               fclose(self->fpcue);
                self->jack_dataflow_control = JD_FLUSH;
                while (self->jack_dataflow_control != JD_OFF)
                   nanosleep(&ms10, NULL);
@@ -663,7 +669,8 @@ static void *recorder_main(void *args)
 
             fclose(self->fp);
             free(self->pathname);
-            free(self->title);
+            free(self->cuepathname);
+            free(self->timestamp);
             memset(self->first_mp3_header, 0x00, 4);
             self->oldbitrate = 0;
             self->oldsamplerate = 0;
@@ -675,6 +682,7 @@ static void *recorder_main(void *args)
             self->bytes_written = 0;
             self->fp = NULL;
             self->pathname = NULL;
+            self->cuepathname = NULL;
             self->encoder_op = NULL;
             self->stop_request = FALSE;
             self->stop_pending = FALSE;
@@ -696,6 +704,33 @@ int recorder_make_report(struct recorder *self)
    return SUCCEEDED;
    }
 
+int recorder_new_metadata(struct recorder *self, char *artist, char *title)
+   {
+   char *new_artist, *new_title;
+   char *old_artist, *old_title;
+   
+   new_artist = strdup(artist);
+   new_title = strdup(title);
+   if (!new_artist || !new_title)
+      {
+      fprintf(stderr, "recorder_new_metadata: malloc failure\n");
+      return FAILED;
+      }
+   old_artist = self->artist;
+   old_title = self->title;
+   
+   pthread_mutex_lock(&self->artist_title_mutex);
+   self->artist = new_artist;
+   self->title = new_title;
+   self->new_artist_title = TRUE;
+   pthread_mutex_unlock(&self->artist_title_mutex);
+   
+   free(old_artist);
+   free(old_title);
+   
+   return SUCCEEDED;
+   }
+
 int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *other)
    {
    struct recorder_vars *rv = other;
@@ -705,6 +740,7 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
    char *file_extension;
    size_t pathname_size;
    char timestamp[TIMESTAMP_SIZ];
+   size_t base;
 
    if (!strcmp(rv->record_source, "-1"))
       {
@@ -750,7 +786,7 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
          }
       }
 
-   if (!(self->pathname = malloc(pathname_size = strlen(rv->record_folder) + strlen(file_extension) + TIMESTAMP_SIZ + 10)))
+   if (!(self->pathname = malloc(pathname_size = strlen(rv->record_folder) + strlen(file_extension) + TIMESTAMP_SIZ + 9)))
       {
       fprintf(stderr, "recorder_start: malloc failure\n");
       if (self->encoder_op)
@@ -761,13 +797,19 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
    t = time(NULL);
    tm = localtime(&t);
    strftime(timestamp, TIMESTAMP_SIZ, "[%Y-%m-%d][%H:%M:%S]", tm);
-   self->title = strdup(timestamp);
+   self->timestamp = strdup(timestamp);
    snprintf(self->pathname, pathname_size, "%s/idjc.%s.%02d%s", rv->record_folder, timestamp, uv->tab+1, file_extension);
+
+   base = strlen(self->pathname) - strlen(file_extension);
+   self->cuepathname = malloc(base + 5);
+   memcpy(self->cuepathname, self->pathname, base);
+   memcpy(self->cuepathname + base, ".cue", 5);
+
    if (!(self->fp = fopen(self->pathname, "w")))
       {
       fprintf(stderr, "recorder_start: failed to open file %s\nuser should check file permissions on the particular directory\n", rv->record_folder);
       free(self->pathname);
-      free(self->title);
+      free(self->timestamp);
       if (self->encoder_op)
          encoder_unregister_client(self->encoder_op);
       return FAILED;
@@ -780,14 +822,30 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
    else
       {
       /* no encoder implies we are encoding in this module */
+      if (!(self->fpcue = fopen(self->cuepathname, "w")))
+         {
+         fprintf(stderr, "recorder_start: failed to open cue file for writing\n");
+         free(self->pathname);
+         free(self->timestamp);
+         fclose(self->fp);
+         return FAILED;
+         }
+      else
+         {
+         fprintf(self->fpcue, "TITLE \"%s\"\r\n", self->timestamp);
+         fprintf(self->fpcue, "PERFORMER \"Recorded with IDJC\"\r\n");
+         fprintf(self->fpcue, "FILE \"%s\" FLAC\r\n", strrchr(self->pathname, '/') + 1);
+         }
+      
       self->sfinfo.samplerate = ti->audio_feed->sample_rate;
       self->sfinfo.channels = 2;
       self->sfinfo.format = SF_FORMAT_FLAC | SF_FORMAT_PCM_24;
       if (!(self->sf = sf_open_fd(fileno(self->fp), SFM_WRITE, &self->sfinfo, 0)))
          {
          free(self->pathname);
-         free(self->title);
+         free(self->timestamp);
          fclose(self->fp);
+         fclose(self->fpcue);
          fprintf(stderr, "recorder_start: unable to initialise FLAC encoder\n");
          return FAILED;
          }
@@ -798,13 +856,15 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
          {
          fprintf(stderr, "encoder_start: jack ringbuffer creation failure\n");
          free(self->pathname);
-         free(self->title);
+         free(self->timestamp);
          fclose(self->fp);
+         fclose(self->fpcue);
          fprintf(stderr, "recorder_start: failed to create ringbuffers\n");
          return FAILED;
          }
       self->jack_dataflow_control = JD_ON;  
       self->initial_serial = -1;
+      self->new_artist_title = TRUE; /* risk inheriting old metadata rather than start with empty */
       fprintf(stderr, "recorder_start: in FLAC mode\n");
       }
    //if (file_extension == ".oga")
@@ -893,7 +953,10 @@ struct recorder *recorder_init(struct threads_info *ti, int numeric_id)
       return NULL;
       }
    self->threads_info = ti;
-   self->numeric_id = numeric_id;  
+   self->numeric_id = numeric_id;
+   self->artist = strdup("");
+   self->title = strdup("");
+   pthread_mutex_init(&self->artist_title_mutex, NULL);
    pthread_create(&self->thread_h, NULL, recorder_main, self);
    return self;
    }
@@ -902,5 +965,8 @@ void recorder_destroy(struct recorder *self)
    {
    self->thread_terminate_f = TRUE;
    pthread_join(self->thread_h, NULL);
+   pthread_mutex_destroy(&self->artist_title_mutex);
+   free(self->artist);
+   free(self->title);
    free(self);
    }

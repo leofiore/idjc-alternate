@@ -80,7 +80,8 @@ struct recorder
    struct encoder_op *encoder_op;       /* handle for getting input data */
    FILE *fp;
    char *pathname;              /* /path/to/filebeingsaved.[ogg/mp3] */
-   char *title;         /* just the timestamp from the filename */
+   char *cuepathname;            /* pathname of cue file */
+   char *timestamp;             /* just the timestamp from the filename */
    enum record_mode record_mode;
    struct metadata_item *mi_first;      /* log mp3 song title changes */
    struct metadata_item *mi_last;
@@ -100,6 +101,12 @@ struct recorder
    char *right;
    char *combined;
    size_t sf_samples;
+   FILE *fpcue;
+   char *artist;
+   char *title;
+   int artist_title_writes;
+   pthread_mutex_t artist_title_mutex;
+   int new_artist_title;
    };
 
 struct recorder *recorder_init(struct threads_info *ti, int numeric_id);
@@ -109,5 +116,6 @@ int recorder_stop(struct threads_info *ti, struct universal_vars *uv, void *othe
 int recorder_pause(struct threads_info *ti, struct universal_vars *uv, void *other);
 int recorder_unpause(struct threads_info *ti, struct universal_vars *uv, void *other);
 int recorder_make_report(struct recorder *self);
+int recorder_new_metadata(struct recorder *self, char *artist, char *title);
 
 #endif

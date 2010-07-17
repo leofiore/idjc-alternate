@@ -611,6 +611,9 @@ int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, voi
       for (uv->tab = 0; uv->tab < ti->n_encoders; uv->tab++)
          if (!(encoder_new_metadata(ti, uv, other)))
             return FAILED;
+      for (int i = 0; i < ti->n_recorders; i++)
+         if (!(recorder_new_metadata(ti->recorder[i], ev->artist, ev->title)))
+            return FAILED;  
       }
    else
       {

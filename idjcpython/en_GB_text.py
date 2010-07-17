@@ -500,7 +500,7 @@ green_phone_tip = "Mix voice over IP audio to the output stream."
 
 group = "Group"
 
-group_action = " Group Action "
+group_action = " Group Controls "
 
 group_action_tip = "Perform operations on multiple servers in unison."
 
