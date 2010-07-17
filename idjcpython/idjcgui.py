@@ -1052,8 +1052,8 @@ class MainWindow:
       string_to_send = ":%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:%d%d:%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" % (
                                                 self.deckadj.get_value() * -1.0 + 100.0,
                                                 self.crossadj.get_value(),
-                                                self.jingles.deckadj.get_value(),
-                                                self.jingles.interadj.get_value(),
+                                                self.jingles.deckadj.get_value() * -1.0 + 100.0,
+                                                self.jingles.interadj.get_value() * -1.0 + 100.0,
                                                 self.mixbackadj.get_value() * -1.0 + 100.0,
                                                 self.jingles.playing,
                                                 self.player_left.stream.get_active(),

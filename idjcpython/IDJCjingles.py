@@ -330,9 +330,10 @@ class jingles:
       self.vboxvol.pack_start(image, False, False, 0)
       image.show()
       
-      self.deckadj = gtk.Adjustment(0.0, 0.0, 105.0, 1.0, 6.0, 0.0)
+      self.deckadj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 6.0, 0.0)
       self.deckadj.connect("value_changed", self.cb_deckvol)
       self.deckvol = gtk.VScale(self.deckadj)
+      self.deckvol.set_inverted(True)
       self.deckvol.set_update_policy(gtk.UPDATE_CONTINUOUS)
       self.deckvol.set_digits(1)
       self.deckvol.set_value_pos(gtk.POS_TOP)
@@ -355,9 +356,10 @@ class jingles:
       self.vboxinter.pack_start(image, False, False, 0)
       image.show()
       
-      self.interadj = gtk.Adjustment(75.0, 0.0, 100.0, 1.0, 6.0, 0.0)
+      self.interadj = gtk.Adjustment(65.0, 0.0, 100.0, 1.0, 6.0, 0.0)
       self.interadj.connect("value_changed", self.cb_intervol)
       self.intervol = gtk.VScale(self.interadj)
+      self.intervol.set_inverted(True)
       self.intervol.set_update_policy(gtk.UPDATE_CONTINUOUS)
       self.intervol.set_digits(1)
       self.intervol.set_value_pos(gtk.POS_TOP)

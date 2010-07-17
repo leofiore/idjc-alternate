@@ -1,5 +1,9 @@
 	***   Changelog for Internet DJ Console.  Most recent changes first.   ***
 
+* Changes in version 0.8.4 *
+
+Reversed the hints on the Jingles player volume controls to match the main player volume control.
+
 * Changes in version 0.8.3 *
 
 Fixed a bug where the mp3 header was not captured resulting in corrupt vbr tags in recordings.
