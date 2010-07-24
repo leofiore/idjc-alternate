@@ -14027,7 +14027,7 @@ SHOUT_CONFIG="shout-config"
 
 
 
-ac_config_files="$ac_config_files Makefile debian/Makefile include/Makefile include/shout/Makefile include/shout/shout.h src/Makefile src/net/Makefile src/timing/Makefile src/thread/Makefile src/avl/Makefile src/httpp/Makefile doc/Makefile win32/Makefile shout-config shout.pc"
+ac_config_files="$ac_config_files Makefile include/Makefile include/shout/Makefile include/shout/shout.h src/Makefile src/net/Makefile src/timing/Makefile src/thread/Makefile src/avl/Makefile src/httpp/Makefile doc/Makefile win32/Makefile shout-config shout.pc"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -15009,7 +15009,6 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-    "debian/Makefile") CONFIG_FILES="$CONFIG_FILES debian/Makefile" ;;
     "include/Makefile") CONFIG_FILES="$CONFIG_FILES include/Makefile" ;;
     "include/shout/Makefile") CONFIG_FILES="$CONFIG_FILES include/shout/Makefile" ;;
     "include/shout/shout.h") CONFIG_FILES="$CONFIG_FILES include/shout/shout.h" ;;

@@ -3,7 +3,8 @@ pre { font-family:"verdana"; font-size:13pt }
 ul, dl { font-family:"tahoma"; font-size:13pt; background:#A0A0A0; margin-right:20pt; margin-left:20pt; margin-top:0pt; margin-bottom:0pt }
 kbd { font-family:"courier"; font-size: 13pt }
 h3 { font-family:"verdana"; font-size:17pt }
-h1 { font-family:"verdana"; font-size:22pt; font-style:italic }
+h1 { font-family:"verdana"; font-size:23pt; font-style:normal }
+h1.main { font-style:normal; font-size:28pt; text-align:center}
 h4 { font-family:"verdana"; font-size:14pt }
 table { font-family:"times new roman"; font-size:14pt; background:#A0A0A0 }
 hr { margin-left:4pt; margin-right:4pt; margin-top:20pt; margin-bottom:15pt }

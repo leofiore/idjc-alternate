@@ -771,7 +771,7 @@ upload:
 
 # make html documentation in the doc directory and convert the high quality png files to low quality jpg files
 htmldoc:
-	cd ../WebPage/ ; make dynamic ; rm -f ../toplevel/doc/* ; cp *.html ../toplevel/doc/ ; cp style.css ../toplevel/doc ; find . -type f -name '*.jpg' -exec convert '{}' -quality 20 ../toplevel/doc/'{}' \; ; find . -type f -name '*.png' -exec convert '{}' -quality 20 -bordercolor "#fafaf0" -frame @ ../toplevel/doc/'{}'.jpg \; ; cd ../toplevel/doc ; find . -type f -name '*.html' -exec sed -i -e 's/.png"/.png.jpg"/' '{}' \; ; sed -i -e '/The latest build/ d' download.html ; cd ..
+	cd ../WebPage/ ; make dynamic ; rm -f ../git/doc/* ; cp *.html ../git/doc/ ; cp style.css ../git/doc ; find . -type f -name '*.jpg' -exec convert '{}' -quality 20 ../git/doc/'{}' \; ; find . -type f -name '*.png' -exec convert '{}' -quality 20 -bordercolor "#fafaf0" -frame @ ../git/doc/'{}'.jpg \; ; cd ../git/doc ; find . -type f -name '*.html' -exec sed -i -e 's/.png"/.png.jpg"/' '{}' \; ; sed -i -e '/The latest build/ d' download.html ; cd ..
 
 # make and test the ebuild -- you need to set PORTDIR_OVERLAY to /usr/local/portage in your /etc/make.conf
 ebuild:

@@ -12,8 +12,22 @@
 </head>
 <body>
 <h3><center>Changelog for Internet DJ Console</center></h3>
+<p><br /><strong>Changes in version 0.8.4</strong></p>
+<p>Reversed the hints on the Jingles player volume controls to match the main player volume control.</p>
 <p><br /><strong>Changes in version 0.8.3</strong></p>
-<p>Track filenames are now stored for use with Random playlist mode.</p>
+<p>Fixed a bug where the mp3 header was not captured resulting in corrupt vbr tags in recordings.</p>
+<p>Fixed a frame length bug in mp3 vbr tagger in recorder. Would cause mpeg 2, mpeg 2.5 frames to overrun with their padding. This bug also appeared in the mp3tagread module and was fixed.</p>
+<p>New feature to record FLAC files and metadata in an accompanying cue file. This does not use one of the server encoders.</p>
+<p>New group controls feature in the output window allows operations on all server tabs simultaneously.</p>
+<p>The listen URL now appears on the connect button.</p>
+<p>Static metadata text now shows with the correct character encoding when streaming mp3 files.</p>
+<p>Playlist and hostname/mountpoint info now shows with ellipses (...) when appropriate.</p>
+<p>The metadata widget is now in each tab so that metadata formatting information can persist beyond application close.</p>
+<p>Added an expander for server connection details which also resizes the window.</p>
+<p>Added new kick feature widgets and rearranged the server connection buttons to be at the top of each stream tab.</p>
+<p>Fixed a bug where the player freezes at the end of certain tracks when the player is started with the seek bar all the way to the right.</p>
+<p>The 'Random' playlist mode now observes a pattern to eliminate repeat performance of tracks while still allowing a large element of randomness.</p>
+<p>Track filenames are now stored when streaming or recording for use with Random playlist mode.</p>
 <p>Renamed variable shutdown in the mixer to avoid a reported namespace collision.</p>
 <p><br /><strong>Changes in version 0.8.2</strong></p>
 <p>Fixed an out of bounds memory access in mixer.c.</p>

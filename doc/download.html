@@ -53,47 +53,68 @@
 <h3>Getting IDJC</h3>
 <p><strong>Official download link <a href="http://sourceforge.net/projects/idjc">http://sourceforge.net/projects/idjc</a> </strong></p>
 <p>The latest ChangeLog can be found <a href="ChangeLog.html"><em>Here</em></a></p>
-<p>The latest upload (may not be stable, may contain half implemented features). <a href="http://web.bethere.co.uk/idjc/download/idjc-0.8.3_pre1.tar.gz"><em>Download link</em></a>.</p>
+<p>The git repository is available for the brave and curious (contains the latest changes).</p>
+<p><pre><kbd>	$ git clone git://idjc.git.sourceforge.net/gitroot/idjc/idjc</kbd></pre></p>
 <p>
 IDJC is available in RPM format for SuSE Linux via Packman. <a href="http://packman.links2linux.de/package/idjc">Download links &amp; details</a>.</p>
 <p>
 A PISI package for Pardus Linux is available
-<a href="http://paketler.pardus.org.tr/contrib-2008">here</a>.</p>
+<a href="http://paketler.pardus.org.tr/contrib-2009">here</a>.</p>
 <hr />
 <h3>Compile instructions</h3>
 <p>Please read the following section all the way through before typing in the commands.</p>
 <p>
 Unpack the source tarball and cd into the source tree. (please note that if you are reading these instructions direct from the web to substitute your version number for the ones shown below).
 </p>
-<p><pre><kbd>	$ tar xzvf idjc-0.8.3_pre1.tar.gz
-	$ cd idjc-0.8.3_pre1
+<p><pre><kbd>	$ tar xzvf idjc-0.8.3.tar.gz
+	$ cd idjc-0.8.3
 </kbd></pre></p>
 <p>
-The following line may be familiar to you.  It is used to generate the Makefile.  To use my suggested configuration you would type.
+Note, the following line contains the letter O.
 </p>
 <p><pre><kbd>	$ ./configure CFLAGS="-O2"
 </kbd></pre></p>
-<p>Note that's a letter 'O' rather than a digit '0'</p>
-<p>
-Now type make.
-</p>
 <p><pre><kbd>	$ make
 </kbd></pre></p>
 <p>
-The next command needs to be run as root (using sudo perhaps?).
+The next command needs to be run as root (using sudo perhaps?). It really depends on which distribution you are using.
 </p>
-<p><pre><kbd>	# make install
+<p><pre><kbd>	$ sudo make install
+</kbd></pre></p>
+<p>or</p>
+<p><pre><kbd>	$ su -c "make install"
 </kbd></pre></p>
 <p>
-Now to launch IDJC (not as root).
+Finally to attempt to launch IDJC (read the Post Configuration section if this fails).
 </p>
 <p><pre><kbd>	$ idjc
 </kbd></pre></p>
+
+<h3>Post Configuration</h3>
+<p>The chances are if you are running this for the first time that your system is not configured for real time scheduling. This is required by jack-audio-connection-kit by default and will require some setting up.</p>
+<p>In order to do this type in a console.</p>
+<p><pre><kbd>	$ jackd -d alsa</kbd></pre></p>
+<p>This is the command to explicitly launch the jack-audio-connection-kit sound server.</p>
+<p>If you are not immediately returned to the command prompt all is well, otherwise follow the configuration
+message on the screen. In particular you will be asked to edit a file called /etc/security/limits.conf and
+type in some text. Go ahead and try launching jackd again after logging out and back in again. Read further
+messages and follow instructions until it launches. Once launched IDJC will launch also.</p>
+<p>You may be asked to change settings for the audio group. If so make sure your user account is in the audio group
+and log out and back in again to make that change apply.</p>
+
+<p>If all this sounds too difficult you <em>can</em> run jackd without real time scheduling but performance will suffer.
+Most likely there will be gaps in the audio that the listeners will also hear.</p>
+<p><pre><kbd>	$ echo "/usr/bin/jackd --no-realtime -d alsa" > ~/.jackdrc</kbd></pre></p>
+<p>Only use the above if this all seems too difficult. The file .jackdrc is the jackd configuration file and is a one-liner.</p>
+<p>The sound server can otherwise be configured to have lower latency and should also in any event have the sample
+rate adjusted to that of CD audio like so.</p>
+<p><pre><kbd>	$echo "/usr/bin/jackd -d alsa -r 44100 -p 256" > ~/.jackdrc</kbd></pre></p>
 <hr />
 <h3>Alternate language support</h3>
 <p>IDJC has partial translation for the German language.</p>
 <p><pre><kbd>	$ LANG=de_DE idjc
 </kbd></pre></p>
+
 <hr />
 <pre><center>Back to <a href="index.html">Main Window</a></center></pre>
-</p></p></body></html>
+</body></html>

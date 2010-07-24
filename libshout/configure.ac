@@ -222,7 +222,7 @@ AC_SUBST(PROFILE)
 AC_SUBST(XIPH_CFLAGS)
 AC_SUBST(XIPH_CPPFLAGS)
 
-AC_OUTPUT([Makefile debian/Makefile include/Makefile include/shout/Makefile
+AC_OUTPUT([Makefile include/Makefile include/shout/Makefile
   include/shout/shout.h src/Makefile src/net/Makefile src/timing/Makefile
   src/thread/Makefile src/avl/Makefile src/httpp/Makefile doc/Makefile
   win32/Makefile shout-config shout.pc])
