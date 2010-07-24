@@ -1327,9 +1327,20 @@ class StreamTab(Tab):
       self.encoder_on_count = 0                 # when this counter hits zero the encoder is turned off
       self.format_page = 0                      # the current format page
       self.subformat_page = 0                   # the Ogg sub-format
-      Tab.set_spacing(self, 10)
+      self.set_spacing(10)
+           
+      self.ic_expander = gtk.Expander(ln.individual_controls)
+      self.pack_start(self.ic_expander, False)
+      self.ic_expander.show()
             
-      hbox = gtk.HBox()                                 # box containing connect button and timers
+      self.ic_frame = gtk.Frame()
+      ic_vbox = gtk.VBox()                 # box containing connect button and timers
+      ic_vbox.set_border_width(10)
+      ic_vbox.set_spacing(10)
+      self.ic_frame.add(ic_vbox)
+      ic_vbox.show()
+      
+      hbox = gtk.HBox()
       hbox.set_spacing(6)
       self.server_connect = gtk.ToggleButton()
       set_tip(self.server_connect, ln.server_connect_tip)
@@ -1347,7 +1358,7 @@ class StreamTab(Tab):
       hbox.pack_start(self.kick_incumbent, False)
       self.kick_incumbent.show()
       
-      Tab.pack_start(self, hbox, False)
+      ic_vbox.pack_start(hbox, False)
       hbox.show()
       
       hbox = gtk.HBox()
@@ -1370,7 +1381,7 @@ class StreamTab(Tab):
       hbox.pack_end(self.kick_before_start, False)
       self.kick_before_start.show()
       
-      Tab.pack_start(self, hbox, False, False, 0)
+      ic_vbox.pack_start(hbox, False, False, 0)
       hbox.show()
       
       hbox = gtk.HBox()                                 # box containing auto action widgets
@@ -1395,7 +1406,7 @@ class StreamTab(Tab):
       if num_recorders:
          self.start_recorder_action.show()
       set_tip(self.start_recorder_action, ln.auto_start_recorder_tip)
-      Tab.pack_start(self, hbox, False, False, 0)
+      ic_vbox.pack_start(hbox, False, False, 0)
       hbox.show()
 
       hbox = gtk.HBox()
@@ -1414,8 +1425,10 @@ class StreamTab(Tab):
       hbox.pack_start(self.metadata_update, False)
       self.metadata_update.show()
       
-      self.pack_start(hbox, False)
+      ic_vbox.pack_start(hbox, False)
       hbox.show()
+      
+      self.pack_start(self.ic_frame, False)
       
       self.details = gtk.Expander(ln.stream_details)
       set_tip(self.details, ln.stream_details_tip)
@@ -2334,6 +2347,8 @@ class SourceClientGui:
                      rvalue = widget.get_text()
                   elif method == "value":
                      rvalue = str(widget.get_value())
+                  elif method == "expanded":
+                     rvalue = str(int(widget.get_expanded()))
                   elif method == "notebookpage":
                      rvalue = str(widget.get_current_page())
                   elif method == "password":
@@ -2416,6 +2431,9 @@ class SourceClientGui:
                            elif method == "active":
                               if int_rvalue is not None:
                                  widget.set_active(int_rvalue)
+                           elif method == "expanded":
+                              if int_rvalue is not None:
+                                 widget.set_expanded(int_rvalue)
                            elif method == "value":
                               if float_rvalue is not None:
                                  widget.set_value(float_rvalue)
@@ -2455,6 +2473,18 @@ class SourceClientGui:
             self.window.resize((int(self.win_x)), 1)
          else:
             self.window.resize((int(self.win_x)), 1000)
+      else:
+         next_expander.set_expanded(expander.get_expanded())
+
+   def cb_stream_controls_expand(self, expander, param_spec, next_expander, frame, details_shown):
+      if expander.get_expanded():
+         frame.show()
+      else:
+         frame.hide()
+      
+      if expander.get_expanded() == next_expander.get_expanded():
+         if not details_shown():
+            self.window.resize((int(self.win_x)), 1)
       else:
          next_expander.set_expanded(expander.get_expanded())
       
@@ -2502,6 +2532,7 @@ class SourceClientGui:
       tab = self.streamtabframe.tabs[-1]
       for next_tab in self.streamtabframe.tabs:
          tab.details.connect("notify::expanded", self.cb_stream_details_expand, next_tab.details, tab.scrolled_window)
+         tab.ic_expander.connect("notify::expanded", self.cb_stream_controls_expand, next_tab.ic_expander, tab.ic_frame, self.streamtabframe.tabs[0].details.get_expanded)
          tab = next_tab
                                                                 
       self.streamtabframe.set_sensitive(True)
@@ -2517,7 +2548,10 @@ class SourceClientGui:
       self.numeric_id = 0                       # pretend to be a tabframe and its tab for save/load purposes
       self.tab_type = "server_window"           #
       self.objects = {  "width" : (self.win_x, "value"),
-                        "height": (self.win_y, "value") }
+                        "height": (self.win_y, "value"),
+                        "streamer_page": (self.streamtabframe.notebook, "notebookpage"),
+                        "recorder_page": (self.recordtabframe.notebook, "notebookpage"),
+                        "controls_shown": (self.streamtabframe.tabs[0].ic_expander, "expanded") }
       self.objects.update(self.streamtabframe.objects)
       self.load_previous_session()
       self.is_streaming = False

@@ -2,6 +2,10 @@
 
 * Changes in version 0.8.4 *
 
+The active record and stream tabs are now remembered across application restarts.
+
+A new individual controls expander added to reduce clutter in the output window.
+
 Reversed the hints on the Jingles player volume controls to match the main player volume control.
 
 * Changes in version 0.8.3 *

@@ -565,6 +565,8 @@ in_dj_mix_tip = "Make the microphone audio audible in the DJ mix. This may not a
 
 initial_player_settings = "Player Settings At Startup"
 
+individual_controls = "Individual Controls"
+
 interval = "Interval:"
 
 invert_left = "Invert left mic audio"
