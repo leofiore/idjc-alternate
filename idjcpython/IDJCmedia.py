@@ -48,21 +48,44 @@ from idjc_config import *
 from ln_text import ln
 
 try:
-   from collections import namedtuple
+   from collections import namedtuple, Iterator
 except:
    from nt import namedtuple
 
 # Named tuple for a playlist row.
-class PlayerRow(namedtuple("PlayerRow", "rsmeta filename length meta encoding title artist replaygain")):
+class PlayerRow(namedtuple("PlayerRow", "rsmeta filename length meta encoding title artist replaygain cuesheet")):
    def __nonzero__(self):
       return self.rsmeta != "<s>valid</s>"
 
 # Playlist value indicating a file isn't valid.
-NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0)
+NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None)
 
 # Replay Gain value to indicate default.
 RGDEF = 100.0
 
+CueSheetTrack = namedtuple("CueSheetTrack", "tracknum play performer title offset duration")
+
+class CueSheetListStore(gtk.ListStore):
+   def __nonzero__(self):
+      return len(self) != 0
+      
+   def __getitem__(self, i):
+      return CueSheetTrack(*gtk.ListStore.__getitem__(self, i))
+      
+   def __iter__(self):
+      i = 0
+      while 1:
+         try:
+            val = self[i]
+         except IndexError:
+            break
+         yield val
+         i += 1
+      
+   def __init__(self):
+      columns = (int, int, str, str, int, int)
+      assert len(columns) == len(CueSheetTrack._fields)
+      gtk.ListStore.__init__(self, *columns)
 
 class ButtonFrame(gtk.Frame):
    def __init__(self, title):
@@ -421,6 +444,7 @@ class IDJC_Media_Player:
       length = 0
       artist_retval = u""
       title_retval = u""
+      cuesheet = CueSheetListStore()
       
       # Strip away any file:// prefix
       if filename.count("file://", 0, 7):
@@ -611,9 +635,9 @@ class IDJC_Media_Player:
       
       if artist and title:
          meta_name = artist + u" - " + title
-         return PlayerRow(rich_safe(meta_name), filename, length, meta_name, encoding, title, artist, rg)
+         return PlayerRow(rich_safe(meta_name), filename, length, meta_name, encoding, title, artist, rg, cuesheet)
       else:
-         return PlayerRow(rsmeta_name, filename, length, meta_name, encoding, title_retval, artist_retval, rg)
+         return PlayerRow(rsmeta_name, filename, length, meta_name, encoding, title_retval, artist_retval, rg, cuesheet)
 
    # Update playlist entries for a given filename e.g. when tag has been edited
    def update_playlist(self, newdata):
@@ -671,8 +695,14 @@ class IDJC_Media_Player:
             elif isinstance(item, float):
                item = str(item)
                fh.write("f")
-            else:
+            elif isinstance(item, str):
                fh.write("s")
+            elif isinstance(item, CueSheetListStore):
+               fh.write("c")
+               if item:
+                  item = "(%s, )" % ", ".join(repr(x) for x in item)
+               else:
+                  item = "()"
             fh.write(str(len(item)) + ":" + item)
          fh.write("\n")
       model, iter = self.treeview.get_selection().get_selected()
@@ -764,10 +794,15 @@ class IDJC_Media_Player:
                value = int(value)
             elif text[start] == "f":
                value = float(value)
-            else:
-               assert(text[start] == "s")
-         except:
-            print "pl_unpack: playlist line not valid"
+            elif text[start] == "s":
+               pass
+            elif text[start] == "c":
+               csts = eval(value, {"__builtins__":None},{"CueSheetTrack":CueSheetTrack})
+               value = CueSheetListStore()
+               for cst in csts:
+                  value.append(cst)
+         except Exception, e:
+            print "pl_unpack: playlist line not valid", e
             try:
                return NOTVALID._replace(filename=reply[1])
             except IndexError:
@@ -2989,8 +3024,8 @@ class IDJC_Media_Player:
       # The first one gets rendered and is derived from id3 tags or just is the filename
       # when the id3 tag is not sufficient.
       # The second one always is the filename and is passed to the player.
-      self.liststore = gtk.ListStore(str, str, int, str, str, str, str, float)
-      self.templist = gtk.ListStore(str, str, int, str, str, str, str, float)
+      self.liststore = gtk.ListStore(str, str, int, str, str, str, str, float, CueSheetListStore)
+      self.templist = gtk.ListStore(str, str, int, str, str, str, str, float, CueSheetListStore)
       self.treeview = gtk.TreeView(self.liststore)
       self.rgcellrender = gtk.CellRendererText()
       self.playtimecellrender = gtk.CellRendererText()
