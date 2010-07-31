@@ -63,7 +63,8 @@ NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None)
 # Replay Gain value to indicate default.
 RGDEF = 100.0
 
-CueSheetTrack = namedtuple("CueSheetTrack", "tracknum play performer title offset duration")
+# Pathname is an absolute file path or 'missing' or 'pregap'.
+CueSheetTrack = namedtuple("CueSheetTrack", "pathname tracknum play performer title offset duration")
 
 class CueSheetListStore(gtk.ListStore):
    def __nonzero__(self):
@@ -83,7 +84,7 @@ class CueSheetListStore(gtk.ListStore):
          i += 1
       
    def __init__(self):
-      columns = (int, int, str, str, int, int)
+      columns = (str, int, int, str, str, int, int)
       assert len(columns) == len(CueSheetTrack._fields)
       gtk.ListStore.__init__(self, *columns)
 
@@ -382,7 +383,7 @@ class Supported(object):
    def check_playlists(self, pathname):
       return self._check(pathname, self.playlists)
    def __init__(self):
-      self.media = [ ".ogg", ".oga", ".wav", ".aiff", ".au" ]
+      self.media = [ ".ogg", ".oga", ".wav", ".aiff", ".au", ".cue", ".txt" ]
       self.playlists = [ ".m3u", ".xspf", ".pls" ]
       
       if avcodec and avformat:
@@ -437,14 +438,69 @@ class nice_listen_togglebutton(gtk.ToggleButton):
          gtk.ToggleButton.set_sensitive(self, True)
          gtk.ToggleButton.set_inconsistent(self, False)
          
+def cue_sheet_split(text):
+   """Split a line from a cue sheet into parts.
+   
+      Only one quoted section of text is allowed.
+      Effort is made to tolerate quotes within the quotes.
+      The command is forced to upper case since lower is tolerated.
+      Unoptimised for blank lines since they are rare.
+   """
+
+   text = text.strip()
+   try:
+      left, quoted = text.split(' "', 1)
+      try:
+         if quoted.endswith('"'):
+            quoted = quoted[:-1]
+            right = ""
+         else:
+            quoted, right = quoted.rsplit('" ', 1)
+      except ValueError:
+         raise ValueError("missing quotation mark in cue sheet")
+      else:
+         parts = left.split() + [quoted] + right.split()
+   except ValueError:
+      parts = text.split()
+
+   # Filter empty elements and capitalise the command, ignoring blank lines.
+   parts = [x for x in parts if x]
+   try:
+      parts[0] = parts[0].upper()
+   except IndexError:
+      pass
+   return parts
+   
+def cue_sheet_read(cue_pathname):
+   """File reader for cue sheets."""
+
+   with open(cue_pathname) as f:
+      for line in f:
+         parts = cue_sheet_split(line)
+         if parts:
+            yield parts
+         
 class IDJC_Media_Player:
+   def cue_sheet_parse(self, cue_pathname):
+      print "~~~ cue sheet data follows ~~~"
+      try:
+         for parts in cue_sheet_read(cue_pathname):
+            print parts
+      except (IOError, ValueError), e:
+         print "failed reading cue sheet."
+         print e
+         return NOTVALID
+      finally:
+         print "~~~~~~~~~~~~~~~~~~~~~~~~~~"
+         
+      return NOTVALID # TODO: Return the finished article.
+   
    def get_media_metadata(self, filename):
       artist = u""
       title = u""
       length = 0
       artist_retval = u""
       title_retval = u""
-      cuesheet = CueSheetListStore()
       
       # Strip away any file:// prefix
       if filename.count("file://", 0, 7):
@@ -455,6 +511,11 @@ class IDJC_Media_Player:
       filext = supported.check_media(filename)
       if filext == False or os.path.isfile(filename) == False:
          return NOTVALID._replace(filename=filename)
+ 
+      if filext in (".cue", ".txt"):
+         return self.cue_sheet_parse(filename)
+      else:
+         cuesheet = CueSheetListStore() # Empty.
  
       # Use this name for metadata when we can't get anything from tags.
       # The name will also appear grey to indicate a tagless state.

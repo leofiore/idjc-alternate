@@ -180,7 +180,7 @@ static int recorder_create_mp3_cuesheet(struct recorder *self)
          }
       else
          fprintf(fp, "    TITLE \"%s\"\r\n", mi->artist_title);
-      fprintf(fp, "    INDEX 01 %02d:%02d:00\r\n", mi->time_offset / 60000, mi->time_offset / 1000 % 60);
+      fprintf(fp, "    INDEX 01 %02d:%02d:%02d\r\n", mi->time_offset / 60000, mi->time_offset / 1000 % 60, mi->time_offset % 1000 * 75 / 1000);
       }
    
    fclose(fp);
@@ -508,7 +508,7 @@ static void *recorder_main(void *args)
    struct encoder_op_packet *packet;
    char *rl, *rr, *w, *endp;
    size_t nbytes;
-   int h, m, s;
+   int m, s, f;
       
    while (!self->thread_terminate_f)
       {
@@ -569,7 +569,8 @@ static void *recorder_main(void *args)
 
                   s = self->recording_length_s % 60;
                   m = self->recording_length_s / 60;
-                  fprintf(self->fpcue, "    INDEX 01 %02d:%02d:00\r\n", m, s);
+                  f = self->recording_length_ms % 1000 * 75 / 1000;
+                  fprintf(self->fpcue, "    INDEX 01 %02d:%02d:%02d\r\n", m, s, f);
                   }
                }
             else
@@ -834,7 +835,7 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
          {
          fprintf(self->fpcue, "TITLE \"%s\"\r\n", self->timestamp);
          fprintf(self->fpcue, "PERFORMER \"Recorded with IDJC\"\r\n");
-         fprintf(self->fpcue, "FILE \"%s\" FLAC\r\n", strrchr(self->pathname, '/') + 1);
+         fprintf(self->fpcue, "FILE \"%s\" WAVE\r\n", strrchr(self->pathname, '/') + 1);
          }
       
       self->sfinfo.samplerate = ti->audio_feed->sample_rate;

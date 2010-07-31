@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.4 *
 
+Cue sheets now indicate type WAVE when making a cue sheet for a flac file and cue sheets now store sub-second time offset information.
+
 The active record and stream tabs are now remembered across application restarts.
 
 A new individual controls expander added to reduce clutter in the output window.
