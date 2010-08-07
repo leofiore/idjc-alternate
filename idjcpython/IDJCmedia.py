@@ -24,6 +24,7 @@ import urllib
 import subprocess
 import random
 import signal
+import re
 import xml.dom.minidom as mdom
 from stat import *
 from collections import deque
@@ -438,191 +439,174 @@ class nice_listen_togglebutton(gtk.ToggleButton):
       else:
          gtk.ToggleButton.set_sensitive(self, True)
          gtk.ToggleButton.set_inconsistent(self, False)
+        
 
-         
-def cuesheet_tokenize(iterable):
-   """Tokenizer for cue sheets.
-   
-   This routine will iteratively take one line at a time and return a
-   list of tokens for each whitespace separated element.
-   
-   The left 'command' parameter will be converted to upper case and
-   strings surrounded by "quotes" will not be split.
-   
-   """
-   for i, line in enumerate(iterable):
-      line = line.strip().replace("\t", " ")
+class CueSheet(object):
+   """A namespace class for parsing cue sheets."""
+
+   _operands = (("PERFORMER", "SONGWRITER", "TITLE", "PREGAP", "POSTGAP"),
+                ("FILE", "TRACK", "INDEX"))
+   _operands = dict((k, v + 1) for v, o in enumerate(_operands) for k in o)
+
+   # Try to split a string into three parts with a large quoted section
+   # and parts fore and aft.
+   _quoted = re.compile(r'(.*?)[ \t]"(.*)"[ \t](.*)').match
+
+   def _time_handler(self, time_str):
+      """Returns the number of frames of audio (75ths of seconds)
+
+      Minutes can exceed 99 going beyond the cue sheet standard.
+
+      """
       try:
-         left, quoted = line.split(' "', 1)
-         try:
-            if quoted.endswith('"'):
-               quoted = quoted[:-1]
-               right = ""
-            else:
-               quoted, right = quoted.rsplit('" ', 1)
-         except ValueError:
-            raise ValueError("missing quotation mark in cue sheet")
-         else:
-            tokens = left.split() + [quoted] + right.split()
+         mm, ss, ff = [int(x) for x in time_str.split(":")]
       except ValueError:
-         tokens = line.split()
+         raise ValueError("time must be in (m*)mm:ss:ff format %s" % self.line)
 
-      # Filter empty tokens representing excess whitespace.
-      tokens = [x for x in tokens if x]
-      if tokens:
-         # Commands are case insensitive so convert them.
-         tokens[0] = tokens[0].upper()
-         yield i, tokens
+      if ff < 0 or ff > 74 or ss < 0 or ss > 59 or mm < 0:
+         raise ValueError("a time value is out of range %s" % self.line)
 
+      return ff + 75 * ss + 75 * 60 * mm
 
-def cuesheet_parse(tokenized_data):
-   """Build a preliminary playlist using just cuesheet info.
-   
-   A finalized playlist would contain full path names of
-   authenticated files, but this is being kept pure at this stage.
-   
-   CD text files are not supported.
-   FLAGS are ignored.
-   
-   The minutes time parameter can spill over 99 without restriction.
-   Multiple PERFORMER, SONGWRITER, TITLE tags allowed.
-   
-   """
-   filename = None
-   tracknum = 0
-   segment = defaultdict(partial(defaultdict, list))
-   
-   for i, line in tokenized_data:
-      command = line[0]
-      operand = line[1:]
-      line = "on line %d %s" % (i + 1, line)
+   def _int_handler(self, int_str):
+      """Attempt to convert to an integer."""
+
+      try:
+         ret = int(int_str)
+      except:
+         raise ValueError("expected integer value for %s %s", (int_str, self.line))
+      return ret
+
+   @classmethod
+   def _tokenize(cls, iterable):
+      """Scanner/tokenizer for cue sheets.
       
-      if command in ("PERFORMER", "SONGWRITER", "TITLE"):
-         # Allow multiple of these tags as not expressly forbidden.
-         if len(operand) != 1:
-            raise ValueError("one operand only %s" % line)
-         segment[tracknum][command].append(operand[0])
+      This routine will iteratively take one line at a time and return
+      the line number, command, and any operands related to the command.
       
-      elif command == "FILE":
-         if len(operand) != 2:
-            raise ValueError("two operands only %s" % line)
+      Quoted text will have spaces and tabs intact and counts as one,
+      otherwise all consecutive non-whitespace is a token. The first
+      token is the command, the rest are it's operands.
+      
+      """
+      for i, line in enumerate(iterable):
+         line = line.strip() + " "
+         match = cls._quoted(line)
+         if match:
+            left, quoted, right = match.groups()
+            left = left.replace("\t", " ").split()
+            right = right.replace("\t", " ").split()
+         else:
+            left = line.replace("\t", " ").split()
+            right = [""]
+            quoted = ""
+               
+         tokens = filter(lambda x: x, left + [quoted] + right)
+         yield i + 1, tokens[0].upper(), tokens[1:]
 
-         if not operand[1] in ("WAVE", "MP3", "AIFF"):
-            raise ValueError("unsupported file type %s" %line)
+   def _parse_PERFORMER(self):
+      self.segment[self.tracknum][self.command].append(self.operand[0])
+      
+   _parse_SONGWRITER = _parse_TITLE = _parse_PERFORMER
 
-         filename = operand[0]
-         prevframes = 0
+   def _parse_FILE(self):
+      if not self.operand[1] in ("WAVE", "MP3", "AIFF"):
+         raise ValueError("unsupported file type %s" % self.line)
          
-      elif command == "TRACK":
-         if filename is None:
-            raise ValueError("no filename yet specified %s" % line)
+      self.filename = self.operand[0]
+      self.prevframes = 0
+      
+   def _parse_TRACK(self):
+      if self.filename is None:
+         raise ValueError("no filename yet specified %s" % self.line)
 
-         if len(operand) != 2:
-            raise ValueError("two operands only %s" % line)
+      if self.tracknum and self.index < 1:
+         raise ValueError("track %02d lacks a 01 index" % self.tracknum)
 
-         if operand[1] != "AUDIO":
-            raise ValueError("only AUDIO track datatype supported %s" % line)
+      if self.operand[1] != "AUDIO":
+         raise ValueError("only AUDIO track datatype supported %s" % self.line)
 
-         try:
-            num = int(operand[0])
-         except ValueError:
-            raise ValueError("non integer track number %s" % line)
+      num = self._int_handler(self.operand[0])
+      self.tracknum += 1
+      self.index = -1
+      if num != self.tracknum:
+         raise ValueError("unexpected track number %s" % self.line)
+                  
+   def _parse_PREGAP(self):
+      if self.tracknum == 0 or self.index != -1 or "PREGAP" in self.segment[self.tracknum]:
+         raise ValueError("unexpected PREGAP command %s" % self.line)
+         
+      self.segment[self.tracknum]["PREGAP"] = self._time_handler(self.operand[0])
 
-         tracknum += 1
-         index = -1
+   def _parse_INDEX(self):
+      if self.tracknum == 0:
+         raise ValueError("no track yet specified %s" % self.line)
+      
+      if "POSTGAP" in self.segment[self.tracknum]:
+         raise ValueError("INDEX command following POSTGAP %s" % self.line)
+      
+      num = self._int_handler(self.operand[0])
+      frames = self._time_handler(self.operand[1])
+      
+      if self.tracknum == 1 and self.index == -1 and frames != 0:
+         raise ValueError("first index must be zero for a file %s" % self.line)
 
-         if num != tracknum:
-            raise ValueError("unexpected track number %s" % line)
+      if self.index == -1 and num == 1:
+         self.index += 1
+      self.index += 1
+      if num != self.index:
+         raise ValueError("unexpected index number %s" % self.line)
          
-      elif command == "PREGAP":
-         if tracknum == 0 or index != -1 or "PREGAP" in segment[tracknum]:
-            raise ValueError("unexpected PREGAP command %s" % line)
-            
-         if len(operand) != 1:
-            raise ValueError("one operand only %s" % line)
-            
-         try:
-            mm, ss, ff = [int(x) for x in operand[0].split(":")]
-         except ValueError:
-            raise ValueError("pregap time must be in mm:ss:ff format %s" % line)
+      if frames < self.prevframes:
+         raise ValueError("index time before the previous index %s" % self.line)
          
-         frames = ff + 75 * ss + 75 * 60 * mm
+      if self.prevframes and frames == self.prevframes:
+         raise ValueError("index time no different than previously %s" % self.line)
          
-         segment[tracknum]["PREGAP"] = frames
+      self.segment[self.tracknum][self.index] = (self.filename, frames)
+      
+      self.prevframes = frames
+                  
+   def _parse_POSTGAP(self):
+      if self.tracknum == 0 or self.index < 1 or "POSTGAP" in self.segment[self.tracknum]:
+         raise ValueError("unexpected POSTGAP command %s" % self.line)
          
-      elif command == "INDEX":
-         if tracknum == 0:
-            raise ValueError("no track yet specified %s" % line)
-         
-         if "POSTGAP" in segment[tracknum]:
-            raise ValueError("INDEX command following POSTGAP %s" % line)
-         
-         if len(operand) != 2:
-            raise ValueError("incorrect number of operands %s" % line)
+      self.segment[self.tracknum]["POSTGAP"] = self._time_handler(operand[0])
 
-         try:
-            num = int(operand[0])
-         except ValueError:
-            raise ValueError("non integer track number %s" % line)
+   def parse(self, iterable):
+      """Return a parsed cuesheet object."""
+      
+      self.filename = None
+      self.tracknum = 0
+      self.segment = defaultdict(partial(defaultdict, list))
 
-         try:
-            mm, ss, ff = [int(x) for x in operand[1].split(":")]
-         except ValueError:
-            raise ValueError("time must be in mm:ss:ff format %s" % line)
+      for self.i, self.command, self.operand in self._tokenize(iterable):
+         if self.command not in self._operands:
+            continue
 
-         if ff < 0 or ff > 74 or ss < 0 or ss > 59 or mm < 0:
-            raise ValueError("time element detected out of range %s" % line)
-         
-         frames = ff + 75 * ss + 75 * 60 * mm
-         
-         print index, frames
-         
-         if tracknum == 1 and index == -1 and frames != 0:
-            raise ValueError("first index must be zero for a file %s" % line)
+         self.line = "on line %d" % self.i
 
-         if index == -1 and num == 1:
-            index += 1
-         index += 1
-         if num != index:
-            raise ValueError("unexpected index number %s" % line)
+         if len(self.operand) != self._operands[self.command]:
+            raise ValueError("wrong number of operands got %d required %d %s" %
+                  (len(self.operand), self._operands[self.command], self.line))
+         else:
+            getattr(self, "_parse_" + self.command)()
 
-         print index
-            
-         if frames < prevframes:
-            raise ValueError("index time before the previous index %s" % line)
-            
-         if prevframes and frames == prevframes:
-            raise ValueError("index time no different than previously %s" % line)
-            
-         segment[tracknum][index] = (filename, frames)
+      if self.tracknum == 0:
+         raise ValueError("no tracks")
          
-         prevframes = frames
-         
-      elif command == "POSTGAP":
-         if tracknum == 0 or index < 1 or "POSTGAP" in segment[tracknum]:
-            raise ValueError("unexpected POSTGAP command %s" % line)
-            
-         if len(operand) != 1:
-            raise ValueError("one operand only %s" % line)
-            
-         try:
-            mm, ss, ff = [int(x) for x in operand[0].split(":")]
-         except ValueError:
-            raise ValueError("pregap time must be in mm:ss:ff format %s" % line)
-         
-         frames = ff + 75 * ss + 75 * 60 * mm
-         
-         segment[tracknum]["POSTGAP"] = frames
-         
-   return segment
+      if self.index < 1:
+         raise ValueError("track %02d lacks a 01 index" % tracknum)
+                 
+      return self.segment
 
-         
+       
 class IDJC_Media_Player:
    def make_cuesheet_playlist_entry(self, cue_pathname):
       cuesheet_liststore = CueSheetListStore()
       try:
          with open(cue_pathname) as f:
-            segment_data = cuesheet_parse(cuesheet_tokenize(f))
+            segment_data = CueSheet().parse(f)
       except (IOError, ValueError), e:
          print "failed reading cue sheet", cue_pathname
          print e
