@@ -1387,6 +1387,8 @@ twodblimit_tip = "This option may improve the audio quality at the expense of a 
 
 unexpected = "A connection to a radio server failed."
 
+unknown = "Unknown"
+
 unp_controls = "Unprocessed Audio Controls"
 
 unp_left = "Left"

@@ -66,9 +66,11 @@ NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None)
 RGDEF = 100.0
 
 # Pathname is an absolute file path or 'missing' or 'pregap'.
-CueSheetTrack = namedtuple("CueSheetTrack", "pathname tracknum play performer title offset duration")
+CueSheetTrack = namedtuple("CueSheetTrack", "pathname play tracknum index performer title offset duration replaygain")
 
 class CueSheetListStore(gtk.ListStore):
+   _columns = (str, int, int, int, str, str, int, int, float)
+   assert len(_columns) == len(CueSheetTrack._fields)
    def __nonzero__(self):
       return len(self) != 0
       
@@ -86,9 +88,7 @@ class CueSheetListStore(gtk.ListStore):
          i += 1
       
    def __init__(self):
-      columns = (str, int, int, str, str, int, int)
-      assert len(columns) == len(CueSheetTrack._fields)
-      gtk.ListStore.__init__(self, *columns)
+      gtk.ListStore.__init__(self, *self._columns)
 
 class ButtonFrame(gtk.Frame):
    def __init__(self, title):
@@ -385,7 +385,7 @@ class Supported(object):
    def check_playlists(self, pathname):
       return self._check(pathname, self.playlists)
    def __init__(self):
-      self.media = [ ".ogg", ".oga", ".wav", ".aiff", ".au", ".cue", ".txt" ]
+      self.media = [ ".ogg", ".oga", ".wav", ".aiff", ".au", ".txt", ".cue" ]
       self.playlists = [ ".m3u", ".xspf", ".pls" ]
       
       if avcodec and avformat:
@@ -597,6 +597,10 @@ class CueSheet(object):
          
       if self.index < 1:
          raise ValueError("track %02d lacks a 01 index" % tracknum)
+       
+      for each in self.segment.itervalues():
+          del each.default_factory
+      del self.segment.default_factory
                  
       return self.segment
 
@@ -611,10 +615,74 @@ class IDJC_Media_Player:
          print "failed reading cue sheet", cue_pathname
          print e
          return NOTVALID
+      
+      basepath = os.path.split(cue_pathname)[0]
+      oldfilename = None
+      totalframes = trackframes = cumulativeframes = 0
+      global_cue_performer = global_cue_title = ""
 
-      print segment_data
+      for key, val in sorted(segment_data.iteritems()):
+         track = key
+         cue_performer = ", ".join(val.get("PERFORMER", []))
+         cue_title = ", ".join(val.get("TITLE", []))
+         if key == 0:
+            global_cue_performer = cue_performer
+            global_cue_title = cue_title
+         else:
+            for key2, val2 in sorted(val.iteritems()):
+               if isinstance(key2, int):
+                  index = key2
+                  filename, frames = val2
+                  if filename != oldfilename:
+                     oldfilename = filename
+                     pathname = os.path.join(basepath, filename)
+                     track_data = self.get_media_metadata(pathname)
+                     if track_data:
+                        trackframes = 75 * track_data.length
+                        totalframes += trackframes
+                        replaygain = track_data.replaygain
+                     else:
+                        pathname = ""
+                        trackframes = 0
+                        replaygain = RGDEF
+
+                  if not cue_performer:
+                     cue_performer = track_data.artist or global_cue_performer
+                  if not cue_title:
+                     cue_title = track_data.title or global_cue_title
+
+                  try:
+                     nextoffset = val[index + 1][1]
+                  except LookupError:
+                     try:
+                        nextoffset = segment_data[track + 1][0][1]
+                     except LookupError:
+                        try:
+                           nextoffset = segment_data[track + 1][1][1]
+                        except LookupError:
+                           nextoffset = trackframes
+                  
+                  if nextoffset == 0:
+                     nextoffset = trackframes
+                  duration = nextoffset - frames
+                  if not trackframes:
+                     duration = frames = 0
+
+                  element = CueSheetTrack(pathname, bool(pathname), track, index,
+                                       cue_performer, cue_title, frames, duration, replaygain)
+                  cuesheet_liststore.append(element)
+
+      if global_cue_performer and global_cue_title:
+         metadata = global_cue_performer + " - " + global_cue_title
+      else:
+         metadata = global_cue_performer or global_cue_title
+      metadata = metadata or ln.unknown
          
-      return NOTVALID # TODO: Return the finished article.
+      element = PlayerRow('<span foreground="dark green">(Cue Sheet)</span>' + rich_safe(metadata),
+            cue_pathname, totalframes // 75 + 1, metadata, "utf-8",
+            global_cue_title, global_cue_performer, RGDEF, cuesheet_liststore)
+         
+      return element
    
    def get_media_metadata(self, filename):
       artist = u""
