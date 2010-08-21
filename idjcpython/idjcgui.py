@@ -3067,6 +3067,9 @@ class MainWindow:
       self.window.connect("key-press-event", self.cb_key_capture)
      
       self.window.show()
+      
+      self.player_left.treeview.emit("cursor-changed")
+      self.player_right.treeview.emit("cursor-changed")
 
       mic = os.environ["MICROPHONE"]
       for each in mic:

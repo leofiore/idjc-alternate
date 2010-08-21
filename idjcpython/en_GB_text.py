@@ -288,7 +288,23 @@ crossfader_tip = "The crossfader."
 
 crosspass = "Pass"
 
+cue_description = "Description"
+
+cue_duration = "Duration"
+
+cue_index = "Index"
+
+cue_index_abbrev = "Ind"
+
+cue_play = "Play"
+
+cue_track = "Track"
+
+cue_track_abbrev = "Trk"
+
 cue_up = "Cue Up"
+
+cuesheet_playlist = " Cuesheet Playlist "
 
 dbalbum = "Album"
 

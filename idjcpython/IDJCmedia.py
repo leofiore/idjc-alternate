@@ -90,6 +90,139 @@ class CueSheetListStore(gtk.ListStore):
    def __init__(self):
       gtk.ListStore.__init__(self, *self._columns)
 
+class NumberedLabel(gtk.Label):
+   attrs = pango.AttrList()
+   attrs.insert(pango.AttrFamily("Monospace" , 0, 3))
+   #attrs.insert(pango.AttrWeight(pango.WEIGHT_BOLD, 0, 3))
+   
+   def set_value(self, value):
+      self.set_text("--" if value is None else "%02d" % value)
+      
+   def get_value(self):
+      text = self.get_text()
+      return None if text == "--" else int(self.text)
+     
+   def __init__(self, value=None):
+      gtk.Label.__init__(self)
+      self.set_attributes(self.attrs)
+      self.set_value(value)
+
+class CellRendererDuration(gtk.CellRendererText):
+   """Render a value in frames as a time mm:ss:hs right justified."""
+   
+   __gproperties__ = { "duration" : (gobject.TYPE_UINT64, "duration",
+      "playback time expressed in CD audio frames",
+      0, long(3e9), 0, gobject.PARAM_WRITABLE) }
+   
+   def __init__(self):
+      gtk.CellRendererText.__init__(self)
+      self.set_property("xalign", 1.0)
+
+   def do_set_property(self, property, value):
+      if property.name == "duration":
+         s, f = divmod(value, 75)
+         m, s = divmod(s, 60)
+         self.props.text = "%d:%02d.%02d" % (m, s, f // 0.75)
+
+class CuesheetPlaylist(gtk.Frame):
+   def description_col_func(self, column, cell, model, iter):
+      line = model[model.get_path(iter)[0]]
+      desc = " - ".join(x for x in (line.performer, line.title) if x)
+      desc = desc or os.path.splitext(os.path.split(line.pathname)[1])[0]
+      cell.props.text = desc
+
+   def play_clicked(self, cellrenderer, path):
+      model = self.treeview.get_model()
+      iter = model.get_iter(path)
+      col = CueSheetTrack._fields.index("play")
+      val = model.get_value(iter, col)
+      model.set_value(iter, col, not val)
+
+   def __init__(self):
+      gtk.Frame.__init__(self, ln.cuesheet_playlist)
+      self.set_border_width(3)
+      
+      vbox = gtk.VBox()
+      vbox.set_border_width(4)
+      vbox.set_spacing(2)
+      self.add(vbox)
+      vbox.show()
+      hbox = gtk.HBox()
+      hbox.set_spacing(6)
+      vbox.pack_start(hbox, False)
+      
+      def nextprev_unit(label_text):
+         def icon_button(stock_item):
+            button = gtk.Button()
+            image = gtk.image_new_from_stock(stock_item, gtk.ICON_SIZE_MENU)
+            button.set_image(image)
+            image.show()
+            return button
+         
+         box = gtk.HBox()
+         box.set_spacing(6)
+         prev = icon_button(gtk.STOCK_MEDIA_PREVIOUS)
+         box.pack_start(prev)
+         prev.show()
+         
+         lhbox = gtk.HBox()
+         box.pack_start(lhbox, False)
+         lhbox.show()
+         
+         label = gtk.Label(label_text + " ")
+         lhbox.pack_start(label, False)
+         label.show()
+         numbered = NumberedLabel()
+         lhbox.pack_start(numbered, False)
+         numbered.show()
+         
+         next = icon_button(gtk.STOCK_MEDIA_NEXT)
+         box.pack_start(next)
+         next.show()
+         box.show()
+         return box, prev, next
+         
+      box_t, self.prev_track, self.next_track = nextprev_unit(ln.cue_track)
+      box_i, self.prev_index, self.next_index = nextprev_unit(ln.cue_index)
+      hbox.pack_start(box_t, fill=False)
+      hbox.pack_start(box_i, fill=False)
+      hbox.show()
+      
+      scrolled = gtk.ScrolledWindow()
+      scrolled.set_size_request(-1, 117)
+      scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
+      scrolled.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+      vbox.pack_start(scrolled)
+      scrolled.show()
+      self.treeview = gtk.TreeView()
+      #self.treeview.set_headers_visible(True)
+      scrolled.add(self.treeview)
+      self.treeview.show()
+      #self.treeview.set_fixed_height_mode(True)
+      
+      renderer_toggle = gtk.CellRendererToggle()
+      renderer_toggle.connect("toggled", self.play_clicked)
+      renderer_text_desc = gtk.CellRendererText()
+      renderer_text_desc.set_property("ellipsize", pango.ELLIPSIZE_MIDDLE)
+      renderer_text_rjust = gtk.CellRendererText()
+      renderer_text_rjust.set_property("xalign", 0.9)
+      renderer_duration = CellRendererDuration()
+      
+      play = gtk.TreeViewColumn(ln.cue_play, renderer_toggle, active=1)
+      self.treeview.append_column(play)
+      track = gtk.TreeViewColumn(ln.cue_track_abbrev, renderer_text_rjust, text=2)
+      self.treeview.append_column(track)
+      index = gtk.TreeViewColumn(ln.cue_index_abbrev, renderer_text_rjust, text=3)
+      self.treeview.append_column(index)
+      description = gtk.TreeViewColumn(ln.cue_description, renderer_text_desc)
+      description.set_expand(True)
+      description.set_cell_data_func(renderer_text_desc, self.description_col_func)
+      self.treeview.append_column(description)
+      duration = gtk.TreeViewColumn(ln.cue_duration, renderer_duration)
+      duration.add_attribute(renderer_duration, "duration", 7)
+      self.treeview.append_column(duration)
+
+
 class ButtonFrame(gtk.Frame):
    def __init__(self, title):
       gtk.Frame.__init__(self)
@@ -2003,13 +2136,7 @@ class IDJC_Media_Player:
  
    def cb_toggle(self, widget, data):
       print "Toggle %s recieved for signal: %s" % (("OFF","ON")[widget.get_active()], data)
-      # Delete mode is for removing items from the playlist.    
-      if data == "Delete":
-         self.delete_mode = widget.get_active()
-         # This indirectly selects our song after delete mode is cancelled
-         if self.delete_mode == 0:
-            self.reselect_please = True   
-         
+   
       if data == "Play":
          self.handle_play_button(widget, widget.get_active())
       if data == "Pause":
@@ -2443,37 +2570,26 @@ class IDJC_Media_Player:
       ] 
       
    def cb_doubleclick(self, treeview, path, tvcolumn, user_data):
-      if self.delete_mode == 0:
-         # Our play button handler will manage to get the song title.
-         # All we need to do is set a flag and issue a play button started signal.
-         if self.is_playing:
-            # The new_title flag allows a new song to be played when the player is going.
-            self.new_title = True
-            self.play.clicked()
-         else:
-            self.play.clicked()
+      # Our play button handler will manage to get the song title.
+      # All we need to do is set a flag and issue a play button started signal.
+      if self.is_playing:
+         # The new_title flag allows a new song to be played when the player is going.
+         self.new_title = True
+         self.play.clicked()
       else:
-         print "Double click does nothing in delete mode"
+         self.play.clicked()
                            
    def cb_singleclick(self, treeview):
       treeselection = treeview.get_selection()
       (model, iter) = treeselection.get_selected()
       if iter:
-         if self.delete_mode == 1:
-            treeselection.unselect_all()
-            # Include a debouce delay for deletion of list entries
-            if time.time() > self.last_time + 0.1:
-               deleted_text = model.get_value(iter, 0)
-               if deleted_text[:3] == "<b>":
-                  print "We deleted the song we are playing - stopping"
-                  self.file_iter_playing = 0
-                  self.stop.clicked()
-               else:
-                  print "We deleted a song"
-               model.remove(iter)
-               self.last_time = time.time()
-            else:
-               print "Was protected by my debounce code"
+         row = PlayerRow._make(self.liststore[model.get_path(iter)[0]])
+         if row.cuesheet:
+            self.cuesheet_playlist.treeview.set_model(row.cuesheet)
+            self.cuesheet_playlist.show()
+         else:
+            self.cuesheet_playlist.hide()
+            self.cuesheet_playlist.treeview.set_model(None)
          self.update_time_stats()
          
    def cb_playlist_changed(self, treemodel, path, iter = None):
@@ -2810,9 +2926,6 @@ class IDJC_Media_Player:
          pass
             
    def cb_keypress(self, widget, event):
-      if self.delete.get_active():
-         print "Keyboard shortcuts disabled in delete mode"
-         return True
       # Handle shifted arrow keys for rearranging stuff in the playlist.
       if event.state & gtk.gdk.SHIFT_MASK:
          if event.keyval == 65362:
@@ -2822,76 +2935,64 @@ class IDJC_Media_Player:
             self.arrow_down()
             return True
          if event.keyval == 65361 and self.playername == "right":
-            if self.parent.player_left.delete.get_active() == False:
-               treeselection = widget.get_selection()
-               s_model, s_iter = treeselection.get_selected()
-               if s_iter is not None:
-                  name = s_model.get_value(s_iter, 0)
-                  if name[:3] == "<b>":
-                     self.stop.clicked()
-                  otherselection = self.parent.player_left.treeview.get_selection()
-                  d_model, d_iter = otherselection.get_selected()
-                  row = list(s_model[s_model.get_path(s_iter)])
-                  path = s_model.get_path(s_iter)
-                  s_model.remove(s_iter)
-                  treeselection.select_path(path)
-                  if d_iter is None:
-                     d_iter = d_model.append(row)
-                  else:
-                     d_iter = d_model.insert_after(d_iter, row)
-                  otherselection.select_iter(d_iter)
-                  self.parent.player_left.treeview.set_cursor(d_model.get_path(d_iter))
-                  self.parent.player_left.treeview.scroll_to_cell(d_model.get_path(d_iter), None, False)
-            else:
-               print "Cannot transfer to the other playlist in delete mode"
+            treeselection = widget.get_selection()
+            s_model, s_iter = treeselection.get_selected()
+            if s_iter is not None:
+               name = s_model.get_value(s_iter, 0)
+               if name[:3] == "<b>":
+                  self.stop.clicked()
+               otherselection = self.parent.player_left.treeview.get_selection()
+               d_model, d_iter = otherselection.get_selected()
+               row = list(s_model[s_model.get_path(s_iter)])
+               path = s_model.get_path(s_iter)
+               s_model.remove(s_iter)
+               treeselection.select_path(path)
+               if d_iter is None:
+                  d_iter = d_model.append(row)
+               else:
+                  d_iter = d_model.insert_after(d_iter, row)
+               otherselection.select_iter(d_iter)
+               self.parent.player_left.treeview.set_cursor(d_model.get_path(d_iter))
+               self.parent.player_left.treeview.scroll_to_cell(d_model.get_path(d_iter), None, False)
             return True
          if event.keyval == 65363 and self.playername == "left":
-            if self.parent.player_left.delete.get_active() == False:
-               treeselection = widget.get_selection()
-               s_model, s_iter = treeselection.get_selected()
-               if s_iter is not None:
-                  name = s_model.get_value(s_iter, 0)
-                  if name[:3] == "<b>":
-                     self.stop.clicked()
-                  otherselection = self.parent.player_right.treeview.get_selection()
-                  d_model, d_iter = otherselection.get_selected()
-                  row = list(s_model[s_model.get_path(s_iter)])
-                  path = s_model.get_path(s_iter)
-                  s_model.remove(s_iter)
-                  treeselection.select_path(path)
-                  if d_iter is None:
-                     d_iter = d_model.append(row)
-                  else:
-                     d_iter = d_model.insert_after(d_iter, row)
-                  otherselection.select_iter(d_iter)
-                  self.parent.player_right.treeview.set_cursor(d_model.get_path(d_iter))
-                  self.parent.player_right.treeview.scroll_to_cell(d_model.get_path(d_iter), None, False)
-            else:
-               print "Cannot transfer to the other playlist in delete mode"
+            treeselection = widget.get_selection()
+            s_model, s_iter = treeselection.get_selected()
+            if s_iter is not None:
+               name = s_model.get_value(s_iter, 0)
+               if name[:3] == "<b>":
+                  self.stop.clicked()
+               otherselection = self.parent.player_right.treeview.get_selection()
+               d_model, d_iter = otherselection.get_selected()
+               row = list(s_model[s_model.get_path(s_iter)])
+               path = s_model.get_path(s_iter)
+               s_model.remove(s_iter)
+               treeselection.select_path(path)
+               if d_iter is None:
+                  d_iter = d_model.append(row)
+               else:
+                  d_iter = d_model.insert_after(d_iter, row)
+               otherselection.select_iter(d_iter)
+               self.parent.player_right.treeview.set_cursor(d_model.get_path(d_iter))
+               self.parent.player_right.treeview.scroll_to_cell(d_model.get_path(d_iter), None, False)
             return True
       if event.keyval == 65361 and self.playername == "right":
-         if self.parent.player_left.delete.get_active() == False:
-            treeselection = self.parent.player_left.treeview.get_selection()
-            model, iter = treeselection.get_selected()
-            if iter is not None:
-               self.parent.player_left.treeview.set_cursor(model.get_path(iter))
-            else:
-               treeselection.select_path(0)
-            self.parent.player_left.treeview.grab_focus()
+         treeselection = self.parent.player_left.treeview.get_selection()
+         model, iter = treeselection.get_selected()
+         if iter is not None:
+            self.parent.player_left.treeview.set_cursor(model.get_path(iter))
          else:
-            print "Cannot switch to other player in delete mode"
+            treeselection.select_path(0)
+         self.parent.player_left.treeview.grab_focus()
          return True
       if event.keyval == 65363 and self.playername == "left":
-         if self.parent.player_right.delete.get_active() == False:
-            treeselection = self.parent.player_right.treeview.get_selection()
-            model, iter = treeselection.get_selected()
-            if iter is not None:
-               self.parent.player_right.treeview.set_cursor(model.get_path(iter))
-            else:
-               treeselection.select_path(0)
-            self.parent.player_right.treeview.grab_focus()
+         treeselection = self.parent.player_right.treeview.get_selection()
+         model, iter = treeselection.get_selected()
+         if iter is not None:
+            self.parent.player_right.treeview.set_cursor(model.get_path(iter))
          else:
-            print "Cannot switch to other player in delete mode"
+            treeselection.select_path(0)
+         self.parent.player_right.treeview.grab_focus()
          return True
       if event.keyval == 65535 or event.keyval == 65439:         # The Main and NK Delete keys
          treeselection = widget.get_selection()         # Delete to cause playlist entry removal
@@ -3267,7 +3368,7 @@ class IDJC_Media_Player:
       # The scrollable window box that will contain our playlist.
       self.scrolllist = gtk.ScrolledWindow()
       self.scrolllist.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
-      self.scrolllist.set_size_request(-1, 217)
+      self.scrolllist.set_size_request(-1, 117)
       self.scrolllist.set_border_width(4)
       self.scrolllist.set_shadow_type(gtk.SHADOW_IN)
       # A liststore object for our playlist
@@ -3283,13 +3384,11 @@ class IDJC_Media_Player:
       self.cellrender.set_property("ellipsize", pango.ELLIPSIZE_END)
       self.rgtvcolumn = gtk.TreeViewColumn("", self.rgcellrender)
       self.playtimetvcolumn = gtk.TreeViewColumn("Time", self.playtimecellrender)
-      self.tvcolumn = gtk.TreeViewColumn("Playlist", self.cellrender)
+      self.tvcolumn = gtk.TreeViewColumn("Playlist", self.cellrender, markup=0)
       self.rgtvcolumn.set_cell_data_func(self.rgcellrender, self.rgrowconfig)
       self.playtimetvcolumn.set_cell_data_func(self.playtimecellrender, self.playtimerowconfig)
       self.tvcolumn.set_cell_data_func(self.cellrender, self.rowconfig)
-      self.playtimetvcolumn.add_attribute(self.playtimecellrender, 'text', 2)
       self.playtimetvcolumn.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
-      self.tvcolumn.add_attribute(self.cellrender, 'markup', 0)
       self.tvcolumn.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
       self.tvcolumn.set_expand(True)
       self.treeview.append_column(self.tvcolumn)
@@ -3309,7 +3408,7 @@ class IDJC_Media_Player:
       self.treeview.connect("drag_data_delete", self.drag_data_delete)
       
       self.treeview.connect("row_activated", self.cb_doubleclick, "Double click")
-      self.treeview.connect("cursor_changed", self.cb_singleclick)
+      self.treeview.connect("cursor-changed", self.cb_singleclick)
       
       self.treeview.connect("key_press_event", self.cb_keypress)
       
@@ -3321,6 +3420,11 @@ class IDJC_Media_Player:
       
       plvbox.pack_start(self.scrolllist, True, True, 0)
       self.scrolllist.show()
+      
+      # Cue sheet playlist controls.
+      
+      self.cuesheet_playlist = CuesheetPlaylist()
+      plvbox.pack_start(self.cuesheet_playlist)
       
       # External playlist control unit
       self.external_pl = ExternalPL(self)
@@ -3493,29 +3597,6 @@ class IDJC_Media_Player:
       
       frame.hbox.pack_start(self.pl_delay, True, True, 0)
       self.pl_delay.show()
-      
-      # Up and Down arrows for moving items in the playlist
-      self.uparrow = make_arrow_button(self, gtk.ARROW_UP, gtk.SHADOW_IN, "Arrow Up")
-      self.hbox2.pack_start(self.uparrow, True, True, 0)
-      parent.tooltips.set_tip(self.uparrow, ln.up_arrow_tip)
-      self.uparrow.hide()
-      
-      self.dnarrow = make_arrow_button(self, gtk.ARROW_DOWN, gtk.SHADOW_IN, "Arrow Dn")
-      self.hbox2.pack_start(self.dnarrow, True, True, 0)
-      parent.tooltips.set_tip(self.dnarrow, ln.down_arrow_tip)
-      self.dnarrow.hide()
-      
-      # Delete mode toggle button for playlist
-      image = gtk.Image()
-      image.set_from_file(pkgdatadir + "del" + gfext)
-      image.show()
-      self.delete = gtk.ToggleButton()
-      self.delete.add(image)
-      self.delete_mode = self.delete.get_active()
-      self.delete.connect("toggled", self.cb_toggle, "Delete")
-      self.hbox2.pack_start(self.delete, True, True, 0)
-      #self.delete.show()
-      parent.tooltips.set_tip(self.delete, ln.delete_mode_tip)
       
       # Mute buttons
       
