@@ -27,6 +27,7 @@
 #include <jack/transport.h>
 #include <jack/ringbuffer.h>
 #include <jack/statistics.h>
+#include <jack/midiport.h>
 #include <getopt.h>
 #include <string.h>
 #include <fcntl.h>
@@ -56,6 +57,8 @@
 #define RB_SIZE 10.0
 /* number of samples in the fade (ring) buffer */
 #define FB_SIZE (RB_SIZE * sr)
+/* number of bytes in the MIDI queue buffer */
+#define MIDI_QUEUE_SIZE 1024
 
 /* the different VOIP modes */
 #define NO_PHONE 0
@@ -65,7 +68,7 @@
 typedef jack_default_audio_sample_t sample_t;
 
 /* values of the volume sliders in the GUI */
-int volume, crossfade, jinglesvolume, interludevol, mixbackvol, crosspattern;
+int volume, volume2, crossfade, jinglesvolume, interludevol, mixbackvol, crosspattern;
 /* back and forth status indicators re. jingles */
 int jingles_playing, jingles_audio_f;
 /* used for gapless playback to indicate an almost empty buffer */
@@ -79,7 +82,7 @@ int aux_flux;
 /* simple mixer mode: uses less space on the screen and less cpu as well */
 int simple_mixer;
 /* currentvolumes are used to implement volume smoothing */
-int current_volume, current_jingles_volume, current_interlude_volume,
+int current_volume, current_volume2, current_jingles_volume, current_interlude_volume,
     current_crossfade, currentmixbackvol, current_crosspattern; 
 /* the id. number microphone filter we are using */
 int mic_filter;
@@ -203,6 +206,11 @@ jack_port_t *phone_left_send;   /* used for VOIP */
 jack_port_t *phone_right_send;
 jack_port_t *phone_left_recv;
 jack_port_t *phone_right_recv;
+jack_port_t *midi_port; /* midi_control */
+
+char midi_queue[MIDI_QUEUE_SIZE];
+size_t midi_nqueued= 0;
+pthread_mutex_t midi_mutex;
 
 unsigned long sr;               /* the sample rate reported by JACK */
 
@@ -214,7 +222,7 @@ struct xlplayer *plr_l, *plr_r, *plr_j, *plr_i; /* pipe reader instance stucture
 /* these are set in the parse routine - the contents coming from the GUI */
 char *mixer_string, *compressor_string, *gate_string, *microphone_string;
 char *normalizer_string, *new_mic_string;
-char *micl, *micr, *auxl, *auxr, *audl, *audr, *strl, *strr, *action;
+char *micl, *micr, *auxl, *auxr, *midi, *audl, *audr, *strl, *strr, *action;
 char *mic1, *mic2, *mic3, *mic4;
 char *dol, *dor, *dil, *dir;
 char *oggpathname, *sndfilepathname, *avformatpathname, *speexpathname, *speextaglist, *speexcreatedby;
@@ -243,6 +251,7 @@ struct kvpdict kvpdict[] = {
          { "MIC4", &mic4 },
          { "AUXL", &auxl },
          { "AUXR", &auxr },
+         { "MIDI", &midi },
          { "AUDL", &audl },
          { "AUDR", &audr },
          { "STRL", &strl },
@@ -308,7 +317,8 @@ void handle_mute_button(sample_t *gainlevel, int switchlevel)
 /* update_smoothed_volumes: stuff that gets run once every 32 samples */
 void update_smoothed_volumes()
    {
-   static sample_t vol_rescale = 1.0F, jingles_vol_rescale = 1.0F, interlude_vol_rescale = 1.0F, cross_left = 1.0F, cross_right = 0.0F, mixback_rescale = 1.0F;
+   static sample_t vol_rescale = 1.0F, vol2_rescale = 1.0F, jingles_vol_rescale = 1.0F, interlude_vol_rescale = 1.0F;
+   static sample_t cross_left = 1.0F, cross_right = 0.0F, mixback_rescale = 1.0F;
    static sample_t lp_listen_mute = 1.0F, rp_listen_mute = 1.0F, lp_stream_mute = 1.0F, rp_stream_mute = 1.0F;
    sample_t mic_target, diff;
    static float interlude_autovol = -128.0F, old_autovol = -128.0F;
@@ -384,6 +394,14 @@ void update_smoothed_volumes()
          current_volume--;
       vol_rescale = 1.0F/powf(10.0F,current_volume/55.0F);      /* a nice logarithmic volume scale */
       }
+   if (volume2 != current_volume2)
+      {
+      if (volume2 > current_volume2)
+         current_volume2++;
+      else
+         current_volume2--;
+      vol2_rescale = 1.0F/powf(10.0F,current_volume2/55.0F);
+      }
       
    if (jinglesvolume != current_jingles_volume)
       {
@@ -438,9 +456,9 @@ void update_smoothed_volumes()
    
    /* the factors that will be applied in the mix on the media players */
    lp_lc_aud = lp_rc_aud = vol_rescale * lp_listen_mute;
-   rp_lc_aud = rp_rc_aud = vol_rescale * rp_listen_mute;
+   rp_lc_aud = rp_rc_aud = vol2_rescale * rp_listen_mute;
    lp_lc_str = lp_rc_str = vol_rescale * cross_left * lp_stream_mute;
-   rp_lc_str = rp_rc_str = vol_rescale * cross_right * rp_stream_mute;
+   rp_lc_str = rp_rc_str = vol2_rescale * cross_right * rp_stream_mute;
    jp_lc_str = jp_rc_str = jp_lc_aud = jp_rc_aud = jingles_vol_rescale;
    mb_lc_aud = mb_rc_aud = mixback_rescale;
    ip_lc_aud = ip_rc_aud = 0.0F;
@@ -465,6 +483,8 @@ void update_smoothed_volumes()
       }
 
    /* calculate the ducking factor reduction based on gain controls */
+   /* XXX what should this do for dual_volume? I don't understand what it's
+      supposed to be doing in shared volume mode - dfmod is not used? */
    if (jingles_playing)
       vol = current_jingles_volume * 0.06666666F;
    else
@@ -530,6 +550,12 @@ void process_audio(jack_nframes_t nframes)
    /* temporary storage for processed fade values */
    sample_t lp_lc_fade, lp_rc_fade, rp_lc_fade, rp_rc_fade;
    sample_t jp_lc_fade, jp_rc_fade, ip_lc_fade, ip_rc_fade;
+   /* midi_control */
+   void *midi_buffer;
+   jack_midi_event_t midi_event;
+   jack_nframes_t midi_nevents, midi_eventi;
+   int midi_command_type, midi_channel_id;
+   int pitch_wheel;
 
    if (timeout > 8000)
       {
@@ -542,6 +568,60 @@ void process_audio(jack_nframes_t nframes)
       plr_r->command = CMD_COMPLETE;
       plr_j->command = CMD_COMPLETE;
       plr_i->command = CMD_COMPLETE;
+      }
+
+   /* midi_control. read incoming commands forward to gui */
+   midi_buffer = jack_port_get_buffer(midi_port, nframes);
+   midi_nevents = jack_midi_get_event_count(midi_buffer);
+   if (midi_nevents!=0)
+      {
+      pthread_mutex_lock(&midi_mutex);
+      for (midi_eventi = 0; midi_eventi < midi_nevents; midi_eventi++)
+         {
+         if (jack_midi_event_get(&midi_event, midi_buffer, midi_eventi) != 0)
+            {
+            fprintf(stderr, "Error reading MIDI event from JACK\n");
+            continue;
+            }
+         if  (midi_nqueued+12 > MIDI_QUEUE_SIZE) /* max length of command */
+            {
+            fprintf(stderr, "MIDI queue overflow, event lost\n");
+            continue;
+            }
+         midi_command_type= midi_event.buffer[0] & 0xF0;
+         midi_channel_id= midi_event.buffer[0] & 0x0F;
+         switch (midi_command_type)
+            {
+            case 0xB0: /* MIDI_COMMAND_CHANGE */
+               midi_nqueued+= snprintf(
+                  midi_queue+midi_nqueued, MIDI_QUEUE_SIZE-midi_nqueued,
+                  ",c%x.%x:%x", midi_channel_id, midi_event.buffer[1], midi_event.buffer[2]
+               );
+               break;
+            case 0x80: /* MIDI_NOTE_OFF */
+               midi_nqueued+= snprintf(
+                  midi_queue+midi_nqueued, MIDI_QUEUE_SIZE-midi_nqueued,
+                  ",n%x.%x:0", midi_channel_id, midi_event.buffer[1]
+               );
+               break;
+            case 0x90: /* MIDI_NOTE_ON */
+               midi_nqueued+= snprintf(
+                  midi_queue+midi_nqueued, MIDI_QUEUE_SIZE-midi_nqueued,
+                  ",n%x.%x:7F", midi_channel_id, midi_event.buffer[1]
+               );
+               break;
+            case 0xFE: /* MIDI_PITCH_WHEEL_CHANGE */
+               pitch_wheel= 0x2040 - midi_event.buffer[2] - midi_event.buffer[1]*128;
+               if (pitch_wheel < 0) pitch_wheel = 0;
+               if (pitch_wheel > 0x7F) pitch_wheel = 0x7F;
+               midi_nqueued+= snprintf(
+                  midi_queue+midi_nqueued, MIDI_QUEUE_SIZE-midi_nqueued,
+                  ",p%x.0:%x", midi_channel_id, pitch_wheel
+               );
+               break;
+            }
+         }
+      pthread_mutex_unlock(&midi_mutex);
       }
 
    /* get the data for the jack ports */
@@ -1492,6 +1572,7 @@ int main(int argc, char **argv)
    int use_dsp;
    jack_status_t status;
    char *server_name = getenv("IDJC_JACK_SERVER");
+   char midi_output[MIDI_QUEUE_SIZE];
 
    setenv("LC_ALL", "C", 1);            /* ensure proper sscanf operation */
 
@@ -1561,6 +1642,9 @@ int main(int argc, char **argv)
                                         JackPortIsInput, 0);
    phone_right_recv = jack_port_register(client, "voip_in_r", JACK_DEFAULT_AUDIO_TYPE,
                                         JackPortIsInput, 0);
+
+   /* midi_control */
+   midi_port = jack_port_register(client, "midi_control", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
 
    sr = jack_get_sample_rate(client);
    fb_size = FB_SIZE;
@@ -1868,15 +1952,14 @@ int main(int argc, char **argv)
       if (!strcmp(action, "mixstats"))
          {
          if(sscanf(mixer_string,
-                ":%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d%1d:%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:",
-                &volume, &crossfade, &jinglesvolume, &interludevol, &mixbackvol, &jingles_playing,
+                ":%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d%1d:%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:",
+                &volume, &volume2, &crossfade, &jinglesvolume, &interludevol, &mixbackvol, &jingles_playing,
                 &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
-                &new_left_pause, &new_right_pause, &aux_on, &flush_left, &flush_right, &flush_jingles, &flush_interlude, &simple_mixer, &eot_alarm_set, &mixermode, &fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed), &speed_variance, &dj_audio_level, &crosspattern, &use_dsp, &twodblimit) !=30)
+                &new_left_pause, &new_right_pause, &aux_on, &flush_left, &flush_right, &flush_jingles, &flush_interlude, &simple_mixer, &eot_alarm_set, &mixermode, &fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed), &speed_variance, &dj_audio_level, &crosspattern, &use_dsp, &twodblimit) !=31)
             {
             fprintf(stderr, "mixer got bad mixer string\n");
             break;
             }
-
          eot_alarm_f |= eot_alarm_set;
 
          plr_l->fadeout_f = plr_r->fadeout_f = plr_j->fadeout_f = plr_i->fadeout_f = fadeout_f;
@@ -2026,6 +2109,12 @@ int main(int argc, char **argv)
          if (auxr[0] != '\0')
             jack_connect(client, auxr, "idjc-mx:aux_in_r");
          }
+      if (!strcmp(action, "remakemidi"))
+         {
+         jack_port_disconnect(client, midi_port);
+         if (midi[0] != '\0')
+            jack_connect(client, midi, "idjc-mx:midi_control");
+         }
       if (!strcmp(action, "remakedol"))
          {
          jack_port_disconnect(client, dspout_left_port);
@@ -2075,7 +2164,16 @@ int main(int argc, char **argv)
          mic_stats("mic_2_levels", mic_2);
          mic_stats("mic_3_levels", mic_3);
          mic_stats("mic_4_levels", mic_4);
-         
+
+         /* forward any MIDI commands that have been queued since last time */
+         pthread_mutex_lock(&midi_mutex);
+         midi_output[0]= '\0';
+         if (midi_nqueued>0) /* exclude leading `,`, include trailing `\0` */
+            memcpy(midi_output, midi_queue+1, midi_nqueued*sizeof(char));
+         midi_queue[0]= '\0';
+         midi_nqueued= 0;
+         pthread_mutex_unlock(&midi_mutex);
+
          fprintf(stdout, 
                    "str_l_peak=%d\nstr_r_peak=%d\n"
                    "str_l_rms=%d\nstr_r_rms=%d\n"
@@ -2095,6 +2193,7 @@ int main(int argc, char **argv)
                    "right_audio_runout=%d\n"
                    "left_additional_metadata=%d\n"
                    "right_additional_metadata=%d\n"
+                   "midi=%s\n"
                    "end\n",
                    str_l_peak_db, str_r_peak_db,
                    str_l_rms_db, str_r_rms_db,
@@ -2113,7 +2212,9 @@ int main(int argc, char **argv)
                    left_audio_runout && (!(plr_l->current_audio_context & 0x1)),
                    right_audio_runout && (!(plr_r->current_audio_context & 0x1)),
                    plr_l->dynamic_metadata.data_type,
-                   plr_r->dynamic_metadata.data_type);
+                   plr_r->dynamic_metadata.data_type,
+                   midi_output);
+
          /* tell the jack mixer it can reset its vu stats now */
          reset_vu_stats_f = TRUE;
          if (plr_l->dynamic_metadata.data_type)

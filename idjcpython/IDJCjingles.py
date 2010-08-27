@@ -140,9 +140,11 @@ class jingles:
                self.interludevolume = self.interadj.get_value()
                self.interadj.set_value(100.0) 
                self.parent.deckadj.set_value(100.0)
+               self.parent.deck2adj.set_value(100.0)
             else:
                self.interludevolume = -1
                self.parent.deckadj.set_value(30.0)
+               self.parent.deck2adj.set_value(30.0)
          self.parent.deckadj.value_changed()
          string_to_send = "LOOP=0\nPLPL=%s\nACTN=playmanyjingles\nend\n" % self.pack_playlistlist(playlist)
          self.parent.mixer_write(string_to_send, True)
@@ -179,10 +181,11 @@ class jingles:
             self.stop.clicked() # this will take care of resetting the play button without triggering a flush
          if self.nomute == False:
             self.parent.deckadj.set_value(self.volume)
+            self.parent.deck2adj.set_value(self.volume)
+            if self.interludevolume != -1:
+               self.interadj.set_value(self.interludevolume)
          else:
             self.parent.send_new_mixer_stats()
-         if self.interludevolume != -1:
-            self.interadj.set_value(self.interludevolume)
          
    def delete_event(self, widget, event, data=None):
       self.window.hide()        # We don't really destroy the window

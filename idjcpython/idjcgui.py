@@ -100,6 +100,7 @@ from sourceclientgui import *
 from IDJCmixprefs import *
 from IDJCjingles import *
 from IDJCfree import int_object, threadslock
+import IDJCcontrols
 import tooltips
 import p3db
 
@@ -1048,9 +1049,14 @@ class MainWindow:
    def send_new_mixer_stats(self):
       def xtp(in_str):                  # xchat text package maker
          return "".join(("d", str(len(in_str)), ":", in_str))
-      
-      string_to_send = ":%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:%d%d:%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" % (
-                                                self.deckadj.get_value() * -1.0 + 100.0,
+
+      deckadj = deck2adj = self.deckadj.get_value() * -1.0 + 100.0
+      if self.prefs_window.dual_volume.get_active():
+          deck2adj = self.deck2adj.get_value() * -1.0 + 100.0
+
+      string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:%d%d:%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" % (
+                                                deckadj,
+                                                deck2adj,
                                                 self.crossadj.get_value(),
                                                 self.jingles.deckadj.get_value(),
                                                 self.jingles.interadj.get_value(),
@@ -1264,7 +1270,7 @@ class MainWindow:
    def callback(self, widget, data):
       print "%s was pressed" % data
       if data == "Show about":
-         self.prefs_window.notebook.set_current_page(5)
+         self.prefs_window.notebook.set_current_page(6)
          self.prefs_window.window.present()
       if data == "Features":
          if widget.get_active():
@@ -1429,12 +1435,15 @@ class MainWindow:
 
    def cb_menu_select(self, widget, data):
       print ("%s was chosen from the menu" % data)   
-            
+
    def save_session(self):
       try:
          fh = open(self.session_filename, "w")
          fh.write("deckvol=" + str(self.deckadj.get_value()) + "\n")
+         fh.write("deck2vol=" + str(self.deck2adj.get_value()) + "\n")
          fh.write("crossfade=" + str(self.crossadj.get_value()) + "\n")
+         fh.write("jingles_deckvol=" + str(self.jingles.deckadj.get_value()) + "\n")
+         fh.write("jingles_intervol=" + str(self.jingles.interadj.get_value()) + "\n")
          fh.write("stream_mon="+ str(int(self.listen_stream.get_active())) + "\n")
          fh.write("tracks_played=" + str(int(self.history_expander.get_expanded())) + "\n")
          fh.write("pass_speed=" + str(self.passspeed_adj.get_value()) + "\n")
@@ -1486,42 +1495,53 @@ class MainWindow:
                break
          except:
                break
-         if line.startswith("deckvol="):
-            self.deckadj.set_value(float(line[8:-1]))
-         if line.startswith("crossfade="):
-            self.crossadj.set_value(float(line[10:-1]))
-         if line.startswith("stream_mon="):
-            self.listen_stream.set_active(int(line[11:-1]))
-         if line.startswith("tracks_played="):
+         k, _, v = line[:-1].partition('=')
+         if k=="deckvol":
+            self.deckadj.set_value(float(v))
+         elif k=="deck2vol":
+            self.deck2adj.set_value(float(v))
+         elif k=="crossfade":
+            self.crossadj.set_value(float(v))
+         elif k=="jingles_deckvol":
+            self.jingles.deckadj.set_value(float(v))
+         elif k=="jingles_intervol":
+            self.jingles.interadj.set_value(float(v))
+         elif k=="stream_mon":
+            self.listen_stream.set_active(int(v))
+         elif k=="tracks_played":
             if int(line[14:-1]):
                self.history_expander.emit("activate")
-         if line.startswith("pass_speed="):
-            self.passspeed_adj.set_value(float(line[11:-1]))
-         if line.startswith("prefs=1"):
-            self.prefs_window.window.show()
-         if line.startswith("server=1"):
-            self.server_window.window.show()
-         if line.startswith("jingles=1"):
-            self.jingles.window.show()
-         if line.startswith("prefspage="):
-            self.prefs_window.notebook.set_current_page(int(line[10:-1]))
-         if line.startswith("metadata_src="):
-            self.metadata_source.set_active(int(line[13:-1]))
-         if line.startswith("crosstype="):
-            self.crosspattern.set_active(int(line[10:-1]))
-         if line.startswith("hpane="):
-            self.paned.set_position(int(line[6:-1]))
-         if line.startswith("vpane="):
-            self.leftpane.set_position(int(line[6:-1]))
-         if line.startswith("treecols="):
-            self.topleftpane.setcolwidths(self.topleftpane.treecols, line[9:-1])
-         if line.startswith("flatcols="):
-            self.topleftpane.setcolwidths(self.topleftpane.flatcols, line[9:-1])
-         if line.startswith("dbpage="):
-            self.topleftpane.notebook.set_current_page(int(line[7:-1]))
-         if line.startswith("interlude=") and len(line) > 11:
-            self.jingles.start_interlude_player(line[10:-1])
-            self.jingles.interlude.emit("toggled")
+         elif k=="pass_speed":
+            self.passspeed_adj.set_value(float(v))
+         elif k=="prefs":
+            if v=="1":
+               self.prefs_window.window.show()
+         elif k=="server":
+            if v=="1":
+               self.server_window.window.show()
+         elif k=="jingles":
+            if v=="1":
+               self.jingles.window.show()
+         elif k=="prefspage":
+            self.prefs_window.notebook.set_current_page(int(v))
+         elif k=="metadata_src":
+            self.metadata_source.set_active(int(v))
+         elif k=="crosstype":
+            self.crosspattern.set_active(int(v))
+         elif k=="hpane":
+            self.paned.set_position(int(v))
+         elif k=="vpane":
+            self.leftpane.set_position(int(v))
+         elif k=="treecols":
+            self.topleftpane.setcolwidths(self.topleftpane.treecols, v)
+         elif k=="flatcols":
+            self.topleftpane.setcolwidths(self.topleftpane.flatcols, v)
+         elif k=="dbpage":
+            self.topleftpane.notebook.set_current_page(int(v))
+         elif k=="interlude":
+            if v!="":
+                self.jingles.start_interlude_player(v)
+                self.jingles.interlude.emit("toggled")
 
       try:
          fh = open(self.session_filename + "_files_played", "r")
@@ -1547,6 +1567,7 @@ class MainWindow:
       if self.session_loaded:
          self.save_session()
          self.prefs_window.save_player_prefs()
+         self.controls.save_prefs()
          self.server_window.save_session_settings()
       try:
          gtk.main_quit()
@@ -1578,6 +1599,7 @@ class MainWindow:
       self.mixer_ctrl.close()
       self.save_session()
       self.prefs_window.save_player_prefs()
+      self.controls.save_prefs()
       self.server_window.save_session_settings()
       self.prefs_window.appexit_event.activate()        # run user specified command for application exit
       if os.path.isfile(self.idjc + "command"):
@@ -1894,6 +1916,7 @@ class MainWindow:
                gtk.gdk.threads_leave()
             return True
 
+         midis= ''
          while 1:
             line = self.mixer_read().rstrip()
             if line == "":
@@ -1906,6 +1929,10 @@ class MainWindow:
                print line
                continue
             key, value = line.split("=")
+
+            if key == "midi":
+               midis= value
+               continue
             try:
                value = int(value)
             except ValueError:
@@ -1932,6 +1959,17 @@ class MainWindow:
                   break
          #self.left_compressor_gain.set_meter_value(int(self.left_compression_level), int(self.left_deess_level), int(self.left_noisegate_level))
          #self.right_compressor_gain.set_meter_value(int(self.right_compression_level), int(self.right_deess_level), int(self.right_noisegate_level))
+
+         # Carry out MIDI-triggered actions *after* reading them from the
+         # response to requestlevels. This is so that any trailing lines after the
+         # actions don't interfere with mixer_write/read cycles caused by the
+         # control commands themselves.
+         #
+         if midis!='':
+            for midi in midis.split(','):
+               input, _, value = midi.partition(':')
+               self.controls.input(input, int(value, 16))
+
       except:
          if locking:    # ensure unlocking occurs whenever there is an exception
             gtk.gdk.threads_leave()
@@ -1939,7 +1977,7 @@ class MainWindow:
       if locking:
          gtk.gdk.threads_leave()
       return True
-      
+
    @threadslock 
    def stats_update(self):
       if not self.player_left.player_is_playing:
@@ -1962,12 +2000,8 @@ class MainWindow:
       menuitem.show()
 
    def cb_key_capture(self, widget, event):
-      keybase = 65470 # the F1 key
-      if event.type == gtk.gdk.KEY_PRESS:
-         if event.keyval >= keybase and event.keyval < keybase + 12:
-            self.jingles.trigger_index(event.keyval - keybase)
-         elif event.keyval == 65307:
-            self.jingles.trigger_index(-1)
+      self.controls.input_key(event)
+      return False
 
    def configure_event(self, widget, event):
       if self.player_left.is_playing:
@@ -2395,7 +2429,7 @@ class MainWindow:
       self.vbox3L.set_border_width(2)
       self.hbox4.pack_start(self.vbox3L, True, True, 0)
 
-      # A vertical box for our main volume control
+      # A vertical box for our main volume controls
       self.vboxvol = gtk.VBox(False, 0)
       self.vboxvol.set_border_width(2)
       self.volframe = gtk.Frame()
@@ -2406,23 +2440,36 @@ class MainWindow:
       self.volframe.show()
       self.hbox4.pack_start(self.volframe, False, True, 4)
            
-      # A pictoral volume label
+      # A pictoral volume label above horizontally-stacked volume control(s)
       image = gtk.Image()
       image.set_from_file(pkgdatadir + "volume2" + gfext)
       self.vboxvol.pack_start(image, False, False, 0)
       image.show()
+      hboxvol = gtk.HBox(True, 0)
+      self.vboxvol.pack_start(hboxvol, True, True, 0)
+      hboxvol.show()
       
-      # The decks common volume controller.
+      # Primary volume control
       self.deckadj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 6.0)
       self.deckadj.connect("value_changed", self.cb_deckvol)
       self.deckvol = gtk.VScale(self.deckadj)
       self.deckvol.set_update_policy(gtk.UPDATE_CONTINUOUS)
       self.deckvol.set_draw_value(False)
       self.deckvol.set_inverted(True)
-      self.vboxvol.pack_start(self.deckvol, True, True, 0)
+      hboxvol.pack_start(self.deckvol, False, False, 6)
       self.deckvol.show()
       self.tooltips.set_tip(self.deckvol, ln.common_volume_control_tip)
-      
+
+      # Secondary volume controller, visible when using separate player volumes
+      self.deck2adj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 6.0)
+      self.deck2adj.connect("value_changed", self.cb_deckvol)
+      self.deck2vol = gtk.VScale(self.deck2adj)
+      self.deck2vol.set_update_policy(gtk.UPDATE_CONTINUOUS)
+      self.deck2vol.set_draw_value(False)
+      self.deck2vol.set_inverted(True)
+      hboxvol.pack_start(self.deck2vol, False, False, 0)
+      self.tooltips.set_tip(self.deck2vol, ln.right_volume_control_tip)
+
       self.spacerbox = gtk.VBox()
       self.spacerbox.set_size_request(1, 5)
       self.vboxvol.pack_start(self.spacerbox, False, False, 0)
@@ -3018,6 +3065,9 @@ class MainWindow:
          "left_additional_metadata" : self.metadata_left_ctrl,
          "right_additional_metadata": self.metadata_right_ctrl
          }
+
+      self.controls= IDJCcontrols.Controls(self)
+      self.controls.load_prefs()
 
       self.window.realize()     # prevent ubuntu crash when activating vu meters
       media_sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
