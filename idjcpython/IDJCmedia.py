@@ -3021,66 +3021,6 @@ class IDJC_Media_Player:
          else:
             print "Playlist is empty!"
          return True
-      if event.string == "1":
-         self.parent.passleft.clicked()
-         return True
-      if event.string == "2":
-         self.parent.passright.clicked()
-         return True
-      if event.string == "c" or event.string == "C":
-         self.parent.passbutton.clicked()
-         return True
-      if (event.string == "m" or event.string == "M" or event.string == " ") and self.parent.mic_select.flags() & gtk.VISIBLE:
-         self.parent.mic_select.set_active(not self.parent.mic_select.get_active())
-         return True
-      if (event.string == "<" or event.string == ",") and not self.parent.mic_select.flags() & gtk.VISIBLE:
-         self.parent.mic_lselect.set_active(not self.parent.mic_lselect.get_active())
-         return True
-      if (event.string == ">" or event.string == ".") and not self.parent.mic_select.flags() & gtk.VISIBLE:
-         self.parent.mic_rselect.set_active(not self.parent.mic_rselect.get_active())
-         return True
-      if event.keyval == 65288:         # backspace key stops the player
-         self.stop.clicked()
-      if event.string == "t" or event.string == "T":    # t key does metadata tagging
-         model, iter = self.treeview.get_selection().get_selected()
-         if iter is not None:
-            pathname = model.get_value(iter, 1)
-            if MutagenGUI.is_supported(pathname):
-               MutagenGUI(pathname, model.get_value(iter, 4), self.parent)
-            else:
-               print "File type is not supported by the idjc metadata tagger"
-      if (event.string == "s" or event.string == "S") and self.pl_mode.get_active() == 0:
-         self.menu_model, self.menu_iter = self.treeview.get_selection().get_selected()
-         self.menuitem_response(None, "Stop Control")
-         return True
-      if (event.string == "u" or event.string == "U") and self.pl_mode.get_active() == 0:
-         self.menu_model, self.menu_iter = self.treeview.get_selection().get_selected()
-         self.menuitem_response(None, "Announcement Control")
-      
-      if (event.string == "a" or event.string == "A") and self.pl_mode.get_active() == 0:
-         self.menu_model, self.menu_iter = self.treeview.get_selection().get_selected()
-         self.menuitem_response(None, "Transfer Control")
-         return True
-      if (event.string == "f" or event.string == "F") and self.pl_mode.get_active() == 0:
-         self.menu_model, self.menu_iter = self.treeview.get_selection().get_selected()
-         self.menuitem_response(None, "Crossfade Control")
-         return True
-      if (event.string == "n" or event.string == "N") and self.pl_mode.get_active() == 0:
-         self.menu_model, self.menu_iter = self.treeview.get_selection().get_selected()
-         self.menuitem_response(None, "Normal Speed Control")
-         return True
-         
-      if event.string == "v" or event.string == "V":
-         self.parent.greenphone.set_active(not self.parent.greenphone.get_active())
-         return True
-         
-      if event.string == "p" or event.string == "P":
-         self.parent.redphone.set_active(not self.parent.redphone.get_active())
-         return True
-      
-      if event.string == "/":
-         self.parent.advance.clicked()
-         
       # Allow certain key presses to work but not allow a text entry box to appear.
       if event.string =="\r":
          self.stop.clicked()

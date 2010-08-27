@@ -198,6 +198,10 @@ channels = "Channels:"
 
 common_volume_control_tip = "The volume control shared by both music players."
 
+left_volume_control_tip = "The volume control for the left music player."
+
+right_volume_control_tip = "The volume control for the right music player."
+
 comp_attack = "Attack"
 
 comp_bar = "Comp"
@@ -1464,4 +1468,137 @@ xchat_install = "Install The XChat Plugin"
 xchat_install_done = "The XChat Plugin Is Already Installed"
 
 xchat_install_failed = "The Plugin Would Not Install -- Try Again?"
+
+dual_volume = "Separate left/right volume faders"
+dual_volume_tip = "Tick this option to use an independent volume fader for the left and right music players."
+
+control_sources= {
+    'c': 'MIDI control',
+    'n': 'MIDI note',
+    'p': 'MIDI pitch-wheel',
+    'k': 'Keyboard press',
+    'x': 'XChat command'
+}
+control_modes= {
+    'd': 'Direct fader/held button',
+    'p': 'One-shot/toggle button',
+    's': 'Set value',
+    'a': 'Alter value'
+}
+control_targets= {
+    'p': 'Player',
+    'm': 'Mic',
+    'k': 'Jingle',
+    's': 'Stream',
+    'r': 'Recorder'
+}
+control_targets_players= (
+    'Left player',
+    'Right player',
+    'Focused player',
+    'Crossfaded player',
+)
+control_method_groups= {
+    'p': 'Player',
+    'x': 'Both players',
+    'm': 'Microphone',
+    'v': 'VoIP channel',
+    'a': 'Aux channel',
+    'k': 'Single jingle',
+    'j': 'Jingle player',
+    's': 'Stream',
+    'r': 'Stream recorder',
+}
+control_methods= {
+    'p_pp': 'Player play/pause',
+    'p_stop': 'Player stop',
+    'p_advance': 'Player advance',
+    'p_prev': 'Player play previous',
+    'p_next': 'Player play next',
+    'p_sfire': 'Player play selected from start',
+    'p_sprev': 'Player select previous',
+    'p_snext': 'Player select next',
+    'p_stream': 'Player stream output enable',
+    'p_listen': 'Player DJ output enable',
+    'p_prep': 'Player DJ-only switch',
+    'p_vol': 'Player set volume',
+    'p_gain': 'Player set gain',
+    'p_pan': 'Player set balance',
+    'p_pitch': 'Player set pitchbend',
+
+    'p_tag': 'Playlist edit tags',
+    'p_istop': 'Playlist insert stop',
+    'p_ianno': 'Playlist insert announce',
+    'p_itrans': 'Playlist insert transfer',
+    'p_ifade': 'Playlist insert crossfade',
+    'p_ipitch': 'Playlist insert pitchunbend',
+
+    'x_fade': 'Players set crossfade',
+    'x_pass': 'Players pass crossfade',
+    'x_focus': 'Players set focus',
+    'x_pitch': 'Players show pitchbend',
+
+    'm_on': 'Mic output enable',
+    'm_vol': 'Mic set volume',
+    'm_gain': 'Mic set gain',
+    'm_pan': 'Mic set balance',
+
+    'v_on': 'VoIP output enable',
+    'v_prep': 'VoIP DJ-only switch',
+    'v_vol': 'VoIP set volume',
+    'v_gain': 'VoIP set gain',
+    'v_pan': 'VoIP set balance',
+
+    'a_on': 'Aux output enable',
+    'a_vol': 'Aux set volume',
+    'a_gain': 'Aux set gain',
+    'a_pan': 'Aux set balance',
+
+    'k_fire': 'Jingle play from start',
+
+    'j_ps': 'Jingles play/stop',
+    'j_playex': 'Jingles play exclusive',
+    'j_sprev': 'Jingles select previous',
+    'j_snext': 'Jingles select next',
+    'j_sfire': 'Jingles play selected from start',
+    'j_vol': 'Jingles set volume',
+    'j_ivol': 'Jingles set interlude-mode volume',
+
+    's_on': 'Stream set connected',
+
+    'r_on': 'Recorder set recording',
+}
+
+ctrltab_label= 'Controls'
+ctrltab_column_input= 'Control'
+ctrltab_column_action= 'Action'
+ctrltab_column_target= 'Which'
+ctrltab_button_new= 'New'
+ctrltab_button_remove= 'Remove'
+ctrltab_button_edit= 'Edit'
+
+binding_title= 'Edit control binding'
+binding_input= 'Input'
+binding_action= 'Action'
+
+binding_learn= 'Listen for input...'
+binding_learn_on= 'Listening for input'
+binding_source= 'Source'
+binding_channel_midi= 'Channel'
+binding_channel_key= 'Shifting'
+binding_controls= {
+    'c': 'Control',
+    'n': 'Note',
+    'p': 'Control',
+    'k': 'Key',
+}
+
+binding_mode= 'Interaction'
+binding_target= 'Target'
+binding_values= {
+    'd': 'Value', 
+    'p': 'Invert',
+    's': 'Set to',
+    'a': 'Adjust by',
+}
 

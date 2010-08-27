@@ -22,6 +22,7 @@ pygtk.require('2.0')
 import gtk, os, licence_window, p3db, shutil
 from idjc_config import *
 from ln_text import ln
+import IDJCcontrols
 
 class XChatInstaller(gtk.Button):
    def check_plugin(self):
@@ -482,7 +483,7 @@ def make_entry_line(parent, item, code, hastoggle):
    box.set_border_width(4)
    box.set_spacing(5)
 
-   entry = gtk.Entry(30)
+   entry = gtk.Entry(128)
    entry.set_size_request(185, -1)
 
    savebutton = gtk.Button(ln.save)
@@ -626,90 +627,15 @@ class mixprefs:
       self.right_player_frame.set_sensitive(state)
       self.misc_session_frame.set_sensitive(state)
    
+   jack_ports= ("mic1", "mic2", "mic3", "mic4", "audl", "audr", "strl", "strr", "auxl", "auxr", "midi", "dol", "dor", "dil", "dir")
+
    def load_jack_port_settings(self):
-      if os.path.isfile(self.parent.idjc + "mic1"):
-         file = open(self.parent.idjc + "mic1", "r")
-         self.mic1entry.set_text(file.readline()[:-1])
-         self.mic1check.set_active(file.readline() == "1\n")
-         file.close()
-
-      if os.path.isfile(self.parent.idjc + "mic2"):
-         file = open(self.parent.idjc + "mic2", "r")
-         self.mic2entry.set_text(file.readline()[:-1])
-         self.mic2check.set_active(file.readline() == "1\n")
-         file.close()
-
-      if os.path.isfile(self.parent.idjc + "mic3"):
-         file = open(self.parent.idjc + "mic3", "r")
-         self.mic3entry.set_text(file.readline()[:-1])
-         self.mic3check.set_active(file.readline() == "1\n")
-         file.close()
-
-      if os.path.isfile(self.parent.idjc + "mic4"):
-         file = open(self.parent.idjc + "mic4", "r")
-         self.mic4entry.set_text(file.readline()[:-1])
-         self.mic4check.set_active(file.readline() == "1\n")
-         file.close()
-
-      if os.path.isfile(self.parent.idjc + "audl"):
-         file = open(self.parent.idjc + "audl", "r")
-         self.audlentry.set_text(file.readline()[:-1])
-         self.audlcheck.set_active(file.readline() == "1\n")
-         file.close()
-      
-      if os.path.isfile(self.parent.idjc + "audr"):
-         file = open(self.parent.idjc + "audr", "r")
-         self.audrentry.set_text(file.readline()[:-1])
-         self.audrcheck.set_active(file.readline() == "1\n")
-         file.close()
-         
-      if os.path.isfile(self.parent.idjc + "strl"):
-         file = open(self.parent.idjc + "strl", "r")
-         self.strlentry.set_text(file.readline()[:-1])
-         self.strlcheck.set_active(file.readline() == "1\n")
-         file.close()
-      
-      if os.path.isfile(self.parent.idjc + "strr"):
-         file = open(self.parent.idjc + "strr", "r")
-         self.strrentry.set_text(file.readline()[:-1])
-         self.strrcheck.set_active(file.readline() == "1\n")
-         file.close()
-      
-      if os.path.isfile(self.parent.idjc + "auxl"):
-         file = open(self.parent.idjc + "auxl", "r")
-         self.auxlentry.set_text(file.readline()[:-1])
-         self.auxlcheck.set_active(file.readline() == "1\n")
-         file.close()
-               
-      if os.path.isfile(self.parent.idjc + "auxr"):
-         file = open(self.parent.idjc + "auxr", "r")
-         self.auxrentry.set_text(file.readline()[:-1])
-         self.auxrcheck.set_active(file.readline() == "1\n")
-         file.close()
-   
-      if os.path.isfile(self.parent.idjc + "dol"):
-         file = open(self.parent.idjc + "dol", "r")
-         self.dolentry.set_text(file.readline()[:-1])
-         self.dolcheck.set_active(file.readline() == "1\n")
-         file.close()
-               
-      if os.path.isfile(self.parent.idjc + "dor"):
-         file = open(self.parent.idjc + "dor", "r")
-         self.dorentry.set_text(file.readline()[:-1])
-         self.dorcheck.set_active(file.readline() == "1\n")
-         file.close()
-   
-      if os.path.isfile(self.parent.idjc + "dil"):
-         file = open(self.parent.idjc + "dil", "r")
-         self.dilentry.set_text(file.readline()[:-1])
-         self.dilcheck.set_active(file.readline() == "1\n")
-         file.close()
-               
-      if os.path.isfile(self.parent.idjc + "dir"):
-         file = open(self.parent.idjc + "dir", "r")
-         self.direntry.set_text(file.readline()[:-1])
-         self.dircheck.set_active(file.readline() == "1\n")
-         file.close()
+      for port in self.jack_ports:
+         if os.path.isfile(self.parent.idjc + port):
+            file = open(self.parent.idjc + port, "r")
+            getattr(self, port+"entry").set_text(file.readline()[:-1])
+            getattr(self, port+"check").set_active(file.readline() == "1\n")
+            file.close()
    
    def auto_click(self, widget, data):
       data.set_sensitive(not widget.get_active())
@@ -909,6 +835,15 @@ class mixprefs:
          self.parent.player_right.pbspeedbox.hide()
       self.parent.send_new_mixer_stats()
 
+   def cb_dual_volume(self, widget):
+      if widget.get_active():
+         self.parent.deck2adj.set_value(self.parent.deckadj.get_value())
+         self.parent.deck2vol.show()
+         self.parent.tooltips.set_tip(self.parent.deckvol, ln.left_volume_control_tip)
+      else:
+         self.parent.deck2vol.hide()
+         self.parent.tooltips.set_tip(self.parent.deckvol, ln.common_volume_control_tip)
+
    def cb_twodblimit(self, widget):
       if widget.get_active():
          level = -2.0
@@ -939,22 +874,10 @@ class mixprefs:
          cursor = entry.get_position()
          entry.insert_text("\x03", cursor)
          entry.set_position(cursor + 1)
-   
+
    def bind_jack_ports(self):
-      self.mic1update.clicked()
-      self.mic2update.clicked()
-      self.mic3update.clicked()
-      self.mic4update.clicked()
-      self.audlupdate.clicked()
-      self.audrupdate.clicked()
-      self.strlupdate.clicked()
-      self.strrupdate.clicked()
-      self.auxlupdate.clicked()
-      self.auxrupdate.clicked()
-      self.dolupdate.clicked()
-      self.dorupdate.clicked()
-      self.dilupdate.clicked()
-      self.dirupdate.clicked()
+      for port in self.jack_ports:
+         getattr(self, port+"update").clicked()
 
    def cb_headroom(self, widget):
       self.parent.mixer_write("HEAD=%f\nACTN=headroom\nend\n" % widget.get_value(), True)
@@ -1167,7 +1090,13 @@ class mixprefs:
       self.speed_variance.connect("toggled", self.cb_pbspeed)
       self.speed_variance.show()
       parent.tooltips.set_tip(self.speed_variance, ln.player_speed_tip)
-      
+
+      self.dual_volume = gtk.CheckButton(ln.dual_volume)
+      vbox.pack_start(self.dual_volume, False, False, 0)
+      self.dual_volume.connect("toggled", self.cb_dual_volume)
+      self.dual_volume.show()
+      parent.tooltips.set_tip(self.dual_volume, ln.dual_volume_tip)
+
       self.ask_profile = gtk.CheckButton(ln.ask_profile)
       vbox.pack_start(self.ask_profile, False, False, 0)
       self.ask_profile.show()
@@ -1895,6 +1824,8 @@ class mixprefs:
       vbox.add(box)
       box, self.auxrcheck, self.auxrentry, self.auxrupdate = make_entry_line(self, "aux_in_r: ", "AUXR", False)
       vbox.add(box)
+      box, self.midicheck, self.midientry, self.midiupdate = make_entry_line(self, "midi_control: ", "MIDI", False)
+      vbox.add(box)
       jack_vbox.add(frame)
       vbox.show()
      
@@ -1954,7 +1885,14 @@ class mixprefs:
       self.notebook.append_page(jack_vbox, jacklabel)
       jack_vbox.show()
       jacklabel.show()
-      
+
+      # Controls tab
+      tab= IDJCcontrols.ControlsUI(self.parent.controls)
+      label= gtk.Label(ln.ctrltab_label)
+      self.notebook.append_page(tab, label)
+      tab.show()
+      label.show()
+
       # Event tab
       
       vbox = gtk.VBox()
@@ -2123,6 +2061,7 @@ class mixprefs:
          "fastest_rs"    : self.fastest_resample,
          "micauxmutex"   : self.mic_aux_mutex,
          "speed_var"     : self.speed_variance,
+         "dual_volume"   : self.dual_volume,
          "twodblimit"    : self.twodblimit,
          "showtips"      : self.enable_tooltips,
          "mp3utf8"           : self.mp3_utf8,
