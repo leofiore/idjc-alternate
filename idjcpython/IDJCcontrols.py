@@ -18,7 +18,7 @@
 import pygtk
 pygtk.require('2.0')
 import os.path, sys, re
-import gtk, gobject
+import gtk, gobject, pango
 from ln_text import ln
 from idjc_config import *
 
@@ -1241,6 +1241,8 @@ class ModifierSpinButton(CustomSpinButton):
 class ControlsUI(gtk.VBox):
     """Controls main config interface, displayed in a tab by IDJCmixprefs
     """
+    tooltip_coords = (0, 0)
+    
     def __init__(self, owner):
         gtk.VBox.__init__(self, spacing= 4)
         self.owner= owner
@@ -1255,22 +1257,20 @@ class ControlsUI(gtk.VBox):
         # Control list
         #
         column_input= gtk.TreeViewColumn(ln.ctrltab_column_input)
+        column_input.set_expand(True)
         cricon= gtk.CellRendererPixbuf()
         crtext= gtk.CellRendererText()
+        crtext.props.ellipsize= pango.ELLIPSIZE_END
         column_input.pack_start(cricon, False)
-        column_input.pack_start(crtext, False)
+        column_input.pack_start(crtext, True)
         column_input.set_attributes(cricon, pixbuf= 3)
         column_input.set_attributes(crtext, text= 4)
         column_input.set_sort_column_id(0)
-        column_input.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
-        column_input.set_fixed_width(92)
-        column_action= gtk.TreeViewColumn(ln.ctrltab_column_action, gtk.CellRendererText(), text= 5)
+        craction= gtk.CellRendererText()
+        column_action= gtk.TreeViewColumn(ln.ctrltab_column_action, craction, text= 5)
         column_action.set_sort_column_id(1)
-        column_action.set_expand(True)
         column_target= gtk.TreeViewColumn(ln.ctrltab_column_target, gtk.CellRendererText(), text= 6)
         column_target.set_sort_column_id(2)
-        column_target.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
-        column_target.set_fixed_width(92)
 
         model= BindingListModel(self)
         model_sort= gtk.TreeModelSort(model)
@@ -1278,11 +1278,15 @@ class ControlsUI(gtk.VBox):
         self.tree= gtk.TreeView(model_sort)
         self.tree.connect('cursor-changed', self.on_cursor_changed)
         self.tree.connect('key-press-event', self.on_tree_key)
+        self.tree.connect('query-tooltip', self.on_tooltip_query, column_input)
         model.connect('row-deleted', self.on_cursor_changed)
         self.tree.append_column(column_input)
         self.tree.append_column(column_action)
         self.tree.append_column(column_target)
         self.tree.set_headers_visible(True)
+        self.tree.set_rules_hint(True)
+        self.tree.set_enable_search(False)
+        self.tree.set_has_tooltip(True)
 
         # New/Edit/Remove buttons
         #
@@ -1312,6 +1316,25 @@ class ControlsUI(gtk.VBox):
         self.pack_start(scroll, True, True)
         self.pack_start(buttons, False, False)
         self.show_all()
+
+    # Tooltip generation
+    #
+    def on_tooltip_query(self, tv, x, y, kb_mode, tooltip, col_input):
+        if (x, y) != self.tooltip_coords:
+            self.tooltip_coords = (x, y)
+        else:
+            path = tv.get_path_at_pos(x, y - 23)
+            if path is not None:
+                row = tv.get_model()[path[0]]
+                hbox = gtk.HBox()
+                hbox.set_spacing(3)
+                hbox.pack_start(gtk.image_new_from_pixbuf(row[3].copy()), False)
+                hbox.pack_start(gtk.Label(row[4]), False)
+                hbox.pack_start(gtk.Label(row[5]), False, False, 8)
+                hbox.pack_start(gtk.Label(row[6] or ln.ctrltab_without_target), False)
+                hbox.show_all()
+                tooltip.set_custom(hbox)
+                return True
 
     # Tree interaction
     #

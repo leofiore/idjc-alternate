@@ -1978,7 +1978,7 @@ class mixprefs:
       lw.show()
       label.show()
       
-      contributors = ("Stephen Fairchild (s-fairchild@users.sourceforge.net)", "Dario Abatianni (eisfuchs@users.sourceforge.net)", "Stefan Fendt (stefan@sfendt.de)", "Jannis Achstetter (jannis_achstetter@web.de)", "Sven Krohlas (sven@asbest-online.de)")
+      contributors = ("Stephen Fairchild (s-fairchild@users.sourceforge.net)", "And Clover (and@doxdesk.com)", "Dario Abatianni (eisfuchs@users.sourceforge.net)", "Stefan Fendt (stefan@sfendt.de)", "Jannis Achstetter (jannis_achstetter@web.de)", "Sven Krohlas (sven@asbest-online.de)")
       
       sw = gtk.ScrolledWindow()
       sw.set_border_width(1)

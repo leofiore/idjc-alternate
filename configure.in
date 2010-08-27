@@ -2,11 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-<<<<<<< HEAD
 AC_INIT(idjc, 0.8.4_development, s-fairchild@users.sourceforge.net)
-=======
-AC_INIT(idjc, 0.8.3, s-fairchild@users.sourceforge.net)
->>>>>>> midi
 AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])

@@ -1496,7 +1496,7 @@ control_targets_players= (
     'Left player',
     'Right player',
     'Focused player',
-    'Crossfaded player',
+    "X'faded player",
 )
 control_method_groups= {
     'p': 'Player',
@@ -1569,13 +1569,14 @@ control_methods= {
     'r_on': 'Recorder set recording',
 }
 
-ctrltab_label= 'Controls'
+ctrltab_label= 'Bindings'
 ctrltab_column_input= 'Control'
 ctrltab_column_action= 'Action'
 ctrltab_column_target= 'Which'
 ctrltab_button_new= 'New'
 ctrltab_button_remove= 'Remove'
 ctrltab_button_edit= 'Edit'
+ctrltab_without_target= 'Unassigned'
 
 binding_title= 'Edit control binding'
 binding_input= 'Input'
