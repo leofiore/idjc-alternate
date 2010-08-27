@@ -642,6 +642,8 @@ LIBVORBIS_LIBS
 LIBVORBIS_CFLAGS
 LIBJACK_LIBS
 LIBJACK_CFLAGS
+PKG_CONFIG_LIBDIR
+PKG_CONFIG_PATH
 PKG_CONFIG
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
@@ -748,6 +750,8 @@ LDFLAGS
 LIBS
 CPPFLAGS
 PKG_CONFIG
+PKG_CONFIG_PATH
+PKG_CONFIG_LIBDIR
 LIBJACK_CFLAGS
 LIBJACK_LIBS
 LIBVORBIS_CFLAGS
@@ -1409,6 +1413,10 @@ Some influential environment variables:
   CPPFLAGS    (Objective) C/C++ preprocessor flags, e.g. -I<include dir> if
               you have headers in a nonstandard directory <include dir>
   PKG_CONFIG  path to pkg-config utility
+  PKG_CONFIG_PATH
+              directories to add to pkg-config's search path
+  PKG_CONFIG_LIBDIR
+              path overriding pkg-config's built-in search path
   LIBJACK_CFLAGS
               C compiler flags for LIBJACK, overriding pkg-config
   LIBJACK_LIBS
@@ -4031,6 +4039,10 @@ fi
 # We need libjack in order to compile.
 
 
+
+
+
+
 if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
 	if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
@@ -4143,7 +4155,6 @@ $as_echo "yes" >&6; }
 $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
-
 fi
 
 pkg_failed=no
@@ -4186,6 +4197,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -4209,9 +4222,10 @@ installed software in a non-standard prefix.
 
 Alternatively, you may set the environment variables LIBJACK_CFLAGS
 and LIBJACK_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-" "$LINENO" 5
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error "The pkg-config script could not be found or is too old.  Make sure it
@@ -4229,7 +4243,7 @@ else
 	LIBJACK_LIBS=$pkg_cv_LIBJACK_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	:
+
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for jack_set_info_function in -ljack" >&5
@@ -4317,6 +4331,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -4340,9 +4356,10 @@ installed software in a non-standard prefix.
 
 Alternatively, you may set the environment variables LIBVORBIS_CFLAGS
 and LIBVORBIS_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-" "$LINENO" 5
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error "The pkg-config script could not be found or is too old.  Make sure it
@@ -4360,7 +4377,7 @@ else
 	LIBVORBIS_LIBS=$pkg_cv_LIBVORBIS_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	:
+
 fi
 
 pkg_failed=no
@@ -4403,6 +4420,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -4426,9 +4445,10 @@ installed software in a non-standard prefix.
 
 Alternatively, you may set the environment variables LIBVORBISENC_CFLAGS
 and LIBVORBISENC_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-" "$LINENO" 5
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error "The pkg-config script could not be found or is too old.  Make sure it
@@ -4446,7 +4466,7 @@ else
 	LIBVORBISENC_LIBS=$pkg_cv_LIBVORBISENC_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	:
+
 fi
 
 # Check whether --enable-mad was given.
@@ -4499,6 +4519,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -4513,8 +4535,6 @@ fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$LIBMAD_PKG_ERRORS" >&5
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
 
 $as_echo "#define DYN_MAD 1" >>confdefs.h
 
@@ -4523,6 +4543,8 @@ $as_echo "#define DYN_MAD 1" >>confdefs.h
             as_fn_error "libmad not detected but specifically requested in configure options" "$LINENO" 5
          fi
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 $as_echo "#define DYN_MAD 1" >>confdefs.h
 
@@ -4535,7 +4557,7 @@ else
 	LIBMAD_LIBS=$pkg_cv_LIBMAD_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	:
+
 fi
 else
 
@@ -4585,6 +4607,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -4608,9 +4632,10 @@ installed software in a non-standard prefix.
 
 Alternatively, you may set the environment variables LIBSAMPLERATE_CFLAGS
 and LIBSAMPLERATE_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-" "$LINENO" 5
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error "The pkg-config script could not be found or is too old.  Make sure it
@@ -4628,7 +4653,7 @@ else
 	LIBSAMPLERATE_LIBS=$pkg_cv_LIBSAMPLERATE_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	:
+
 fi
 
 
@@ -4672,6 +4697,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -4695,9 +4722,10 @@ installed software in a non-standard prefix.
 
 Alternatively, you may set the environment variables LIBSNDFILE_CFLAGS
 and LIBSNDFILE_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-" "$LINENO" 5
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error "The pkg-config script could not be found or is too old.  Make sure it
@@ -4715,7 +4743,7 @@ else
 	LIBSNDFILE_LIBS=$pkg_cv_LIBSNDFILE_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	:
+
 fi
 
 # Check whether --enable-ffmpeg was given.
@@ -4768,6 +4796,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -4782,9 +4812,7 @@ fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$LIBAVCODEC_PKG_ERRORS" >&5
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-                HAVE_AVCODEC=0
+	HAVE_AVCODEC=0
 
 
             if test $makeffmpeg = "yes" ; then
@@ -4794,6 +4822,8 @@ $as_echo "no" >&6; }
 $as_echo "$as_me: WARNING: IDJC will be built without wma/mp4/ape support" >&2;}
             fi
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	HAVE_AVCODEC=0
 
 
@@ -4913,6 +4943,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -4927,9 +4959,7 @@ fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$LIBAVFORMAT_PKG_ERRORS" >&5
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-                HAVE_AVFORMAT=0
+	HAVE_AVFORMAT=0
 
 
             if test $makeffmpeg = "yes" ; then
@@ -4939,6 +4969,8 @@ $as_echo "no" >&6; }
 $as_echo "$as_me: WARNING: IDJC will be built without wma/mp4/ape support" >&2;}
             fi
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	HAVE_AVFORMAT=0
 
 
@@ -5017,6 +5049,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -5031,9 +5065,7 @@ fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$LIBSPEEX_PKG_ERRORS" >&5
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-                HAVE_SPEEX=0
+	HAVE_SPEEX=0
 ,
 
             if test $makespeex = "yes" ; then
@@ -5043,6 +5075,8 @@ $as_echo "no" >&6; }
 $as_echo "$as_me: WARNING: IDJC will be built without speex support" >&2;}
             fi
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	HAVE_SPEEX=0
 ,
 
@@ -5153,6 +5187,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -5176,9 +5212,10 @@ installed software in a non-standard prefix.
 
 Alternatively, you may set the environment variables PYGTK_CFLAGS
 and PYGTK_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-" "$LINENO" 5
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error "The pkg-config script could not be found or is too old.  Make sure it
@@ -5196,7 +5233,7 @@ else
 	PYGTK_LIBS=$pkg_cv_PYGTK_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	:
+
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for mutagen" >&5
@@ -5261,6 +5298,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -5275,9 +5314,7 @@ fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$LIBFLAC_PKG_ERRORS" >&5
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-                HAVE_FLAC=0
+	HAVE_FLAC=0
 
 
             if test $makeflac = "yes" ; then
@@ -5287,6 +5324,8 @@ $as_echo "no" >&6; }
 $as_echo "$as_me: WARNING: IDJC will be built without flac support" >&2;}
             fi
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	HAVE_FLAC=0
 
 
@@ -6340,6 +6379,8 @@ fi
 
 
 if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
         _pkg_short_errors_supported=yes
@@ -6363,9 +6404,10 @@ installed software in a non-standard prefix.
 
 Alternatively, you may set the environment variables LIBSHOUT_CFLAGS
 and LIBSHOUT_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-" "$LINENO" 5
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error "The pkg-config script could not be found or is too old.  Make sure it
@@ -6383,7 +6425,7 @@ else
 	LIBSHOUT_LIBS=$pkg_cv_LIBSHOUT_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	:
+
 fi
    for ac_header in shout/shout.h
 do :
