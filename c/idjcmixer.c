@@ -489,7 +489,7 @@ void update_smoothed_volumes()
       vol = current_jingles_volume * 0.06666666F;
    else
       vol = current_volume * 0.06666666F;
-   dfmod = 1.0F / (vol * vol + 1.0F);
+   dfmod = vol * vol + 1.0F;
    }
 
 /* update_mic_and_aux: provide gradual mute/unmute for aux button */
@@ -768,7 +768,7 @@ void process_audio(jack_nframes_t nframes)
              
              float w1 = (df1 < df2) ? df1 : df2;
              float w2 = (df3 < df4) ? df3 : df4;
-             df = (w1 < w2) ? w1 : w2;
+             df = ((w1 < w2) ? w1 : w2) * dfmod;
              df = (df < hr) ? df : hr;
          }
 
@@ -1261,7 +1261,7 @@ void process_audio(jack_nframes_t nframes)
                       
                       float w1 = (df1 < df2) ? df1 : df2;
                       float w2 = (df3 < df4) ? df3 : df4;
-                      df = (w1 < w2) ? w1 : w2;
+                      df = ((w1 < w2) ? w1 : w2) * dfmod;
                       df = (df < hr) ? df : hr;
                   }
                      
