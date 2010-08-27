@@ -203,7 +203,7 @@ class CuesheetPlaylist(gtk.Frame):
       renderer_toggle = gtk.CellRendererToggle()
       renderer_toggle.connect("toggled", self.play_clicked)
       renderer_text_desc = gtk.CellRendererText()
-      renderer_text_desc.set_property("ellipsize", pango.ELLIPSIZE_MIDDLE)
+      renderer_text_desc.set_property("ellipsize", pango.ELLIPSIZE_END)
       renderer_text_rjust = gtk.CellRendererText()
       renderer_text_rjust.set_property("xalign", 0.9)
       renderer_duration = CellRendererDuration()
@@ -575,7 +575,7 @@ class nice_listen_togglebutton(gtk.ToggleButton):
         
 
 class CueSheet(object):
-   """A namespace class for parsing cue sheets."""
+   """A class for parsing cue sheets."""
 
    _operands = (("PERFORMER", "SONGWRITER", "TITLE", "PREGAP", "POSTGAP"),
                 ("FILE", "TRACK", "INDEX"))
@@ -2579,8 +2579,7 @@ class IDJC_Media_Player:
       else:
          self.play.clicked()
                            
-   def cb_singleclick(self, treeview):
-      treeselection = treeview.get_selection()
+   def cb_selection_changed(self, treeselection):
       (model, iter) = treeselection.get_selected()
       if iter:
          row = PlayerRow._make(self.liststore[model.get_path(iter)[0]])
@@ -3408,7 +3407,7 @@ class IDJC_Media_Player:
       self.treeview.connect("drag_data_delete", self.drag_data_delete)
       
       self.treeview.connect("row_activated", self.cb_doubleclick, "Double click")
-      self.treeview.connect("cursor-changed", self.cb_singleclick)
+      self.treeview.get_selection().connect("changed", self.cb_selection_changed)
       
       self.treeview.connect("key_press_event", self.cb_keypress)
       
