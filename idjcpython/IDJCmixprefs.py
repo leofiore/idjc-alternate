@@ -841,6 +841,16 @@ class mixprefs:
          self.parent.deck2vol.show()
          self.parent.tooltips.set_tip(self.parent.deckvol, ln.left_volume_control_tip)
       else:
+         if self.parent.player_left.is_playing ^ self.parent.player_right.is_playing:
+            if self.parent.player_left.is_playing:
+               self.parent.deck2adj.set_value(self.parent.deckadj.get_value())
+            else:
+               self.parent.deckadj.set_value(self.parent.deck2adj.get_value())
+         else:
+            halfdelta = (self.parent.deck2adj.get_value() - self.parent.deckadj.get_value()) / 2
+            self.parent.deck2adj.props.value -= halfdelta
+            self.parent.deckadj.props.value += halfdelta
+         
          self.parent.deck2vol.hide()
          self.parent.tooltips.set_tip(self.parent.deckvol, ln.common_volume_control_tip)
 

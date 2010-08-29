@@ -645,9 +645,13 @@ class Controls(object):
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def m_on(self, n, v, isd):
         opener= self.owner.mic_opener
-        mic= opener.mic2button[opener.mic_list[n].ui_name]
-        s= not mic.get_active() if isd else v>=0x40
-        mic.set_active(s)
+        try:
+           mic= opener.mic2button[opener.mic_list[n].ui_name]
+        except:
+           print "microphone %d is not present" % (n + 1)
+        else:
+           s= not mic.get_active() if isd else v>=0x40
+           mic.set_active(s)
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def m_vol(self, n, v, isd):
@@ -1278,7 +1282,7 @@ class ControlsUI(gtk.VBox):
         self.tree= gtk.TreeView(model_sort)
         self.tree.connect('cursor-changed', self.on_cursor_changed)
         self.tree.connect('key-press-event', self.on_tree_key)
-        self.tree.connect('query-tooltip', self.on_tooltip_query, column_input)
+        self.tree.connect('query-tooltip', self.on_tooltip_query)
         model.connect('row-deleted', self.on_cursor_changed)
         self.tree.append_column(column_input)
         self.tree.append_column(column_action)
@@ -1319,7 +1323,7 @@ class ControlsUI(gtk.VBox):
 
     # Tooltip generation
     #
-    def on_tooltip_query(self, tv, x, y, kb_mode, tooltip, col_input):
+    def on_tooltip_query(self, tv, x, y, kb_mode, tooltip):
         if (x, y) != self.tooltip_coords:
             self.tooltip_coords = (x, y)
         else:

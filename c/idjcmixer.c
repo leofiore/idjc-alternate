@@ -322,7 +322,7 @@ void update_smoothed_volumes()
    static sample_t lp_listen_mute = 1.0F, rp_listen_mute = 1.0F, lp_stream_mute = 1.0F, rp_stream_mute = 1.0F;
    sample_t mic_target, diff;
    static float interlude_autovol = -128.0F, old_autovol = -128.0F;
-   float vol;
+   float vol, halfdelta;
    float xprop, yprop;
    const float bias = 0.35386F;
 
@@ -482,13 +482,11 @@ void update_smoothed_volumes()
             }
       }
 
-   /* calculate the ducking factor reduction based on gain controls */
-   /* XXX what should this do for dual_volume? I don't understand what it's
-      supposed to be doing in shared volume mode - dfmod is not used? */
    if (jingles_playing)
       vol = current_jingles_volume * 0.06666666F;
    else
-      vol = current_volume * 0.06666666F;
+      halfdelta = (current_volume - current_volume2) / 2.0F;
+      vol = (current_volume - halfdelta) * 0.06666666F;
    dfmod = vol * vol + 1.0F;
    }
 

@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.4 *
 
+Merged in new midi and assignable keyboard shortcuts interface.
+
 Cue sheets can now be added to the main player playlists. TODO: cuesheet playlist, playback.
 
 Cue sheets now indicate type WAVE when making a cue sheet for a flac file and cue sheets now store sub-second time offset information.
