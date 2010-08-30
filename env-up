@@ -1,0 +1,7 @@
+#!/bin/bash
+
+autoconf
+cd libshout
+./configure || /bin/true
+cd ..
+autoreconf
