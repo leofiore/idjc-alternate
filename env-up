@@ -1,9 +1,9 @@
 #!/bin/bash
 
-echo "Remaking missing files in build environment."
+echo "remaking missing files in build environment"
 autoconf
 cd libshout
 ./configure >/dev/null 2>&1 || /bin/true
-echo "Almost done."
+echo "almost done"
 cd ..
 autoreconf

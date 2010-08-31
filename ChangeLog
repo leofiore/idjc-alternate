@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.4 *
 
+New env-up script for those who accidentally on purpose deleted thier ./configure file.
+
 Merged in new midi and assignable keyboard shortcuts interface.
 
 Cue sheets can now be added to the main player playlists. TODO: cuesheet playlist, playback.

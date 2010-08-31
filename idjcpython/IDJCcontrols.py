@@ -21,6 +21,7 @@ import os.path, sys, re
 import gtk, gobject, pango
 from ln_text import ln
 from idjc_config import *
+from IDJCfree import *
 
 
 class Binding(tuple):
@@ -328,6 +329,7 @@ class Controls(object):
         self.learner= None
         self.editing= None
         self.lookup= {}
+        self.highlights= {}
 
         # Default minimal set of bindings, if not overridden by prefs file
         # This matches the hotkeys previously built-in to IDJC
@@ -410,6 +412,8 @@ class Controls(object):
         # is-delta flag to action methods.
         #
         for binding in self.lookup.get(input, []):
+            # Binding is to be highlighted in the user interface.
+            self.highlights[binding]= 5
             isd= False
             if binding.mode==Binding.MODE_DIRECT:
                 if binding.value<0:
@@ -1267,7 +1271,7 @@ class ControlsUI(gtk.VBox):
         crtext.props.ellipsize= pango.ELLIPSIZE_END
         column_input.pack_start(cricon, False)
         column_input.pack_start(crtext, True)
-        column_input.set_attributes(cricon, pixbuf= 3)
+        column_input.set_attributes(cricon, pixbuf= 3, cell_background= 7)
         column_input.set_attributes(crtext, text= 4)
         column_input.set_sort_column_id(0)
         craction= gtk.CellRendererText()
@@ -1321,12 +1325,12 @@ class ControlsUI(gtk.VBox):
         self.pack_start(buttons, False, False)
         self.show_all()
 
-    # Tooltip generation
+    # Dynamic tooltip generation
     #
     def on_tooltip_query(self, tv, x, y, kb_mode, tooltip):
         if (x, y) != self.tooltip_coords:
             self.tooltip_coords = (x, y)
-        else:
+        elif None not in (x, y):
             path = tv.get_path_at_pos(x, y - 23)
             if path is not None:
                 row = tv.get_model()[path[0]]
@@ -1419,6 +1423,22 @@ class BindingListModel(gtk.GenericTreeModel):
         gtk.GenericTreeModel.__init__(self)
         self.owner= owner
         self.bindings= owner.owner.bindings
+        self.highlights= owner.owner.highlights
+        gobject.timeout_add(100, self.highlights_decimator)
+        
+    @threadslock
+    def highlights_decimator(self):
+        d= self.highlights
+        if d:
+            for key, val in d.items():
+                if val > 1:
+                    d[key] -= 1
+                else:
+                    del d[key]
+            win = self.owner.tree.get_bin_window()
+            if win is not None:
+                win.invalidate_rect(gtk.gdk.Rectangle(0, 0, 32768, 32768), False)
+        return True
 
     def on_get_flags(self):
         return gtk.TREE_MODEL_LIST_ONLY|gtk.TREE_MODEL_ITERS_PERSIST
@@ -1459,7 +1479,7 @@ class BindingListModel(gtk.GenericTreeModel):
 
     # Make column data from binding objects
     #
-    column_types= [str, str, str, gtk.gdk.Pixbuf, str, str, str]
+    column_types= [str, str, str, gtk.gdk.Pixbuf, str, str, str, str]
     def on_get_value(self, binding, i):
         if i<3: # invisible sort columns
             inputix= '%02x.%02x.%04x' % (Binding.SOURCES.index(binding.source), binding.channel, binding.control)
@@ -1474,6 +1494,8 @@ class BindingListModel(gtk.GenericTreeModel):
             return binding.action_str
         elif i==6: # target column
             return binding.target_str
+        elif i==7: # background color column
+            return "red" if binding in self.highlights else None
 
     # Alteration
     #

@@ -2,7 +2,7 @@ SUBDIRS = ${MAYBE_LIBSHOUT} c idjcpython artwork Man
 DISTDIRS = libshout
 
 nodist_bin_SCRIPTS=idjc idjcctrl
-dist_noinst_SCRIPTS=idjc_ idjcctrl_.py ffmpeg_avcodec.c $(wildcard doc/*.html) $(wildcard doc/*.jpg) $(wildcard doc/*.css)
+dist_noinst_SCRIPTS=idjc_ idjcctrl_.py env-up ffmpeg_avcodec.c $(wildcard doc/*.html) $(wildcard doc/*.jpg) $(wildcard doc/*.css)
 nodist_doc_DATA=AUTHORS.gz NEWS.gz README.gz ChangeLog.gz
 docdir=${prefix}/share/doc/${PACKAGE_NAME}-${PACKAGE_VERSION}
 dist_noinst_DATA=idjc.desktop_
