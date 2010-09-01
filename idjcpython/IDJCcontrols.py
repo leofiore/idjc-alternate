@@ -413,7 +413,7 @@ class Controls(object):
         #
         for binding in self.lookup.get(input, []):
             # Binding is to be highlighted in the user interface.
-            self.highlights[binding]= 5
+            self.highlights[binding]= (5, True)
             isd= False
             if binding.mode==Binding.MODE_DIRECT:
                 if binding.value<0:
@@ -1284,6 +1284,7 @@ class ControlsUI(gtk.VBox):
         model_sort= gtk.TreeModelSort(model)
         model_sort.set_sort_column_id(2, gtk.SORT_ASCENDING)
         self.tree= gtk.TreeView(model_sort)
+        self.tree.connect('realize', model.on_realize, column_input, model_sort)
         self.tree.connect('cursor-changed', self.on_cursor_changed)
         self.tree.connect('key-press-event', self.on_tree_key)
         self.tree.connect('query-tooltip', self.on_tooltip_query)
@@ -1331,7 +1332,7 @@ class ControlsUI(gtk.VBox):
         if (x, y) != self.tooltip_coords:
             self.tooltip_coords = (x, y)
         elif None not in (x, y):
-            path = tv.get_path_at_pos(x, y - 23)
+            path = tv.get_path_at_pos(*tv.convert_widget_to_bin_window_coords(x, y))
             if path is not None:
                 row = tv.get_model()[path[0]]
                 hbox = gtk.HBox()
@@ -1424,20 +1425,27 @@ class BindingListModel(gtk.GenericTreeModel):
         self.owner= owner
         self.bindings= owner.owner.bindings
         self.highlights= owner.owner.highlights
-        gobject.timeout_add(100, self.highlights_decimator)
+        
+    def on_realize(self, tree, column0, model_sort):
+        source= gobject.timeout_add(100, self.cb_highlights, tree, column0, model_sort)
+        tree.connect_object('destroy', gobject.source_remove, source)
         
     @threadslock
-    def highlights_decimator(self):
+    def cb_highlights(self, tree, column0, model_sort):
         d= self.highlights
         if d:
-            for key, val in d.items():
-                if val > 1:
-                    d[key] -= 1
+            for rowref, (count, is_new) in d.items():
+                # Highlights counter is reduced.
+                if count < 1:
+                    del d[rowref]
                 else:
-                    del d[key]
-            win = self.owner.tree.get_bin_window()
-            if win is not None:
-                win.invalidate_rect(gtk.gdk.Rectangle(0, 0, 32768, 32768), False)
+                    d[rowref]= (count - 1, False)
+                # Treeview area invalidation to trigger a redraw.
+                if is_new or rowref not in d:
+                    path= self.on_get_path(rowref)
+                    path= model_sort.convert_child_path_to_path(path)
+                    area= tree.get_background_area(path, column0)
+                    tree.get_bin_window().invalidate_rect(area, False)
         return True
 
     def on_get_flags(self):
