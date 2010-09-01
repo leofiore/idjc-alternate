@@ -837,7 +837,7 @@ class IDJC_Media_Player:
       if filext in (".cue", ".txt"):
          return self.make_cuesheet_playlist_entry(filename)
       else:
-         cuesheet = CueSheetListStore() # Empty.
+         cuesheet = None
  
       # Use this name for metadata when we can't get anything from tags.
       # The name will also appear grey to indicate a tagless state.
@@ -1086,6 +1086,9 @@ class IDJC_Media_Player:
                   item = "(%s, )" % ", ".join(repr(x) for x in item)
                else:
                   item = "()"
+            elif item is None:
+               fh.write("n")
+               item = "None"
             fh.write(str(len(item)) + ":" + item)
          fh.write("\n")
       model, iter = self.treeview.get_selection().get_selected()
@@ -1173,17 +1176,20 @@ class IDJC_Media_Player:
          
          value = text[end + 1 : nextstart]
          try:
-            if text[start] == "i":
+            t = text[start]
+            if t == "i":
                value = int(value)
-            elif text[start] == "f":
+            elif t == "f":
                value = float(value)
-            elif text[start] == "s":
+            elif t == "s":
                pass
-            elif text[start] == "c":
+            elif t == "c":
                csts = eval(value, {"__builtins__":None},{"CueSheetTrack":CueSheetTrack})
                value = CueSheetListStore()
                for cst in csts:
                   value.append(cst)
+            elif t == "n":
+               value = None
          except Exception, e:
             print "pl_unpack: playlist line not valid", e
             try:
