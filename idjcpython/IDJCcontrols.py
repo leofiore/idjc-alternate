@@ -1440,12 +1440,17 @@ class BindingListModel(gtk.GenericTreeModel):
                     del d[rowref]
                 else:
                     d[rowref]= (count - 1, False)
-                # Treeview area invalidation to trigger a redraw.
+                # TreeView area invalidation to trigger a redraw.
                 if is_new or rowref not in d:
-                    path= self.on_get_path(rowref)
-                    path= model_sort.convert_child_path_to_path(path)
-                    area= tree.get_background_area(path, column0)
-                    tree.get_bin_window().invalidate_rect(area, False)
+                    try:
+                        path= self.on_get_path(rowref)
+                    except ValueError:
+                        # User craftily deleted the entry during highlighting.
+                        pass
+                    else:
+                        path= model_sort.convert_child_path_to_path(path)
+                        area= tree.get_background_area(path, column0)
+                        tree.get_bin_window().invalidate_rect(area, False)
         return True
 
     def on_get_flags(self):
