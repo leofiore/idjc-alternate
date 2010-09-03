@@ -347,7 +347,7 @@ class Controls(object):
             Binding('k0.ffc7:pk_fire.9.0'),
             Binding('k0.ffc8:pk_fire.a.0'),
             Binding('k0.ffc9:pk_fire.b.0'),
-            Binding('k0.ff1b:sj_ps.b.0'), # Esc stop jingles
+            Binding('k0.ff1b:pj_ps.b.0'), # Esc stop jingles
             Binding('k0.31:sx_fade.b.0'), # 1-2 xfader sides
             Binding('k0.32:sx_fade.b.127'),
             Binding('k0.63:px_pass.0.127'), # C, pass xfader
@@ -988,20 +988,26 @@ class BindingEditor(gtk.Dialog):
         self.target_field= CustomSpinButton(TargetAdjustment('p'))
 
         self.value_label= gtk.Label(ln.binding_values[Binding.MODE_SET])
+        self.value_field_numeric= gtk.Label()
+        self.value_field_numeric.set_width_chars(4)
+        self.value_field_numeric.set_alignment(1.0, 0.5)
         self.value_field= gtk.HScale(gtk.Adjustment(0, -127, 127, 1))
+        self.value_field.connect("value-changed", self.on_value_field, self.value_field_numeric)
         self.value_field.set_digits(0)
-        self.value_field.set_draw_value(True)
-        if hasattr(self.value_field, 'add_mark'): # requires gtk+ 2.16
+        self.value_field.set_draw_value(False)
+        if hasattr(self.value_field, 'add_mark'): # requires gtk+ 2.16, maybe 2.15
             self.value_field.add_mark(0, gtk.POS_BOTTOM, None)
-        self.value_field.set_value_pos(gtk.POS_BOTTOM)
-        self.value_field_invert= gtk.CheckButton()
+        self.value_field_noninvert = gtk.RadioButton(None, ln.non_inverted_value)
+        self.value_field_noninvert.set_active(True)
+        self.value_field_invert= gtk.RadioButton(self.value_field_noninvert, ln.inverted_value)
+        self.value_field_statelabel= gtk.Label(ln.current_state)  # Informational/null control.
+        self.value_field_statelabel.set_alignment(0.0, 0.5)
 
         # Layout
         #
         for label in self.source_label, self.channel_label, self.control_label, self.mode_label, self.target_label, self.value_label:
             label.set_width_chars(10)
             label.set_alignment(0, 0.5)
-        self.value_label.set_alignment(0, 0.2)
 
         row0, row1, row2, row3= gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4)
         row0.pack_start(self.learn_button)
@@ -1024,6 +1030,20 @@ class BindingEditor(gtk.Dialog):
         input_frame.add(input_pane)
         input_pane.show()
 
+        self.value_field_rangebox = gtk.HBox()
+        self.value_field_rangebox.set_spacing(2)
+        self.value_field_rangebox.pack_start(self.value_field_numeric, False)
+        self.value_field_rangebox.pack_start(self.value_field)
+        self.value_field_rangebox.foreach(gtk.Widget.show)
+        self.value_field_radiobox = gtk.HBox()
+        self.value_field_radiobox.pack_start(self.value_field_noninvert)
+        self.value_field_radiobox.pack_start(self.value_field_invert)
+        self.value_field_radiobox.foreach(gtk.Widget.show)
+        sg= gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
+        sg.add_widget(self.value_field_rangebox)
+        sg.add_widget(self.value_field_radiobox)
+        sg.add_widget(self.value_field_statelabel)
+
         row0, row1, row2, row3= gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4)
         row0.pack_start(self.method_field)
         row1.pack_start(self.mode_label, False, False)
@@ -1031,8 +1051,9 @@ class BindingEditor(gtk.Dialog):
         row2.pack_start(self.target_label, False, False)
         row2.pack_start(self.target_field)
         row3.pack_start(self.value_label, False, False)
-        row3.pack_start(self.value_field)
-        row3.pack_start(self.value_field_invert)
+        row3.pack_start(self.value_field_rangebox)
+        row3.pack_start(self.value_field_radiobox)
+        row3.pack_start(self.value_field_statelabel)
 
         action_pane= gtk.VBox(spacing= 4)
         action_pane.set_border_width(8)
@@ -1080,9 +1101,12 @@ class BindingEditor(gtk.Dialog):
             value= value
         )
 
+    def on_value_field(self, range, label):
+        label.set_text(str(int(range.get_value())))
+
     def on_delete(self, *_):
-       self.on_close()
-       return True
+        self.on_close()
+        return True
     def on_close(self, *_):
         self.learn_button.set_active(False)
 
@@ -1158,28 +1182,30 @@ class BindingEditor(gtk.Dialog):
     def on_mode_changed(self, *_):
         mode= self.mode_field.get_value()
         self.value_label.set_text(ln.binding_values[mode])
-        if hasattr(self.value_field, 'clear_marks'):
-            self.value_field.clear_marks()
+
+        self.value_field_statelabel.hide()
+        self.value_field_rangebox.hide()
+        self.value_field_radiobox.hide()
+        
         if mode==Binding.MODE_DIRECT:
-            self.value_field_invert.set_active(False)
-            self.value_field.hide()
-            self.value_field_invert.show()
+            self.value_field_noninvert.set_active(True)
+            self.value_field_radiobox.show()
+        elif mode==Binding.MODE_PULSE:
+            self.value_field_statelabel.show()
         else:
-            if mode==Binding.MODE_SET:
-                self.value_field.set_value(127)
-                self.value_field.set_adjustment(gtk.Adjustment(0, 0, 127, 1))
-                if hasattr(self.value_field, 'add_mark'):
-                    self.value_field.add_mark(64, gtk.POS_BOTTOM, None)
-            else:
-                self.value_field.set_value(10)
-                self.value_field.set_adjustment(gtk.Adjustment(0, -127, 127, 1))
-                if hasattr(self.value_field, 'add_mark'):
-                    self.value_field.add_mark(0, gtk.POS_BOTTOM, None)
-            self.value_field.show()
-            self.value_field_invert.hide()
-        sensitive= mode!=Binding.MODE_PULSE
-        self.value_field.set_sensitive(sensitive)
-        self.value_label.set_sensitive(sensitive)
+           # Find the adjustment limits.
+           if mode==Binding.MODE_SET:
+               min, max = 0, 127
+           else:
+               min, max = -127, 127
+           mid = (max - min + 1) // 2 + min
+
+           self.value_field.set_adjustment(gtk.Adjustment(mid, min, max, 1))
+           if hasattr(self.value_field, 'add_mark'):
+               self.value_field.clear_marks()
+               self.value_field.add_mark(mid, gtk.POS_BOTTOM, None)
+           self.value_field.emit('value-changed')
+           self.value_field_rangebox.show()
 
 # Extended adjustments for custom SpinButtons
 #

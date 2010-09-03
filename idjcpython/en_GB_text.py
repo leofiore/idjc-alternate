@@ -1496,7 +1496,7 @@ control_targets_players= (
     'Left player',
     'Right player',
     'Focused player',
-    "X'faded player",
+    "Fadered player",
 )
 control_method_groups= {
     'p': 'Player',
@@ -1579,8 +1579,8 @@ ctrltab_button_edit= 'Edit'
 ctrltab_without_target= 'Unassigned'
 
 binding_title= 'Edit control binding'
-binding_input= 'Input'
-binding_action= 'Action'
+binding_input= ' Input '
+binding_action= ' Action '
 
 binding_learn= 'Listen for input...'
 binding_learn_on= 'Listening for input'
@@ -1603,3 +1603,6 @@ binding_values= {
     'a': 'Adjust by',
 }
 
+non_inverted_value= 'As is'
+inverted_value= 'Inverted'
+current_state= 'Current State'
