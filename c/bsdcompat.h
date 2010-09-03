@@ -27,10 +27,10 @@
 #include <stdio.h>
 #include <sys/types.h>
 
-inline float bsd_pow10f(float x);
+float bsd_pow10f(float x);
 char *bsd_strndup(const char *s, size_t n);
 ssize_t bsd_getline(char **lineptr, size_t *n, FILE *stream);
-inline char *bsd_canonicalize_file_name(const char *path);
+char *bsd_canonicalize_file_name(const char *path);
 
 #ifndef _GNU_SOURCE
 

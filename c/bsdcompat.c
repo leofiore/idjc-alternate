@@ -27,7 +27,7 @@
 #include <string.h>
 #include <errno.h>
 
-inline float bsd_pow10f(float x)
+float bsd_pow10f(float x)
    {
    return powf(10.f, x);
    }
@@ -99,7 +99,7 @@ ssize_t bsd_getline(char **lineptr, size_t *n, FILE *stream)
    return i;
    }
 
-inline char *bsd_canonicalize_file_name(const char *path)
+char *bsd_canonicalize_file_name(const char *path)
    {
    return realpath(path, NULL);
    }
