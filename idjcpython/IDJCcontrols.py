@@ -1103,6 +1103,8 @@ class BindingEditor(gtk.Dialog):
 
     def on_value_field(self, range, label):
         label.set_text(str(int(range.get_value())))
+        if range.get_adjustment().props.page_size > 32:
+            range.set_value(0 if range.get_value() < 32 else 64)
 
     def on_delete(self, *_):
         self.on_close()
@@ -1178,6 +1180,15 @@ class BindingEditor(gtk.Dialog):
             sensitive= False
         self.target_field.set_sensitive(sensitive)
         self.target_label.set_sensitive(sensitive)
+        
+        # Make the value field range boolean in nature.
+        if 'p' in modes and 'a' not in modes:
+           self.value_field_step=64
+           self.value_field.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
+        else:
+           self.value_field_step=1
+           self.value_field.set_update_policy(gtk.UPDATE_CONTINUOUS)
+        self.mode_field.emit("changed")
 
     def on_mode_changed(self, *_):
         mode= self.mode_field.get_value()
@@ -1198,9 +1209,10 @@ class BindingEditor(gtk.Dialog):
                min, max = 0, 127
            else:
                min, max = -127, 127
-           mid = (max - min + 1) // 2 + min
+           mid= (max - min + 1) // 2 + min
+           step= self.value_field_step
 
-           self.value_field.set_adjustment(gtk.Adjustment(mid, min, max, 1))
+           self.value_field.set_adjustment(gtk.Adjustment(mid, min, max, step, step, step - 1))
            if hasattr(self.value_field, 'add_mark'):
                self.value_field.clear_marks()
                self.value_field.add_mark(mid, gtk.POS_BOTTOM, None)
