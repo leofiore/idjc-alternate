@@ -988,15 +988,8 @@ class BindingEditor(gtk.Dialog):
         self.target_field= CustomSpinButton(TargetAdjustment('p'))
 
         self.value_label= gtk.Label(ln.binding_values[Binding.MODE_SET])
-        self.value_field_numeric= gtk.Label()
-        self.value_field_numeric.set_width_chars(4)
-        self.value_field_numeric.set_alignment(1.0, 0.5)
-        self.value_field= gtk.HScale(gtk.Adjustment(0, -127, 127, 1))
-        self.value_field.connect("value-changed", self.on_value_field, self.value_field_numeric)
-        self.value_field.set_digits(0)
-        self.value_field.set_draw_value(False)
-        if hasattr(self.value_field, 'add_mark'): # requires gtk+ 2.16, maybe 2.15
-            self.value_field.add_mark(0, gtk.POS_BOTTOM, None)
+        self.value_field_scale= ValueSnapHScale(0, -127, 127)
+        dummy= ValueSnapHScale(0, -127, 127)
         self.value_field_noninvert = gtk.RadioButton(None, ln.non_inverted_value)
         self.value_field_noninvert.set_active(True)
         self.value_field_invert= gtk.RadioButton(self.value_field_noninvert, ln.inverted_value)
@@ -1030,19 +1023,16 @@ class BindingEditor(gtk.Dialog):
         input_frame.add(input_pane)
         input_pane.show()
 
-        self.value_field_rangebox = gtk.HBox()
-        self.value_field_rangebox.set_spacing(2)
-        self.value_field_rangebox.pack_start(self.value_field_numeric, False)
-        self.value_field_rangebox.pack_start(self.value_field)
-        self.value_field_rangebox.foreach(gtk.Widget.show)
         self.value_field_radiobox = gtk.HBox()
         self.value_field_radiobox.pack_start(self.value_field_noninvert)
         self.value_field_radiobox.pack_start(self.value_field_invert)
         self.value_field_radiobox.foreach(gtk.Widget.show)
         sg= gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
-        sg.add_widget(self.value_field_rangebox)
+        sg.add_widget(self.value_field_scale)
         sg.add_widget(self.value_field_radiobox)
         sg.add_widget(self.value_field_statelabel)
+        sg.add_widget(dummy)
+        dummy.show()
 
         row0, row1, row2, row3= gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4)
         row0.pack_start(self.method_field)
@@ -1051,7 +1041,7 @@ class BindingEditor(gtk.Dialog):
         row2.pack_start(self.target_label, False, False)
         row2.pack_start(self.target_field)
         row3.pack_start(self.value_label, False, False)
-        row3.pack_start(self.value_field_rangebox)
+        row3.pack_start(self.value_field_scale)
         row3.pack_start(self.value_field_radiobox)
         row3.pack_start(self.value_field_statelabel)
 
@@ -1082,7 +1072,7 @@ class BindingEditor(gtk.Dialog):
         self.method_field.set_value(binding.method)
         self.mode_field.set_value(binding.mode)
         self.target_field.set_value(binding.target)
-        self.value_field.set_value(binding.value)
+        self.value_field_scale.set_value(binding.value)
         self.value_field_invert.set_active(binding.control>=64)
 
     def get_binding(self):
@@ -1090,7 +1080,7 @@ class BindingEditor(gtk.Dialog):
         if mode==Binding.MODE_DIRECT:
             value= -127 if self.value_field_invert.get_active() else 127
         else:
-            value= int(self.value_field.get_value())
+            value= int(self.value_field_scale.get_value())
         return Binding(
             source= self.source_field.get_value(),
             channel= int(self.channel_field.get_value()),
@@ -1100,11 +1090,6 @@ class BindingEditor(gtk.Dialog):
             target= int(self.target_field.get_value()),
             value= value
         )
-
-    def on_value_field(self, range, label):
-        label.set_text(str(int(range.get_value())))
-        if range.get_adjustment().props.page_size > 32:
-            range.set_value(0 if range.get_value() < 32 else 64)
 
     def on_delete(self, *_):
         self.on_close()
@@ -1170,32 +1155,24 @@ class BindingEditor(gtk.Dialog):
         self.mode_field.set_value(modes[0])
 
         group= method[:1]
-        sensitive= True
         if group=='p':
             self.target_field.set_adjustment(PlayerAdjustment())
         elif group in 'mksr':
             self.target_field.set_adjustment(TargetAdjustment(group))
         else:
-            self.target_field.set_adjustment(gtk.Adjustment(0, 0, 99, 1))
-            sensitive= False
-        self.target_field.set_sensitive(sensitive)
-        self.target_label.set_sensitive(sensitive)
+            self.target_field.set_adjustment(SingularAdjustment())
         
-        # Make the value field range boolean in nature.
-        if 'p' in modes and 'a' not in modes:
-           self.value_field_step=64
-           self.value_field.set_update_policy(gtk.UPDATE_DISCONTINUOUS)
-        else:
-           self.value_field_step=1
-           self.value_field.set_update_policy(gtk.UPDATE_CONTINUOUS)
-        self.mode_field.emit("changed")
+        # Snap state may need altering.
+        self.snap_needed = 'p' in modes and 'a' not in modes
+        if bool(self.value_field_scale.snap) != self.snap_needed:
+            self.mode_field.emit("changed")
 
     def on_mode_changed(self, *_):
         mode= self.mode_field.get_value()
         self.value_label.set_text(ln.binding_values[mode])
 
         self.value_field_statelabel.hide()
-        self.value_field_rangebox.hide()
+        self.value_field_scale.hide()
         self.value_field_radiobox.hide()
         
         if mode==Binding.MODE_DIRECT:
@@ -1209,15 +1186,76 @@ class BindingEditor(gtk.Dialog):
                min, max = 0, 127
            else:
                min, max = -127, 127
-           mid= (max - min + 1) // 2 + min
-           step= self.value_field_step
+           val= min + (max - min + 1) // 2
+           snap= val if self.snap_needed else None
+           self.value_field_scale.set_range(val, min, max, snap)
+           self.value_field_scale.show()
 
-           self.value_field.set_adjustment(gtk.Adjustment(mid, min, max, step, step, step - 1))
-           if hasattr(self.value_field, 'add_mark'):
-               self.value_field.clear_marks()
-               self.value_field.add_mark(mid, gtk.POS_BOTTOM, None)
-           self.value_field.emit('value-changed')
-           self.value_field_rangebox.show()
+# A Compound HScale widget that supports snapping.
+#
+class ValueSnapHScale(gtk.HBox):
+    can_mark= all(hasattr(gtk.Scale, x) for x in ('add_mark', 'clear_marks'))
+    
+    def __init__(self, *args, **kwds):
+        gtk.HBox.__init__(self)
+        self.set_spacing(2)
+        self.label= gtk.Label() 
+        self.label.set_width_chars(4)
+        self.label.set_alignment(1.0, 0.5)
+        self.pack_start(self.label, False)
+        self.hscale= gtk.HScale()
+        self.hscale.connect('change-value', self.on_change_value)
+        self.hscale.connect('value-changed', self.on_value_changed)
+        # We draw our own value so we can control the alignment.
+        self.hscale.set_draw_value(False)
+        self.pack_start(self.hscale)
+        self.foreach(gtk.Widget.show)
+        if args:
+            self.set_range(*args, **kwds)
+        else:
+            self.label.set_text("0")
+            self.snap= None
+
+    def set_range(self, val, lower, upper, snap=None):
+        # Here snap also doubles as the boundary value.
+        self.snap= snap
+        if snap is not None:
+            policy= gtk.UPDATE_DISCONTINUOUS
+            adj= gtk.Adjustment(val, lower, upper + snap - 1, snap * 2, snap * 2, snap-1)
+            adj.connect('notify::value', self.on_value_do_snap, lower, upper)
+        else:
+            policy= gtk.UPDATE_CONTINUOUS
+            adj= gtk.Adjustment(val, lower, upper, 1, 6)
+        if self.can_mark:
+            self.hscale.clear_marks()
+            if not self.snap:
+                mark= lower + (upper - lower + 1) // 2
+                self.hscale.add_mark(mark, gtk.POS_BOTTOM, None)
+        self.hscale.set_adjustment(adj)
+        self.hscale.set_update_policy(policy)
+        adj.props.value= val
+        self.hscale.emit('value-changed')
+
+    def on_change_value(self, range, scroll, _val):
+        if self.snap:
+            props= range.get_adjustment().props
+            value= props.upper - props.page_size if range.get_value() >= self.snap else props.lower
+            self.label.set_text(str(int(value)))
+
+    def on_value_changed(self, range):
+        self.label.set_text(str(int(range.get_value())))
+
+    def on_value_do_snap(self, adj, _val, lower, upper):
+        val= upper if adj.props.value >= self.snap else lower
+        if adj.props.value != val:
+            adj.props.value= val
+        if val==lower:
+            self.snap= lower + (upper - lower) // 4
+        else:
+            self.snap= lower + (upper - lower) * 3 // 4
+
+    def __getattr__(self, name):
+        return getattr(self.hscale, name)
 
 # Extended adjustments for custom SpinButtons
 #
@@ -1266,6 +1304,13 @@ class TargetAdjustment(CustomAdjustment):
         return int(text.rsplit(' ', 1)[-1])-1
     def write_output(self, value):
         return '%s %d' % (ln.control_targets[self._group], value+1)
+class SingularAdjustment(CustomAdjustment):
+    def __init__(self, value= 0):
+        CustomAdjustment.__init__(self)
+    def read_input(self, text):
+        return ln.control_target_singular
+    def write_output(self, value):
+        return ln.control_target_singular
 
 # SpinButton that can translate its underlying adjustment values to GTK shift
 # key modifier flags, when a ModifierAdjustment is used.

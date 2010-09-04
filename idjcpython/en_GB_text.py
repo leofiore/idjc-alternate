@@ -1485,6 +1485,9 @@ control_modes= {
     's': 'Set value',
     'a': 'Alter value'
 }
+
+control_target_singular= 'Singular control'
+
 control_targets= {
     'p': 'Player',
     'm': 'Mic',
@@ -1570,13 +1573,13 @@ control_methods= {
 }
 
 ctrltab_label= 'Bindings'
-ctrltab_column_input= 'Control'
+ctrltab_column_input= 'Input'
 ctrltab_column_action= 'Action'
-ctrltab_column_target= 'Which'
+ctrltab_column_target= 'Target'
 ctrltab_button_new= 'New'
 ctrltab_button_remove= 'Remove'
 ctrltab_button_edit= 'Edit'
-ctrltab_without_target= 'Unassigned'
+ctrltab_without_target= 'Singular control'
 
 binding_title= 'Edit control binding'
 binding_input= ' Input '
