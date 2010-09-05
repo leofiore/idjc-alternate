@@ -991,11 +991,8 @@ class BindingEditor(gtk.Dialog):
         self.value_label= gtk.Label(ln.binding_values[Binding.MODE_SET])
         self.value_field_scale= ValueSnapHScale(0, -127, 127)
         dummy= ValueSnapHScale(0, -127, 127)
-        self.value_field_noninvert = gtk.RadioButton(None, ln.non_inverted_value)
-        self.value_field_noninvert.set_active(True)
-        self.value_field_invert= gtk.RadioButton(self.value_field_noninvert, ln.inverted_value)
+        self.value_field_invert= gtk.CheckButton(ln.inverted_value)
         self.value_field_empty= gtk.Label(' ')
-        self.value_field_empty.set_alignment(0.06, 0.5)
 
         # Layout
         #
@@ -1025,13 +1022,9 @@ class BindingEditor(gtk.Dialog):
         input_pane.show()
         set_tip(input_pane, ln.binding_input_tip)
 
-        self.value_field_radiobox = gtk.HBox()
-        self.value_field_radiobox.pack_start(self.value_field_noninvert)
-        self.value_field_radiobox.pack_start(self.value_field_invert)
-        self.value_field_radiobox.foreach(gtk.Widget.show)
         sg= gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
         sg.add_widget(self.value_field_scale)
-        sg.add_widget(self.value_field_radiobox)
+        sg.add_widget(self.value_field_invert)
         sg.add_widget(self.value_field_empty)
         sg.add_widget(dummy)
         dummy.show()
@@ -1042,7 +1035,7 @@ class BindingEditor(gtk.Dialog):
         row1.pack_start(self.mode_field)
         row2.pack_start(self.value_label, False, False)
         row2.pack_start(self.value_field_scale)
-        row2.pack_start(self.value_field_radiobox)
+        row2.pack_start(self.value_field_invert)
         row2.pack_start(self.value_field_empty)
         row3.pack_start(self.target_label, False, False)
         row3.pack_start(self.target_field)
@@ -1076,7 +1069,7 @@ class BindingEditor(gtk.Dialog):
         self.mode_field.set_value(binding.mode)
         self.target_field.set_value(binding.target)
         self.value_field_scale.set_value(binding.value)
-        self.value_field_invert.set_active(binding.control>=64)
+        self.value_field_invert.set_active(binding.control < 64)
 
     def get_binding(self):
         mode= self.mode_field.get_value()
@@ -1177,11 +1170,11 @@ class BindingEditor(gtk.Dialog):
 
         self.value_field_empty.hide()
         self.value_field_scale.hide()
-        self.value_field_radiobox.hide()
+        self.value_field_invert.hide()
         
         if mode==Binding.MODE_DIRECT:
-            self.value_field_noninvert.set_active(True)
-            self.value_field_radiobox.show()
+            self.value_field_invert.set_active(False)
+            self.value_field_invert.show()
         elif mode==Binding.MODE_PULSE:
             self.value_field_empty.show()
         else:
