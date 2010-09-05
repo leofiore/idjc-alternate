@@ -1512,6 +1512,11 @@ control_method_groups= {
     's': 'Stream',
     'r': 'Stream recorder',
 }
+control_values_pulse= (
+    'On press, with repeat',
+    'On press, no repeat',
+    'On release'
+)
 control_methods= {
     'p_pp': 'Player play/pause',
     'p_stop': 'Player stop',

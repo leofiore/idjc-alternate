@@ -318,6 +318,7 @@ class jingles:
       self.window.set_icon_from_file(pkgdatadir + "icon" + gfext)
       self.window.add_events(gtk.gdk.KEY_PRESS_MASK)
       self.window.connect("key-press-event", parent.cb_key_capture)
+      self.window.connect("key-release-event", parent.cb_key_capture)
 
       hbox = gtk.HBox()
       hbox.set_spacing(8)

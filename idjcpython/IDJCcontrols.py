@@ -330,9 +330,10 @@ class Controls(object):
         self.editing= None
         self.lookup= {}
         self.highlights= {}
+        self.repeat_cache= set()
 
         # Default minimal set of bindings, if not overridden by prefs file
-        # This matches the hotkeys previously built-in to IDJC
+        # This matches the hotkeys previously built into IDJC
         #
         self.bindings= [
             Binding('k0.ffbe:pk_fire.0.0'), # F-key jingles
@@ -398,7 +399,7 @@ class Controls(object):
         for binding in self.bindings:
             self.lookup.setdefault(str(binding).split(':', 1)[0], []).append(binding)
 
-    def input(self, input, v):
+    def input(self, input, iv):
         """Dispatch incoming input to all bindings associated with it
         """
         # If a BindingEditor is open in learning mode, inform it of the input
@@ -415,10 +416,23 @@ class Controls(object):
             # Binding is to be highlighted in the user interface.
             self.highlights[binding]= (5, True)
             isd= False
+            v= iv
             if binding.mode==Binding.MODE_DIRECT:
                 if binding.value<0:
                     v= 0x7F-v
             else:
+                if binding.mode==Binding.MODE_PULSE:
+                    if binding.value==2:
+                        # Implement pulse mode on release instead.
+                        v= (~v)&0x7F
+                    elif binding.value==1:
+                        # Suppress repeats.
+                        if input in self.repeat_cache:
+                            if v<0x40:
+                                self.repeat_cache.discard(input)
+                            v= 0
+                        else:
+                            self.repeat_cache.add(input)
                 if v<0x40:
                     continue
                 if binding.mode in (Binding.MODE_SET, Binding.MODE_ALTER):
@@ -945,7 +959,7 @@ class BindingEditor(gtk.Dialog):
         self.owner= owner
         gtk.Dialog.__init__(self,
             ln.binding_title, owner.owner.owner.prefs_window.window,
-            gtk.DIALOG_DESTROY_WITH_PARENT | gtk.DIALOG_NO_SEPARATOR,
+            gtk.DIALOG_DESTROY_WITH_PARENT | gtk.DIALOG_NO_SEPARATOR | gtk.DIALOG_MODAL,
             (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OK, gtk.RESPONSE_OK)
         )
         gtk.Dialog.set_icon_from_file(self, pkgdatadir+'icon'+gfext)
@@ -992,13 +1006,15 @@ class BindingEditor(gtk.Dialog):
         self.value_field_scale= ValueSnapHScale(0, -127, 127)
         dummy= ValueSnapHScale(0, -127, 127)
         self.value_field_invert= gtk.CheckButton(ln.inverted_value)
-        self.value_field_empty= gtk.Label(' ')
+        self.value_field_pulse= CustomSpinButton(PulseAdjustment(0))
 
         # Layout
         #
         for label in self.source_label, self.channel_label, self.control_label, self.mode_label, self.target_label, self.value_label:
             label.set_width_chars(10)
             label.set_alignment(0, 0.5)
+
+        sg= gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
 
         row0, row1, row2, row3= gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4)
         row0.pack_start(self.learn_button)
@@ -1008,8 +1024,9 @@ class BindingEditor(gtk.Dialog):
         row2.pack_start(self.channel_field)
         row3.pack_start(self.control_label, False, False)
         row3.pack_start(self.control_field)
+        sg.add_widget(row2)
 
-        input_pane= gtk.VBox(spacing= 4)
+        input_pane= gtk.VBox(homogeneous= True, spacing= 2)
         input_pane.set_border_width(8)
         input_pane.pack_start(row0, False, False)
         input_pane.pack_start(row1, False, False)
@@ -1022,10 +1039,13 @@ class BindingEditor(gtk.Dialog):
         input_pane.show()
         set_tip(input_pane, ln.binding_input_tip)
 
-        sg= gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
+        self.value_field_pulsebox= gtk.HBox()
+        self.value_field_pulsebox.pack_start(self.value_field_pulse)
+        self.value_field_pulse.show()
+
         sg.add_widget(self.value_field_scale)
         sg.add_widget(self.value_field_invert)
-        sg.add_widget(self.value_field_empty)
+        sg.add_widget(self.value_field_pulsebox)
         sg.add_widget(dummy)
         dummy.show()
 
@@ -1036,11 +1056,11 @@ class BindingEditor(gtk.Dialog):
         row2.pack_start(self.value_label, False, False)
         row2.pack_start(self.value_field_scale)
         row2.pack_start(self.value_field_invert)
-        row2.pack_start(self.value_field_empty)
+        row2.pack_start(self.value_field_pulsebox)
         row3.pack_start(self.target_label, False, False)
         row3.pack_start(self.target_field)
 
-        action_pane= gtk.VBox(spacing= 4)
+        action_pane= gtk.VBox(homogeneous= True, spacing= 2)
         action_pane.set_border_width(8)
         action_pane.pack_start(row0, False, False)
         action_pane.pack_start(row1, False, False)
@@ -1069,12 +1089,15 @@ class BindingEditor(gtk.Dialog):
         self.mode_field.set_value(binding.mode)
         self.target_field.set_value(binding.target)
         self.value_field_scale.set_value(binding.value)
-        self.value_field_invert.set_active(binding.control < 64)
+        self.value_field_invert.set_active(binding.value < 64)
+        self.value_field_pulse.set_value(binding.value)
 
     def get_binding(self):
         mode= self.mode_field.get_value()
         if mode==Binding.MODE_DIRECT:
             value= -127 if self.value_field_invert.get_active() else 127
+        elif mode==Binding.MODE_PULSE:
+            value= int(self.value_field_pulse.get_value())
         else:
             value= int(self.value_field_scale.get_value())
         return Binding(
@@ -1168,7 +1191,7 @@ class BindingEditor(gtk.Dialog):
         mode= self.mode_field.get_value()
         self.value_label.set_text(ln.binding_values[mode])
 
-        self.value_field_empty.hide()
+        self.value_field_pulsebox.hide()
         self.value_field_scale.hide()
         self.value_field_invert.hide()
         
@@ -1176,7 +1199,7 @@ class BindingEditor(gtk.Dialog):
             self.value_field_invert.set_active(False)
             self.value_field_invert.show()
         elif mode==Binding.MODE_PULSE:
-            self.value_field_empty.show()
+            self.value_field_pulsebox.show()
         else:
            # Find the adjustment limits.
            if mode==Binding.MODE_SET:
@@ -1308,7 +1331,15 @@ class SingularAdjustment(CustomAdjustment):
         return 0.0
     def write_output(self, value):
         return ln.control_target_singular
-
+        
+class PulseAdjustment(CustomAdjustment):
+    def __init__(self, value= 0):
+        CustomAdjustment.__init__(self, value, 0, 2, 1)
+    def read_input(self, text):
+        return ln.control_values_pulse.index(text)
+    def write_output(self, value):
+        return ln.control_values_pulse[max(min(int(value), 2), 0)]
+        
 # SpinButton that can translate its underlying adjustment values to GTK shift
 # key modifier flags, when a ModifierAdjustment is used.
 #
@@ -1357,6 +1388,7 @@ class ControlsUI(gtk.VBox):
         craction= gtk.CellRendererText()
         column_action= gtk.TreeViewColumn(ln.ctrltab_column_action, craction, text= 5)
         column_action.set_sort_column_id(1)
+        column_action.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
         column_target= gtk.TreeViewColumn(ln.ctrltab_column_target, gtk.CellRendererText(), text= 6)
         column_target.set_sort_column_id(2)
 
@@ -1545,7 +1577,7 @@ class BindingListModel(gtk.GenericTreeModel):
     # Pure-list iteration
     #
     def on_get_iter(self, path):
-        return self.bindings[path[0]]
+        return self.bindings[path[0]] if self.bindings else None
     def on_get_path(self, rowref):
         return (self.bindings.index(rowref),)
     def on_iter_next(self, rowref):

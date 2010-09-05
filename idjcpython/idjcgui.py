@@ -3124,6 +3124,7 @@ class MainWindow:
      
       self.window.add_events(gtk.gdk.KEY_PRESS_MASK)
       self.window.connect("key-press-event", self.cb_key_capture)
+      self.window.connect("key-release-event", self.cb_key_capture)
      
       self.window.show()
       
