@@ -1598,14 +1598,29 @@ binding_controls= {
 }
 
 binding_mode= 'Interaction'
-binding_target= 'Target'
+binding_target= 'On target'
 binding_values= {
-    'd': 'Value', 
-    'p': 'Invert',
+    'd': 'Use value', 
+    'p': 'Pulse', 
     's': 'Set to',
     'a': 'Adjust by',
 }
 
-non_inverted_value= 'As is'
+non_inverted_value= 'As-is'
 inverted_value= 'Inverted'
-current_state= 'Current State'
+
+binding_input_tip= """No binding would be complete without an input. In this case a press of a keyboard key or an event from a midi device.
+
+Input selection can be done manually or with the help of the 'Listen for input' option."""
+binding_action_tip= """The top option tersely describes a user interface feature of which there may be multiples - see 'On target' for how to select those.
+
+'Interaction' describes how the control input will be used for example:
+'Direct fader/held button' cancels the selection when the input condition is no longer present. Its 'Use value' option lets you reverse this effect.
+
+'One-shot/toggle button' Use this for a one off effect. 
+
+'Set value' This allows setting specific values like fader positions or setting a state fully on/off where no between values are allowed.
+
+'Adjust by' A single press will reduce or increase a value, e.g. a fader position will move by a certain amount.
+
+Only a subset of interaction options may be available for each action (as many as make sense)."""

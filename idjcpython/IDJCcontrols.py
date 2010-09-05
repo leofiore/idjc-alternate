@@ -864,7 +864,7 @@ class GroupedComboBox(gtk.ComboBox):
         cr= gtk.CellRendererText()
         self.pack_start(cr, True)
         self.set_attributes(cr, text= 1, sensitive= 2)
-
+        
     def get_value(self):
         iter= self.get_active_iter()
         if iter is None:
@@ -954,6 +954,7 @@ class BindingEditor(gtk.Dialog):
         self.connect('delete_event', self.on_delete)
         self.connect('close', self.on_close)
         self.connect("key-press-event", self.on_key)
+        set_tip= owner.owner.owner.tooltips.set_tip
 
         # Input editing
         #
@@ -993,8 +994,8 @@ class BindingEditor(gtk.Dialog):
         self.value_field_noninvert = gtk.RadioButton(None, ln.non_inverted_value)
         self.value_field_noninvert.set_active(True)
         self.value_field_invert= gtk.RadioButton(self.value_field_noninvert, ln.inverted_value)
-        self.value_field_statelabel= gtk.Label(ln.current_state)  # Informational/null control.
-        self.value_field_statelabel.set_alignment(0.0, 0.5)
+        self.value_field_empty= gtk.Label(' ')
+        self.value_field_empty.set_alignment(0.06, 0.5)
 
         # Layout
         #
@@ -1022,6 +1023,7 @@ class BindingEditor(gtk.Dialog):
         input_frame.set_border_width(4)
         input_frame.add(input_pane)
         input_pane.show()
+        set_tip(input_pane, ln.binding_input_tip)
 
         self.value_field_radiobox = gtk.HBox()
         self.value_field_radiobox.pack_start(self.value_field_noninvert)
@@ -1030,7 +1032,7 @@ class BindingEditor(gtk.Dialog):
         sg= gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
         sg.add_widget(self.value_field_scale)
         sg.add_widget(self.value_field_radiobox)
-        sg.add_widget(self.value_field_statelabel)
+        sg.add_widget(self.value_field_empty)
         sg.add_widget(dummy)
         dummy.show()
 
@@ -1038,12 +1040,12 @@ class BindingEditor(gtk.Dialog):
         row0.pack_start(self.method_field)
         row1.pack_start(self.mode_label, False, False)
         row1.pack_start(self.mode_field)
-        row2.pack_start(self.target_label, False, False)
-        row2.pack_start(self.target_field)
-        row3.pack_start(self.value_label, False, False)
-        row3.pack_start(self.value_field_scale)
-        row3.pack_start(self.value_field_radiobox)
-        row3.pack_start(self.value_field_statelabel)
+        row2.pack_start(self.value_label, False, False)
+        row2.pack_start(self.value_field_scale)
+        row2.pack_start(self.value_field_radiobox)
+        row2.pack_start(self.value_field_empty)
+        row3.pack_start(self.target_label, False, False)
+        row3.pack_start(self.target_field)
 
         action_pane= gtk.VBox(spacing= 4)
         action_pane.set_border_width(8)
@@ -1056,6 +1058,7 @@ class BindingEditor(gtk.Dialog):
         action_frame.set_border_width(4)
         action_frame.add(action_pane)
         action_pane.show()
+        set_tip(action_pane, ln.binding_action_tip)
 
         hbox= gtk.HBox(True, spacing= 4)
         hbox.pack_start(input_frame)
@@ -1161,6 +1164,7 @@ class BindingEditor(gtk.Dialog):
             self.target_field.set_adjustment(TargetAdjustment(group))
         else:
             self.target_field.set_adjustment(SingularAdjustment())
+        self.target_field.update()
         
         # Snap state may need altering.
         self.snap_needed = 'p' in modes and 'a' not in modes
@@ -1171,7 +1175,7 @@ class BindingEditor(gtk.Dialog):
         mode= self.mode_field.get_value()
         self.value_label.set_text(ln.binding_values[mode])
 
-        self.value_field_statelabel.hide()
+        self.value_field_empty.hide()
         self.value_field_scale.hide()
         self.value_field_radiobox.hide()
         
@@ -1179,7 +1183,7 @@ class BindingEditor(gtk.Dialog):
             self.value_field_noninvert.set_active(True)
             self.value_field_radiobox.show()
         elif mode==Binding.MODE_PULSE:
-            self.value_field_statelabel.show()
+            self.value_field_empty.show()
         else:
            # Find the adjustment limits.
            if mode==Binding.MODE_SET:
@@ -1308,7 +1312,7 @@ class SingularAdjustment(CustomAdjustment):
     def __init__(self, value= 0):
         CustomAdjustment.__init__(self)
     def read_input(self, text):
-        return ln.control_target_singular
+        return 0.0
     def write_output(self, value):
         return ln.control_target_singular
 
