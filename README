@@ -1,6 +1,8 @@
 Internet DJ Console README.
 
-A full set of documentation can be found in the doc directory of the source tree in html format and on the homepage http://idjc.sourceforge.net.
+A full set of documentation can be found in the doc directory of
+the source tree in html format and on the project homepage at
+http://idjc.sourceforge.net.
 
-The documentation contains the build instructions.
-
+If you obtained this code from the git repository please run the
+env-up script to re-create the build environment.
