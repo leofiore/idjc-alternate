@@ -1,9 +1,9 @@
 #!/bin/bash
 
 echo "remaking missing files in build environment"
-autoconf
 cd libshout
+autoreconf -ifs
+# Recreates shout-config.in
 ./configure >/dev/null 2>&1 || /bin/true
-echo "almost done"
 cd ..
-autoreconf
+autoreconf -ifs
