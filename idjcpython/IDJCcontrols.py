@@ -336,19 +336,19 @@ class Controls(object):
         # This matches the hotkeys previously built into IDJC
         #
         self.bindings= [
-            Binding('k0.ffbe:pk_fire.0.0'), # F-key jingles
-            Binding('k0.ffbf:pk_fire.1.0'),
-            Binding('k0.ffc0:pk_fire.2.0'),
-            Binding('k0.ffc1:pk_fire.3.0'),
-            Binding('k0.ffc2:pk_fire.4.0'),
-            Binding('k0.ffc3:pk_fire.5.0'),
-            Binding('k0.ffc4:pk_fire.6.0'),
-            Binding('k0.ffc5:pk_fire.7.0'),
-            Binding('k0.ffc6:pk_fire.8.0'),
-            Binding('k0.ffc7:pk_fire.9.0'),
-            Binding('k0.ffc8:pk_fire.a.0'),
-            Binding('k0.ffc9:pk_fire.b.0'),
-            Binding('k0.ff1b:pj_ps.b.0'), # Esc stop jingles
+            Binding('k0.ffbe:pk_fire.0.127'), # F-key jingles
+            Binding('k0.ffbf:pk_fire.1.127'),
+            Binding('k0.ffc0:pk_fire.2.127'),
+            Binding('k0.ffc1:pk_fire.3.127'),
+            Binding('k0.ffc2:pk_fire.4.127'),
+            Binding('k0.ffc3:pk_fire.5.127'),
+            Binding('k0.ffc4:pk_fire.6.127'),
+            Binding('k0.ffc5:pk_fire.7.127'),
+            Binding('k0.ffc6:pk_fire.8.127'),
+            Binding('k0.ffc7:pk_fire.9.127'),
+            Binding('k0.ffc8:pk_fire.a.127'),
+            Binding('k0.ffc9:pk_fire.b.127'),
+            Binding('k0.ff1b:pj_ps.b.127'), # Esc stop jingles
             Binding('k0.31:sx_fade.b.0'), # 1-2 xfader sides
             Binding('k0.32:sx_fade.b.127'),
             Binding('k0.63:px_pass.0.127'), # C, pass xfader
@@ -365,6 +365,7 @@ class Controls(object):
             Binding('k0.6e:pp_ipitch.2.127'),
             Binding('k4.72:pr_on.0.127'),
             Binding('k4.73:ps_on.0.127'),
+            Binding('k0.69:pc_tips.0.127'), # Tooltips shown
         ]
         self.update_lookup()
 
@@ -421,18 +422,8 @@ class Controls(object):
                 if binding.value<0:
                     v= 0x7F-v
             else:
-                if binding.mode==Binding.MODE_PULSE:
-                    if binding.value==2:
-                        # Implement pulse mode on release instead.
-                        v= (~v)&0x7F
-                    elif binding.value==1:
-                        # Suppress repeats.
-                        if input in self.repeat_cache:
-                            if v<0x40:
-                                self.repeat_cache.discard(input)
-                            v= 0
-                        else:
-                            self.repeat_cache.add(input)
+                if binding.mode==Binding.MODE_PULSE and binding.value<=0x40:
+                    v= (~v)&0x7F # Act upon release.
                 if v<0x40:
                     continue
                 if binding.mode in (Binding.MODE_SET, Binding.MODE_ALTER):
@@ -444,12 +435,21 @@ class Controls(object):
     def input_key(self, event):
         """Convert incoming key events into input signals
         """
-        # Ignore modifier keypresses, and include only relevant modifier flags
+        # Ignore modifier keypresses, suppress keyboard repeat,
+        # and include only relevant modifier flags.
         #
         if not(0xFFE1<=event.keyval<0xFFEF or 0xFE01<=event.keyval<0xFE35):
             state= event.state&Binding.MODIFIERS_MASK
             v= 0x7F if event.type==gtk.gdk.KEY_PRESS else 0
-            self.input('k%x.%x' % (state, event.keyval), v)
+            b= 'k%x.%x' % (state, event.keyval)
+            if v>=0x40:
+                if b in self.repeat_cache:
+                    return
+                else:
+                    self.repeat_cache.add(b)
+            else:
+                self.repeat_cache.discard(b)
+            self.input(b, v)
 
     # Utility for p_ control methods
     #
@@ -471,6 +471,15 @@ class Controls(object):
     # Control implementations. The @action_method decorator records all control
     # methods in order, so the order they are defined in this code dictates the
     # order they'll appear in in the UI.
+
+    # Preferences
+    #
+    @action_method(Binding.MODE_PULSE, Binding.MODE_SET)
+    def c_tips(self, n, v, isd):
+        control= self.owner.prefs_window.enable_tooltips
+        if isd:
+            v= 0 if control.get_active() else 127
+        control.set_active(v>=64)
 
     # Player
     #
@@ -1006,7 +1015,8 @@ class BindingEditor(gtk.Dialog):
         self.value_field_scale= ValueSnapHScale(0, -127, 127)
         dummy= ValueSnapHScale(0, -127, 127)
         self.value_field_invert= gtk.CheckButton(ln.inverted_value)
-        self.value_field_pulse= CustomSpinButton(PulseAdjustment(0))
+        self.value_field_pulse_noinvert= gtk.RadioButton(None, ln.pulse_on_press)
+        self.value_field_pulse_inverted=gtk.RadioButton(self.value_field_pulse_noinvert, ln.pulse_on_release)
 
         # Layout
         #
@@ -1040,8 +1050,9 @@ class BindingEditor(gtk.Dialog):
         set_tip(input_pane, ln.binding_input_tip)
 
         self.value_field_pulsebox= gtk.HBox()
-        self.value_field_pulsebox.pack_start(self.value_field_pulse)
-        self.value_field_pulse.show()
+        self.value_field_pulsebox.pack_start(self.value_field_pulse_noinvert)
+        self.value_field_pulsebox.pack_start(self.value_field_pulse_inverted)
+        self.value_field_pulsebox.foreach(gtk.Widget.show)
 
         sg.add_widget(self.value_field_scale)
         sg.add_widget(self.value_field_invert)
@@ -1090,14 +1101,15 @@ class BindingEditor(gtk.Dialog):
         self.target_field.set_value(binding.target)
         self.value_field_scale.set_value(binding.value)
         self.value_field_invert.set_active(binding.value < 64)
-        self.value_field_pulse.set_value(binding.value)
+        self.value_field_pulse_noinvert.set_active(binding.value>=64)
+        self.value_field_pulse_inverted.set_active(binding.value<64)
 
     def get_binding(self):
         mode= self.mode_field.get_value()
         if mode==Binding.MODE_DIRECT:
             value= -127 if self.value_field_invert.get_active() else 127
         elif mode==Binding.MODE_PULSE:
-            value= int(self.value_field_pulse.get_value())
+            value= 127 if self.value_field_pulse_noinvert.get_active() else 0
         else:
             value= int(self.value_field_scale.get_value())
         return Binding(
@@ -1331,14 +1343,6 @@ class SingularAdjustment(CustomAdjustment):
         return 0.0
     def write_output(self, value):
         return ln.control_target_singular
-        
-class PulseAdjustment(CustomAdjustment):
-    def __init__(self, value= 0):
-        CustomAdjustment.__init__(self, value, 0, 2, 1)
-    def read_input(self, text):
-        return ln.control_values_pulse.index(text)
-    def write_output(self, value):
-        return ln.control_values_pulse[max(min(int(value), 2), 0)]
         
 # SpinButton that can translate its underlying adjustment values to GTK shift
 # key modifier flags, when a ModifierAdjustment is used.

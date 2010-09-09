@@ -1502,6 +1502,7 @@ control_targets_players= (
     "Fadered player",
 )
 control_method_groups= {
+    'c': 'Preferences',
     'p': 'Player',
     'x': 'Both players',
     'm': 'Microphone',
@@ -1512,12 +1513,9 @@ control_method_groups= {
     's': 'Stream',
     'r': 'Stream recorder',
 }
-control_values_pulse= (
-    'On press, with repeat',
-    'On press, no repeat',
-    'On release'
-)
 control_methods= {
+    'c_tips': 'Prefs enable tooltips',
+
     'p_pp': 'Player play/pause',
     'p_stop': 'Player stop',
     'p_advance': 'Player advance',
@@ -1569,13 +1567,16 @@ control_methods= {
     'j_sprev': 'Jingles select previous',
     'j_snext': 'Jingles select next',
     'j_sfire': 'Jingles play selected from start',
-    'j_vol': 'Jingles set volume',
-    'j_ivol': 'Jingles set interlude-mode volume',
+    'j_vol': 'Jingles set jingles volume',
+    'j_ivol': 'Jingles set interlude volume',
 
     's_on': 'Stream set connected',
 
     'r_on': 'Recorder set recording',
 }
+
+pulse_on_press= 'Pressed'
+pulse_on_release= 'Released'
 
 ctrltab_label= 'Bindings'
 ctrltab_column_input= 'Input'
@@ -1606,7 +1607,7 @@ binding_mode= 'Interaction'
 binding_target= 'On target'
 binding_values= {
     'd': 'Use value', 
-    'p': 'Pulse', 
+    'p': 'Act if', 
     's': 'Set to',
     'a': 'Adjust by',
 }
