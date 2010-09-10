@@ -49,7 +49,6 @@ local:
 	@echo "speexenabled = ${HAVE_SPEEX}" >> idjcpython/idjc_config.py
 	@echo "version = \"${PACKAGE_VERSION} Dev.\"" >> idjcpython/idjc_config.py
 	@echo "gfext = \".@EXT@\"" >> idjcpython/idjc_config.py
-	@echo "tipsenabled = ${TOOLTIPS}" >> idjcpython/idjc_config.py
 	@echo "num_streamers = "@STREAMERS_S@ >> idjcpython/idjc_config.py
 	@echo "num_encoders = "@STREAMERS_S@ >> idjcpython/idjc_config.py
 	@echo "num_recorders = "@RECORDERS_S@ >> idjcpython/idjc_config.py

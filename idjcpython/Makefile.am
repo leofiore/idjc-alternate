@@ -16,7 +16,6 @@ idjc_config.py:
 	@echo "speexenabled = "${HAVE_SPEEX} >> idjc_config.py
 	@echo "version = \"${PACKAGE_VERSION}\"" >> idjc_config.py
 	@echo "gfext = \".@EXT@\"" >> idjc_config.py
-	@echo "tipsenabled = "${TOOLTIPS} >> idjc_config.py
 	@echo "num_streamers = "@STREAMERS_S@ >> idjc_config.py
 	@echo "num_encoders = "@STREAMERS_S@ >> idjc_config.py
 	@echo "num_recorders = "@RECORDERS_S@ >> idjc_config.py
