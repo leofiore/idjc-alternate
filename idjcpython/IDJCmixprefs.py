@@ -1142,8 +1142,6 @@ class mixprefs:
       
       self.enable_tooltips = gtk.CheckButton(ln.enable_tooltips)
       self.enable_tooltips.connect("toggled", self.callback, "tooltips")
-      if parent.tooltips.dummy:
-         self.enable_tooltips.set_sensitive(False)
       vbox.pack_start(self.enable_tooltips, False, False, 0)
       self.enable_tooltips.show()
       parent.tooltips.set_tip(self.enable_tooltips, ln.enable_tooltips_tip)

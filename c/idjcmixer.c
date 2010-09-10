@@ -1516,6 +1516,7 @@ void alarm_handler(int data)
 void atexit_handler()
    {
    if (client)
+      jack_deactivate(client);
       jack_client_close(client);
    }
 
@@ -2223,6 +2224,7 @@ int main(int argc, char **argv)
          }
       }
    alarm(0);
+   jack_deactivate(client);
    jack_client_close(client);
    client = NULL;
    free(fade_table);

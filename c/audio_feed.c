@@ -165,6 +165,7 @@ struct audio_feed *audio_feed_init(struct threads_info *ti)
 
 void audio_feed_destroy(struct audio_feed *self)
    {
+   jack_deactivate(self->jack_h);
    jack_client_close(self->jack_h);
    self->threads_info->audio_feed = NULL;
    free(self->jack_client_name);

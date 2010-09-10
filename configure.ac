@@ -185,15 +185,6 @@ AC_CHECK_FUNCS([getline strndup canonicalize_file_name], :,
 # Use png or xpm for graphics
 AC_SUBST(EXT,[png])
 
-AC_ARG_ENABLE(tooltips,
-   AC_HELP_STRING([--disable-tooltips],[completely disable tooltips]), 
-   [ if test "$enableval" = "yes" ; then
-         AC_SUBST([TOOLTIPS], [1])
-     else
-         AC_SUBST([TOOLTIPS], [0])
-     fi ],
-     AC_SUBST([TOOLTIPS], [1]))
-
 AC_ARG_VAR([STREAMERS], [The number of streamers that will be available])
 AC_ARG_VAR([RECORDERS], [The number of recorders that will be available])
 

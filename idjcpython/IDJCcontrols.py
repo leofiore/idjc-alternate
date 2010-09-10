@@ -415,7 +415,7 @@ class Controls(object):
         #
         for binding in self.lookup.get(input, []):
             # Binding is to be highlighted in the user interface.
-            self.highlights[binding]= (5, True)
+            self.highlights[binding]= (2, True)
             isd= False
             v= iv
             if binding.mode==Binding.MODE_DIRECT:
@@ -1447,7 +1447,7 @@ class ControlsUI(gtk.VBox):
     def on_tooltip_query(self, tv, x, y, kb_mode, tooltip):
         if (x, y) != self.tooltip_coords:
             self.tooltip_coords = (x, y)
-        elif None not in (x, y):
+        elif None not in (x, y) and self.owner.owner.prefs_window.enable_tooltips.get_active():
             path = tv.get_path_at_pos(*tv.convert_widget_to_bin_window_coords(x, y))
             if path is not None:
                 row = tv.get_model()[path[0]]
