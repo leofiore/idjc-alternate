@@ -188,20 +188,28 @@ class Binding(tuple):
     def action_str(self):
         """Get user-facing representation of action/mode/value
         """
-        action= ln.control_methods[self.method]
+        return ln.control_methods[self.method]
+        
+    @property
+    def modifier_str(self):
+        """Get user-facing representation of interaction type and value
+        """
         if self.mode==Binding.MODE_DIRECT:
             if self.value<0:
-                action+= ' (-)'
+                return ' (-)'
             elif getattr(Controls, self.method).action_modes[0]!=Binding.MODE_DIRECT:
-                action+= ' (+)'
+                return ' (+)'
         elif self.mode==Binding.MODE_SET:
-            action+= ' (%d)' % self.value
+            return ' (%d)' % self.value
         elif self.mode==Binding.MODE_ALTER:
             if self.value>=0:
-                action+= ' (+%d)' % self.value
+                return ' (+%d)' % self.value
             else:
-                action+= ' (%d)' % self.value
-        return action
+                return ' (%d)' % self.value
+        elif self.mode==Binding.MODE_PULSE:
+            if self.value<0x40:
+                return ' (1-)'
+        return ''
 
     @property
     def target_str(self):
@@ -414,22 +422,31 @@ class Controls(object):
         # is-delta flag to action methods.
         #
         for binding in self.lookup.get(input, []):
-            # Binding is to be highlighted in the user interface.
-            self.highlights[binding]= (2, True)
             isd= False
             v= iv
             if binding.mode==Binding.MODE_DIRECT:
                 if binding.value<0:
                     v= 0x7F-v
             else:
-                if binding.mode==Binding.MODE_PULSE and binding.value<=0x40:
-                    v= (~v)&0x7F # Act upon release.
+                if binding.mode==Binding.MODE_PULSE:
+                    if v>=0x40:
+                        if binding in self.repeat_cache:
+                            continue
+                        else:
+                            self.repeat_cache.add(binding)
+                    else:
+                        self.repeat_cache.discard(binding)
+
+                    if binding.value<=0x40:
+                        v= (~v)&0x7F # Act upon release.
                 if v<0x40:
                     continue
                 if binding.mode in (Binding.MODE_SET, Binding.MODE_ALTER):
                     v= binding.value
                 if binding.mode in (Binding.MODE_PULSE, Binding.MODE_ALTER):
                     isd= True
+            # Binding is to be highlighted in the user interface.
+            self.highlights[binding]= (3, True)
             getattr(self, binding.method)(binding.target, v, isd)
 
     def input_key(self, event):
@@ -441,15 +458,7 @@ class Controls(object):
         if not(0xFFE1<=event.keyval<0xFFEF or 0xFE01<=event.keyval<0xFE35):
             state= event.state&Binding.MODIFIERS_MASK
             v= 0x7F if event.type==gtk.gdk.KEY_PRESS else 0
-            b= 'k%x.%x' % (state, event.keyval)
-            if v>=0x40:
-                if b in self.repeat_cache:
-                    return
-                else:
-                    self.repeat_cache.add(b)
-            else:
-                self.repeat_cache.discard(b)
-            self.input(b, v)
+            self.input('k%x.%x' % (state, event.keyval), v)
 
     # Utility for p_ control methods
     #
@@ -1386,14 +1395,20 @@ class ControlsUI(gtk.VBox):
         crtext.props.ellipsize= pango.ELLIPSIZE_END
         column_input.pack_start(cricon, False)
         column_input.pack_start(crtext, True)
-        column_input.set_attributes(cricon, pixbuf= 3, cell_background= 7)
+        column_input.set_attributes(cricon, pixbuf= 3, cell_background= 8)
         column_input.set_attributes(crtext, text= 4)
         column_input.set_sort_column_id(0)
         craction= gtk.CellRendererText()
-        column_action= gtk.TreeViewColumn(ln.ctrltab_column_action, craction, text= 5)
+        crmodifier= gtk.CellRendererText()
+        crmodifier.props.xalign= 1.0
+        column_action= gtk.TreeViewColumn(ln.ctrltab_column_action)
+        column_action.pack_start(craction, True)
+        column_action.pack_start(crmodifier, False)
+        column_action.set_attributes(craction, text= 5)
+        column_action.set_attributes(crmodifier, text= 6)
         column_action.set_sort_column_id(1)
         column_action.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
-        column_target= gtk.TreeViewColumn(ln.ctrltab_column_target, gtk.CellRendererText(), text= 6)
+        column_target= gtk.TreeViewColumn(ln.ctrltab_column_target, gtk.CellRendererText(), text= 7)
         column_target.set_sort_column_id(2)
 
         model= BindingListModel(self)
@@ -1455,8 +1470,9 @@ class ControlsUI(gtk.VBox):
                 hbox.set_spacing(3)
                 hbox.pack_start(gtk.image_new_from_pixbuf(row[3].copy()), False)
                 hbox.pack_start(gtk.Label(row[4]), False)
-                hbox.pack_start(gtk.Label(row[5]), False, False, 8)
-                hbox.pack_start(gtk.Label(row[6] or ln.ctrltab_without_target), False)
+                hbox.pack_start(gtk.Label("  " + row[5] + row[6]), False)
+                if row[7]:
+                    hbox.pack_start(gtk.Label("  " + row[7]), False)
                 hbox.show_all()
                 tooltip.set_custom(hbox)
                 return True
@@ -1608,7 +1624,7 @@ class BindingListModel(gtk.GenericTreeModel):
 
     # Make column data from binding objects
     #
-    column_types= [str, str, str, gtk.gdk.Pixbuf, str, str, str, str]
+    column_types= [str, str, str, gtk.gdk.Pixbuf, str, str, str, str, str]
     def on_get_value(self, binding, i):
         if i<3: # invisible sort columns
             inputix= '%02x.%02x.%04x' % (Binding.SOURCES.index(binding.source), binding.channel, binding.control)
@@ -1619,11 +1635,13 @@ class BindingListModel(gtk.GenericTreeModel):
             return self.owner.source_icons[binding.source]
         elif i==4: # input channel/control column
             return binding.input_str
-        elif i==5: # method/mode/value column
+        elif i==5: # method column
             return binding.action_str
-        elif i==6: # target column
+        elif i==6: # mode/value column
+            return binding.modifier_str
+        elif i==7: # target column
             return binding.target_str
-        elif i==7: # background color column
+        elif i==8: # background color column
             return "red" if binding in self.highlights else None
 
     # Alteration
