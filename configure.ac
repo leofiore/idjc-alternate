@@ -229,9 +229,10 @@ if test x$DYNAMIC = "x1" ; then
 fi
 
 AC_CONFIG_FILES([Makefile
-                 c/Makefile
-		 idjcpython/Makefile
-                 artwork/Makefile
-                 Man/Makefile])
+                  c/Makefile
+                  idjcpython/Makefile
+                  artwork/Makefile
+                  Man/Makefile
+                  docsrc/Makefile])
 
 AC_OUTPUT

@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="description" content="Internet DJ Console (IDJC) is Shoutcast and Icecast internet radio client incorporating features for live radio show production." />
+<meta name="keywords" xml:lang="en" content="idjc dj shoutcast icecast radio linux gtk live recorded voip irc" />
+<meta name="robots" content="index, follow" />
+<link rel="shortcut icon" href="favicon.png" type="application/png">
+<link rel="stylesheet" href="idjc.css" type="text/css">
+<title>Internet DJ Console Homepage</title>
+</head>
+<body>
+<table id="main-table">
+ <tr><td>
+            <table>
+               <tr>
+                  <td><img src="site-logo.png" alt="site logo"/></td>
+               </tr>
+               <tr>
+                  <td id="left-sidebar">
+                   <h3>Contents</h3>
+                   <ul id="sidebar-menu">
+                    <li><a href="index.html">Front page</a></li>
+                    <li><a href="tour.html">Tour</a></li>
+                    <ul>
+                     <li><a href="tour_main.html">Main window</a></li>
+                     <li><a href="tour_jingles.html">Jingles</a></li>
+                     <li><a href="tour_output.html">Output</a></li>
+                     <li><a href="tour_preferences.html">Preferences</a></li>
+                    </ul>
+                    <li><a href="install.html">Installation</a></li>
+                    <ul>
+                     <li><a href="install_build.html">Building</a></li>
+                     <li><a href="install_first_run.html">First run</a></li>
+                    </ul>
+                    <li><a href="tutorials.html">Tutorials</a></li>
+                    <ul>
+                     <li><a href="tutorial_icecast">Icecast</a></li>
+                     <li><a href="tutorial_shoutcast">Shoutcast</a></li>
+                     <li><a href="tutorial_voip">VoIP</a></li>
+                     <li><a href="tutorial_irc">IRC</a></li>
+                    </ul>
+                    <li><a href="contact.html">Contact</a></li>
+                   </ul>
+                  </td>
+               </tr>
+            </table>
+     </td>
+     <td>
+            <table>
+               <tr>
+                  <td id="top-titlebar">
+                     <h2>Front page</h2>
+                  </td>
+               </tr>
+               <tr>
+                  <td>

@@ -1,4 +1,4 @@
-SUBDIRS = ${MAYBE_LIBSHOUT} c idjcpython artwork Man
+SUBDIRS = ${MAYBE_LIBSHOUT} c idjcpython artwork Man docsrc
 DISTDIRS = libshout
 
 nodist_bin_SCRIPTS=idjc idjcctrl
