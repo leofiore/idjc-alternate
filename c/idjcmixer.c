@@ -322,7 +322,7 @@ void update_smoothed_volumes()
    static sample_t lp_listen_mute = 1.0F, rp_listen_mute = 1.0F, lp_stream_mute = 1.0F, rp_stream_mute = 1.0F;
    sample_t mic_target, diff;
    static float interlude_autovol = -128.0F, old_autovol = -128.0F;
-   float vol, halfdelta;
+   float vol;
    float xprop, yprop;
    const float bias = 0.35386F;
 
@@ -485,8 +485,7 @@ void update_smoothed_volumes()
    if (jingles_playing)
       vol = current_jingles_volume * 0.06666666F;
    else
-      halfdelta = (current_volume - current_volume2) / 2.0F;
-      vol = (current_volume - halfdelta) * 0.06666666F;
+      vol = (current_volume - (current_volume - current_volume2) / 2.0F) * 0.06666666F;
    dfmod = vol * vol + 1.0F;
    }
 
