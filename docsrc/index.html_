@@ -2,18 +2,18 @@
 
 <p>Internet DJ Console is a project started in March 2005 to provide a powerful yet
 easy to use source-client to individuals interested in streaming live radio shows over the
-Internet to Shoutcast and Icecast servers.</p>
+Internet using Shoutcast or Icecast servers.</p>
 
 <p>In addition to providing most of the features a person could want when producing
-a live radio show this software is written with the aim of producing the best experience
+a live radio show, this software is written with the aim of producing the best possible experience
 for listeners and DJ alike.</p>
 
 <p>Features like VoIP integration involve the listeners who are often part of tight-knit
-communities on the web, while others like the DJ alarm, and the silence-killer help
-ensure that the shows run smoothly.</p>
+communities on the web, while others like the DJ alarm, and the silence-killer help with
+show production.</p>
 
 <p>Incorporating the technology of Jack Audio Connection Kit has afforded IDJC
-audio processing capabilities that were they built in would be considered excessive. Enjoy
+audio processing capabilities that, were they built in, would be considered excessive. Enjoy
 integration with programs such as Skype, Jack Rack (offering audio sound effects plugins), Jamin
 (the powerful audio compressor/equalizer), and <a href="http://jackaudio.org/applications">many more</a>.</p>
 

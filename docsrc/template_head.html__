@@ -5,7 +5,6 @@
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="description" content="Internet DJ Console (IDJC) is Shoutcast and Icecast internet radio client incorporating features for live radio show production." />
 <meta name="keywords" xml:lang="en" content="idjc dj shoutcast icecast radio linux gtk live recorded voip irc" />
-<meta name="robots" content="index, follow" />
 <link rel="shortcut icon" href="favicon.png" type="application/png">
 <link rel="stylesheet" href="idjc.css" type="text/css">
 <title>Internet DJ Console Homepage</title>
@@ -15,7 +14,7 @@
  <tr><td>
             <table>
                <tr>
-                  <td><img src="site-logo.png" alt="site logo"/></td>
+                  <td><img src="site-logo.png" width=148 alt="site logo"/></td>
                </tr>
                <tr>
                   <td id="left-sidebar">

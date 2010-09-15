@@ -1,7 +1,7 @@
  body{
   margin:0;
   background-color:#444;
-  font-family:"sans";"verdana";
+  font-family:"sans","verdana";
   text-align:center;
  }
  h1.unshown{
@@ -27,7 +27,7 @@
  }
  #left-sidebar{
   background-color:#ccc;
-  foreground-color:#222;
+  color:#222;
   padding-left:7px;
  }
  #left-sidebar h3{

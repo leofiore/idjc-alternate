@@ -84,3 +84,4 @@ stamp-h1
 config.h.in~
 libshout/ltmain.sh
 *.tar.gz
+doc/*

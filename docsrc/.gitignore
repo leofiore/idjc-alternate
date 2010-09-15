@@ -1,2 +1,9 @@
+!Makefile
+hiqual/*
+loqual/*
+
+site-logo.jpg
+site-logo.png
+
 index.html
 tour.html
