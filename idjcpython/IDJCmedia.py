@@ -1586,6 +1586,10 @@ class IDJC_Media_Player:
             treeselection.select_iter(model.iter_next(iter))
          else:
             treeselection.select_iter(model.get_iter_first())
+      if control == "<b>>jumptotop</b>":
+         self.stop.clicked()
+         treeselection.select_path(0)
+         self.play.clicked()
       if control == "<b>>announcement</b>":
          dia = AnnouncementDialog(self, model, iter, "active")
          dia.present()
@@ -1644,7 +1648,7 @@ class IDJC_Media_Player:
             text = self.liststore.get_value(iter, 0)
             if text.startswith("<b>"):
                text = text[3:-4]
-            if text in (">stopplayer", ">openaux", ">transfer", ">crossfade", ">announcement"):
+            if text in (">stopplayer", ">openaux", ">transfer", ">crossfade", ">announcement", ">jumptotop"):
                break
             if text == ">normalspeed":
                speedfactor = 1.0
@@ -1848,7 +1852,7 @@ class IDJC_Media_Player:
 
    def stop_inspect(self):
       stoppers = (">stopplayer", ">announcement")
-      horizon = (">transfer", ">crossfade", ">openaux")
+      horizon = (">transfer", ">crossfade", ">openaux", ">jumptotop")
       i = self.iter_playing
       m = self.model_playing
       while 1:
@@ -2683,6 +2687,7 @@ class IDJC_Media_Player:
              "Fade 10"                   : ">fade10",
              "Fade 5"                    : ">fade5",
              "Fade none"                 : ">fadenone",
+             "Jump To Top Control"       : ">jumptotop",
       }
       if dict.has_key(text):
          if iter is not None:
@@ -3129,6 +3134,11 @@ class IDJC_Media_Player:
             cell_renderer.set_property("background", "gray")
             cell_renderer.set_property("foreground", "red")
             cell_renderer.set_property("text", ln.stop_control_element)
+         if celltext == ">jumptotop":
+            cell_renderer.set_property("cell-background", "red")
+            cell_renderer.set_property("background", "gray")
+            cell_renderer.set_property("foreground", "red")
+            cell_renderer.set_property("text", ln.jump_to_top_control_element)
          if celltext == ">stopstreaming":
             cell_renderer.set_property("cell-background", "black")
             cell_renderer.set_property("background", "gray")
@@ -3606,6 +3616,11 @@ class IDJC_Media_Player:
       self.control_menu_stop_control.connect("activate", self.menuitem_response, "Stop Control")
       self.control_menu.append(self.control_menu_stop_control)
       self.control_menu_stop_control.show()
+
+      self.control_menu_jumptop_control = gtk.MenuItem(ln.jump_to_top_control_menu)
+      self.control_menu_jumptop_control.connect("activate", self.menuitem_response, "Jump To Top Control")
+      self.control_menu.append(self.control_menu_jumptop_control)
+      self.control_menu_jumptop_control.show()
       
       self.control_menu_transfer_control = gtk.MenuItem(ln.transfer_control_menu)
       self.control_menu_transfer_control.connect("activate", self.menuitem_response, "Transfer Control")

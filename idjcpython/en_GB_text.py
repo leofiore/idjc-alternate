@@ -1275,9 +1275,13 @@ show_stream_meters = "Stream Audio Levels And Connections"
 
 stereo = "Stereo"
 
+jump_to_top_control_element = "Jump To Top"
+
 stop_control_element = "Player stop"
 
 stop_control_menu = "Player stop"
+
+jump_to_top_control_menu = "Jump To Top"
 
 stop_jingles_tip = "Stop playing jingles."
 
