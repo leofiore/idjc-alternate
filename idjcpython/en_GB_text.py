@@ -1542,6 +1542,7 @@ control_methods= {
     'p_itrans': 'Playlist insert transfer',
     'p_ifade': 'Playlist insert crossfade',
     'p_ipitch': 'Playlist insert pitchunbend',
+    'p_igotop': 'Playlist insert jump to top',
 
     'x_fade': 'Players set crossfade',
     'x_pass': 'Players pass crossfade',

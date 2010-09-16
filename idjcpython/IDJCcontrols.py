@@ -653,6 +653,12 @@ class Controls(object):
         player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Normal Speed Control')
 
+    @action_method(Binding.MODE_PULSE)
+    def p_igotop(self, n, v, isd):
+        player= self._get_player(n)
+        if player is None: return
+        player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
+        player.menuitem_response(None, 'Jump To Top Control')
 
     # Both players
     #

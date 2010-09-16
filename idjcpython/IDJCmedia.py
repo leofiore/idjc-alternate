@@ -2096,35 +2096,48 @@ class IDJC_Media_Player:
             playlist = doc.documentElement
             playlist.setAttribute('version', '1')
             playlist.setAttribute('xmlns', 'http://xspf.org/ns/0/')
+            playlist.setAttribute('xmlns:idjc', 'http://idjc.sourceforge.net/ns/')
             
             trackList = doc.createElement('trackList')
             playlist.appendChild(trackList)
             
-            for each in validlist:
+            for each in self.liststore:
+               row = PlayerRow(*each)
+               
                track = doc.createElement('track')
                trackList.appendChild(track)
-               
-               location = doc.createElement('location')
-               track.appendChild(location)
-               locationText = doc.createTextNode("file://" + urllib.quote(each[1]))
-               location.appendChild(locationText)
-               
-               if each[6]:
-                  creator = doc.createElement('creator')
-                  track.appendChild(creator)
-                  creatorText = doc.createTextNode(each[6])
-                  creator.appendChild(creatorText)
+
+               if row.rsmeta.startswith(">"):
+                  extension = doc.createElement('extension')
+                  track.appendChild(extension)
+                  extension.setAttribute('application', 'http://idjc.sourceforge.net/ns/')
                   
-               if each[5]:
-                  title = doc.createElement('title')
-                  track.appendChild(title)
-                  titleText = doc.createTextNode(each[5])
-                  title.appendChild(titleText)
+                  pld = doc.createElementNS('http://idjc.sourceforge.net/ns/', 'idjc:pld')
+                  extension.appendChild(pld)
+                  pld.setAttribute('rsmeta', row.rsmeta)
+                  pld.setAttribute('length', str(row.length))
+               else:
+                  location = doc.createElement('location')
+                  track.appendChild(location)
+                  locationText = doc.createTextNode("file://" + urllib.quote(each[1]))
+                  location.appendChild(locationText)
                   
-               duration = doc.createElement('duration')
-               track.appendChild(duration)
-               durationText = doc.createTextNode(str(each[2] * 1000))
-               duration.appendChild(durationText)
+                  if each[6]:
+                     creator = doc.createElement('creator')
+                     track.appendChild(creator)
+                     creatorText = doc.createTextNode(each[6])
+                     creator.appendChild(creatorText)
+                     
+                  if each[5]:
+                     title = doc.createElement('title')
+                     track.appendChild(title)
+                     titleText = doc.createTextNode(each[5])
+                     title.appendChild(titleText)
+                     
+                  duration = doc.createElement('duration')
+                  track.appendChild(duration)
+                  durationText = doc.createTextNode(str(each[2] * 1000))
+                  duration.appendChild(durationText)
             
             xmltext = doc.toxml("UTF-8").replace("><", ">\n<").splitlines()
             spc = ""
@@ -2138,6 +2151,7 @@ class IDJC_Media_Player:
                   if xmltext[i][len(spc) + 1] != "/":
                      spc = spc + "  "
             pl.write("\r\n".join(xmltext))
+            pl.write("\r\n")
             doc.unlink()
             pl.close()
 
@@ -2366,12 +2380,12 @@ class IDJC_Media_Player:
             dom = mdom.parse(filename)
          except:
             raise BadXspf
-   
+ 
          if dom.hasChildNodes() and len(dom.childNodes) == 1 and dom.documentElement.nodeName == u'playlist':
             playlist = dom.documentElement
          else:
             raise BadXspf
-               
+
          if playlist.namespaceURI != u"http://xspf.org/ns/0/":
             raise BadXspf
             
@@ -2420,6 +2434,21 @@ class IDJC_Media_Player:
                      if meta:
                         yield meta
                         raise GotLocation
+               # Support namespaced pld tag for literal playlist data.
+               # This is only used for non playable data such as playlist controls.
+               extensions = track.getElementsByTagName('extension')
+               for extension in extensions:
+                  if extension.getAttribute("application") == "http://idjc.sourceforge.net/ns/":
+                     customtags = extension.getElementsByTagNameNS("http://idjc.sourceforge.net/ns/", "pld")
+                     for tag in customtags:
+                        try:
+                           literal_entry = NOTVALID._replace(**dict((k, type(getattr(NOTVALID, k))(tag.attributes.get(k).nodeValue)) for k in tag.attributes.keys()))
+                        except Exception, e:
+                           print e
+                           pass
+                        else:
+                           yield literal_entry
+                           raise GotLocation
             except GotLocation:
                pass
          return
@@ -3135,9 +3164,9 @@ class IDJC_Media_Player:
             cell_renderer.set_property("foreground", "red")
             cell_renderer.set_property("text", ln.stop_control_element)
          if celltext == ">jumptotop":
-            cell_renderer.set_property("cell-background", "red")
+            cell_renderer.set_property("cell-background", "dark magenta")
             cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "red")
+            cell_renderer.set_property("foreground", "dark magenta")
             cell_renderer.set_property("text", ln.jump_to_top_control_element)
          if celltext == ">stopstreaming":
             cell_renderer.set_property("cell-background", "black")

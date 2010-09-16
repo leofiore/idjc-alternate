@@ -2,6 +2,10 @@
 
 * Changes in version 0.8.4 *
 
+Saved playlist in xspf format now saves playlist controls.
+
+New playlist control for restarting the playlist from the top.
+
 New env-up script for those who accidentally on purpose deleted thier ./configure file.
 
 Merged in new midi and assignable keyboard shortcuts interface.
