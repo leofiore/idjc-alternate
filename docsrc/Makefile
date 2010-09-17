@@ -1,8 +1,8 @@
-HTML = index.html tour.html
+HTML = index.html tour.html tour_main.html
 TEMPLATES = template_head.html__ template_tail.html__
-IMAGES = site-logo.png site-logo.jpg
+IMAGES = site-logo.png site-logo.jpg main-window.png main-window.jpg
 
-LITERALS = favicon.png idjc.css
+LITERALS = favicon.png style.css
 
 .SUFFIXES:
 .SUFFIXES: .html_ .html .jpg_ .jpg .png_ .png
@@ -19,13 +19,13 @@ LITERALS = favicon.png idjc.css
 .jpg_.jpg :
 	cp $< $@
 	cp $< hiqual/$@
-	convert $< -quality 3 -resize 80% loqual/$@
+	convert $< -quality 50 -resize 80% loqual/$@
 
 .png_.jpg :
-	convert $< -quality 3 -resize 80% $@
+	convert $< -quality 50 -resize 80% $@
 	cp $@ loqual/$@
 
-all : $(HTML) $(IMAGES) literals
+all : literals $(HTML) $(IMAGES)
 
 $(HTML) : $(TEMPLATES)
 
@@ -35,10 +35,16 @@ literals: $(LITERALS)
 	cp $? loqual/
 
 doc:
+	mkdir -p ../doc/
 	rm -f ../doc/*
 	cp loqual/* ../doc/
+
+hqdoc:
+	mkdir -p ../doc/
+	rm -f ../doc/*
+	cp hiqual/* ../doc/
 
 clean:
 	rm -f $(HTML) $(IMAGES) hiqual/* loqual/*
 
-.PHONY: clean literals
+.PHONY: clean literals doc

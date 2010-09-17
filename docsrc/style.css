@@ -4,6 +4,12 @@
   font-family:"sans","verdana";
   text-align:center;
  }
+ html{
+  overflow-y: scroll;
+  overflow: -moz-scrollbars-vertical;
+ }
+
+
  h1.unshown{
   display:none;
   font-size:8pt;
@@ -16,6 +22,20 @@
   font-size:16pt;
  }
 
+ img.floatleft{
+  float:left;
+ }
+ 
+ img.floatnone{
+  text-align:center;
+  }
+ img.floatright{
+  float:right;
+  }
+ div.centered-contents {
+   margin:0 auto;
+   text-align:center
+ }
  #main-table{
   margin-left:auto;
   margin-right:auto;
@@ -64,7 +84,7 @@
  } 
 
  #top-titlebar{
-  width:700px;
+  width:890px;
   background-color:#ccc;
  }
  #top-titlebar h2{
@@ -73,5 +93,4 @@
 
  #signature{
   font-size:smaller;
-  font:underline;
  }

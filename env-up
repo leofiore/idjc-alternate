@@ -1,9 +1,17 @@
 #!/bin/bash
 
 echo "remaking missing files in build environment"
+
+# Directory exists in git source only.
+if [ -d docsrc ]; then
+  cd docsrc
+  make && make doc
+  cd ..
+fi
+
 cd libshout
 autoreconf -ifs
-# Recreates shout-config.in
+# Recreates shout-config.in. Returns an error code.
 ./configure >/dev/null 2>&1 || /bin/true
 cd ..
 autoreconf -ifs

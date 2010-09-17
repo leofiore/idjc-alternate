@@ -4,6 +4,7 @@ loqual/*
 
 site-logo.jpg
 site-logo.png
+main-window.jpg
+main-window.png
 
-index.html
-tour.html
+*.html

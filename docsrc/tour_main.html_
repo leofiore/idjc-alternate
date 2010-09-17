@@ -1,0 +1,31 @@
+<script type="text/javascript">
+ui('Tour: Main window', 'tour-main-nav')
+</script>
+
+<br/>
+<div class="centered-contents">
+<img src="main-window.png" alt="Main Window Screenshot" />
+</div>
+
+<p>The main window isn't as complicated as it first appears thanks to a fairly standard
+media player layout.</p>
+
+<p>On the right, meters, so nothing to click there. Meters for monitoring your stream and
+microphone audio levels and also the stream connection status and health, as well as the
+number of listeners. I seem to have none.</p>
+
+<p>Beneath each playlist is a selector for the playlist mode. This feature affects what
+will happen once a track ends. Among other options, Loop All, Random, Manual. Fade controls
+the amount of fade with options for 5 or 10 second fades between tracks and finally,
+'Audio Feed' controls whether the player audio is piped to the stream and or the DJ. This
+feature when combined with 'Monitor Mix DJ' facilitates the pre-listening of tracks.</p>
+
+<p>Metadata source controls which player contributes the song title metadata to the stream
+and to the right of that, crossfader controls.</p>
+
+<p>Bottom left are buttons for opening the windows discussed on the following pages.</p>
+
+<p>Bottom right are controls for (un)muting the various audio sources, among them potentially:
+VoIP callers, a record deck (vinyl via aux), a number of microphones. Here there are two on two
+separate buttons with someone called DJ on microphone 1. Finally, conveniently alongside the mic
+buttons, a playlist advance button with play/skip-to-the-next-track-and-stop functionality.</p>

@@ -1,4 +1,6 @@
-<!-->Begin body text of index.html.</-->
+<script type="text/javascript">
+ui('Front page', 'front-page-nav')
+</script>
 
 <p>Internet DJ Console is a project started in March 2005 to provide a powerful yet
 easy to use source-client to individuals interested in streaming live radio shows over the
@@ -23,12 +25,3 @@ the main goals have always been that of stability and audio quality and your lis
 for it (in IRC of course).</p>
 
 <p id="signature">Stephen Fairchild</p>
-
-<!-->Search engine seeding - the old fashioned way.</-->
-<h1 class="unshown">Internet DJ Console Homepage</h1><h1 class="unshown">IDJC Homepage</h1>
-<h1 class="unshown">Internet DJ Console Homepage</h1><h1 class="unshown">IDJC Homepage</h1>
-<h1 class="unshown">Internet DJ Console Homepage</h1><h1 class="unshown">IDJC Homepage</h1>
-<h1 class="unshown">Internet DJ Console Homepage</h1><h1 class="unshown">IDJC Homepage</h1>
-<h1 class="unshown">Internet DJ Console Homepage</h1><h1 class="unshown">IDJC Homepage</h1>
-
-<!-->End body text of index.html.</-->

@@ -1,4 +1,9 @@
-<p>The following subsection takes you on a guided tour around the user interface giving you
-hopefully an idea of the current capabilities that this application offers.</p>
+<script type="text/javascript">
+ui('Tour', 'tour-nav')
+</script>
 
-<p>Needs hyperlinks here, yes?</p>
+<p>The following subsection takes you on a guided tour through the user interface, hopefully giving you
+an idea of the current capabilities of this application.</p>
+
+<p>It is not meant as documentation (that's what the tooltips are for) nor should it be
+expected to remain tightly in sync when features change.</p>

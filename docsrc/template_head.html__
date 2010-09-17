@@ -2,45 +2,60 @@
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
+
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta name="description" content="Internet DJ Console (IDJC) is Shoutcast and Icecast internet radio client incorporating features for live radio show production." />
+<meta name="description" content="Internet DJ Console (IDJC) is a Shoutcast/Icecast internet radio client incorporating features for live radio show production." />
 <meta name="keywords" xml:lang="en" content="idjc dj shoutcast icecast radio linux gtk live recorded voip irc" />
 <link rel="shortcut icon" href="favicon.png" type="application/png">
-<link rel="stylesheet" href="idjc.css" type="text/css">
+<link rel="stylesheet" href="style.css" type="text/css">
 <title>Internet DJ Console Homepage</title>
+
+<script type="text/javascript">
+// Change the title text and highlight a navigation bar option.
+function ui(title, menu) {
+  document.getElementById('title').innerHTML = title;
+  s = document.getElementById(menu).style;
+  s.color = "#F70";
+  s.fontWeight = "bold";
+  s.textDecoration = "underline";
+}
+</script>
+
 </head>
 <body>
+<!-->Hidden h1 title for search engine seeding.</-->
+<h1 class="unshown">Internet DJ Console Homepage IDJC</h1>
 <table id="main-table">
  <tr><td>
             <table>
                <tr>
-                  <td><img src="site-logo.png" width=148 alt="site logo"/></td>
+                  <td><img src="site-logo.png" width=148 alt="website logo" title="Internet DJ Console homepage"/></td>
                </tr>
                <tr>
                   <td id="left-sidebar">
                    <h3>Contents</h3>
                    <ul id="sidebar-menu">
-                    <li><a href="index.html">Front page</a></li>
-                    <li><a href="tour.html">Tour</a></li>
+                    <li><a href="index.html" id="front-page-nav">Front page</a></li>
+                    <li><a href="tour.html" id="tour-nav">Tour</a></li>
                     <ul>
-                     <li><a href="tour_main.html">Main window</a></li>
-                     <li><a href="tour_jingles.html">Jingles</a></li>
-                     <li><a href="tour_output.html">Output</a></li>
-                     <li><a href="tour_preferences.html">Preferences</a></li>
+                     <li><a href="tour_main.html" id="tour-main-nav">Main window</a></li>
+                     <li><a href="tour_jingles.html" id="tour-jingles-nav">Jingles</a></li>
+                     <li><a href="tour_output.html" id="tour-output-nav">Output</a></li>
+                     <li><a href="tour_preferences.html" id="tour-preferences-nav">Preferences</a></li>
                     </ul>
-                    <li><a href="install.html">Installation</a></li>
+                    <li><a href="install.html" id="install-nav">Installation</a></li>
                     <ul>
-                     <li><a href="install_build.html">Building</a></li>
-                     <li><a href="install_first_run.html">First run</a></li>
+                     <li><a href="install_build.html" id="install-build-nav">Building</a></li>
+                     <li><a href="install_first_run.html" id="install-first-run-nav">First run</a></li>
                     </ul>
-                    <li><a href="tutorials.html">Tutorials</a></li>
+                    <li><a href="tutorials.html" id="tutorials-nav">Tutorials</a></li>
                     <ul>
-                     <li><a href="tutorial_icecast">Icecast</a></li>
-                     <li><a href="tutorial_shoutcast">Shoutcast</a></li>
-                     <li><a href="tutorial_voip">VoIP</a></li>
-                     <li><a href="tutorial_irc">IRC</a></li>
+                     <li><a href="tutorial_icecast" id="tutorial-icecast-nav">Icecast</a></li>
+                     <li><a href="tutorial_shoutcast" id="tutorial-shoutcast-nav">Shoutcast</a></li>
+                     <li><a href="tutorial_voip" id="tutorial-voip-nav">VoIP</a></li>
+                     <li><a href="tutorial_irc" id="tutorial-irc-nav">IRC</a></li>
                     </ul>
-                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="contact.html" id="contact-nav">Contact</a></li>
                    </ul>
                   </td>
                </tr>
@@ -50,7 +65,7 @@
             <table>
                <tr>
                   <td id="top-titlebar">
-                     <h2>Front page</h2>
+                     <h2 id="title"></h2> 
                   </td>
                </tr>
                <tr>
