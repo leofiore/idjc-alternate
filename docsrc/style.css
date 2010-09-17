@@ -8,30 +8,25 @@
   overflow-y: scroll;
   overflow: -moz-scrollbars-vertical;
  }
-
-
  h1.unshown{
   display:none;
   font-size:8pt;
  }
-
  h2{
   font-size:20pt;
+  margin-top:8pt;
+  margin-bottom:14pt;
  }
  h3{
   font-size:16pt;
  }
-
- img.floatleft{
-  float:left;
+ p{
+  font-size:10pt;
  }
- 
- img.floatnone{
-  text-align:center;
-  }
- img.floatright{
-  float:right;
-  }
+
+ img.clickthrough{
+  border-style:hidden;
+ }
  div.centered-contents {
    margin:0 auto;
    text-align:center
@@ -84,7 +79,7 @@
  } 
 
  #top-titlebar{
-  width:890px;
+  width:700px;
   background-color:#ccc;
  }
  #top-titlebar h2{

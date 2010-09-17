@@ -1,50 +1,42 @@
 HTML = index.html tour.html tour_main.html
 TEMPLATES = template_head.html__ template_tail.html__
-IMAGES = site-logo.png site-logo.jpg main-window.png main-window.jpg
+IMAGES = main-window.png
 
-LITERALS = favicon.png style.css
+STATIC = favicon.png style.css site-logo.png
 
 .SUFFIXES:
 .SUFFIXES: .html_ .html .jpg_ .jpg .png_ .png
 
 .html_.html :
 	cat template_head.html__ $< template_tail.html__ > $@
-	cp $@ hiqual/$@
-	sed -e s/.png/.jpg/ <$@ >loqual/$@
 
 .png_.png :
-	cp $< $@
-	cp $< hiqual/$@
+	basename $@ .png | xargs -I @r@ cp $< @r@.hq.png
+	convert $< -quality 1 -resize 80% $@
 
-.jpg_.jpg :
-	cp $< $@
-	cp $< hiqual/$@
-	convert $< -quality 50 -resize 80% loqual/$@
-
-.png_.jpg :
-	convert $< -quality 50 -resize 80% $@
-	cp $@ loqual/$@
-
-all : literals $(HTML) $(IMAGES)
+all : $(HTML) $(IMAGES)
 
 $(HTML) : $(TEMPLATES)
-
-literals: $(LITERALS)
-	mkdir -p hiqual loqual
-	cp $? hiqual/
-	cp $? loqual/
 
 doc:
 	mkdir -p ../doc/
 	rm -f ../doc/*
-	cp loqual/* ../doc/
+	cp $(HTML) $(IMAGES) $(STATIC) ../doc/
 
-hqdoc:
-	mkdir -p ../doc/
-	rm -f ../doc/*
-	cp hiqual/* ../doc/
+site:
+	mkdir -p site/
+	rm -f site/*
+	cp $(HTML) $(IMAGES) $(STATIC) *.hq.png site/
+	find site -type f -exec curl --retry 3 --connect-timeout 10 -n -T "{}" sftp://web.sourceforge.net/home/groups/i/id/idjc/htdocs/ \;
 
 clean:
-	rm -f $(HTML) $(IMAGES) hiqual/* loqual/*
+	rm -f $(HTML) $(IMAGES) *.hq.png
+	
+docclean:
+	rm -f ../doc/*
 
-.PHONY: clean literals doc
+siteclean:
+	rm -f site/*
+
+.PHONY: doc site clean docclean siteclean
+

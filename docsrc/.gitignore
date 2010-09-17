@@ -1,10 +1,7 @@
 !Makefile
-hiqual/*
-loqual/*
 
-site-logo.jpg
-site-logo.png
-main-window.jpg
 main-window.png
 
 *.html
+*.hq.png
+site/

@@ -3,25 +3,26 @@ ui('Front page', 'front-page-nav')
 </script>
 
 <p>Internet DJ Console is a project started in March 2005 to provide a powerful yet
-easy to use source-client to individuals interested in streaming live radio shows over the
+easy to use source-client for individuals interested in streaming live radio shows over the
 Internet using Shoutcast or Icecast servers.</p>
 
-<p>In addition to providing most of the features a person could want when producing
-a live radio show, this software is written with the aim of producing the best possible experience
-for listeners and DJ alike.</p>
+<p>Because of the large number of streaming applications that already existed but did little more
+than stream a pair of audio channels or a fixed playlist, it was decided that IDJC would be the opposite
+and simulate audio hardware to cut down the expense of creating a home studio.</p>
 
-<p>Features like VoIP integration involve the listeners who are often part of tight-knit
-communities on the web, while others like the DJ alarm, and the silence-killer help with
-show production.</p>
+<p>In addition to providing a large number of show production features, this software has been written
+with the aim of producing the best possible experience for the listeners and DJ alike. To that end features
+like VoIP integration were conceived of from the very start resulting in the choice of Jack Audio Connection
+Kit to base the audio.
 
-<p>Incorporating the technology of Jack Audio Connection Kit has afforded IDJC
-audio processing capabilities that, were they built in, would be considered excessive. Enjoy
-integration with programs such as Skype, Jack Rack (offering audio sound effects plugins), Jamin
-(the powerful audio compressor/equalizer), and <a href="http://jackaudio.org/applications">many more</a>.</p>
+<p>This has afforded IDJC audio processing capabilities that, were they built in, would be considered excessive. Enjoy
+integration with powerful programs such as the well known Skype, Jack Rack (offering audio sound effects plugins),
+Jamin (the powerful audio compressor/equalizer), and <a href="http://jackaudio.org/applications">many more</a>.</p>
 
-<p>Fortunately all this power does not come at the expense of a user interface resembling a messy desk, nor
-have requests for features been permitted to diminish the applicaton's intuitive feel however throughout development
-the main goals have always been that of stability and audio quality and your listeners may thank you
-for it (in IRC of course).</p>
+<p>Fortunately IDJCs power does not come at the expense of a well organized user interface, nor
+have requests for features been permitted to diminish the applicaton's intuitive feel yet throughout development
+the main goals have always been that of stability and audio quality.</p>
+
+<p>Choose IDJC and your listeners may personally thank you for it (in IRC of course).</p>
 
 <p id="signature">Stephen Fairchild</p>
