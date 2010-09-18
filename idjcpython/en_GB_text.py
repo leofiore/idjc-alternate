@@ -260,7 +260,7 @@ connections_add_tip = "Click this to add server information from the entry boxes
 
 connections_editremove_tip = "Click this when you want to remove a server from the list above for editing/removal. Highlight the particular server first. The information will be transferred to the entry boxes below."
 
-contact_info = " Shoutcast Contact Info "
+contact_details = " Contact Details "
 
 contrib_label = "Contributors"
 
@@ -707,6 +707,10 @@ login_tip = "Icecast servers require a login password. On a server where no fixe
 loop_all = "Loop All"
 
 lower_vorbis = "Lower %"
+
+master_login = "Master server admin password:"
+
+master_login_tip = "This is for kick and stats on Shoutcast master servers that have an administrator password. For those that don't leave this blank (the source password is sufficient for those)."
 
 make_public = "Make Public"
 
@@ -1218,6 +1222,8 @@ sideline_tip = "A user interface clutter removal feature for unused or problemat
 silence_killer = "End tracks early: those that have quiet endings"
 
 sharp = "Sharp"
+
+shoutcast_extra = " Shoutcast Additional Info "
 
 shell_commands_tip = "Enter bash shell commands to run, separated by a semicolon for this particular event."
 

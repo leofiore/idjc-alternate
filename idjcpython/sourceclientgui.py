@@ -374,7 +374,12 @@ class ConnectionPane(CategoryFrame):
       getstats = self.stats_always.get_active() or (self.stats_ifconnected.get_active() and self.streaming_is_set())
       for i, row in enumerate(self.liststore):
          if row[0] and getstats:
-            stats_thread = StatsThread(self.row_to_dict(i))
+            d = self.row_to_dict(i)
+            if d["server_type"] == 1:
+               ap = self.tab.admin_password_entry.get_text().strip()
+               if ap:
+                  d["password"] = ap
+            stats_thread = StatsThread(d)
             stats_thread.start()
             ref = gtk.TreeRowReference(self.liststore, i)
             self.stats_rows.append((ref, stats_thread))
@@ -398,6 +403,7 @@ class ConnectionPane(CategoryFrame):
       cell.set_property("text", text)
 
    def __init__(self, set_tip, tab):
+      self.tab = tab
       CategoryFrame.__init__(self, ln.connection)
       self.set_frame_mode(0)
       self.master_set(False)
@@ -1295,8 +1301,9 @@ class StreamTab(Tab):
             return rslt == "succeeded"
 
       elif mode == 2:
+         password = self.admin_password_entry.get_text().strip() or srv.password
          url = "http://" + urllib.quote(srv.host) + ":" + str(srv.port) + "/admin.cgi?mode=kicksrc"
-         auth_handler.add_password("Shoutcast Server", srv.host + ":" + str(srv.port), "admin", srv.password)
+         auth_handler.add_password("Shoutcast Server", srv.host + ":" + str(srv.port), "admin", password)
          def check_reply(reply):
             # Could go to lengths to check the XML stats here.
             # Thats one whole extra HTTP request.
@@ -1706,9 +1713,27 @@ class StreamTab(Tab):
       frame.vbox.add(stream_details_pane)
       stream_details_pane.show()
       
-      frame = ModuleFrame(ln.contact_info)      # contact information
+      scframe = ModuleFrame(ln.shoutcast_extra)
+      alhbox = gtk.HBox()
+      alhbox.set_border_width(10)
+      alhbox.set_spacing(5)
+      label = gtk.Label(ln.master_login)
+      alhbox.pack_start(label, False)
+      label.show()
+      self.admin_password_entry = gtk.Entry()
+      self.admin_password_entry.set_visibility(False)
+      set_tip(self.admin_password_entry, ln.master_login_tip)
+      alhbox.pack_start(self.admin_password_entry)
+      self.admin_password_entry.show()
+      scframe.vbox.pack_start(alhbox)
+      alhbox.show()
+      scrolled_vbox.pack_start(scframe, False)
+      scframe.show()
+            
+      frame = ModuleFrame(ln.contact_details)      # contact information
+      frame.set_shadow_type(gtk.SHADOW_NONE)
       if enh_libshout:
-         scrolled_vbox.pack_start(frame, False, False, 0)
+         scframe.vbox.pack_start(frame, False, False, 0)
          frame.show()
       self.irc_entry = gtk.Entry()
       set_tip(self.irc_entry, ln.icy_irc_tip)
@@ -1773,6 +1798,7 @@ class StreamTab(Tab):
                         "timer_start_time" : (self.start_timer.entry, "text"),
                         "timer_stop_active" : (self.stop_timer.check, "active"),
                         "timer_stop_time" : (self.stop_timer.entry, "text"),
+                        "sc_admin_pass" : (self.admin_password_entry, "text"),
                         "action_play_active" : (self.start_player_action, "active"),
                         "action_play_which" : (self.start_player_action, "radioindex"),
                         "action_record_active" : (self.start_recorder_action, "active"),
