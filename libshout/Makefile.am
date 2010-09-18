@@ -31,3 +31,6 @@ profile:
 	$(MAKE) all CFLAGS="@PROFILE@"
 
 install:
+
+uninstall:
+

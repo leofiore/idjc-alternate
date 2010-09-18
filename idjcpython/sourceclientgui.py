@@ -149,6 +149,32 @@ class ActionTimer(object):
       self.first = first
       self.last = last
 
+class CellRendererXCast(gtk.CellRendererPixbuf):
+   pixbufs = [gtk.gdk.pixbuf_new_from_file(pkgdatadir + x + gfext) for x in ("im", "sm", "ir", "sr")]
+
+   __gproperties__ = {
+      'servertype' : (gobject.TYPE_INT,
+                      'kind of server',
+                      'indication by number of the server in use',
+                      0, 3, 0, gobject.PARAM_READWRITE)
+      }
+   
+   def __init__(self):
+      gtk.CellRendererPixbuf.__init__(self)
+      self._servertype = 0
+
+   def do_get_property(self, property):
+      if property.name == 'servertype':
+         return self._servertype
+      else:
+         raise AttributeError
+         
+   def do_set_property(self, property, value):
+      if property.name == 'servertype':
+         self._servertype = value
+         self.props.pixbuf = self.pixbufs[value]
+      else:
+         raise AttributeError
 
 class ConnectionPane(CategoryFrame):
    LISTFORMAT = (("check_stats", bool), ("server_type", int), ("host", str), ("port", int), ("mount", str), ("listeners", int), ("login", str), ("password", str))
@@ -426,18 +452,13 @@ class ConnectionPane(CategoryFrame):
       self.treeview = gtk.TreeView(self.liststore)
       set_tip(self.treeview, ln.connections_table_tip)
       self.treeview.set_enable_search(False)
-      rend_enabled = gtk.CellRendererToggle()
-      rend_enabled.connect("toggled", self.individual_listeners_toggle_cb)
-      col_enabled = gtk.TreeViewColumn("*", rend_enabled, active = 0)
-      col_enabled.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
-      col_enabled.set_alignment(0.5)
-      self.treeview.append_column(col_enabled)
-      rend_type = gtk.CellRendererText()
+
+      rend_type = CellRendererXCast()
       rend_type.set_property("xalign", 0.5) 
-      col_type = gtk.TreeViewColumn(ln.conn_col_type, rend_type)
+      col_type = gtk.TreeViewColumn(ln.conn_col_type, rend_type, servertype = 1)
       col_type.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       col_type.set_alignment(0.5)
-      col_type.set_cell_data_func(rend_type, self.type_renderer_cb)
+      #col_type.set_cell_data_func(rend_type, self.type_renderer_cb)
       self.treeview.append_column(col_type)
       rend_host = gtk.CellRendererText()
       col_host = gtk.TreeViewColumn(ln.conn_col_host, rend_host)
@@ -454,13 +475,17 @@ class ConnectionPane(CategoryFrame):
       rend_mount = gtk.CellRendererText()
       col_mount = gtk.TreeViewColumn(ln.conn_col_mount, rend_mount)
       col_mount.set_cell_data_func(rend_mount, self.cell_data_func, 4)
-      col_mount.set_sizing = gtk.TREE_VIEW_COLUMN_FIXED
-      col_mount.set_expand(True)
+      col_mount.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       self.treeview.append_column(col_mount)
+      
+      rend_enabled = gtk.CellRendererToggle()
+      rend_enabled.connect("toggled", self.individual_listeners_toggle_cb)
       rend_listeners = gtk.CellRendererText()
-      col_listeners = gtk.TreeViewColumn(ln.conn_col_listeners, rend_listeners)
+      col_listeners = gtk.TreeViewColumn(ln.conn_col_listeners)
       col_listeners.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
-      col_listeners.set_alignment(0.5)
+      col_listeners.pack_start(rend_enabled, False)
+      col_listeners.pack_start(rend_listeners)
+      col_listeners.add_attribute(rend_enabled, "active", 0)
       col_listeners.set_cell_data_func(rend_listeners, self.listeners_renderer_cb)
       self.treeview.append_column(col_listeners)
       scrolled.add(self.treeview)

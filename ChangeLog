@@ -2,6 +2,12 @@
 
 * Changes in version 0.8.4 *
 
+Added an empty uninstall target to libshout/Makefile.am to fix 'make uninstall' breakage.
+
+New project website. See docsrc directory in Git source tree. Has a hand crafted Makefile not under GNU autotools control.
+
+Added facility for entering a Shoutcast admin password for the master server.
+
 Saved playlist in xspf format now saves playlist controls.
 
 New playlist control for restarting the playlist from the top.

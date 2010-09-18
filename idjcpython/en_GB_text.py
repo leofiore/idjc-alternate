@@ -254,7 +254,7 @@ connection_icecast2 = " Connection: Icecast 2 server "
 
 connection_shoutcast = " Connection: Shoutcast server "
 
-connections_table_tip = "A table of servers with which to connect. Only one master server can be added for the purpose of streaming. All other servers will appear below the master server in the list for the purpose of stats collection which can be toggled on a per server basis by the check button in the left hand column. The type column consists of a code pertaining to the type of server: Icecast2/Shoutcast, Master/Relay."
+connections_table_tip = "A table of servers with which to connect. Only one master server can be added for the purpose of streaming. All other servers will appear below the master server in the list for the purpose of stats collection which can be toggled on a per server basis. The type column indicates strong background for master and pale for relay. Yellow for Shoutcast, blue for Icecast."
 
 connections_add_tip = "Click this to add server information from the entry boxes below into the table above. Fields below cannot be left blank or else nothing will happen."
 
