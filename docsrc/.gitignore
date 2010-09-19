@@ -1,6 +1,7 @@
 !Makefile
 
 main-window.png
+jingles-window.png
 
 *.html
 *.hq.png

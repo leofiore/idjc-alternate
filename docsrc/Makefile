@@ -1,6 +1,6 @@
-HTML = index.html tour.html tour_main.html
+HTML = index.html tour.html tour_main.html tour_jingles.html
 TEMPLATES = template_head.html__ template_tail.html__
-IMAGES = main-window.png
+IMAGES = main-window.png jingles-window.png
 
 STATIC = favicon.png style.css site-logo.png
 

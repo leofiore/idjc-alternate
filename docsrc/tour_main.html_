@@ -2,9 +2,8 @@
 ui('Tour: Main window', 'tour-main-nav')
 </script>
 
-<br/>
 <div class="centered-contents">
-<a href="main-window.hq.png"><img class="clickthrough" src="main-window.png" alt="Main Window Screenshot" title="Click for full size version"/></a>
+<a href="main-window.hq.png" target="_blank"><img class="clickthrough" src="main-window.png" alt="Main Window Screenshot" title="Click for full size version" /></a>
 </div>
 
 <p>The main window isn't as complicated as it first appears thanks to a fairly standard

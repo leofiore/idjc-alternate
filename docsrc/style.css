@@ -26,6 +26,19 @@
 
  img.clickthrough{
   border-style:hidden;
+  margin-top:14pt;
+ }
+ img.clickthrough-left{
+  border-style:hidden;
+  float:left;
+  margin-right:9pt;
+  margin-top:14pt;
+ }
+ img.clickthrough-right{
+  border-style:hidden;
+  float:right;
+  margin-left:9pt;
+  margin-top:14pt;
  }
  div.centered-contents {
    margin:0 auto;
