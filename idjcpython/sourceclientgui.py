@@ -176,7 +176,7 @@ class CellRendererXCast(gtk.CellRendererPixbuf):
       else:
          raise AttributeError
 
-class ConnectionPane(CategoryFrame):
+class ConnectionPane(gtk.VBox):
    LISTFORMAT = (("check_stats", bool), ("server_type", int), ("host", str), ("port", int), ("mount", str), ("listeners", int), ("login", str), ("password", str))
    ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
 
@@ -430,12 +430,12 @@ class ConnectionPane(CategoryFrame):
 
    def __init__(self, set_tip, tab):
       self.tab = tab
-      CategoryFrame.__init__(self, ln.connection)
+      gtk.VBox.__init__(self)
       self.set_frame_mode(0)
       self.master_set(False)
       self.streaming_set(False)
       vbox = gtk.VBox()
-      vbox.set_border_width(10)
+      vbox.set_border_width(6)
       vbox.set_spacing(6)
       self.add(vbox)
       vbox.show()
@@ -473,7 +473,8 @@ class ConnectionPane(CategoryFrame):
       col_port.set_alignment(0.5)
       self.treeview.append_column(col_port)
       rend_mount = gtk.CellRendererText()
-      col_mount = gtk.TreeViewColumn(ln.conn_col_mount, rend_mount)
+      col_mount = gtk.TreeViewColumn(ln.conn_col_mount)
+      col_mount.pack_start(rend_mount, True)
       col_mount.set_cell_data_func(rend_mount, self.cell_data_func, 4)
       col_mount.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       self.treeview.append_column(col_mount)
@@ -1467,34 +1468,27 @@ class StreamTab(Tab):
       self.pack_start(self.details, False)
       self.details.show()
      
-      self.scrolled_window = scrolled = gtk.ScrolledWindow()     # Scrollable window for connection details.
-      self.pack_start(scrolled, True)
-      scrolled.set_size_request(-1, 100)
-      scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
-      scrolled.set_shadow_type(gtk.SHADOW_NONE)
-      scrolled_vbox = gtk.VBox()
-      scrolled_vbox.set_border_width(10)
-      scrolled_vbox.set_spacing(10)
-      scrolled.add_with_viewport(scrolled_vbox)
-      scrolled_vbox.show()
+      self.details_nb = gtk.Notebook()
+      self.pack_start(self.details_nb, False)
       
       self.connection_pane = ConnectionPane(set_tip, self)
       self.connection_pane.liststore.connect("row-deleted", self.update_sensitives)
       self.connection_pane.liststore.connect("row-inserted", self.update_sensitives)
-      scrolled_vbox.pack_start(self.connection_pane, False, False, 0)
+      label = gtk.Label(ln.connection)
+      self.details_nb.append_page(self.connection_pane, label)
+      label.show()
       self.connection_pane.show()
        
-      frame = CategoryFrame(ln.format)          # Format Frame
-      scrolled_vbox.pack_start(frame, False, False, 0)
-      frame.show()
-      vbox = gtk.VBox()
+      vbox = gtk.VBox()          # format box
       vbox.set_border_width(10)
       vbox.set_spacing(14)
-      frame.add(vbox)
+      label = gtk.Label(ln.format)
+      self.details_nb.append_page(vbox, label)
+      label.show()
       vbox.show()
       hbox = gtk.HBox(True)
       hbox.set_spacing(16)
-      vbox.add(hbox)
+      vbox.pack_start(hbox, False)
       hbox.show()
       sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
       self.stream_resample_frame = self.ResampleFrame(self, sizegroup)  # stream resample frame
@@ -1687,7 +1681,7 @@ class StreamTab(Tab):
       format_control_bar = gtk.HBox()                           # Button box in Format frame
       format_control_sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       format_control_bar.set_spacing(10)
-      vbox.add(format_control_bar)
+      vbox.pack_start(format_control_bar, False)
       format_control_bar.show()
       self.test_monitor = gtk.ToggleButton(ln.test_monitor)
       self.test_monitor.connect("toggled", self.cb_test_monitor)
@@ -1709,9 +1703,12 @@ class StreamTab(Tab):
       self.format_notebook.connect("switch-page", self.cb_format_notebook)
       self.subformat_notebook.connect("switch-page", self.cb_subformat_notebook)
       self.format_notebook.set_current_page(0)
-      frame = ModuleFrame(ln.stream_info)               # frame containing stream information (optional)
-      scrolled_vbox.pack_start(frame, False, False, 0)
-      frame.show()
+
+      vbox = gtk.VBox()
+      label = gtk.Label(ln.extra_info)
+      self.details_nb.append_page(vbox, label)
+      label.show()
+      vbox.show()
       self.dj_name_entry = gtk.Entry()
       set_tip(self.dj_name_entry, ln.dj_name_tip)
       self.listen_url_entry = gtk.Entry()
@@ -1735,10 +1732,11 @@ class StreamTab(Tab):
                                               (ln.genre, genre_entry_box)
                                               ), info_sizegroup)
       stream_details_pane.set_border_width(10)
-      frame.vbox.add(stream_details_pane)
+      vbox.add(stream_details_pane)
       stream_details_pane.show()
       
-      scframe = ModuleFrame(ln.shoutcast_extra)
+
+      vbox = gtk.VBox()
       alhbox = gtk.HBox()
       alhbox.set_border_width(10)
       alhbox.set_spacing(5)
@@ -1750,16 +1748,12 @@ class StreamTab(Tab):
       set_tip(self.admin_password_entry, ln.master_login_tip)
       alhbox.pack_start(self.admin_password_entry)
       self.admin_password_entry.show()
-      scframe.vbox.pack_start(alhbox)
+      vbox.pack_start(alhbox, False)
       alhbox.show()
-      scrolled_vbox.pack_start(scframe, False)
-      scframe.show()
-            
-      frame = ModuleFrame(ln.contact_details)      # contact information
+           
+      frame = CategoryFrame(ln.contact_details)
       frame.set_shadow_type(gtk.SHADOW_NONE)
-      if enh_libshout:
-         scframe.vbox.pack_start(frame, False, False, 0)
-         frame.show()
+      frame.set_border_width(0)
       self.irc_entry = gtk.Entry()
       set_tip(self.irc_entry, ln.icy_irc_tip)
       self.aim_entry = gtk.Entry()
@@ -1773,8 +1767,16 @@ class StreamTab(Tab):
                                               (ln.icy_icq, self.icq_entry)
                                               ), contact_sizegroup)
       contact_details_pane.set_border_width(10)
-      frame.vbox.add(contact_details_pane)
+      frame.add(contact_details_pane)
       contact_details_pane.show()
+      
+      vbox.pack_start(frame, False)
+      if enh_libshout:
+         frame.show()
+      label = gtk.Label(ln.shoutcast_extra)
+      self.details_nb.append_page(vbox, label)
+      label.show()
+      vbox.show()
       
       self.stream_resample_frame.resample_no_resample.emit("clicked")   # bogus signal to update mp3 pane
       self.objects = {  "metadata"    : (self.metadata, "text"),
@@ -1824,6 +1826,8 @@ class StreamTab(Tab):
                         "timer_stop_active" : (self.stop_timer.check, "active"),
                         "timer_stop_time" : (self.stop_timer.entry, "text"),
                         "sc_admin_pass" : (self.admin_password_entry, "text"),
+                        "ic_expander" : (self.ic_expander, "expanded"),
+                        "conf_expander" : (self.details, "expanded"),
                         "action_play_active" : (self.start_player_action, "active"),
                         "action_play_which" : (self.start_player_action, "radioindex"),
                         "action_record_active" : (self.start_recorder_action, "active"),
@@ -2523,7 +2527,8 @@ class SourceClientGui:
          if not expander.get_expanded():
             self.window.resize((int(self.win_x)), 1)
          else:
-            self.window.resize((int(self.win_x)), 1000)
+            pass
+            #self.window.resize((int(self.win_x)), 1000)
       else:
          next_expander.set_expanded(expander.get_expanded())
 
@@ -2534,8 +2539,7 @@ class SourceClientGui:
          frame.hide()
       
       if expander.get_expanded() == next_expander.get_expanded():
-         if not details_shown():
-            self.window.resize((int(self.win_x)), 1)
+         self.window.resize((int(self.win_x)), 1)
       else:
          next_expander.set_expanded(expander.get_expanded())
       
@@ -2582,7 +2586,7 @@ class SourceClientGui:
          
       tab = self.streamtabframe.tabs[-1]
       for next_tab in self.streamtabframe.tabs:
-         tab.details.connect("notify::expanded", self.cb_stream_details_expand, next_tab.details, tab.scrolled_window)
+         tab.details.connect("notify::expanded", self.cb_stream_details_expand, next_tab.details, tab.details_nb)
          tab.ic_expander.connect("notify::expanded", self.cb_stream_controls_expand, next_tab.ic_expander, tab.ic_frame, self.streamtabframe.tabs[0].details.get_expanded)
          tab = next_tab
                                                                 

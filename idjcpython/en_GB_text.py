@@ -236,7 +236,7 @@ conn_col_host = "Hostname/IP"
 
 conn_col_port = "Port"
 
-conn_col_mount = "Mount point"
+conn_col_mount = "Mount point      "
 
 conn_col_listeners = "Listeners"
 
@@ -244,7 +244,7 @@ connect_disconnect_nonconfig = "Server Not Configured"
 
 connected_to_history = "connected to"
 
-connection = " Connection "
+connection = "Connection"
 
 connection_lost = "Connection Lost"
 
@@ -446,6 +446,8 @@ external_playlist = "Choose a playlist file."
 
 external_directory = "Choose a folder/directory of music."
 
+extra_info = "Extra Info"
+
 fade_none_menu = "No Fade"
 
 fade_5_menu = "Fade 5s"
@@ -484,7 +486,7 @@ flacmetadata = "Metadata"
 
 flacmetadata_tip = "You can prevent the sending of metadata by turning this feature off. This will prevent certain players from dropping the stream or inserting an audible gap every time the song title changes."
 
-format = " Format "
+format = "Format"
 
 format_info_bar_tip = "Information about how the encoder is currently configured is displayed here."
 
@@ -506,7 +508,7 @@ genre = "Genre:"
 
 genre_tip = "The musical genres you are likely to play."
 
-get_stats = "Get listener stats:"
+get_stats = "Obtain audience stats:"
 
 get_stats_never = "Never"
 
@@ -1201,9 +1203,9 @@ server_type_codes = ("I2M", "SM", "I2R", "SR")
 server_type_labels = ("Icecast 2 Master", "Shoutcast Master",
                       "Icecast 2 Stats/Relay", "Shoutcast Stats/Relay")
 
-stream_details = "Server Details & Stream Format"
+stream_details = "Configuration"
 
-stream_details_tip = "The user interface for changing server connection details and the stream format, e.g. mp3 or vorbis, is contained within. Be sure to scroll down and enter as much information as is necessary."
+stream_details_tip = "The controls for configuring a stream."
 
 output_window_title = "IDJC Output"
 
@@ -1223,7 +1225,7 @@ silence_killer = "End tracks early: those that have quiet endings"
 
 sharp = "Sharp"
 
-shoutcast_extra = " Shoutcast Additional Info "
+shoutcast_extra = "Extra Shoutcast"
 
 shell_commands_tip = "Enter bash shell commands to run, separated by a semicolon for this particular event."
 
