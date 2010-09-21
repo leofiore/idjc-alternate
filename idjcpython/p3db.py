@@ -474,7 +474,7 @@ class Prefs(gtk.Frame):
       if sql is not None:
          if widget.get_active():
             try:
-               self.db = sql.connect(host=self.prokhostname.get_text(), user=self.prokuser.get_text(), passwd=self.prokpassword.get_text(), db=self.prokdatabase.get_text())
+               self.db = sql.connect(host=self.prokhostname.get_text(), user=self.prokuser.get_text(), passwd=self.prokpassword.get_text(), db=self.prokdatabase.get_text(), connect_timeout=3)
                c = self.db.cursor()
                # check this database looks familiar enough to use
                dbtest(c, "SHOW tables", ("tracks", ))

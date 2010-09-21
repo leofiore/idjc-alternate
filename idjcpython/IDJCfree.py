@@ -112,8 +112,7 @@ class DefaultEntry(gtk.Entry):
       self.default_text = default_text
 
    def on_realize(self, entry):
-      context = self.get_pango_context()
-      layout = pango.Layout(context)
+      layout = self.get_layout().copy()
       layout.set_markup("<span foreground='dark gray'>%s</span>" % self.default_text)
       extents = layout.get_pixel_extents()[1]
       drawable = gtk.gdk.Pixmap(self.get_parent_window(), extents[2], extents[3])
@@ -151,6 +150,3 @@ class DefaultEntry(gtk.Entry):
             self.props.primary_icon_pixbuf = self.empty_pixbuf
          except AttributeError:
             pass
-
-
-   
