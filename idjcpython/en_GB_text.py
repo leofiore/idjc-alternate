@@ -1034,6 +1034,8 @@ prokyon3_database = "Database:"
 
 prokyon3_frame_text = "Prokyon3 (song title) Database"
 
+prokyon3_hostname = "Hostname:"
+
 prokyon3_nosql = "Python module MySQLdb required"
 
 prokyon3_password = "Password:"
