@@ -21,7 +21,7 @@ import pygtk
 pygtk.require('2.0')
 import gtk, gobject, time
 from idjc_config import *
-from IDJCfree import threadslock
+from IDJCfree import threadslock, DefaultEntry
 from ln_text import ln
 from urllib import quote
 
@@ -450,6 +450,7 @@ class Prefs(gtk.Frame):
    
    def set_ui_state(self, state):
       sens = not state
+      self.prokhostname.set_sensitive(sens)
       self.prokuser.set_sensitive(sens)
       self.prokdatabase.set_sensitive(sens)
       self.prokpassword.set_sensitive(sens)
@@ -473,7 +474,7 @@ class Prefs(gtk.Frame):
       if sql is not None:
          if widget.get_active():
             try:
-               self.db = sql.connect(user=self.prokuser.get_text(), passwd=self.prokpassword.get_text(), db=self.prokdatabase.get_text())
+               self.db = sql.connect(host=self.prokhostname.get_text(), user=self.prokuser.get_text(), passwd=self.prokpassword.get_text(), db=self.prokdatabase.get_text(), connect_timeout=3)
                c = self.db.cursor()
                # check this database looks familiar enough to use
                dbtest(c, "SHOW tables", ("tracks", ))
@@ -506,12 +507,6 @@ class Prefs(gtk.Frame):
       label.show()
       return box
 
-   class ProkEntry(gtk.Entry):
-      def __init__(self, maxlength=0):
-         gtk.Entry.__init__(self, maxlength)
-         self.set_size_request(30, -1)
-         self.set_text("prokyon")
-
    def __init__(self, parent):
       gtk.Frame.__init__(self)
       self.main = parent
@@ -527,7 +522,7 @@ class Prefs(gtk.Frame):
       self.prok_led_image.set_from_pixbuf(self.prok_ledclear)
       self.set_label_widget(hbox)
       self.set_border_width(3)
-      table = gtk.Table(2, 4)
+      table = gtk.Table(3, 4)
       table.set_border_width(10)
       if sql:
          self.add(table)
@@ -541,30 +536,40 @@ class Prefs(gtk.Frame):
          vbox.show()
       table.show()
       table.set_row_spacing(0, 1)
+      table.set_row_spacing(1, 1)
       table.set_col_spacing(0, 2)
       table.set_col_spacing(1, 10)
       table.set_col_spacing(2, 2)
+      hostlabel = self.rjustlabel(ln.prokyon3_hostname)
+      table.attach(hostlabel, 0, 1, 0, 1, gtk.SHRINK | gtk.FILL)
+      hostlabel.show()
+      self.prokhostname = DefaultEntry("localhost")
+      table.attach(self.prokhostname, 1, 4, 0, 1)
+      self.prokhostname.show()
       userlabel = self.rjustlabel(ln.prokyon3_user)
-      table.attach(userlabel, 0, 1, 0, 1, gtk.SHRINK | gtk.FILL)
+      table.attach(userlabel, 0, 1, 1, 2, gtk.SHRINK | gtk.FILL)
       userlabel.show()
-      self.prokuser = self.ProkEntry()
-      table.attach(self.prokuser, 1, 2, 0, 1)
+      self.prokuser = DefaultEntry("prokyon")
+      self.prokuser.set_size_request(30, -1)
+      table.attach(self.prokuser, 1, 2, 1, 2)
       self.prokuser.show()
       databaselabel = self.rjustlabel(ln.prokyon3_database)
-      table.attach(databaselabel, 2, 3, 0, 1, gtk.SHRINK | gtk.FILL)
+      table.attach(databaselabel, 2, 3, 1, 2, gtk.SHRINK | gtk.FILL)
       databaselabel.show()
-      self.prokdatabase = self.ProkEntry()
-      table.attach(self.prokdatabase, 3, 4, 0, 1)
+      self.prokdatabase = DefaultEntry("prokyon")
+      self.prokdatabase.set_size_request(30, -1)
+      table.attach(self.prokdatabase, 3, 4, 1, 2)
       self.prokdatabase.show()
       passwordlabel = self.rjustlabel(ln.prokyon3_password)
-      table.attach(passwordlabel, 0, 1, 1, 2, gtk.SHRINK | gtk.FILL)
+      table.attach(passwordlabel, 0, 1, 2, 3, gtk.SHRINK | gtk.FILL)
       passwordlabel.show()
-      self.prokpassword = self.ProkEntry()
+      self.prokpassword = DefaultEntry("prokyon")
+      self.prokpassword.set_size_request(30, -1)
       self.prokpassword.set_visibility(False)
-      table.attach(self.prokpassword, 1, 2, 1, 2)
+      table.attach(self.prokpassword, 1, 2, 2, 3)
       self.prokpassword.show()
       self.proktoggle = gtk.ToggleButton(ln.prokyon3_connect)
       self.proktoggle.set_size_request(10, -1)
       self.proktoggle.connect("toggled", self.cb_proktoggle)
-      table.attach(self.proktoggle, 2, 4, 1, 2)
+      table.attach(self.proktoggle, 2, 4, 2, 3)
       self.proktoggle.show()
