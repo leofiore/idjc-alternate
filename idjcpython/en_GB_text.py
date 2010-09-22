@@ -198,6 +198,8 @@ channels = "Channels:"
 
 common_volume_control_tip = "The volume control shared by both music players."
 
+connection_dialog_title = "Enter server connection details"
+
 left_volume_control_tip = "The volume control for the left music player."
 
 right_volume_control_tip = "The volume control for the right music player."
@@ -538,6 +540,8 @@ hostname_tip = """The hostname of the server.
 Example 1: 192.168.1.4
 Example 2: localhost"""
 
+hostname2 = "Hostname:"
+
 hysteresis = "Hyster."
 
 icy_aim = "AIM:"
@@ -706,6 +710,8 @@ localhost = "Localhost"
 
 login_tip = "Icecast servers require a login password. On a server where no fixed mountpoints have been configured the source login will be 'source'. For collecting stats the admin password can be given for which the login is by default, 'admin' but could have been changed to something else. Stats may be collected with a source login provided the mountpoint matches."
 
+loginname = "Login name:"
+
 loop_all = "Loop All"
 
 lower_vorbis = "Lower %"
@@ -811,6 +817,8 @@ monitor_dj = "DJ"
 monitor_stream = "Stream"
 
 mono = "Mono"
+
+mountpoint = "Mount point:"
 
 mount_point_tip = "The mount point, which is not required when dealing with Shoutcast servers. A typical mount point might be /listen or /listen.ogg. It is recommended that Ogg streams have a mount point ending in .ogg for the sake of listener client compatibility."
 
@@ -920,6 +928,8 @@ This control maintains constant audio power throughout its range of travel, givi
 
 If you require 0dB straight down the middle then this feature should be turned off."""
 
+password = "Password:"
+
 pass_button_tip = "This button causes the crossfader to move to the opposite side at a speed determined by the speed selector to the left."
 
 pass_speed_tip = "The time in seconds that the crossfader will take to automatically pass across when the button to the right is clicked."
@@ -1003,6 +1013,8 @@ popupwindowplaying = "Playing track %d of %d"
 popupwindowtracktotal = "Total number of tracks %d"
 
 port = "Port"
+
+portnumber = "Port number:"
 
 port_tip = "The base port number which the server is using."
 
@@ -1190,7 +1202,7 @@ server_passwd = "Pass:"
 
 server_port = "Port:"
 
-server_type = "Type:"
+servertype = "Server type:"
 
 server_type_icecast2 = "Icecast 2"
 

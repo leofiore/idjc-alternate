@@ -29,7 +29,7 @@ import xml.etree.ElementTree
 
 from idjc_config import *
 from ln_text import ln
-from IDJCfree import int_object, threadslock
+from IDJCfree import int_object, threadslock, DefaultEntry
 from IDJCservdialog import *
 from threading import Thread
 
@@ -57,6 +57,87 @@ class SubcategoryFrame(gtk.Frame):
    def __init__(self, frametext = None):
       gtk.Frame.__init__(self, frametext)
       gtk.Frame.set_shadow_type(self, gtk.SHADOW_ETCHED_IN)
+
+class ConnectionDialog(gtk.Dialog):
+   """Create new data for or edit an item in the connection table.
+   """
+   server_types = (ln.label_icecast_master, ln.label_shoutcast_master,
+                  ln.label_icecast_relay, ln.label_shoutcast_relay)
+
+   def __init__(self, parent_window, model, iter=None, master=True, relay=True, preselect="any"):
+      gtk.Dialog.__init__(self, ln.connection_dialog_title, 
+         parent_window, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+         (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+
+      # Widgets
+      #
+      liststore = gtk.ListStore(str, int)
+      for l, t in zip(self.server_types, (master, master, relay, relay)):
+         liststore.append((l, t))
+      self.servertype = gtk.ComboBox(liststore)
+      renderer = gtk.CellRendererText()
+      self.servertype.pack_start(renderer, True)
+      self.servertype.set_attributes(renderer, text=0, sensitive=1)
+      self.servertype.set_model(liststore)
+      
+      self.hostname = DefaultEntry("localhost")
+      adj = gtk.Adjustment(8000.0, 0.0, 65535.0, 1.0, 10.0)
+      self.portnumber = gtk.SpinButton(adj, 1.0, 0)
+      self.mountpoint = DefaultEntry("/listen")
+      self.loginname = DefaultEntry("source")
+      self.password = DefaultEntry("changeme")
+      self.password.set_visibility(False)
+      
+      # Layout
+      #
+      self.set_border_width(5)
+      hbox = gtk.HBox(spacing = 6)
+      hbox.set_border_width(15)
+      col = gtk.VBox(homogeneous = True, spacing = 4)
+      hbox.pack_start(col)
+      sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
+      for text, widget in zip(
+            (ln.servertype, ln.hostname2, ln.portnumber, 
+            ln.mountpoint, ln.loginname, ln.password), 
+            (self.servertype, self.hostname, self.portnumber, 
+            self.mountpoint, self.loginname, self.password)):
+         row = gtk.HBox()
+         label = gtk.Label(text)
+         label.set_alignment(1.0, 0.5)
+         row.pack_start(label, False)
+         row.pack_start(widget)
+         sg.add_widget(label)
+         col.pack_start(row)
+      self.get_content_area().pack_start(hbox)
+      self.hostname.set_width_chars(30)
+      hbox.show_all()
+
+      # Signals
+      #
+      self.connect("response", self._on_response, model, iter)
+
+      # Data fill
+      #
+      if iter is None:
+         if preselect == "any":
+            if master:
+               self.servertype.set_active(0)
+            else:
+               self.servertype.set_active(2)
+         else:
+            self.servertype.set_active(preselect)
+      else:
+         pass # Get line data
+         
+      
+      
+   # Since dialog equals self...
+   @staticmethod
+   def _on_response(self, response_id, model, iter):
+      if response_id == gtk.RESPONSE_ACCEPT:
+         print "Do stuff with this data"
+      self.destroy()
+
 
 class StatsThread(Thread):
    def __init__(self, d):
@@ -260,6 +341,16 @@ class ConnectionPane(gtk.VBox):
    def streaming_is_set(self):
       return self._streaming_set
    def add_cb(self, button):
+      
+      
+      model, iter = self.treeview.get_selection().get_selected()
+      
+      ConnectionDialog(self.tab.scg.window, model, iter).show()
+      
+      
+      
+      
+      
       masters = ln.server_type_codes[:2]
       requirements = ("host", "password")
       also = ("mount", "login")
