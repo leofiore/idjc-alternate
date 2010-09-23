@@ -1225,6 +1225,8 @@ output_window_title = "IDJC Output"
 
 output_window_open_tip = "Open the output window."
 
+server_dialog_stats = "Server to be scanned for audience figures"
+
 set = "Set"
 
 set_tip = "Reroute the audio to/from the specified port"

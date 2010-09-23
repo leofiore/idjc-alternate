@@ -138,7 +138,10 @@ class DefaultEntry(gtk.Entry):
          self.props.primary_icon_pixbuf = self.empty_pixbuf
       
    def get_text(self):
-      return gtk.Entry.get_text(self).strip() or self.default_text
+      if self.flags() & gtk.SENSITIVE:
+         return gtk.Entry.get_text(self).strip() or self.default_text
+      else:
+         return ""
       
    def set_text(self, newtext):
       newtext = newtext.strip()

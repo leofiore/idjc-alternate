@@ -40,6 +40,10 @@ except:
 
 ENCODER_START=1; ENCODER_STOP=0                                 # start_stop_encoder constants
 
+LISTFORMAT = (("check_stats", bool), ("server_type", int), ("host", str), ("port", int), ("mount", str), ("listeners", int), ("login", str), ("password", str))
+ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
+BLANK_LISTLINE = ListLine(1, 0, "", 8000, "", -1, "", "")
+
 class ModuleFrame(gtk.Frame):
    def __init__(self, frametext = None):
       gtk.Frame.__init__(self, frametext)
@@ -64,20 +68,49 @@ class ConnectionDialog(gtk.Dialog):
    server_types = (ln.label_icecast_master, ln.label_shoutcast_master,
                   ln.label_icecast_relay, ln.label_shoutcast_relay)
 
-   def __init__(self, parent_window, model, iter=None, master=True, relay=True, preselect="any"):
+   def __init__(self, parent_window, model, iter=None):
       gtk.Dialog.__init__(self, ln.connection_dialog_title, 
          parent_window, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
          (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+         
+      # Configuration from existing server data.
+      #
+      cap_master = True
+      preselect = 0
+      data = BLANK_LISTLINE
+      try:
+         first = ListLine._make(model[0])
+      except IndexError:
+         pass  # Defaults are fine. Server table currently empty.
+      else:
+         if iter:
+            # In editing mode.
+            index = model.get_path(iter)[0]
+            data = ListLine._make(model[index])
+            preselect = data.server_type
+            if index and first.server_type < 2:
+               # Editing non first line where a master server is configured.
+               cap_master = False
+         else:
+            # In adding additional server mode.
+            if first.server_type < 2:
+               cap_master = False
+               preselect = first.server_type + 2
 
       # Widgets
       #
-      liststore = gtk.ListStore(str, int)
-      for l, t in zip(self.server_types, (master, master, relay, relay)):
-         liststore.append((l, t))
+      liststore = gtk.ListStore(int, str, int)
+      for i, (l, t) in enumerate(zip(self.server_types, (cap_master, cap_master, True, True))):
+         liststore.append((i, l, t))
       self.servertype = gtk.ComboBox(liststore)
-      renderer = gtk.CellRendererText()
-      self.servertype.pack_start(renderer, True)
-      self.servertype.set_attributes(renderer, text=0, sensitive=1)
+      icon_renderer = CellRendererXCast()
+      icon_renderer.props.xalign = 0.5
+      icon_renderer.props.family = "monospace"
+      text_renderer = gtk.CellRendererText()
+      self.servertype.pack_start(icon_renderer, False)
+      self.servertype.pack_start(text_renderer, True)
+      self.servertype.set_attributes(icon_renderer, servertype=0)
+      self.servertype.set_attributes(text_renderer, text=1, sensitive=2)
       self.servertype.set_model(liststore)
       
       self.hostname = DefaultEntry("localhost")
@@ -87,12 +120,15 @@ class ConnectionDialog(gtk.Dialog):
       self.loginname = DefaultEntry("source")
       self.password = DefaultEntry("changeme")
       self.password.set_visibility(False)
+      self.stats = gtk.CheckButton(ln.server_dialog_stats)
       
       # Layout
       #
       self.set_border_width(5)
-      hbox = gtk.HBox(spacing = 6)
+      hbox = gtk.HBox(spacing = 20)
       hbox.set_border_width(15)
+      icon = gtk.image_new_from_stock(gtk.STOCK_NETWORK, gtk.ICON_SIZE_DIALOG)
+      hbox.pack_start(icon)
       col = gtk.VBox(homogeneous = True, spacing = 4)
       hbox.pack_start(col)
       sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
@@ -108,6 +144,7 @@ class ConnectionDialog(gtk.Dialog):
          row.pack_start(widget)
          sg.add_widget(label)
          col.pack_start(row)
+      col.pack_start(self.stats, False)
       self.get_content_area().pack_start(hbox)
       self.hostname.set_width_chars(30)
       hbox.show_all()
@@ -115,29 +152,48 @@ class ConnectionDialog(gtk.Dialog):
       # Signals
       #
       self.connect("response", self._on_response, model, iter)
+      self.servertype.connect("changed", self._on_servertype_changed)
 
       # Data fill
       #
-      if iter is None:
-         if preselect == "any":
-            if master:
-               self.servertype.set_active(0)
-            else:
-               self.servertype.set_active(2)
-         else:
-            self.servertype.set_active(preselect)
-      else:
-         pass # Get line data
-         
+      self.servertype.set_active(preselect)
+      self.hostname.set_text(data.host)
+      self.portnumber.set_value(data.port)
+      self.mountpoint.set_text(data.mount)
+      self.loginname.set_text(data.login)
+      self.password.set_text(data.password)
+      self.stats.set_active(data.check_stats)
       
-      
-   # Since dialog equals self...
    @staticmethod
    def _on_response(self, response_id, model, iter):
       if response_id == gtk.RESPONSE_ACCEPT:
-         print "Do stuff with this data"
-      self.destroy()
+         for entry in (self.hostname, self.mountpoint, self.loginname, self.password):
+            entry.set_text(entry.get_text().strip())
+         if self.mountpoint.get_text() and not self.mountpoint.get_text().startswith("/"):
+            self.mountpoint.set_text("/" + self.mountpoint.get_text())
 
+         data = ListLine(check_stats=self.stats.get_active(),
+                         server_type=self.servertype.get_active(),
+                         host=self.hostname.get_text(),
+                         port=int(self.portnumber.get_value()),
+                         mount=self.mountpoint.get_text(),
+                         listeners=-1,
+                         login=self.loginname.get_text(),
+                         password=self.password.get_text())
+         if iter:
+            model.insert_after(iter, data)
+            model.remove(iter)
+         else:
+            if self.servertype.get_active() < 2:
+               model.prepend(data)
+            else:
+               model.append(data)
+      self.destroy()
+      
+   def _on_servertype_changed(self, servertype):
+      sens = not (servertype.get_active() & 1)
+      self.mountpoint.set_sensitive(sens)
+      self.loginname.set_sensitive(sens)
 
 class StatsThread(Thread):
    def __init__(self, d):
@@ -230,8 +286,11 @@ class ActionTimer(object):
       self.first = first
       self.last = last
 
-class CellRendererXCast(gtk.CellRendererPixbuf):
-   pixbufs = [gtk.gdk.pixbuf_new_from_file(pkgdatadir + x + gfext) for x in ("im", "sm", "ir", "sr")]
+class CellRendererXCast(gtk.CellRendererText):
+   icons = ("<span foreground='#0077FF'>&#x25fc;</span>",
+            "<span foreground='orange'>&#x25fc;</span>",
+            "<span foreground='#0077FF'>&#x25B4;</span>",
+            "<span foreground='orange'>&#x25B4;</span>")
 
    __gproperties__ = {
       'servertype' : (gobject.TYPE_INT,
@@ -241,7 +300,7 @@ class CellRendererXCast(gtk.CellRendererPixbuf):
       }
    
    def __init__(self):
-      gtk.CellRendererPixbuf.__init__(self)
+      gtk.CellRendererText.__init__(self)
       self._servertype = 0
 
    def do_get_property(self, property):
@@ -253,14 +312,11 @@ class CellRendererXCast(gtk.CellRendererPixbuf):
    def do_set_property(self, property, value):
       if property.name == 'servertype':
          self._servertype = value
-         self.props.pixbuf = self.pixbufs[value]
+         self.props.markup = self.icons[value]
       else:
          raise AttributeError
 
 class ConnectionPane(gtk.VBox):
-   LISTFORMAT = (("check_stats", bool), ("server_type", int), ("host", str), ("port", int), ("mount", str), ("listeners", int), ("login", str), ("password", str))
-   ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
-
    def set_frame_mode(self, mode):
       self.mode = mode
       
@@ -270,7 +326,7 @@ class ConnectionPane(gtk.VBox):
    def set_button(self, tab):
       mode = self.mode
       if mode:
-         config = self.ListLine(*self.liststore[0])
+         config = ListLine(*self.liststore[0])
          text = "{0.host}:{0.port}{0.mount}".format(config)
          tab.server_connect_label.set_text(text)
       else:
@@ -410,13 +466,13 @@ class ConnectionPane(gtk.VBox):
    def row_to_dict(self, rownum):
       """ obtain a dictionary of server data for a specified row """
             
-      return self.ListLine._make(self.liststore[rownum])._asdict()
+      return ListLine._make(self.liststore[rownum])._asdict()
    
    def dict_to_row(self, _dict):
       """ append a row of server data from a dictionary """
       
       _dict["listeners"] = -1
-      row = self.ListLine(**_dict)
+      row = ListLine(**_dict)
       t = row.server_type
       if t < 2:                           # check if first line contains master server info
          self.master_set(True)
@@ -536,7 +592,7 @@ class ConnectionPane(gtk.VBox):
       scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
       vbox.pack_start(scrolled, False, False, 0)
       scrolled.show()
-      self.liststore = gtk.ListStore(*[x[1] for x in self.LISTFORMAT])
+      self.liststore = gtk.ListStore(*[x[1] for x in LISTFORMAT])
       self.liststore.connect("row-deleted", lambda x, y: self.set_button(tab))
       self.liststore.connect("row-inserted", lambda x, y, z: self.set_button(tab))
       self.set_button(tab)
@@ -546,7 +602,7 @@ class ConnectionPane(gtk.VBox):
 
       rend_type = CellRendererXCast()
       rend_type.set_property("xalign", 0.5) 
-      col_type = gtk.TreeViewColumn(ln.conn_col_type, rend_type, servertype = 1)
+      col_type = gtk.TreeViewColumn("", rend_type, servertype = 1)
       col_type.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       col_type.set_alignment(0.5)
       #col_type.set_cell_data_func(rend_type, self.type_renderer_cb)
@@ -1405,7 +1461,7 @@ class StreamTab(Tab):
       if mode == 0:
          return
         
-      srv = self.connection_pane.ListLine(*self.connection_pane.liststore[0])
+      srv = ListLine(*self.connection_pane.liststore[0])
       auth_handler = urllib2.HTTPBasicAuthHandler()
 
       if mode == 1:
