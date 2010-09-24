@@ -64,14 +64,17 @@ class SubcategoryFrame(gtk.Frame):
 
 class ConnectionDialog(gtk.Dialog):
    """Create new data for or edit an item in the connection table.
+   
+   When an item is selected in the TreeView, will edit, else add.
    """
    server_types = (ln.label_icecast_master, ln.label_shoutcast_master,
                   ln.label_icecast_relay, ln.label_shoutcast_relay)
 
-   def __init__(self, parent_window, model, iter=None):
-      gtk.Dialog.__init__(self, ln.connection_dialog_title, 
+   def __init__(self, parent_window, tree_selection):
+      gtk.Dialog.__init__(self, ln.connection_dialog_title_add, 
          parent_window, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
          (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+      model, iter = tree_selection.get_selected()
          
       # Configuration from existing server data.
       #
@@ -85,6 +88,7 @@ class ConnectionDialog(gtk.Dialog):
       else:
          if iter:
             # In editing mode.
+            self.set_title(ln.connection_dialog_title_edit)
             index = model.get_path(iter)[0]
             data = ListLine._make(model[index])
             preselect = data.server_type
@@ -104,12 +108,10 @@ class ConnectionDialog(gtk.Dialog):
          liststore.append((i, l, t))
       self.servertype = gtk.ComboBox(liststore)
       icon_renderer = CellRendererXCast()
-      icon_renderer.props.xalign = 0.5
-      icon_renderer.props.family = "monospace"
       text_renderer = gtk.CellRendererText()
       self.servertype.pack_start(icon_renderer, False)
       self.servertype.pack_start(text_renderer, True)
-      self.servertype.set_attributes(icon_renderer, servertype=0)
+      self.servertype.set_attributes(icon_renderer, servertype=0, sensitive=2)
       self.servertype.set_attributes(text_renderer, text=1, sensitive=2)
       self.servertype.set_model(liststore)
       
@@ -151,7 +153,7 @@ class ConnectionDialog(gtk.Dialog):
 
       # Signals
       #
-      self.connect("response", self._on_response, model, iter)
+      self.connect("response", self._on_response, tree_selection, model, iter)
       self.servertype.connect("changed", self._on_servertype_changed)
 
       # Data fill
@@ -165,7 +167,7 @@ class ConnectionDialog(gtk.Dialog):
       self.stats.set_active(data.check_stats)
       
    @staticmethod
-   def _on_response(self, response_id, model, iter):
+   def _on_response(self, response_id, tree_selection, model, iter):
       if response_id == gtk.RESPONSE_ACCEPT:
          for entry in (self.hostname, self.mountpoint, self.loginname, self.password):
             entry.set_text(entry.get_text().strip())
@@ -180,14 +182,19 @@ class ConnectionDialog(gtk.Dialog):
                          listeners=-1,
                          login=self.loginname.get_text(),
                          password=self.password.get_text())
-         if iter:
-            model.insert_after(iter, data)
-            model.remove(iter)
+                         
+         if self.servertype.get_active() < 2:
+            if iter:
+               model.remove(iter)
+            new_iter = model.prepend(data)
          else:
-            if self.servertype.get_active() < 2:
-               model.prepend(data)
+            if iter:
+               new_iter = model.insert_after(iter, data)
+               model.remove(iter)
             else:
-               model.append(data)
+               new_iter = model.append(data)
+         tree_selection.select_path(model.get_path(new_iter))
+         tree_selection.get_tree_view().scroll_to_cell(model.get_path(new_iter))
       self.destroy()
       
    def _on_servertype_changed(self, servertype):
@@ -287,34 +294,55 @@ class ActionTimer(object):
       self.last = last
 
 class CellRendererXCast(gtk.CellRendererText):
-   icons = ("<span foreground='#0077FF'>&#x25fc;</span>",
-            "<span foreground='orange'>&#x25fc;</span>",
+   icons = ("<span foreground='#0077FF'>&#x25A0;</span>",
+            "<span foreground='orange'>&#x25A0;</span>",
             "<span foreground='#0077FF'>&#x25B4;</span>",
             "<span foreground='orange'>&#x25B4;</span>")
+            
+   ins_icons = ("<span foreground='#CCCCCC'>&#x25A0;</span>",
+            "<span foreground='#CCCCCC'>&#x25A0;</span>",
+            "<span foreground='#CCCCCC'>&#x25B4;</span>",
+            "<span foreground='#CCCCCC'>&#x25B4;</span>")
 
    __gproperties__ = {
       'servertype' : (gobject.TYPE_INT,
                       'kind of server',
                       'indication by number of the server in use',
-                      0, 3, 0, gobject.PARAM_READWRITE)
+                      0, 3, 0, gobject.PARAM_READWRITE),
+      'sensitive' : (gobject.TYPE_BOOLEAN,
+                     'sensitivity flag',
+                     'indication of selectability',
+                      1, gobject.PARAM_READWRITE)
       }
    
    def __init__(self):
       gtk.CellRendererText.__init__(self)
       self._servertype = 0
+      self._sensitive = 1
+      self.props.xalign = 0.5
+      self.props.family = "monospace"
 
    def do_get_property(self, property):
       if property.name == 'servertype':
          return self._servertype
+      elif property.name == 'sensitive':
+         return self._sensitive
       else:
          raise AttributeError
          
    def do_set_property(self, property, value):
       if property.name == 'servertype':
          self._servertype = value
-         self.props.markup = self.icons[value]
+      elif property.name == 'sensitive':
+         self._sensitive = value
       else:
          raise AttributeError
+
+      if self._sensitive:
+         self.props.markup = self.icons[self._servertype]
+      else:
+         self.props.markup = self.ins_icons[self._servertype]
+
 
 class ConnectionPane(gtk.VBox):
    def set_frame_mode(self, mode):
@@ -399,9 +427,7 @@ class ConnectionPane(gtk.VBox):
    def add_cb(self, button):
       
       
-      model, iter = self.treeview.get_selection().get_selected()
-      
-      ConnectionDialog(self.tab.scg.window, model, iter).show()
+      ConnectionDialog(self.tab.scg.window, self.treeview.get_selection()).show()
       
       
       

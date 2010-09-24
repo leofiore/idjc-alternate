@@ -198,7 +198,9 @@ channels = "Channels:"
 
 common_volume_control_tip = "The volume control shared by both music players."
 
-connection_dialog_title = "Enter server connection details"
+connection_dialog_title_add = "Enter new server connection details"
+
+connection_dialog_title_edit = "Edit existing server connection details"
 
 left_volume_control_tip = "The volume control for the left music player."
 
