@@ -1,8 +1,8 @@
-SUBDIRS = ${MAYBE_LIBSHOUT} c idjcpython artwork Man
+SUBDIRS = ${MAYBE_LIBSHOUT} c idjcpython artwork Man doc
 DISTDIRS = libshout
 
 nodist_bin_SCRIPTS=idjc idjcctrl
-dist_noinst_SCRIPTS=idjc_ idjcctrl_.py env-up ffmpeg_avcodec.c $(wildcard doc/*.html) $(wildcard doc/*.jpg) $(wildcard doc/*.css)
+dist_noinst_SCRIPTS=idjc_ idjcctrl_.py env-up ffmpeg_avcodec.c
 nodist_doc_DATA=AUTHORS.gz NEWS.gz README.gz ChangeLog.gz
 docdir=${prefix}/share/doc/${PACKAGE_NAME}-${PACKAGE_VERSION}
 dist_noinst_DATA=idjc.desktop_
@@ -54,22 +54,12 @@ local:
 	@echo "num_recorders = "@RECORDERS_S@ >> idjcpython/idjc_config.py
 	@echo "enh_libshout = "${ENH_SHOUT} >> idjcpython/idjc_config.py
 
+# Too lazy to copy this out from the source tree.
 dtdist:
 	make dist
 	cp ${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz ${HOME}/Desktop
 
-# publish in full the new version including web pages updates
-publish:
-	@if test -f ../WebPage/Makefile ; then make htmldoc ; make dist ; echo ${PACKAGE_VERSION} > ../WebPage/currentversion ; echo "${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz" > ../WebPage/currentpackage ; cp ${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz ../WebPage/download/ ; cp ChangeLog ../WebPage/ChangeLog.txt ; cd ../WebPage ; make publish ; else echo "Web Page Makefile not found" ; /bin/false ; fi
-
-# uploads the current version to the ftp but does not update web pages
-upload:
-	@if test -f ../WebPage/Makefile ; then make htmldoc ; make dist ; echo ${PACKAGE_VERSION} > ../WebPage/currentversion ; echo "${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz" > ../WebPage/currentpackage ; cp ${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz ../WebPage/download/ ; cd ../WebPage ; make uploadpackage ; else echo "Web Page Makefile not found" ; /bin/false ; fi
-
-# make html documentation in the doc directory and convert the high quality png files to low quality jpg files
-htmldoc:
-	cd ../WebPage/ ; make dynamic ; rm -f ../git/doc/* ; cp *.html ../git/doc/ ; cp style.css ../git/doc ; find . -type f -name '*.jpg' -exec convert '{}' -quality 20 ../git/doc/'{}' \; ; find . -type f -name '*.png' -exec convert '{}' -quality 20 -bordercolor "#fafaf0" -frame @ ../git/doc/'{}'.jpg \; ; cd ../git/doc ; find . -type f -name '*.html' -exec sed -i -e 's/.png"/.png.jpg"/' '{}' \; ; sed -i -e '/The latest build/ d' download.html ; cd ..
-
+# Gentoo specific
 # make and test the ebuild -- you need to set PORTDIR_OVERLAY to /usr/local/portage in your /etc/make.conf
 ebuild:
 	mkdir -p /usr/local/portage/media-sound/idjc/
@@ -78,4 +68,4 @@ ebuild:
 	emerge "${PACKAGE_TARNAME}"
 	cp idjc-ver.ebuild "${PACKAGE_TARNAME}-${PACKAGE_VERSION}.ebuild"
 
-.PHONY: idjc
+.PHONY: idjc dtdist ebuild local 

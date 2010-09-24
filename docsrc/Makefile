@@ -22,6 +22,7 @@ doc:
 	mkdir -p ../doc/
 	rm -f ../doc/*
 	cp $(HTML) $(IMAGES) $(STATIC) ../doc/
+	echo "EXTRA_DIST=$(HTML) $(IMAGES) $(STATIC)" > ../doc/Makefile.am
 
 site:
 	mkdir -p site/
