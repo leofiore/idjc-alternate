@@ -450,7 +450,7 @@ external_playlist = "Choose a playlist file."
 
 external_directory = "Choose a folder/directory of music."
 
-extra_info = "Extra Info"
+extra_info = "Stream Info"
 
 fade_none_menu = "No Fade"
 
@@ -508,7 +508,7 @@ gather_stats_tip = "Setting this will cause IDJC to attempt to obtain the number
 
 general_tab = "General"
 
-genre = "Genre:"
+genre = "Genre(s):"
 
 genre_tip = "The musical genres you are likely to play."
 
@@ -1457,7 +1457,7 @@ update_encoder_settings_tip = """Use this to change the encoder settings while s
  
 If this button is greyed out it means that the encoder is not running, or the bitrate/samplerate combination is not supported by the encoder, or you are trying to switch between Ogg and mp3, which is not permitted."""
 
-upon_connection = "Upon connection:"
+upon_connection = "At connect:"
 
 upper_vorbis = "Upper %"
 
