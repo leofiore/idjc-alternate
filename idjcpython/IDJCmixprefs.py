@@ -917,10 +917,6 @@ class mixprefs:
       self.notebook = gtk.Notebook()
       self.window.add(self.notebook)
 
-      self.window.add_events(gtk.gdk.KEY_PRESS_MASK)
-      self.window.connect("key-press-event", self.parent.cb_key_capture)
-      self.window.connect("key-release-event", self.parent.cb_key_capture)
-
       # General tab
       
       generalwindow = gtk.ScrolledWindow()
