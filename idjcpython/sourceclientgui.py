@@ -29,7 +29,7 @@ import xml.etree.ElementTree
 
 from idjc_config import *
 from ln_text import ln
-from IDJCfree import int_object, threadslock
+from IDJCfree import int_object, threadslock, DefaultEntry
 from IDJCservdialog import *
 from threading import Thread
 
@@ -39,6 +39,10 @@ except:
    from nt import namedtuple
 
 ENCODER_START=1; ENCODER_STOP=0                                 # start_stop_encoder constants
+
+LISTFORMAT = (("check_stats", bool), ("server_type", int), ("host", str), ("port", int), ("mount", str), ("listeners", int), ("login", str), ("password", str))
+ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
+BLANK_LISTLINE = ListLine(1, 0, "", 8000, "", -1, "", "")
 
 class ModuleFrame(gtk.Frame):
    def __init__(self, frametext = None):
@@ -57,6 +61,146 @@ class SubcategoryFrame(gtk.Frame):
    def __init__(self, frametext = None):
       gtk.Frame.__init__(self, frametext)
       gtk.Frame.set_shadow_type(self, gtk.SHADOW_ETCHED_IN)
+
+class ConnectionDialog(gtk.Dialog):
+   """Create new data for or edit an item in the connection table.
+   
+   When an item is selected in the TreeView, will edit, else add.
+   """
+   server_types = (ln.label_icecast_master, ln.label_shoutcast_master,
+                  ln.label_icecast_relay, ln.label_shoutcast_relay)
+
+   def __init__(self, parent_window, tree_selection):
+      gtk.Dialog.__init__(self, ln.connection_dialog_title_add, 
+         parent_window, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+         (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+      model, iter = tree_selection.get_selected()
+         
+      # Configuration from existing server data.
+      #
+      cap_master = True
+      preselect = 0
+      data = BLANK_LISTLINE
+      try:
+         first = ListLine._make(model[0])
+      except IndexError:
+         pass  # Defaults are fine. Server table currently empty.
+      else:
+         if iter:
+            # In editing mode.
+            self.set_title(ln.connection_dialog_title_edit)
+            index = model.get_path(iter)[0]
+            data = ListLine._make(model[index])
+            preselect = data.server_type
+            if index and first.server_type < 2:
+               # Editing non first line where a master server is configured.
+               cap_master = False
+         else:
+            # In adding additional server mode.
+            if first.server_type < 2:
+               cap_master = False
+               preselect = first.server_type + 2
+
+      # Widgets
+      #
+      liststore = gtk.ListStore(int, str, int)
+      for i, (l, t) in enumerate(zip(self.server_types, (cap_master, cap_master, True, True))):
+         liststore.append((i, l, t))
+      self.servertype = gtk.ComboBox(liststore)
+      icon_renderer = CellRendererXCast()
+      text_renderer = gtk.CellRendererText()
+      self.servertype.pack_start(icon_renderer, False)
+      self.servertype.pack_start(text_renderer, True)
+      self.servertype.set_attributes(icon_renderer, servertype=0, sensitive=2)
+      self.servertype.set_attributes(text_renderer, text=1, sensitive=2)
+      self.servertype.set_model(liststore)
+      
+      self.hostname = DefaultEntry("localhost")
+      adj = gtk.Adjustment(8000.0, 0.0, 65535.0, 1.0, 10.0)
+      self.portnumber = gtk.SpinButton(adj, 1.0, 0)
+      self.mountpoint = DefaultEntry("/listen")
+      self.loginname = DefaultEntry("source")
+      self.password = DefaultEntry("changeme")
+      self.password.set_visibility(False)
+      self.stats = gtk.CheckButton(ln.server_dialog_stats)
+      
+      # Layout
+      #
+      self.set_border_width(5)
+      hbox = gtk.HBox(spacing = 20)
+      hbox.set_border_width(15)
+      icon = gtk.image_new_from_stock(gtk.STOCK_NETWORK, gtk.ICON_SIZE_DIALOG)
+      hbox.pack_start(icon)
+      col = gtk.VBox(homogeneous = True, spacing = 4)
+      hbox.pack_start(col)
+      sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
+      for text, widget in zip(
+            (ln.servertype, ln.hostname2, ln.portnumber, 
+            ln.mountpoint, ln.loginname, ln.password), 
+            (self.servertype, self.hostname, self.portnumber, 
+            self.mountpoint, self.loginname, self.password)):
+         row = gtk.HBox()
+         label = gtk.Label(text)
+         label.set_alignment(1.0, 0.5)
+         row.pack_start(label, False)
+         row.pack_start(widget)
+         sg.add_widget(label)
+         col.pack_start(row)
+      col.pack_start(self.stats, False)
+      self.get_content_area().pack_start(hbox)
+      self.hostname.set_width_chars(30)
+      hbox.show_all()
+
+      # Signals
+      #
+      self.connect("response", self._on_response, tree_selection, model, iter)
+      self.servertype.connect("changed", self._on_servertype_changed)
+
+      # Data fill
+      #
+      self.servertype.set_active(preselect)
+      self.hostname.set_text(data.host)
+      self.portnumber.set_value(data.port)
+      self.mountpoint.set_text(data.mount)
+      self.loginname.set_text(data.login)
+      self.password.set_text(data.password)
+      self.stats.set_active(data.check_stats)
+      
+   @staticmethod
+   def _on_response(self, response_id, tree_selection, model, iter):
+      if response_id == gtk.RESPONSE_ACCEPT:
+         for entry in (self.hostname, self.mountpoint, self.loginname, self.password):
+            entry.set_text(entry.get_text().strip())
+         if self.mountpoint.get_text() and not self.mountpoint.get_text().startswith("/"):
+            self.mountpoint.set_text("/" + self.mountpoint.get_text())
+
+         data = ListLine(check_stats=self.stats.get_active(),
+                         server_type=self.servertype.get_active(),
+                         host=self.hostname.get_text(),
+                         port=int(self.portnumber.get_value()),
+                         mount=self.mountpoint.get_text(),
+                         listeners=-1,
+                         login=self.loginname.get_text(),
+                         password=self.password.get_text())
+
+         if self.servertype.get_active() < 2:
+            if iter:
+               model.remove(iter)
+            new_iter = model.insert(0, data)
+         else:
+            if iter:
+               new_iter = model.insert_after(iter, data)
+               model.remove(iter)
+            else:
+               new_iter = model.append(data)
+         tree_selection.select_path(model.get_path(new_iter))
+         tree_selection.get_tree_view().scroll_to_cell(model.get_path(new_iter))
+      self.destroy()
+      
+   def _on_servertype_changed(self, servertype):
+      sens = not (servertype.get_active() & 1)
+      self.mountpoint.set_sensitive(sens)
+      self.loginname.set_sensitive(sens)
 
 class StatsThread(Thread):
    def __init__(self, d):
@@ -149,94 +293,76 @@ class ActionTimer(object):
       self.first = first
       self.last = last
 
-class CellRendererXCast(gtk.CellRendererPixbuf):
-   pixbufs = [gtk.gdk.pixbuf_new_from_file(pkgdatadir + x + gfext) for x in ("im", "sm", "ir", "sr")]
+class CellRendererXCast(gtk.CellRendererText):
+   icons = ("<span foreground='#0077FF'>&#x25A0;</span>",
+            "<span foreground='orange'>&#x25A0;</span>",
+            "<span foreground='#0077FF'>&#x25B4;</span>",
+            "<span foreground='orange'>&#x25B4;</span>")
+            
+   ins_icons = ("<span foreground='#CCCCCC'>&#x25A0;</span>",
+            "<span foreground='#CCCCCC'>&#x25A0;</span>",
+            "<span foreground='#CCCCCC'>&#x25B4;</span>",
+            "<span foreground='#CCCCCC'>&#x25B4;</span>")
 
    __gproperties__ = {
       'servertype' : (gobject.TYPE_INT,
                       'kind of server',
                       'indication by number of the server in use',
-                      0, 3, 0, gobject.PARAM_READWRITE)
+                      0, 3, 0, gobject.PARAM_READWRITE),
+      'sensitive' : (gobject.TYPE_BOOLEAN,
+                     'sensitivity flag',
+                     'indication of selectability',
+                      1, gobject.PARAM_READWRITE)
       }
    
    def __init__(self):
-      gtk.CellRendererPixbuf.__init__(self)
+      gtk.CellRendererText.__init__(self)
       self._servertype = 0
+      self._sensitive = 1
+      self.props.xalign = 0.5
+      self.props.family = "monospace"
 
    def do_get_property(self, property):
       if property.name == 'servertype':
          return self._servertype
+      elif property.name == 'sensitive':
+         return self._sensitive
       else:
          raise AttributeError
          
    def do_set_property(self, property, value):
       if property.name == 'servertype':
          self._servertype = value
-         self.props.pixbuf = self.pixbufs[value]
+      elif property.name == 'sensitive':
+         self._sensitive = value
       else:
          raise AttributeError
 
-class ConnectionPane(gtk.VBox):
-   LISTFORMAT = (("check_stats", bool), ("server_type", int), ("host", str), ("port", int), ("mount", str), ("listeners", int), ("login", str), ("password", str))
-   ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
+      if self._sensitive:
+         self.props.markup = self.icons[self._servertype]
+      else:
+         self.props.markup = self.ins_icons[self._servertype]
 
-   def set_frame_mode(self, mode):
-      self.mode = mode
-      
-   def get_frame_mode(self):
-      return self.mode
+
+class ConnectionPane(gtk.VBox):
+   def get_master_server_type(self):
+      try:
+         s_type = ListLine(*self.liststore[0]).server_type
+      except IndexError:
+         return 0
+      return 0 if s_type >= 2 else s_type + 1
 
    def set_button(self, tab):
-      mode = self.mode
-      if mode:
-         config = self.ListLine(*self.liststore[0])
+      if self.get_master_server_type():
+         config = ListLine(*self.liststore[0])
          text = "{0.host}:{0.port}{0.mount}".format(config)
          tab.server_connect_label.set_text(text)
       else:
          tab.server_connect_label.set_text(ln.connect_disconnect_nonconfig)
    
-   def label_item_layout(self, label_item_pairs, sizegroup):    # align vertical colums of label : item
-      hbox = gtk.HBox()                                         # label is right justified and narrow as possible
-      vbox_left = gtk.VBox()                                    # the item widget is free to expand
-      vbox_left.set_spacing(1)
-      vbox_right = gtk.VBox()
-      vbox_right.set_spacing(1)
-      hbox.pack_start(vbox_left, False, False, 0)
-      hbox.pack_start(vbox_right, True, True, 0)
-      hbox.set_spacing(5)
-      for text, item in label_item_pairs:
-         if text is not None:
-            labelbox = gtk.HBox()
-            if type(text) == str:
-               label = gtk.Label(text)
-            else:
-               label = text
-            sizegroup.add_widget(label)
-            labelbox.pack_end(label, False, False)
-            label.show()
-            vbox_left.pack_start(labelbox, False, False, 0)
-            labelbox.show()
-         itembox = gtk.HBox()
-         sizegroup.add_widget(itembox)
-         itembox.add(item)
-         item.show()
-         vbox_right.pack_start(itembox, False, False, 0)
-         itembox.show()
-      vbox_left.show()
-      vbox_right.show()
-      return hbox   
    def individual_listeners_toggle_cb(self, cell, path):
       self.liststore[path][0] = not self.liststore[path][0]
-   def server_type_data_func(self, column, cell, model, iter):
-      cell.set_property("text", model.get_value(iter, 0))
-      sens = model.get_path(iter)[0] >= 2 or self.master_is_set() == False
-      cell.set_property("sensitive", sens)
-   def server_type_changed(self, combo):
-      active = combo.get_active()
-      self.ic2 = not active % 2
-      self.master = active < 2
-      for each in (self.mount, self.login):
-         each.set_sensitive(self.ic2)
+
    def listeners_renderer_cb(self, column, cell, model, iter):
       listeners = model.get_value(iter, 5)
       if listeners == -1:
@@ -248,93 +374,29 @@ class ConnectionPane(gtk.VBox):
       else:
          cell.set_property("text", listeners)
          cell.set_property("xalign", 1.0)
-   def type_renderer_cb(self, column, cell, model, iter):
-      server_type = model.get_value(iter, 1)
-      cell.set_property("text", ln.server_type_codes[server_type])
-   def master_set(self, val):
-      self._master_set = val
+
    def master_is_set(self):
-      return self._master_set
+      return bool(self.get_master_server_type())
+
    def streaming_set(self, val):
       self._streaming_set = val
+
    def streaming_is_set(self):
       return self._streaming_set
-   def add_cb(self, button):
-      masters = ln.server_type_codes[:2]
-      requirements = ("host", "password")
-      also = ("mount", "login")
-      if self.master and len(self.liststore) and self.liststore[0][1] in masters:
-         print "already have a master server in the list so we won't add another"
-         return
-      if self.ic2:
-         requirements += also
-         d = {}
-      else:
-         d = dict.fromkeys(also, "")
-      for each in requirements:
-         val = self.__getattribute__(each).get_text().strip()
-         if not val:
-            print "to add the server you need to set", each
-            return
-         d[each] = val
-      if self.ic2 and d["mount"][0] != "/":
-         d["mount"] = "/" + d["mount"]
-      row = (True, self.server_type.get_active(), d["host"], self.port.get_value(), d["mount"], -1, d["login"], d["password"])
-      if self.master:
-         self.master_set(True)
-         self.set_frame_mode((2, 1)[self.ic2])
-         self.server_type.set_active(self.server_type.get_active() + 2)
-         iter = self.liststore.insert(0, row)
-         self.treeview.scroll_to_cell(0)
-      else:
-         iter = self.liststore.append(row)
-         self.treeview.scroll_to_cell(self.liststore.get_path(iter))
-      self.treeview.get_selection().select_iter(iter)
-      for each in (self.host, self.mount, self.login, self.password):
-         each.set_text("")
-      self.port.set_value(8000)
-   def edit_remove_cb(self, button):
-      selection = self.treeview.get_selection()
-      model, treeiter = selection.get_selected()
-      if treeiter is None:
-         print "nothing is selected to remove"
-         return
-      path = model.get_path(treeiter)[0]
-      d = self.row_to_dict(path)
-      st = d["server_type"]
-      if st < 2:
-         self.set_frame_mode(0)
-         self.master_set(False)
-      self.server_type.set_active(st)
-      self.host.set_text(d["host"])
-      self.port.set_value(d["port"])
-      self.mount.set_text(d["mount"])
-      self.login.set_text(d["login"])
-      self.password.set_text(d["password"])
-      if not model.remove(treeiter):
-         path -= 1
-      if path >= 0:
-         selection.select_path(path)
-         self.treeview.scroll_to_cell(path)
+
    def row_to_dict(self, rownum):
       """ obtain a dictionary of server data for a specified row """
             
-      return self.ListLine._make(self.liststore[rownum])._asdict()
+      return ListLine._make(self.liststore[rownum])._asdict()
    
    def dict_to_row(self, _dict):
       """ append a row of server data from a dictionary """
       
       _dict["listeners"] = -1
-      row = self.ListLine(**_dict)
+      row = ListLine(**_dict)
       t = row.server_type
       if t < 2:                           # check if first line contains master server info
-         self.master_set(True)
-         if t == 0:
-            self.set_frame_mode(1)
-         if t == 1:
-            self.set_frame_mode(2)
          self.liststore.insert(0, row)
-         self.server_type.set_active(t + 2)
       else:
          self.liststore.append(row)
       return
@@ -411,6 +473,7 @@ class ConnectionPane(gtk.VBox):
             self.stats_rows.append((ref, stats_thread))
          else:
             row[5] = -1       # sets listeners text to 'unknown'
+
    def stats_collate(self):
       count = 0
       for ref, thread in self.stats_rows:
@@ -423,16 +486,47 @@ class ConnectionPane(gtk.VBox):
             count += thread.listeners
       self.listeners_display.set_text(str(count))
       self.listeners = count
-   def cell_data_func(self, column, cell, model, iter, index):
-      text = model.get_value(iter, index)
-      cell.set_property("ellipsize", pango.ELLIPSIZE_END)
-      cell.set_property("text", text)
+
+   def on_dialog_destroy(self, dialog, tree_selection, old_iter):
+      model, iter = tree_selection.get_selected()
+      if iter is None and old_iter is not None:
+         tree_selection.select_iter(old_iter)
+
+   def on_new_clicked(self, button, tree_selection):
+      old_iter = tree_selection.get_selected()[1]
+      tree_selection.unselect_all()
+      self.connection_dialog = ConnectionDialog(self.tab.scg.window, tree_selection)
+      self.connection_dialog.connect("destroy", self.on_dialog_destroy, tree_selection, old_iter)
+      self.connection_dialog.show()
+      
+   def on_edit_clicked(self, button, tree_selection):
+      model, iter = tree_selection.get_selected()
+      if iter:
+         self.connection_dialog = ConnectionDialog(self.tab.scg.window, tree_selection)
+         self.connection_dialog.show()
+      else:
+         print "nothing selected for edit"
+   
+   def on_remove_clicked(self, button, tree_selection):
+      model, iter = tree_selection.get_selected()
+      if iter:
+         if model.remove(iter):
+            tree_selection.select_iter(iter)
+      else:
+         print "nothing selected for removal"
+
+   def on_keypress(self, widget, event):
+      if gtk.gdk.keyval_name(event.keyval) == "Delete":
+         self.remove.clicked()
+
+   def on_selection_changed(self, tree_selection):
+      sens = tree_selection.get_selected()[1] is not None
+      for button in self.require_selection:
+         button.set_sensitive(sens)
 
    def __init__(self, set_tip, tab):
       self.tab = tab
       gtk.VBox.__init__(self)
-      self.set_frame_mode(0)
-      self.master_set(False)
       self.streaming_set(False)
       vbox = gtk.VBox()
       vbox.set_border_width(6)
@@ -440,29 +534,28 @@ class ConnectionPane(gtk.VBox):
       self.add(vbox)
       vbox.show()
       scrolled = gtk.ScrolledWindow()
-      scrolled.set_size_request(-1, 90)
       scrolled.set_shadow_type(gtk.SHADOW_ETCHED_IN)
       scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
-      vbox.pack_start(scrolled, False, False, 0)
+      vbox.pack_start(scrolled, True)
       scrolled.show()
-      self.liststore = gtk.ListStore(*[x[1] for x in self.LISTFORMAT])
+      self.liststore = gtk.ListStore(*[x[1] for x in LISTFORMAT])
       self.liststore.connect("row-deleted", lambda x, y: self.set_button(tab))
       self.liststore.connect("row-inserted", lambda x, y, z: self.set_button(tab))
       self.set_button(tab)
       self.treeview = gtk.TreeView(self.liststore)
       set_tip(self.treeview, ln.connections_table_tip)
       self.treeview.set_enable_search(False)
+      self.treeview.connect("key-press-event", self.on_keypress)
 
       rend_type = CellRendererXCast()
       rend_type.set_property("xalign", 0.5) 
-      col_type = gtk.TreeViewColumn(ln.conn_col_type, rend_type, servertype = 1)
+      col_type = gtk.TreeViewColumn("", rend_type, servertype = 1)
       col_type.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       col_type.set_alignment(0.5)
-      #col_type.set_cell_data_func(rend_type, self.type_renderer_cb)
       self.treeview.append_column(col_type)
-      rend_host = gtk.CellRendererText()
-      col_host = gtk.TreeViewColumn(ln.conn_col_host, rend_host)
-      col_host.set_cell_data_func(rend_host, self.cell_data_func, 2)
+      text_cell_rend = gtk.CellRendererText()
+      text_cell_rend.set_property("ellipsize", pango.ELLIPSIZE_END)
+      col_host = gtk.TreeViewColumn(ln.conn_col_host, text_cell_rend, text=2)
       col_host.set_sizing = gtk.TREE_VIEW_COLUMN_FIXED
       col_host.set_expand(True)
       self.treeview.append_column(col_host)
@@ -472,10 +565,7 @@ class ConnectionPane(gtk.VBox):
       col_port.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       col_port.set_alignment(0.5)
       self.treeview.append_column(col_port)
-      rend_mount = gtk.CellRendererText()
-      col_mount = gtk.TreeViewColumn(ln.conn_col_mount)
-      col_mount.pack_start(rend_mount, True)
-      col_mount.set_cell_data_func(rend_mount, self.cell_data_func, 4)
+      col_mount = gtk.TreeViewColumn(ln.conn_col_mount, text_cell_rend, text=4)
       col_mount.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       self.treeview.append_column(col_mount)
       
@@ -491,69 +581,26 @@ class ConnectionPane(gtk.VBox):
       self.treeview.append_column(col_listeners)
       scrolled.add(self.treeview)
       self.treeview.show()
-      
-      edit_add_hbox = gtk.HBox()
-      sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
-      self.edit_remove = gtk.Button(ln.edit_remove)
-      set_tip(self.edit_remove, ln.connections_editremove_tip)
-      self.edit_remove.connect("clicked", self.edit_remove_cb)
-      sg.add_widget(self.edit_remove)
-      edit_add_hbox.pack_start(self.edit_remove, False, False, 0)
-      self.edit_remove.show()
-      self.add = gtk.Button(ln.add)
-      set_tip(self.add, ln.connections_add_tip)
-      self.add.connect("clicked", self.add_cb)
-      sg.add_widget(self.add)
-      edit_add_hbox.pack_end(self.add, False, False, 0)
-      self.add.show()
-      vbox.pack_start(edit_add_hbox, False, False, 0)
-      edit_add_hbox.show()
-      sep = gtk.HSeparator()
-      vbox.pack_start(sep, False, False, 0)
-      sep.show()
-      
-      cpsizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
-      ls = gtk.ListStore(str)
-      for x in ln.server_type_labels:
-         ls.append((x,))
-      self.server_type = gtk.ComboBox(ls)
-      set_tip(self.server_type, ln.server_type_tip)
-      cell = gtk.CellRendererText()
-      self.server_type.pack_start(cell, True)
-      self.server_type.set_cell_data_func(cell, self.server_type_data_func)
-      self.server_type.connect("changed", self.server_type_changed)
-      self.host = gtk.Entry()
-      set_tip(self.host, ln.hostname_tip)
-      port_adj = gtk.Adjustment(8000, 0, 65535, 1, 10)
-      self.port = gtk.SpinButton(port_adj, 0.0, 0)
-      set_tip(self.port, ln.port_tip)
-      sg = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
-      left_pane = self.label_item_layout( ((ln.server_type, self.server_type),
-                                           (ln.server_host, self.host),
-                                           (ln.server_port, self.port)), sg)
-      cpsizegroup.add_widget(left_pane)
-      self.mount = gtk.Entry()
-      set_tip(self.mount, ln.mount_point_tip)
-      self.login = gtk.Entry()
-      set_tip(self.login, ln.login_tip)
-      self.password = gtk.Entry()
-      set_tip(self.password, ln.password_tip)
-      self.password.set_visibility(False)
-      right_pane = self.label_item_layout( ((ln.server_mount, self.mount),
-                                            (ln.server_login, self.login),
-                                            (ln.server_passwd, self.password)), sg)
-      cpsizegroup.add_widget(right_pane)
-      hbox = gtk.HBox()
-      hbox.set_spacing(6)
-      hbox.add(left_pane)
-      left_pane.show()
-      sep = gtk.VSeparator()
-      hbox.add(sep)
-      sep.show()
-      hbox.add(right_pane)
-      right_pane.show()
-      vbox.pack_start(hbox, False, False, 0)
-      hbox.show()
+
+      bbox = gtk.HButtonBox()
+      bbox.set_spacing(8)
+      bbox.set_layout(gtk.BUTTONBOX_END)
+      new = gtk.Button("New")
+      self.remove = gtk.Button("Remove")
+      edit = gtk.Button("Edit")
+      bbox.add(new)
+      bbox.add(self.remove)
+      bbox.add(edit)
+      self.require_selection = (edit, self.remove)
+      selection = self.treeview.get_selection()
+      selection.connect("changed", self.on_selection_changed)
+      selection.emit("changed")
+      new.connect("clicked", self.on_new_clicked, selection)
+      edit.connect("clicked", self.on_edit_clicked, selection)
+      self.remove.connect("clicked", self.on_remove_clicked, selection)
+      self.require_selection = (self.remove, edit)
+      vbox.pack_start(bbox, False)
+      bbox.show_all()
       
       sep = gtk.HSeparator()
       vbox.pack_start(sep, False, False, 0)
@@ -592,7 +639,6 @@ class ConnectionPane(gtk.VBox):
       vbox.pack_start(hbox, False, False, 0)
       hbox.show()
       
-      self.server_type.set_active(0)
       self.timer = ActionTimer(40, self.stats_commence, self.stats_collate)
 
 class TimeEntry(gtk.HBox):              # A 24-hour-time entry widget with a checkbutton
@@ -1020,7 +1066,7 @@ class StreamTab(Tab):
    def update_sensitives(self, *params):
       if self.encoder == "off":
          self.update_button.set_sensitive(False)
-      mode = self.connection_pane.get_frame_mode() # 0 = none, 1 = icecast2, 2 = shoutcast
+      mode = self.connection_pane.get_master_server_type() # 0 = none, 1 = icecast2, 2 = shoutcast
       self.recorder_valid_override = False
       
       if self.encoder == "ogg":
@@ -1310,11 +1356,11 @@ class StreamTab(Tab):
    def cb_kick_incumbent(self, widget, post_action=lambda : None):
       """Try to remove whoever is using the server so that we can connect."""
       
-      mode = self.connection_pane.get_frame_mode()
+      mode = self.connection_pane.get_master_server_type()
       if mode == 0:
          return
         
-      srv = self.connection_pane.ListLine(*self.connection_pane.liststore[0])
+      srv = ListLine(*self.connection_pane.liststore[0])
       auth_handler = urllib2.HTTPBasicAuthHandler()
 
       if mode == 1:

@@ -198,6 +198,10 @@ channels = "Channels:"
 
 common_volume_control_tip = "The volume control shared by both music players."
 
+connection_dialog_title_add = "Enter new server connection details"
+
+connection_dialog_title_edit = "Edit existing server connection details"
+
 left_volume_control_tip = "The volume control for the left music player."
 
 right_volume_control_tip = "The volume control for the right music player."
@@ -446,7 +450,7 @@ external_playlist = "Choose a playlist file."
 
 external_directory = "Choose a folder/directory of music."
 
-extra_info = "Extra Info"
+extra_info = "Stream Info"
 
 fade_none_menu = "No Fade"
 
@@ -504,7 +508,7 @@ gather_stats_tip = "Setting this will cause IDJC to attempt to obtain the number
 
 general_tab = "General"
 
-genre = "Genre:"
+genre = "Genre(s):"
 
 genre_tip = "The musical genres you are likely to play."
 
@@ -537,6 +541,8 @@ hostname = "Hostname"
 hostname_tip = """The hostname of the server.
 Example 1: 192.168.1.4
 Example 2: localhost"""
+
+hostname2 = "Hostname:"
 
 hysteresis = "Hyster."
 
@@ -706,6 +712,8 @@ localhost = "Localhost"
 
 login_tip = "Icecast servers require a login password. On a server where no fixed mountpoints have been configured the source login will be 'source'. For collecting stats the admin password can be given for which the login is by default, 'admin' but could have been changed to something else. Stats may be collected with a source login provided the mountpoint matches."
 
+loginname = "Login name:"
+
 loop_all = "Loop All"
 
 lower_vorbis = "Lower %"
@@ -811,6 +819,8 @@ monitor_dj = "DJ"
 monitor_stream = "Stream"
 
 mono = "Mono"
+
+mountpoint = "Mount point:"
 
 mount_point_tip = "The mount point, which is not required when dealing with Shoutcast servers. A typical mount point might be /listen or /listen.ogg. It is recommended that Ogg streams have a mount point ending in .ogg for the sake of listener client compatibility."
 
@@ -920,6 +930,8 @@ This control maintains constant audio power throughout its range of travel, givi
 
 If you require 0dB straight down the middle then this feature should be turned off."""
 
+password = "Password:"
+
 pass_button_tip = "This button causes the crossfader to move to the opposite side at a speed determined by the speed selector to the left."
 
 pass_speed_tip = "The time in seconds that the crossfader will take to automatically pass across when the button to the right is clicked."
@@ -1004,6 +1016,8 @@ popupwindowtracktotal = "Total number of tracks %d"
 
 port = "Port"
 
+portnumber = "Port number:"
+
 port_tip = "The base port number which the server is using."
 
 prefs_button = "Prefs"
@@ -1033,6 +1047,8 @@ prokyon3_connect = "Database Connect"
 prokyon3_database = "Database:"
 
 prokyon3_frame_text = "Prokyon3 (song title) Database"
+
+prokyon3_hostname = "Hostname:"
 
 prokyon3_nosql = "Python module MySQLdb required"
 
@@ -1190,7 +1206,7 @@ server_passwd = "Pass:"
 
 server_port = "Port:"
 
-server_type = "Type:"
+servertype = "Server type:"
 
 server_type_icecast2 = "Icecast 2"
 
@@ -1210,6 +1226,8 @@ stream_details_tip = "The controls for configuring a stream."
 output_window_title = "IDJC Output"
 
 output_window_open_tip = "Open the output window."
+
+server_dialog_stats = "Server to be scanned for audience figures"
 
 set = "Set"
 
@@ -1439,7 +1457,7 @@ update_encoder_settings_tip = """Use this to change the encoder settings while s
  
 If this button is greyed out it means that the encoder is not running, or the bitrate/samplerate combination is not supported by the encoder, or you are trying to switch between Ogg and mp3, which is not permitted."""
 
-upon_connection = "Upon connection:"
+upon_connection = "At connect:"
 
 upper_vorbis = "Upper %"
 
