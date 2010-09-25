@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.4 *
 
+New server configuration dialog and notebook widget to replace the previous large scrolling window.
+
 Added an empty uninstall target to libshout/Makefile.am to fix 'make uninstall' breakage.
 
 New project website. See docsrc directory in Git source tree. Has a hand crafted Makefile not under GNU autotools control.
@@ -12,11 +14,11 @@ Saved playlist in xspf format now saves playlist controls.
 
 New playlist control for restarting the playlist from the top.
 
-New env-up script for those who accidentally on purpose deleted thier ./configure file.
+New env-up script to generate the up the ./configure file and html documentation. Both not to be found in the raw git source tree.
 
 Merged in new midi and assignable keyboard shortcuts interface.
 
-Cue sheets can now be added to the main player playlists. TODO: cuesheet playlist, playback.
+Cue sheets can now be added to the main player playlists. TODO: cuesheet playback.
 
 Cue sheets now indicate type WAVE when making a cue sheet for a flac file and cue sheets now store sub-second time offset information.
 
