@@ -2214,8 +2214,10 @@ class MainWindow:
       self.init_profile()            # decide which profile to use
       
       # Name the mixer and sourceclient jack client IDs.
-      os.environ["mx_client_id"] = "idjc-mx-" + self.profile
-      os.environ["sc_client_id"] = "idjc-sc-" + self.profile
+      os.environ["mx_client_id"] = mx_id = "idjc-mx-" + self.profile
+      os.environ["sc_client_id"] = sc_id = "idjc-sc-" + self.profile
+      
+      print "jack client IDs:", mx_id, sc_id
       
       print ln
 

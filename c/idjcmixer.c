@@ -1597,8 +1597,6 @@ int main(int argc, char **argv)
       return 1;
       }
       
-   fprintf(stderr, "jack client id %s\n", getenv("mx_client_id"));   
-      
    jack_set_process_callback(client, process, NULL);
       
    jack_set_error_function(display_error_to_stderr);

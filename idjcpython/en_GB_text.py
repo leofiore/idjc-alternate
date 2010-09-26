@@ -700,10 +700,6 @@ listen_url = "Listen URL:"
 
 listen_url_tip = "The URL of your radio station. This and the rest of the information below is intended for display on a radio station listings website."
 
-listeners_failed = u"\u2049"
-
-listeners_unknown = u"\u2026"
-
 listeners_total_tip = "The sum total of listeners in this server tab."
 
 lmic_toggle_tip = "This button toggles the left microphone input."

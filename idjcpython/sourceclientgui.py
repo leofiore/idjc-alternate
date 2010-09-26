@@ -366,10 +366,10 @@ class ConnectionPane(gtk.VBox):
    def listeners_renderer_cb(self, column, cell, model, iter):
       listeners = model.get_value(iter, 5)
       if listeners == -1:
-         cell.set_property("text", ln.listeners_unknown)
+         cell.set_property("text", "")
          cell.set_property("xalign", 0.5)
       elif listeners == -2:
-         cell.set_property("text", ln.listeners_failed)
+         cell.set_property("text", u"\u2049")
          cell.set_property("xalign", 0.5)
       else:
          cell.set_property("text", listeners)
