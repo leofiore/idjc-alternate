@@ -1571,6 +1571,10 @@ int main(int argc, char **argv)
    jack_status_t status;
    char *server_name = getenv("IDJC_JACK_SERVER");
    char midi_output[MIDI_QUEUE_SIZE];
+   char *our_sc_str_in_l;
+   char *our_sc_str_in_r;
+   char *sc_client_name = getenv("sc_client_id");
+   int l;
 
    setenv("LC_ALL", "C", 1);            /* ensure proper sscanf operation */
 
@@ -1586,12 +1590,14 @@ int main(int argc, char **argv)
    have_mad = 1;
 #endif /* DYN_MAD */
 
-   if((client = jack_client_open("idjc-mx", JackUseExactName | JackServerName, &status, server_name)) == 0)
+   if((client = jack_client_open(getenv("mx_client_id"), JackUseExactName | JackServerName, &status, server_name)) == 0)
       {
       printf("IDJC: Error\n");
       fflush(stdout);
       return 1;
       }
+      
+   fprintf(stderr, "jack client id %s\n", getenv("mx_client_id"));   
       
    jack_set_process_callback(client, process, NULL);
       
@@ -1643,6 +1649,17 @@ int main(int argc, char **argv)
 
    /* midi_control */
    midi_port = jack_port_register(client, "midi_control", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+
+   l = strlen(sc_client_name) + 10;
+   our_sc_str_in_l = malloc(l);
+   our_sc_str_in_r = malloc(l);
+   if ((!our_sc_str_in_l) || (!our_sc_str_in_r))
+      {
+      fprintf(stderr, "malloc failure\n");
+      return 1;
+      }
+   snprintf(our_sc_str_in_l, l, "%s:%s", sc_client_name, "str_in_l");
+   snprintf(our_sc_str_in_r, l, "%s:%s", sc_client_name, "str_in_r");
 
    sr = jack_get_sample_rate(client);
    fb_size = FB_SIZE;
@@ -1993,11 +2010,11 @@ int main(int argc, char **argv)
          if (strcmp(mic1, "default"))
             {
             if (mic1[0] != '\0')
-               jack_connect(client, mic1, "idjc-mx:mic_in_1");
+               jack_connect(client, mic1, jack_port_name(mic_channel_1));
             }
          else
             if (inport && inport[0])
-               jack_connect(client, inport[0], "idjc-mx:mic_in_1");
+               jack_connect(client, inport[0], jack_port_name(mic_channel_1));
          }
          
       if (!strcmp(action, "remakemic2"))
@@ -2006,11 +2023,11 @@ int main(int argc, char **argv)
          if (strcmp(mic2, "default"))
             {
             if (mic2[0] != '\0')
-               jack_connect(client, mic2, "idjc-mx:mic_in_2");
+               jack_connect(client, mic2, jack_port_name(mic_channel_2));
             }
          else
             if (inport && inport[0] && inport[1])
-               jack_connect(client, inport[1], "idjc-mx:mic_in_2");
+               jack_connect(client, inport[1], jack_port_name(mic_channel_2));
          }
 
       if (!strcmp(action, "remakemic3"))
@@ -2019,11 +2036,11 @@ int main(int argc, char **argv)
          if (strcmp(mic3, "default"))
             {
             if (mic3[0] != '\0')
-               jack_connect(client, mic3, "idjc-mx:mic_in_3");
+               jack_connect(client, mic3, jack_port_name(mic_channel_3));
             }
          else
             if (inport && inport[0] && inport[1] && inport[2])
-               jack_connect(client, inport[2], "idjc-mx:mic_in_3");
+               jack_connect(client, inport[2], jack_port_name(mic_channel_3));
          }
          
       if (!strcmp(action, "remakemic4"))
@@ -2032,11 +2049,11 @@ int main(int argc, char **argv)
          if (strcmp(mic4, "default"))
             {
             if (mic4[0] != '\0')
-               jack_connect(client, mic4, "idjc-mx:mic_in_4");
+               jack_connect(client, mic4, jack_port_name(mic_channel_4));
             }
          else
             if (inport && inport[0] && inport[1] && inport[2] && inport[3])
-               jack_connect(client, inport[3], "idjc-mx:mic_in_4");
+               jack_connect(client, inport[3], jack_port_name(mic_channel_4));
          }
 
       if (!strcmp(action, "remakeaudl"))
@@ -2045,11 +2062,11 @@ int main(int argc, char **argv)
          if (strcmp(audl, "default"))
             {
             if (audl[0] != '\0')
-               jack_connect(client, "idjc-mx:dj_out_l", audl);
+               jack_connect(client, jack_port_name(audio_left_port), audl);
             }
          else
             if (outport)
-               jack_connect(client, "idjc-mx:dj_out_l", outport[0]);
+               jack_connect(client, jack_port_name(audio_left_port), outport[0]);
          }
       if (!strcmp(action, "remakeaudr"))
          {
@@ -2057,91 +2074,91 @@ int main(int argc, char **argv)
          if (strcmp(audr, "default"))
             {
             if (audr[0] != '\0')
-               jack_connect(client, "idjc-mx:dj_out_r", audr);
+               jack_connect(client, jack_port_name(audio_right_port), audr);
             }
          else
             if (outport && outport[1])
-               jack_connect(client, "idjc-mx:dj_out_r", outport[1]);
+               jack_connect(client, jack_port_name(audio_right_port), outport[1]);
          }
       if (!strcmp(action, "remakestrl"))
          {
          jack_port_disconnect(client, stream_left_port);
-         jack_connect(client, "idjc-mx:str_out_l", "idjc-sc:str_in_l");
+         jack_connect(client, jack_port_name(stream_left_port), our_sc_str_in_l);
          if (strcmp(strl, "default"))
             {
             if (strl[0] != '\0')
-               jack_connect(client, "idjc-mx:str_out_l", strl);
+               jack_connect(client, jack_port_name(stream_left_port), strl);
             }
          else
             if (outport && outport[1] && outport[2] && outport[3] && outport[4])
-               jack_connect(client, "idjc-mx:str_out_l", outport[4]);
+               jack_connect(client, jack_port_name(stream_left_port), outport[4]);
             else
                if(outport && outport[1] && outport[2])
-                  jack_connect(client, "idjc-mx:str_out_l", outport[2]);
+                  jack_connect(client, jack_port_name(stream_left_port), outport[2]);
          }
       if (!strcmp(action, "remakestrr"))
          {
          jack_port_disconnect(client, stream_right_port);
-         jack_connect(client, "idjc-mx:str_out_r", "idjc-sc:str_in_r");
+         jack_connect(client, jack_port_name(stream_right_port), our_sc_str_in_r);
          if (strcmp(strr, "default"))
             {
             if (strr[0] != '\0')
-               jack_connect(client, "idjc-mx:str_out_r", strr);
+               jack_connect(client, jack_port_name(stream_right_port), strr);
             }
          else
             if (outport && outport[1] && outport[2] && outport[3] && outport[4] && outport[5])
-               jack_connect(client, "idjc-mx:str_out_r", outport[5]);
+               jack_connect(client, jack_port_name(stream_right_port), outport[5]);
             else
                if (outport && outport[1] && outport[2] && outport[3])
-                  jack_connect(client, "idjc-mx:str_out_r", outport[3]);
+                  jack_connect(client, jack_port_name(stream_right_port), outport[3]);
          }
       if (!strcmp(action, "remakeauxl"))
          {
          jack_port_disconnect(client, aux_left_channel);
          if (auxl[0] != '\0')
-            jack_connect(client, auxl, "idjc-mx:aux_in_l");
+            jack_connect(client, auxl, jack_port_name(aux_left_channel));
          }
       if (!strcmp(action, "remakeauxr"))
          {
          jack_port_disconnect(client, aux_right_channel);
          if (auxr[0] != '\0')
-            jack_connect(client, auxr, "idjc-mx:aux_in_r");
+            jack_connect(client, auxr, jack_port_name(aux_right_channel));
          }
       if (!strcmp(action, "remakemidi"))
          {
          jack_port_disconnect(client, midi_port);
          if (midi[0] != '\0')
-            jack_connect(client, midi, "idjc-mx:midi_control");
+            jack_connect(client, midi, jack_port_name(midi_port));
          }
       if (!strcmp(action, "remakedol"))
          {
          jack_port_disconnect(client, dspout_left_port);
          if (dol[0] != '\0')
-            jack_connect(client, "idjc-mx:dsp_out_l" , dol);
+            jack_connect(client, jack_port_name(dspout_left_port), dol);
          }
       if (!strcmp(action, "remakedor"))
          {
          jack_port_disconnect(client, dspout_right_port);
          if (dor[0] != '\0')
-            jack_connect(client, "idjc-mx:dsp_out_r" , dor);
+            jack_connect(client, jack_port_name(dspout_right_port), dor);
          }
       if (!strcmp(action, "remakedil"))
          {
          jack_port_disconnect(client, dspin_left_port);
          if (dil[0] != '\0')
-            jack_connect(client, dil, "idjc-mx:dsp_in_l");
+            jack_connect(client, dil, jack_port_name(dspin_left_port));
          }
       if (!strcmp(action, "remakedir"))
          {
          jack_port_disconnect(client, dspin_right_port);
          if (dir[0] != '\0')
-            jack_connect(client, dir, "idjc-mx:dsp_in_r");
+            jack_connect(client, dir, jack_port_name(dspin_right_port));
          }
       if (!strcmp(action, "serverbind"))
          {
          fprintf(stderr, "remaking connection to server\n");
-         jack_connect(client, "idjc-mx:str_out_l", "idjc-sc:str_in_l"); 
-         jack_connect(client, "idjc-mx:str_out_r", "idjc-sc:str_in_r");
+         jack_connect(client, jack_port_name(stream_left_port), our_sc_str_in_l); 
+         jack_connect(client, jack_port_name(stream_right_port), our_sc_str_in_r);
          }
       if (!strcmp(action, "requestlevels"))
          {
@@ -2232,6 +2249,8 @@ int main(int argc, char **argv)
    free_dblookup_table();
    jack_free_ports(inport);
    jack_free_ports(outport);
+   free(our_sc_str_in_l);
+   free(our_sc_str_in_r);
    mic_free(mic_1);
    mic_free(mic_2);
    mic_free(mic_3);

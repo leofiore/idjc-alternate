@@ -1,6 +1,6 @@
 /*
 #   audiofeed.h: jack connectivity for the streaming module of idjc
-#   Copyright (C) 2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2007-2010 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ struct audio_feed
    struct threads_info *threads_info;
    jack_client_t *jack_h;
    char *jack_client_name;
+   char *mx_port_l, *mx_port_r, *sc_port_l, *sc_port_r;
    jack_port_t *input_port[2];
    jack_port_t *output_port[2];
    jack_nframes_t sample_rate;

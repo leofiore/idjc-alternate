@@ -1,6 +1,6 @@
 /*
 #   audiofeed.c: jack connectivity for the streaming module of idjc
-#   Copyright (C) 2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2007-2010 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -124,13 +124,40 @@ int audio_feed_jack_samplerate_request(struct threads_info *ti, struct universal
 struct audio_feed *audio_feed_init(struct threads_info *ti)
    {
    struct audio_feed *self;
+   size_t l;
+   char *sc_client_name, *mx_client_name;
 
    if (!(self = calloc(1, sizeof (struct audio_feed))))
       {
       fprintf(stderr, "audio_feed_init: malloc failure\n");
       return NULL;
       }
-   if (!(self->jack_client_name = strdup("idjc-sc")))
+      
+   mx_client_name = getenv("mx_client_id");
+   sc_client_name = getenv("sc_client_id");
+   l = strlen(sc_client_name) + 11;
+   self->mx_port_l = malloc(l);
+   self->mx_port_r = malloc(l);
+   --l;
+   self->sc_port_l = malloc(l);
+   self->sc_port_r = malloc(l);
+   ++l;
+   
+   if (self->mx_port_l && self->mx_port_r && self->sc_port_l && self->sc_port_r)
+      {
+      snprintf(self->mx_port_l, l, "%s:%s", mx_client_name, "str_out_l");
+      snprintf(self->mx_port_r, l, "%s:%s", mx_client_name, "str_out_r");
+      --l;
+      snprintf(self->sc_port_l, l, "%s:%s", sc_client_name, "str_in_l");
+      snprintf(self->sc_port_r, l, "%s:%s", sc_client_name, "str_in_r");
+      }
+   else
+      {
+      fprintf(stderr, "malloc failure\n");
+      return NULL;
+      }
+      
+   if (!(self->jack_client_name = strdup(sc_client_name)))
       {
       fprintf(stderr, "audio_feed_init: malloc failure\n");
       return NULL;
@@ -158,8 +185,8 @@ struct audio_feed *audio_feed_init(struct threads_info *ti)
       fprintf(stderr, "audio_feed_init: could not activate jack client\n");
       return NULL;
       }
-   jack_connect(self->jack_h, "idjc-mx:str_out_l", "idjc-sc:str_in_l");
-   jack_connect(self->jack_h, "idjc-mx:str_out_r", "idjc-sc:str_in_r");
+   jack_connect(self->jack_h, self->mx_port_l, self->sc_port_l);
+   jack_connect(self->jack_h, self->mx_port_r, self->sc_port_r);
    return self;
    }
 
@@ -169,5 +196,9 @@ void audio_feed_destroy(struct audio_feed *self)
    jack_client_close(self->jack_h);
    self->threads_info->audio_feed = NULL;
    free(self->jack_client_name);
+   free(self->mx_port_l);
+   free(self->mx_port_r);
+   free(self->sc_port_l);
+   free(self->mx_port_r);
    free(self);
    }
