@@ -950,6 +950,7 @@ class select_profile_dialog(gtk.Dialog):
       vbox.add(self.combobox)
       self.combobox.show()
       self.new_profile_box = gtk.Entry()
+      self.new_profile_box.set_max_length(24)
       self.new_profile_box.connect("key_press_event", self.cb_keypress)
       self.new_profile_box.connect("activate", self.profile_enter)
       self.new_profile_box.connect("changed", self.profile_changed)
