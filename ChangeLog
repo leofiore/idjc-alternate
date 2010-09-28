@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.4 *
 
+Can now open multiple idjc instances on the same jack sound server.
+
 New server configuration dialog and notebook widget to replace the previous large scrolling window.
 
 Added an empty uninstall target to libshout/Makefile.am to fix 'make uninstall' breakage.

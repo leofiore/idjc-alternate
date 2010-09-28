@@ -1,0 +1,17 @@
+<script type="text/javascript">
+ui('Installation', 'install-nav')
+</script>
+
+<p>The simplest way to install IDJC is to install it from your distribution's repository.
+This can be achieved using a graphical user interface in most cases but I will describe the console
+method for the sake of simplicity and will continue to do so throughout the section when describing how
+to install IDJC from source. All console commands apply to Ubuntu specifically but also to Debian which
+uses the same package management system.</p>
+
+<kbd>$ sudo apt-get install idjc</kbd>
+
+<p>That's it as far as installing from the repository goes. Enjoy your program but see the
+<a href="install_first_run.html">First Run</a> section because you will need to configure your
+system for working with Jack Audio Connection Kit which has some special requirements.</p>
+
+<p>No matter how you installed it, the program launcher will appear in your Applications->Internet menu.</p>

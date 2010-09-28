@@ -1,0 +1,19 @@
+<script type="text/javascript">
+ui('Tour: Output', 'tour-output-nav')
+</script>
+
+<a href="output-window-hq.png" target="_blank"><img class="clickthrough-right" src="output-window.png" alt="Output Window Screenshot" title="Click for full size version" /></a>
+
+<p>A journey of a thousand miles begins with a single step. Here that step is configuring IDJC to stream over the internet.</p>
+
+<p>IDJC supports six simultaneous streams as standard and each of those can be configured for listener stats collection.</p>
+
+<p>In the format section you get to select the stream's sample rate, format, and bitrate.</p>
+
+<p>Stream Info is where you get to tell the world about your stream, including the DJ and/or station name, the description, genres of music to be played.</p>
+
+<p>The song title metadata can be formatted and controlled directly by the use of the 'Metadata' control. This gives you an extra communications channel in addition to your own voice.</p>
+
+<p>The record feature does what you would expect.</p>
+
+<p>In the individual controls section there is a timer that allows stream scheduling for pre-recorded shows.</p>

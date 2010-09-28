@@ -2,6 +2,11 @@
 
 main-window.png
 jingles-window.png
+prefs-general.png
+prefs-microphones.png
+prefs-bindings.png
+prefs-jack-ports.png
+output-window.png
 
 *.html
 *.hq.png

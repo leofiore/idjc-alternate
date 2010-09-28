@@ -5,8 +5,7 @@
   text-align:center;
  }
  html{
-  overflow-y: scroll;
-  overflow: -moz-scrollbars-vertical;
+  overflow-y:scroll;
  }
  h1.unshown{
   display:none;
@@ -22,6 +21,9 @@
  }
  p{
   font-size:10pt;
+ }
+ br.division{
+  clear:both;
  }
 
  img.clickthrough{
@@ -100,5 +102,5 @@
  }
 
  #signature{
-  font-size:smaller;
+  font-size:x-small;
  }

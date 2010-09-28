@@ -13,16 +13,14 @@ and simulate audio hardware to cut down the expense of creating a home studio.</
 <p>In addition to providing a large number of show production features, this software has been written
 with the aim of producing the best possible experience for the listeners and DJ alike. To that end features
 like VoIP integration were conceived of from the very start resulting in the choice of Jack Audio Connection
-Kit to base the audio.
+Kit to base the audio.</p>
 
 <p>This has afforded IDJC audio processing capabilities that, were they built in, would be considered excessive. Enjoy
 integration with powerful programs such as the well known Skype, Jack Rack (offering audio sound effects plugins),
 Jamin (the powerful audio compressor/equalizer), and <a href="http://jackaudio.org/applications">many more</a>.</p>
 
 <p>Fortunately IDJCs power does not come at the expense of a well organized user interface, nor
-have requests for features been permitted to diminish the applicaton's intuitive feel yet throughout development
+have requests for features been permitted to diminish the application's intuitive feel yet throughout development
 the main goals have always been that of stability and audio quality.</p>
-
-<p>Choose IDJC and your listeners may personally thank you for it (in IRC of course).</p>
 
 <p id="signature">Stephen Fairchild</p>

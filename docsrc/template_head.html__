@@ -6,8 +6,8 @@
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="description" content="Internet DJ Console (IDJC) is a Shoutcast/Icecast internet radio client incorporating features for live radio show production." />
 <meta name="keywords" xml:lang="en" content="idjc dj shoutcast icecast radio linux gtk live recorded voip irc" />
-<link rel="shortcut icon" href="favicon.png" type="application/png">
-<link rel="stylesheet" href="style.css" type="text/css">
+<link rel="shortcut icon" href="favicon.png" type="application/png" />
+<link rel="stylesheet" href="style.css" type="text/css" />
 <title>Internet DJ Console Homepage</title>
 
 <script type="text/javascript">
@@ -29,7 +29,7 @@ function ui(title, menu) {
  <tr><td>
             <table>
                <tr>
-                  <td><img src="site-logo.png" width=148 alt="website logo" title="Internet DJ Console homepage"/></td>
+                  <td><img src="site-logo.png" width="148" alt="website logo" title="Internet DJ Console homepage"/></td>
                </tr>
                <tr>
                   <td id="left-sidebar">
@@ -37,24 +37,30 @@ function ui(title, menu) {
                    <ul id="sidebar-menu">
                     <li><a href="index.html" id="front-page-nav">Front page</a></li>
                     <li><a href="tour.html" id="tour-nav">Tour</a></li>
-                    <ul>
-                     <li><a href="tour_main.html" id="tour-main-nav">Main window</a></li>
-                     <li><a href="tour_jingles.html" id="tour-jingles-nav">Jingles</a></li>
-                     <li><a href="tour_output.html" id="tour-output-nav">Output</a></li>
-                     <li><a href="tour_preferences.html" id="tour-preferences-nav">Preferences</a></li>
-                    </ul>
+                    <li>
+                     <ul>
+                      <li><a href="tour_main.html" id="tour-main-nav">Main window</a></li>
+                      <li><a href="tour_jingles.html" id="tour-jingles-nav">Jingles</a></li>
+                      <li><a href="tour_output.html" id="tour-output-nav">Output</a></li>
+                      <li><a href="tour_preferences.html" id="tour-preferences-nav">Preferences</a></li>
+                     </ul>
+                    </li>
                     <li><a href="install.html" id="install-nav">Installation</a></li>
-                    <ul>
-                     <li><a href="install_build.html" id="install-build-nav">Building</a></li>
-                     <li><a href="install_first_run.html" id="install-first-run-nav">First run</a></li>
-                    </ul>
+                    <li>
+                     <ul>
+                      <li><a href="install_build.html" id="install-build-nav">Building</a></li>
+                      <li><a href="install_first_run.html" id="install-first-run-nav">First run</a></li>
+                     </ul>
+                    </li>
                     <li><a href="tutorials.html" id="tutorials-nav">Tutorials</a></li>
-                    <ul>
-                     <li><a href="tutorial_icecast" id="tutorial-icecast-nav">Icecast</a></li>
-                     <li><a href="tutorial_shoutcast" id="tutorial-shoutcast-nav">Shoutcast</a></li>
-                     <li><a href="tutorial_voip" id="tutorial-voip-nav">VoIP</a></li>
-                     <li><a href="tutorial_irc" id="tutorial-irc-nav">IRC</a></li>
-                    </ul>
+                    <li>
+                     <ul>
+                      <li><a href="tutorial_icecast" id="tutorial-icecast-nav">Icecast</a></li>
+                      <li><a href="tutorial_shoutcast" id="tutorial-shoutcast-nav">Shoutcast</a></li>
+                      <li><a href="tutorial_voip" id="tutorial-voip-nav">VoIP</a></li>
+                      <li><a href="tutorial_irc" id="tutorial-irc-nav">IRC</a></li>
+                     </ul>
+                    </li>
                     <li><a href="contact.html" id="contact-nav">Contact</a></li>
                    </ul>
                   </td>
