@@ -22,10 +22,17 @@
  p{
   font-size:10pt;
  }
+ pre{
+  margin:0px;
+  padding:6px;
+  border:1px inset;
+  width:672px;
+  overflow:auto;
+ }
+ 
  br.division{
   clear:both;
  }
-
  img.clickthrough{
   border-style:hidden;
   margin-top:14pt;

@@ -1,0 +1,40 @@
+<script type="text/javascript">
+ui('Installation: Building from source', 'install-building-nav')
+</script>
+
+<h4>Firstly, open a terminal</h4>
+<p>In this section I'll post instructions that are meant to be entered into a terminal
+(sometimes called the console). Those lines will be preceded by a '$' and require the text following the $ to be typed
+in exactly as written apart from any text in red. The terminal can be found in the menu under Applications->Accessories.</p>
+
+<h4>Installing dependencies</h4>
+<p>The following packages listed are required to build IDJC or are used at run-time by IDJC.</p>
+<pre>$ sudo apt-get install build-essential libc6-dev libjack-dev jackd libvorbis-dev libsamplerate0-dev libsndfile1-dev python-gtk2-dev libmad0-dev libavcodec-dev libavformat-dev libmp3lame-dev flac vorbis-tools python-mutagen libspeex-dev</pre>
+
+<h4>Obtaining the IDJC source code</h4>
+<p>There are two options available to you. One is to get the official release (recommended), the other is to
+obtain the development sources - useful if you really need a new feature, but may have half finished
+stuff lying around and is guaranteed not to be tested in anything but the most casual way.</p>
+
+<h5>Option 1: Obtaining the latest official release</h5>
+<p>Navigate to <a href="http://www.sourceforge.net/projects/idjc" target="blank_">http://www.sourceforge.net/projects/idjc</a>.</p>
+<p>Hit the 'Download Now' button and wait for the download to finish. Make a note of the version you downloaded.</p>
+<pre>$ cd Downloads
+$ tar xzvf idjc-<span style="color:red;">[version]</span>.tar.gz
+$ cd idjc-<span style="color:red;">[version]</span></pre>
+
+<h5>Option 2: Obtaining the development sources</h5>
+<pre>$ sudo apt-get install git-core
+$ git clone git://idjc.git.sourceforge.net/gitroot/idjc/idjc
+$ cd idjc
+$ ./env-up</pre>
+
+<h4>The build process</h4>
+<p>Systems that do not have 'sudo' configured will require the use of the 'su' command instead.</p>
+<pre>$ ./configure CFLAGS="-O2"
+$ make
+$ sudo make install</pre>
+
+<h4>Finally</h4>
+<p>At this stage it's installed but see the <a href="install_first_run.html">First run</a> section
+as further configuration is very likely needed.</p>

@@ -1,4 +1,4 @@
-HTML = index.html tour.html tour_main.html tour_jingles.html tour_output.html tour_preferences.html install.html
+HTML = index.html tour.html tour_main.html tour_jingles.html tour_output.html tour_preferences.html install.html install_build.html
 TEMPLATES = template_head.html__ template_tail.html__
 IMAGES = main-window.png jingles-window.png output-window.png prefs-general.png prefs-microphones.png prefs-jack-ports.png prefs-bindings.png
 
