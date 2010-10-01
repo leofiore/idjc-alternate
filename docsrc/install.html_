@@ -2,16 +2,38 @@
 ui('Installation', 'install-nav')
 </script>
 
-<p>The simplest way to install IDJC is to install it from your distribution's repository.
-This can be achieved using a graphical user interface in most cases but I will describe the console
-method for the sake of simplicity and will continue to do so throughout the section when describing how
-to install IDJC from source. All console commands apply to Ubuntu specifically but also to Debian which
-uses the same package management system.</p>
+<h4>Firstly, open a terminal</h4>
+<p>In this section and on the remainder of this site there will be instructions that are
+intended to be entered into a terminal. Those lines will be preceded by a <i>$</i> symbol and require
+the text that follows to be typed in exactly as written apart from any text appearing in
+<span style="color:red;" title="This is just an example">red</span>, which will have some accompanying
+mouse-hover text explaining exactly what needs to be entered.</p>
 
-<pre>$ sudo apt-get install idjc</pre>
+<p>The terminal can be launched from the menu. It's under <strong>Applications->Accessories</strong>.
+If you don't want to do this you can use your distribution's graphical package management tool
+instead <i>e.g. Synaptic</i> in Ubuntu, but you can use this only for the installation step.</p>
+
+<h4>From the repository A.K.A. the preferred way (examples)</h4>
+
+<ul>
+<li><p>Ubuntu</p><pre class="reduced">$ sudo apt-get install idjc</pre></li>
+<li><p>Debian</p><pre class="reduced">$ su -c "apt-get install idjc"</pre></li>
+
+</ul>
+
+<p>You will be required to enter a password.</p>
+
+<h4>In summary</h4>
 
 <p>That's it as far as installing from the repository goes. Enjoy your program but see the
 <a href="install_first_run.html">First run</a> section because you will need to configure your
-system for working with Jack Audio Connection Kit which has some special requirements.</p>
+system for working with <a href="http://www.jackaudio.org/">Jack Audio Connection Kit</a>
+which has some special requirements.</p>
 
-<p>No matter how you installed it, the program launcher will appear in your Applications->Internet menu.</p>
+<p>No matter how you go about installing it, the program launcher will appear in
+your <strong>Applications->Internet</strong> menu.</p>
+
+<h4>I want the latest version please, with all features enabled</h4>
+
+<p>If IDJC is unavailable in your distribution's repository or you would prefer to use a newer
+or more capable version the <a href="install_build.html">next section</a> will be of interest.</p>

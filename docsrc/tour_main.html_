@@ -3,7 +3,7 @@ ui('Tour: Main window', 'tour-main-nav')
 </script>
 
 <div class="centered-contents">
-<a href="main-window.hq.png" target="_blank"><img class="clickthrough" src="main-window.png" alt="Main Window Screenshot" title="Click for full size version" /></a>
+<a href="main-window.hq.png"><img class="clickthrough" src="main-window.png" alt="Main Window Screenshot" title="Click for full size version" /></a>
 </div>
 
 <p>The main window isn't as complicated as it first appears thanks to a fairly standard
@@ -16,11 +16,11 @@ number of listeners, currently none.</p>
 <p>Beneath each playlist is a selector for the playlist mode. This feature affects what
 will happen once a track ends. Among other options, Loop All, Random, Manual. Fade controls
 the amount of inter-track fade with options for 5 or 10 seconds and finally,
-'Audio Feed' controls whether the player audio is piped to the stream and or the DJ. This
-feature when combined with 'Monitor Mix DJ' facilitates the pre-listening of tracks.</p>
+<i>Audio Feed</i> controls whether the player audio is piped to the stream and or the DJ. This
+feature when combined with <i>Monitor Mix DJ</i> facilitates the pre-listening of tracks.</p>
 
-<p>Metadata source controls which player contributes the song title metadata to the stream
-and to the right of that are various crossfader controls.</p>
+<p>The <i>Metadata source</i> feature controls which player contributes the song title metadata
+to the stream and to the right of that are various crossfader controls.</p>
 
 <p>Bottom right are controls for (un)muting the various audio sources, among them potentially:
 VoIP callers, an analog source via aux, a number of microphones. Here there are two configured on two

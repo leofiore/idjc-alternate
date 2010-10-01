@@ -29,6 +29,9 @@
   width:672px;
   overflow:auto;
  }
+ pre.reduced{
+  width:90%;
+ }
  
  br.division{
   clear:both;
@@ -53,11 +56,23 @@
    margin:0 auto;
    text-align:center
  }
+ #dep-table{
+  border:2px solid black;
+ }
+ #dep-table th{
+  font-size:small;
+  border:1px outset;
+ }
+ #dep-table td{
+  font-size:small;
+  border:1px solid lightgray;
+ }
  #main-table{
   margin-left:auto;
   margin-right:auto;
   background-color:#fff;
-  text-align:left
+  text-align:left;
+  width:856px;
  }
  #main-table td{
   vertical-align:top
@@ -101,7 +116,7 @@
  } 
 
  #top-titlebar{
-  width:700px;
+  lwidth:700px;
   background-color:#ccc;
  }
  #top-titlebar h2{

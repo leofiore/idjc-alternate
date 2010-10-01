@@ -2,13 +2,13 @@
 ui('Tour: Jingles', 'tour-jingles-nav')
 </script>
 
-<a href="jingles-window.hq.png" target="_blank"><img class="clickthrough-left" src="jingles-window.png" alt="Jingles Window Screenshot" title="Click for full size version" /></a>
+<a href="jingles-window.hq.png"><img class="clickthrough-left" src="jingles-window.png" alt="Jingles Window Screenshot" title="Click for full size version" /></a>
 
 <p>The Jingles window houses the Jingles player, a basic player that indicates by number the function key
 (F-Key on your keyboard) that when pressed will trigger the jingle.</p>
 
 <p>You can also string jingles together by entering the corresponding numbers (comma separated) into the sequence
-box and trigger them with the 'Esc' key or with one of the play buttons.</p>
+box and trigger them with the <i>Esc</i> key or with one of the play buttons.</p>
 
 <p>The black play button which is the default turns down the audio on your main players so the jingle can be
 heard clearly. The red play button does the same but turns the main player volume all the way down.</p>
