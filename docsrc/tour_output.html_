@@ -2,7 +2,7 @@
 ui('Tour: Output', 'tour-output-nav')
 </script>
 
-<a href="output-window-hq.png"><img class="clickthrough-right" src="output-window.png" alt="Output Window Screenshot" title="Click for full size version" /></a>
+<a href="output-window.hq.png"><img class="clickthrough-right" src="output-window.png" alt="Output Window Screenshot" title="Click for full size version" /></a>
 
 <p>IDJC supports six simultaneous streams as standard and each of those can be configured
 for listener stats collection simply by specifying all the relays in addition to the master server.</p>

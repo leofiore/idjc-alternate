@@ -3,7 +3,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
 <meta name="description" content="Internet DJ Console (IDJC) is a Shoutcast/Icecast internet radio client incorporating features for live radio show production." />
 <meta name="keywords" xml:lang="en" content="idjc dj shoutcast icecast radio linux gtk live recorded voip irc" />
 <link rel="shortcut icon" href="favicon.png" type="application/png" />
@@ -23,13 +24,15 @@ function ui(title, menu) {
 
 </head>
 <body>
-<!-->Hidden h1 title for search engine seeding.</-->
+<!--Hidden h1 title for search engine seeding.-->
 <h1 class="unshown">Internet DJ Console Homepage IDJC</h1>
 <table id="main-table">
  <tr><td>
             <table>
-               <tr>
-                  <td><img src="site-logo.png" width="148" alt="website logo" title="Internet DJ Console homepage"/></td>
+               <tr id="logo-holder">
+                  <td>
+                  <img src="site-logo.png" width="148" height="212" alt="website logo" title="Internet DJ Console homepage"/>
+                  </td>
                </tr>
                <tr>
                   <td id="left-sidebar">

@@ -2,7 +2,7 @@
 ui('Tour: Preferences', 'tour-preferences-nav')
 </script>
 
-<a href="prefs-general-hq.png"><img class="clickthrough-left" src="prefs-general.png" alt="Preferences Window Screenshot (general)" title="Click for full size version" /></a>
+<a href="prefs-general.hq.png"><img class="clickthrough-left" src="prefs-general.png" alt="Preferences Window Screenshot (general)" title="Click for full size version" /></a>
 
 <p>Here there are extensive controls that alter the way IDJC behaves on often subtle levels.</p>
 
@@ -10,7 +10,7 @@ ui('Tour: Preferences', 'tour-preferences-nav')
 with an absolute minimum CPU load as well as reducing the amount of screen space that is occupied.</p>
 
 <p>It's possible to toggle the meters that are visible, configure
-<a href="http://en.wikipedia.org/wiki/Replay_Gain"><i>Replay Gain</i></a> or any of the other
+<a href="http://en.wikipedia.org/wiki/Replay_Gain">Replay Gain</a> or any of the other
 options shown in detail on the screenshot alongside.</p>
 
 <p>Further down is a very useful control that lets you choose how IDJC behaves
@@ -23,7 +23,7 @@ From the sidebar searching or filtering is also possible.</p>
 
 <br class="division" />
 
-<a href="prefs-microphones-hq.png"><img class="clickthrough-right" src="prefs-microphones.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
+<a href="prefs-microphones.hq.png"><img class="clickthrough-right" src="prefs-microphones.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
 
 <p>A great deal of care has been taken to make sure your voice can be heard consistently
 over the mix. The controls to do this are placed in your hands so experimenting and making
@@ -34,9 +34,9 @@ it's all done in software. That said, a good microphone is still advised for the
 
 <br class="division" />
 
-<a href="prefs-jack-ports-hq.png"><img class="clickthrough-left" src="prefs-jack-ports.png" alt="Preferences Window Screenshot (JACK ports)" title="Click for full size version" /></a>
+<a href="prefs-jack-ports.hq.png"><img class="clickthrough-left" src="prefs-jack-ports.png" alt="Preferences Window Screenshot (JACK ports)" title="Click for full size version" /></a>
 
-<p>IDJC is built on the technology of <a href="http://www.jackaudio.org/"><i>Jack Audio Connection Kit</i></a>.
+<p>IDJC is built on the technology of <a href="http://www.jackaudio.org/">Jack Audio Connection Kit</a>.
 As the name implies it facilitates audio connections and IDJC makes audio available on a number of such ports.</p>
 
 <p>Microphone audio is collected from the sources specified in this window and there is an interface that
@@ -46,7 +46,7 @@ allows the stream audio to be sent for processing by external applications.</p>
 
 <br class="division" />
 
-<a href="prefs-bindings-hq.png"><img class="clickthrough-right" src="prefs-bindings.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
+<a href="prefs-bindings.hq.png"><img class="clickthrough-right" src="prefs-bindings.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
 
 <p>Set and see in what way IDJC responds to key presses here.</p>
 

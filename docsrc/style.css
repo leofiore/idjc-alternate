@@ -19,20 +19,35 @@
  h3{
   font-size:16pt;
  }
+ h4{
+  font-size:12pt;
+  margin-top:13pt;
+  margin-bottom:13pt;
+  }
+ h5{
+  font-size:10pt;
+  margin-top:11pt;
+  margin-bottom:11pt;
+ }
  p{
   font-size:10pt;
+  margin-top:10pt;
+  margin-bottom:10pt;
  }
  pre{
   margin:0px;
   padding:6px;
   border:1px inset;
   width:672px;
-  overflow:auto;
+  overflow-x:auto;
  }
  pre.reduced{
   width:90%;
  }
- 
+ strong{
+  text-wrap:suppress;
+ }
+
  br.division{
   clear:both;
  }
@@ -51,6 +66,9 @@
   float:right;
   margin-left:9pt;
   margin-top:14pt;
+ }
+ #logo-holder td {
+   padding:0px;
  }
  div.centered-contents {
    margin:0 auto;
@@ -75,7 +93,7 @@
   width:856px;
  }
  #main-table td{
-  vertical-align:top
+  vertical-align:top;
  }
  #left-sidebar{
   background-color:#ccc;
@@ -83,26 +101,30 @@
   padding-left:7px;
  }
  #left-sidebar h3{
-  padding-left:inherit;
+  margin:18pt 7px;
  }
  #sidebar-menu{
   font-size:18px;
-  padding-left:inherit;
+  padding-left:7px;
   padding-top:3px;
+  margin:0;
+  margin-bottom:20pt;
   list-style-type:none;
  }
  #sidebar-menu ul{
   font-size:15px;
   padding-left:10px;
-  
+  margin:0;
   list-style-type:none;
  }
  #sidebar-menu li{
   padding-top:4px;
+  margin:0;
  }
  #sidebar-menu ul li{
   padding-top:1px;
   padding-bottom:4px;
+  margin:0;
  }
  #sidebar-menu a{
   text-decoration:none;
@@ -114,9 +136,7 @@
   font-weight:bold;
   color:#F70;
  } 
-
  #top-titlebar{
-  lwidth:700px;
   background-color:#ccc;
  }
  #top-titlebar h2{
