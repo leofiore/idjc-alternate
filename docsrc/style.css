@@ -9,30 +9,30 @@
  }
  h1.unshown{
   display:none;
-  font-size:8pt;
+  font-size:10px;
  }
  h2{
-  font-size:20pt;
-  margin-top:8pt;
-  margin-bottom:14pt;
+  font-size:25px;
+  margin-top:8px;
+  margin-bottom:14px;
  }
  h3{
-  font-size:16pt;
+  font-size:22px;
  }
  h4{
-  font-size:12pt;
-  margin-top:13pt;
-  margin-bottom:13pt;
+  font-size:17px;
+  margin-top:13px;
+  margin-bottom:13px;
   }
  h5{
-  font-size:10pt;
-  margin-top:11pt;
-  margin-bottom:11pt;
+  font-size:13px;
+  margin-top:11px;
+  margin-bottom:11px;
  }
  p{
-  font-size:10pt;
-  margin-top:10pt;
-  margin-bottom:10pt;
+  font-size:13px;
+  margin-top:10px;
+  margin-bottom:10px;
  }
  pre{
   margin:0px;
@@ -53,19 +53,19 @@
  }
  img.clickthrough{
   border-style:hidden;
-  margin-top:14pt;
+  margin-top:14px;
  }
  img.clickthrough-left{
   border-style:hidden;
   float:left;
-  margin-right:9pt;
-  margin-top:14pt;
+  margin-right:9px;
+  margin-top:14px;
  }
  img.clickthrough-right{
   border-style:hidden;
   float:right;
-  margin-left:9pt;
-  margin-top:14pt;
+  margin-left:9px;
+  margin-top:14px;
  }
  #logo-holder td {
    padding:0px;
@@ -76,13 +76,12 @@
  }
  #dep-table{
   border:2px solid black;
+  font-size:12px;
  }
  #dep-table th{
-  font-size:small;
   border:1px outset;
  }
  #dep-table td{
-  font-size:small;
   border:1px solid lightgray;
  }
  #main-table{
@@ -101,14 +100,14 @@
   padding-left:7px;
  }
  #left-sidebar h3{
-  margin:18pt 7px;
+  margin-left:7px;
+  margin-top:16px;
+  margin-bottom:15px;
  }
  #sidebar-menu{
-  font-size:18px;
+  font-size:17px;
   padding-left:7px;
-  padding-top:3px;
-  margin:0;
-  margin-bottom:20pt;
+  margin-bottom:20px;
   list-style-type:none;
  }
  #sidebar-menu ul{
@@ -140,9 +139,9 @@
   background-color:#ccc;
  }
  #top-titlebar h2{
-  padding-left:10pt;
+  padding-left:10px;
  }
 
  #signature{
-  font-size:x-small;
+  font-size:11px;
  }
