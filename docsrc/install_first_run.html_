@@ -1,0 +1,105 @@
+<script type="text/javascript">
+ui('Installation: First run', 'install-first-run-nav')
+</script>
+
+<h4>Configuring Jack Audio Connection Kit</h4>
+
+<h5>No Jack means no IDJC</h5>
+
+<p>In this section I'm going to be talking about Jack Audio Connection Kit (Jack from now on)
+and it's sound server, jackd. Forget IDJC exists for the moment as the following information
+applies to all applications that need Jack in order to run.</p>
+
+<p>Jack needs real-time privileges in order to run smoothly because of the small sized buffers
+that it uses to transfer audio. Using small buffers keeps the audio time delay (latency) to a minimum
+which is a good thing if you are listening to the processed audio of your own just captured voice.</p>
+
+<h5>Manually running jackd for the first time</h5>
+<pre>$ jackd -d alsa
+jackd 0.118.0
+Copyright 2001-2009 Paul Davis, Stephane Letz, Jack O'Quinn, Torben Hohn and others.
+jackd comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions; see the file COPYING for details
+
+
+JACK is running in realtime mode, but you are not allowed to use realtime scheduling.
+Please check your /etc/security/limits.conf for the following lines
+and correct/add them:
+
+  @audio          -       rtprio          100
+  @audio          -       nice            -10
+
+After applying these changes, please re-login in order for them to take effect.
+
+You don't appear to have a sane system configuration. It is very likely that you
+encounter xruns. Please apply all the above mentioned changes and start jack again!</pre>
+
+<p>Okay, what just happened here is jackd just failed to start because it considers your system's
+configuration to be wrong.</p>
+
+<p>Using a text editor and root privileges, edit the file mentioned above. Add the two lines given to you
+at the end of the file. Save and exit. The following command will help.</p>
+
+<pre>$ sudo nano /etc/security/limits.conf</pre>
+
+<p>Now that you have added all members of the audio group to the real-time privileges list lets
+make sure your user account has audio group membership. You can do this in the Ubuntu <i>System</i> menu
+by selecting <i>Users and Groups</i> from the <i>Administration</i> menu and clicking the
+<i>Manage Groups</i> button. Choose audio and make sure the check-box is selected.</p>
+
+<p>You now need to log out of your desktop and log back in again for the changes to take effect.</p>
+
+<p>Let's try starting jackd one more time.</p>
+
+<pre>$ jackd -d alsa
+jackd 0.118.0
+Copyright 2001-2009 Paul Davis, Stephane Letz, Jack O'Quinn, Torben Hohn and others.
+jackd comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions; see the file COPYING for details
+
+JACK compiled with System V SHM support.
+loading driver ..
+creating alsa driver ... hw:0|hw:0|1024|2|48000|0|0|nomon|swmeter|-|32bit
+control device hw:0
+configuring for 48000Hz, period = 1024 frames (21.3 ms), buffer = 2 periods
+ALSA: final selected sample format for capture: 32bit integer little-endian
+ALSA: use 2 periods for capture
+ALSA: final selected sample format for playback: 32bit integer little-endian
+ALSA: use 2 periods for playback
+</pre>
+<p>This time it has successfully started so you can now run IDJC.</p>
+
+<h5>Making a simple jackd configuration file</h5>
+
+<pre>$ echo "/usr/bin/jackd -d alsa -r 44100 -p 256" > ~/.jackdrc</pre>
+
+<p>This will ensure that when jackd is started on demand that it will do so with a sample
+rate equalling that of CD audio and therefore most likely your entire music collection.</p>
+
+<h5>Making jackd use a particular sound card</h5>
+
+<p>It's a two step process of finding the names of all the sound cards and specifying
+which one to use to jackd.</p>
+
+<p>In this example there is only one sound card.</p>
+
+<pre>$ aplay -l
+**** List of PLAYBACK Hardware Devices ****
+card 0: Revolution71 [M Audio Revolution-7.1], device 0: ICE1724 [ICE1724]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: Revolution71 [M Audio Revolution-7.1], device 1: ICE1724 IEC958 [ICE1724 IEC958]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: Revolution71 [M Audio Revolution-7.1], device 2: ICE1724 Surrounds [ICE1724 Surround PCM]
+  Subdevices: 3/3
+  Subdevice #0: subdevice #0
+  Subdevice #1: subdevice #1
+  Subdevice #2: subdevice #2
+$ jackd -d alsa -d "Revolution71"</pre>
+
+<h4>Finally</h4>
+<p>The program <i>qjackctl</i> can be used to start a Jack sound server. It has a nice graphical user
+interface and can generate a .jackdrc file as well.</p>
