@@ -4,6 +4,3 @@ ui('Tour', 'tour-nav')
 
 <p>The following subsection takes you on a guided tour through the user interface, hopefully giving you
 an idea of the current capabilities of this application.</p>
-
-<p>It is <em>not</em> meant as documentation (that's what the tooltips are for) nor should it be
-expected to remain tightly in sync whenever features change.</p>

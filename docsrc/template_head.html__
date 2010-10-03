@@ -58,10 +58,10 @@ function ui(title, menu) {
                     <li><a href="tutorials.html" id="tutorials-nav">Tutorials</a></li>
                     <li>
                      <ul>
-                      <li><a href="tutorial_icecast" id="tutorial-icecast-nav">Icecast</a></li>
-                      <li><a href="tutorial_shoutcast" id="tutorial-shoutcast-nav">Shoutcast</a></li>
-                      <li><a href="tutorial_voip" id="tutorial-voip-nav">VoIP</a></li>
-                      <li><a href="tutorial_irc" id="tutorial-irc-nav">IRC</a></li>
+                      <li><a href="tutorials_icecast.html" id="tutorials-icecast-nav">Icecast</a></li>
+                      <li><a href="tutorials_shoutcast.html" id="tutorials-shoutcast-nav">Shoutcast</a></li>
+                      <li><a href="tutorials_voip.html" id="tutorials-voip-nav">VoIP</a></li>
+                      <li><a href="tutorials_irc.html" id="tutorials-irc-nav">IRC</a></li>
                      </ul>
                     </li>
                     <li><a href="contact.html" id="contact-nav">Contact</a></li>
@@ -71,7 +71,7 @@ function ui(title, menu) {
             </table>
      </td>
      <td>
-            <table>
+            <table id="right-table">
                <tr>
                   <td id="top-titlebar">
                      <h2 id="title"></h2> 

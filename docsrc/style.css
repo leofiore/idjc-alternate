@@ -1,7 +1,7 @@
  body{
   margin:0;
   background-color:#444;
-  font-family:"sans","verdana";
+  font-family:sans, bitstream vera sans, verdana;
   text-align:center;
  }
  html{
@@ -35,6 +35,8 @@
   margin-bottom:10px;
  }
  pre{
+  font-family:courier new, monospace;
+  font-size:12px;
   margin:0px;
   padding:6px;
   border:1px inset;
@@ -43,6 +45,10 @@
  }
  pre.reduced{
   width:90%;
+ }
+ pre.big-code{
+ height:300px;
+ overflow-y:auto;
  }
  strong{
   text-wrap:suppress;
@@ -87,9 +93,9 @@
  #main-table{
   margin-left:auto;
   margin-right:auto;
+  margin-bottom:20px;
   background-color:#fff;
   text-align:left;
-  width:856px;
  }
  #main-table td{
   vertical-align:top;
@@ -134,7 +140,10 @@
   text-decoration:none;
   font-weight:bold;
   color:#F70;
- } 
+ }
+ #right-table{
+  width:696px;
+ }
  #top-titlebar{
   background-color:#ccc;
  }

@@ -1,4 +1,4 @@
-HTML = index.html tour.html tour_main.html tour_jingles.html tour_output.html tour_preferences.html install.html install_build.html install_first_run.html
+HTML = index.html tour.html tour_main.html tour_jingles.html tour_output.html tour_preferences.html install.html install_build.html install_first_run.html tutorials.html tutorials_icecast.html
 TEMPLATES = template_head.html__ template_tail.html__
 IMAGES = main-window.png jingles-window.png output-window.png prefs-general.png prefs-microphones.png prefs-jack-ports.png prefs-bindings.png
 
@@ -30,14 +30,19 @@ site:
 	cp $(HTML) $(IMAGES) $(STATIC) *.hq.png site/
 	find site -type f -exec curl --retry 3 --connect-timeout 10 -n -T "{}" sftp://web.sourceforge.net/home/groups/i/id/idjc/htdocs/ \;
 
+sitemarkup:
+	mkdir -p site/
+	rm -f site/*
+	cp $(HTML) $(STATIC) site/
+	find site -type f -exec curl --retry 3 --connect-timeout 10 -n -T "{}" sftp://web.sourceforge.net/home/groups/i/id/idjc/htdocs/ \;
+
 clean:
 	rm -f $(HTML) $(IMAGES) *.hq.png
-	
+
 docclean:
 	rm -f ../doc/*
 
 siteclean:
 	rm -f site/*
 
-.PHONY: doc site clean docclean siteclean
-
+.PHONY: all doc site sitemarkup clean docclean siteclean
