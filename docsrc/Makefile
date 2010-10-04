@@ -2,7 +2,7 @@ HTML = index.html tour.html tour_main.html tour_jingles.html tour_output.html to
 TEMPLATES = template_head.html__ template_tail.html__
 IMAGES = main-window.png jingles-window.png output-window.png prefs-general.png prefs-microphones.png prefs-jack-ports.png prefs-bindings.png
 
-STATIC = favicon.png style.css site-logo.png
+STATIC = favicon.png style.css style_ie.css site-logo.png
 
 .SUFFIXES:
 .SUFFIXES: .html_ .html .jpg_ .jpg .png_ .png
@@ -36,6 +36,12 @@ sitemarkup:
 	cp $(HTML) $(STATIC) site/
 	find site -type f -exec curl --retry 3 --connect-timeout 10 -n -T "{}" sftp://web.sourceforge.net/home/groups/i/id/idjc/htdocs/ \;
 
+sitecss:
+	mkdir -p site/
+	rm -f site/*
+	cp style.css style_ie.css site/
+	find site -type f -exec curl --retry 3 --connect-timeout 10 -n -T "{}" sftp://web.sourceforge.net/home/groups/i/id/idjc/htdocs/ \;
+
 clean:
 	rm -f $(HTML) $(IMAGES) *.hq.png
 
@@ -45,4 +51,4 @@ docclean:
 siteclean:
 	rm -f site/*
 
-.PHONY: all doc site sitemarkup clean docclean siteclean
+.PHONY: all doc site sitemarkup sitestatic clean docclean siteclean

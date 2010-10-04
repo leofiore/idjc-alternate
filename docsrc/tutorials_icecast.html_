@@ -8,19 +8,17 @@ ui('Tutorials: Streaming with Icecast and IDJC', 'tutorials-icecast-nav')
 and then sending a live stream to it with IDJC. In addition I will demonstrate the connection of
 a listener to show that everything really does work.</p>
 
-<p>Not covered are best practices of locking down an Icecast server for serious use. For that and
-other non IDJC related matters there are the <a href="http://icecast.imux.net/">Icecast forums and
-the Icecast documentation itself.</a>.</p>
+<p>The advice below is for demonstration purposes only. Not covered are best practices of locking
+down an Icecast server for serious use. For that and other non IDJC related matters there are the
+<a href="http://icecast.imux.net/">Icecast forums</a> and the Icecast documentation itself.</p>
 
 <h4>Setting up Icecast</h4>
 
 <h5>Why local?</h5>
 <p>Everything in this tutorial will be demonstrated on the same machine and while not as impressive as
 sending a stream half way across your house, by making this tutorial single machine specific I can
-not only leave multi-machine as an exercise to the reader, but also not have to worry about the
-quality or architecture of anyones home network, nor anyone's level of understanding of networking terms.</p>
-
-<p>The other reason is simply that not everyone who has access to a computer has access to more than one computer.</p>
+not only leave multi-machine as an exercise to the reader but also not have to worry about anyone's
+local network specifics or how many machines they have reasonable access to.</p>
 
 <h5>Installing Icecast</h5>
 
@@ -34,7 +32,12 @@ quality or architecture of anyones home network, nor anyone's level of understan
 
 <h5>The configuration file</h5>
 
-<p>Take a look in your /etc/icecast2/ directory and you should find a file called icecast.xml.</p>
+<p>Take a look in your /etc/<span style="color:red;" title="It could just be icecast. Ubuntu uses plain&#32;
+icecast for storing Icecast version 1 configuration files. IDJC does not support Icecast 1.">icecast2</span>/
+directory and you should find a file called icecast.xml. This file is and will be referred to as the
+Icecast server configuration file. In it are the settings for the various different Icecast options.
+Here below are the typical contents.</p>
+
 <pre class="big-code" title="icecast.xml">&lt;icecast&gt;
     &lt;limits&gt;
         &lt;clients&gt;100&lt;/clients&gt;
@@ -209,10 +212,9 @@ quality or architecture of anyones home network, nor anyone's level of understan
         --&gt;</span>
     &lt;/security&gt;
 &lt;/icecast&gt;</pre>
-<p>This is what the file should look like when in pristine condition.</p>
 
 <p>What we should do now is copy and paste this file into a text editor or start editing a copy of your original
-file. Launch a text editor like gedit to do this.</p>
+file. Hint: use your own file in preference to mine. Launch a text editor like gedit to do this.</p>
 
 <p>Next, select Save As in the text editor's menu, choose the file name icecast.xml, and save it in your home directory.</p>
 <h5>Attempting to run</h5>
@@ -223,8 +225,8 @@ FATAL: could not open access logging (/var/log/icecast2/access.log): No such fil
 FATAL: Could not start logging
 </pre>
 
-<p>Fix this by editing icecast.xml and change the logdir setting to point into your home directory where you
-have write permissions and try again. Leave Icecast running for the time being.</p>
+<p>Fix this by editing icecast.xml and change the logdir setting to /tmp which will solve the problem of
+inadequate write permissions and try again. Leave Icecast running for the time being.</p>
 
 <h4>Configuring IDJC</h4>
 
@@ -239,7 +241,8 @@ configuration section is visible.</p>
 <p>Click Connection, then New.</p>
 <p>For Server type you want Icecast 2 Master, for Hostname, localhost, port number should be 8000, mount point
 can be what you like but choose /listen, login name needs to be source and the password will be the default
-password, which is hackme. Click Ok to add the server to the list.</p>
+password, which is <span style="color:red;" title="Obviously a server exposed to the Internet should never&#32;
+be configured to use its default password">hackme</span>. Click Ok to add the server to the list.</p>
 
 <p>Click Format. Select the Sample rate drop down box and choose 44100. Select MP3 and the top drop down box.
 Choose 128, Quality 5, and Joint Stereo. </p>
@@ -252,10 +255,11 @@ localhost:8000/listen.</p>
 <h4>Streaming some audio</h4>
 
 <p>Click the down pointing arrow on the left media player and using the file selector add a track to the
-playlist. Click play, make sure the crossfader is set all the way to the left. Make sure Stream is on and DJ is off.
+playlist. Click play. Make sure the crossfader is set all the way to the left. Make sure Stream is on and DJ is off.
 You should be able to see the Str Peak meter is active.</p>
 
-<p>If you can't hear anything right now it's because DJ is off and you are running a dummy Jack soundcard.</p>
+<p>If you can't hear anything right now it's because DJ is off and/or you are running a dummy Jack soundcard,
+which is what you want for the sake of this test.</p>
 
 <h4>Join the stream as a listener</h4>
 

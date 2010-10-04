@@ -1,7 +1,7 @@
  body{
   margin:0;
   background-color:#444;
-  font-family:sans, bitstream vera sans, verdana;
+  font-family:verdana, sans;
   text-align:center;
  }
  html{
@@ -41,6 +41,7 @@
   padding:6px;
   border:1px inset;
   width:672px;
+  height:150%;
   overflow-x:auto;
  }
  pre.reduced{
@@ -88,7 +89,7 @@
   border:1px outset;
  }
  #dep-table td{
-  border:1px solid lightgray;
+  border:1px solid #d3d3d3;
  }
  #main-table{
   margin-left:auto;
