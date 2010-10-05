@@ -1,0 +1,105 @@
+<script type="text/javascript">
+ui('Tutorials: Setting up VoIP', 'tutorials-voip-nav')
+</script>
+
+<h4>Aims</h4>
+
+<p>In this section I'm going to explain how to set up ALSA and Skype to use the VoIP feature and then explain how
+VoIP works within IDJC. VoIP clients that have explicit support for JACK should present little difficulty in
+connecting to IDJC. For Skype a little more work is required.</p>
+
+<h4>ALSA configuration</h4>
+
+<p>ALSA supports virtual devices called plugins that can form audio pipelines from descriptions in a configuration file.
+With them you can change sample rates, mix audio, apply audio effects, and so on.
+For the purpose of getting sound into IDJC from an ALSA source the following can be specified
+in the appropriate configuration file <i>~/.asoundrc</i> which may need to be created. 
+
+<pre title="~/.asoundrc additional contents">pcm.idjcvoip {
+   type plug
+   slave.pcm {
+      type jack
+      playback_ports {
+         0 idjc-mx:voip_in_l
+         1 idjc-mx:voip_in_r
+      }
+      capture_ports {
+         0 idjc-mx:voip_out_l
+         1 idjc-mx:voip_out_r
+      }
+   }
+}</pre>
+
+<p>For the changes to take effect you need to log out. On logging back into your desktop failure may have occurred
+ for the following two reasons.</p>
+
+<ol style="font-size:12px;">
+<li>The ALSA component <i>alsa-plugins</i> is not installed.</li>
+<li>alsa-plugins is installed but not its module for JACK Audio Connection Kit.</li>
+</ol>
+
+<p>Fixing reason 1 seems easy. Just install it using the package manager
+(possibly under the name <i>libasound2-plugins</i>)
+however after doing so there may still be reason 2 to contend with.</p>
+
+<p>A simple test for JACK plugin support.</p>
+<pre title="No problem here.">$ find /usr/lib/alsa-lib | grep jack
+/usr/lib/alsa-lib/libasound_module_pcm_jack.so
+/usr/lib/alsa-lib/libasound_module_pcm_jack.la
+</pre>
+
+<p>If these two files are both missing there is no option but to install unofficial software.
+<a href="ftp://ftp.alsa-project.org/pub/plugins/">Source</a> and
+<a href="http://packages.debian.org/squeeze/libasound2-plugins">binary</a>. This is intended
+as a replacement for the current <i>alsa-plugins</i> package so remove the old version first.</p>
+
+<h4>Skype configuration</h4>
+
+<p>Launch Skype and Hit <i>Ctrl + O</i>. Choose <i>Sound Devices</i> and for each of the
+<i>Sound In</i>, <i>Sound Out</i>, and <i>Ringing</i> options, select <i>idjcvoip</i> then
+click <i>Apply</i>. Leave the configuration window open for the next step.</p>
+
+<h4>Testing</h4>
+
+<p>Launch IDJC. Put your headphones on and select the Green Telephone icon to put IDJC into VoIP mode. In Skype click the
+<i>Make a test sound</i> button and listen for a sound effect.</p>
+
+<h4>The IDJC VoIP modes explained</h4>
+
+<ul>
+
+<li>
+<p><strong>Private conference (Red Telephone + No microphones engaged)</strong></p>
+<p>You are in a private conference with whoever is on the VoIP service and able to talk freely without
+interrupting the stream.
+You would typically use this mode when playing a song since the listeners can no longer hear you.
+What you can hear of the streamed audio is dictated by the mixback volume control
+that has the telephone icon above it.
+When you play jingles in this mode the jingles audio goes to the VoIP listeners
+and not to the stream. The right jingle could put them in the correct mood for going on air.</p>
+</li>
+
+<li>
+<p><strong>Away serving the listeners (Red Telephone + Any microphone)</strong></p>
+<p>This mode allows for the people who are on the VoIP service to keep up with your show and
+talk among themselves while you moderate your show. All active microphone audio will go to the stream
+and inactive microphones will just be muted leaving the VoIP users as part of your audience who can hear your show
+at the level determined by the mixback volume control.</p>
+
+<p>This mode is ideal for announcing the imminent switch to the next mode.</p>
+</li>
+
+<li>
+<p><strong>Letting these animals out of their cage (Green Telephone)</strong></p>
+<p>Self explanatory really. Note how the microphone buttons are not available in this mode.
+It is assumed you are taking responsibility for your show and being audible to all. Shutting off microphones
+in this mode would lead to confusion over who is able to speak and follow the conversation so all microphones are
+open. See the individual microphone disable feature in the preferences as the correct way to deal with unused
+microphone channels.</p>
+</li>
+
+</ul>
+
+<h4>Final advice</h4>
+<p>Practice for the sake of competence.</p>
+<p>It's not that difficult to learn but the mode changes will trip up a beginner.</p>

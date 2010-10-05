@@ -1,0 +1,88 @@
+<script type="text/javascript">
+ui('Tutorials: Streaming with Shoutcast and IDJC', 'tutorials-shoutcast-nav')
+</script>
+
+<h4>Aims</h4>
+
+<p>In this section I'm going to walk you through the procedure of setting up a Shoutcast server
+and then sending a live stream to it with IDJC. In addition I will demonstrate the connection of
+a listener to show that everything really does work.</p>
+
+<p>The advice below is for demonstration purposes only. Not covered are best practices of locking
+down a Shoutcast server for serious use. There are plenty of specialized Shoutcast hosting services
+to take that burden, for a price.</p>
+
+<h4>Obtaining Shoutcast</h4>
+
+<p>Shoutcast may not be available in your linux distribution. Not really a problem since it's available
+as a presumably statically linked binary from <a href="http://www.shoutcast.com">http://www.shoutcast.com</a>.
+</p>
+
+<h4>Setting up Shoutcast</h4>
+
+<p>Okay, so having downloaded the version of Shoutcast that's right for your platform and extracted it from
+the archive there should be two files called sc_serv and sc_serv.conf. The first is the server and the
+second is its configuration file. There is also a README.TXT which contains some recommended reading.</p>
+
+<p>Let's run this and see what success looks like.</p>
+
+<pre>$ ./sc_serv sc_serv.conf
+*******************************************************************************
+** SHOUTcast Distributed Network Audio Server
+** Copyright (C) 1998-2004 Nullsoft, Inc.  All Rights Reserved.
+** Use "sc_serv filename.ini" to specify an ini file.
+*******************************************************************************
+
+Event log:
+&lt;10/05/10@07:09:16&gt; [SHOUTcast] DNAS/Linux v1.9.8 (Feb 28 2007) starting up...
+&lt;10/05/10@07:09:16&gt; [main] pid: 5755
+&lt;10/05/10@07:09:16&gt; [main] loaded config from sc_serv.conf
+&lt;10/05/10@07:09:16&gt; [main] initializing (usermax:32 portbase:8000)...
+&lt;10/05/10@07:09:16&gt; [main] No ban file found (sc_serv.ban)
+&lt;10/05/10@07:09:16&gt; [main] No rip file found (sc_serv.rip)
+&lt;10/05/10@07:09:16&gt; [main] opening source socket
+&lt;10/05/10@07:09:16&gt; [main] source thread starting
+&lt;10/05/10@07:09:16&gt; [main] opening client socket
+&lt;10/05/10@07:09:16&gt; [source] listening for connection on port 8001
+&lt;10/05/10@07:09:16&gt; [main] Client Stream thread [0] starting
+&lt;10/05/10@07:09:16&gt; [main] client main thread starting</pre>
+
+<h4>Configuring IDJC</h4>
+
+<p>Start the Jack sound server as follows.</p>
+<pre>$ jackd -d dummy -r 44100</pre>
+<p>This is done so that any media player, even one that does not support Jack Audio Connection Kit can be
+used for playing the stream on this machine.</p>
+
+<p>Run IDJC and click the Output button in the bottom left hand corner. Click Configuration so the
+configuration section is visible.</p>
+
+<p>Click Connection, then New.</p>
+<p>For Server type you want Shoutcast Master, for Hostname, localhost, port number should be 8000 and the password
+will be the default password, which is <span style="color:red;" title="Obviously a server exposed to the Internet&#32;
+should never be configured to use its default password">changeme</span>. Click Ok to add the server to the list.</p>
+
+<p>Click Format. Select the Sample rate drop down box and choose 44100. Select MP3 and the top drop down box.
+Choose 128, Quality 5, and Joint Stereo. </p>
+
+<p>Click Individual Controls so the controls section is visible and click the button that says
+localhost:8000/listen.</p>
+
+<p>If the button stays in you have made the connection.</p>
+
+<h4>Streaming some audio</h4>
+
+<p>Click the down pointing arrow on the left media player and using the file selector add a track to the
+playlist. Click play. Make sure the crossfader is set all the way to the left. Make sure Stream is on and DJ is off.
+You should be able to see the Str Peak meter is active.</p>
+
+<p>If you can't hear anything right now it's because DJ is off and/or you are running a dummy Jack soundcard,
+which is what you want for the sake of this test.</p>
+
+<h4>Join the stream as a listener</h4>
+
+<pre>$ mplayer http://localhost:8000/listen</pre>
+
+<p>After a brief moment audio should start to play and within thirty seconds the listener count in the main IDJC
+window should have risen to 1. It's possible to add more listeners up to the maximum number currently
+specified in the Shoutcast configuration file.</p>

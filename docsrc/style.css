@@ -54,6 +54,9 @@
  strong{
   text-wrap:suppress;
  }
+ ol{
+  font-size:13px;
+ }
 
  br.division{
   clear:both;
