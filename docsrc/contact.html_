@@ -1,0 +1,11 @@
+<script type="text/javascript">
+ui('Contact', 'contact-nav')
+</script>
+
+<h4>Should assistance be required</h4>
+
+<p>If you need any help with IDJC you can leave a comment on the IDJC bug tracker or on the forum at
+<a href="http://sourceforge.net/projects/idjc/support">http://sourceforge.net/projects/idjc/support</a>
+</p>
+
+<p>Anonymous postings are entirely possible.</p>

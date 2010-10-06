@@ -13,7 +13,7 @@ connecting to IDJC. For Skype a little more work is required.</p>
 <p>ALSA supports virtual devices called plugins that can form audio pipelines from descriptions in a configuration file.
 With them you can change sample rates, mix audio, apply audio effects, and so on.
 For the purpose of getting sound into IDJC from an ALSA source the following can be specified
-in the appropriate configuration file <i>~/.asoundrc</i> which may need to be created. 
+in the appropriate configuration file <i>~/.asoundrc</i> which may need to be created.</p>
 
 <pre title="~/.asoundrc additional contents">pcm.idjcvoip {
    type plug
@@ -90,7 +90,7 @@ at the level determined by the mixback volume control.</p>
 </li>
 
 <li>
-<p><strong>Letting these animals out of their cage (Green Telephone)</strong></p>
+<p><strong>VoIP users free to speak to the audience (Green Telephone)</strong></p>
 <p>Self explanatory really. Note how the microphone buttons are not available in this mode.
 It is assumed you are taking responsibility for your show and being audible to all. Shutting off microphones
 in this mode would lead to confusion over who is able to speak and follow the conversation so all microphones are
@@ -101,5 +101,4 @@ microphone channels.</p>
 </ul>
 
 <h4>Final advice</h4>
-<p>Practice for the sake of competence.</p>
-<p>It's not that difficult to learn but the mode changes will trip up a beginner.</p>
+<p>Practice for the sake of competence. It's confusing at first but there are only three VoIP modes.</p>

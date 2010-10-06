@@ -2,6 +2,8 @@
 ui('Front page', 'front-page-nav')
 </script>
 
+<h4>Introduction</h4>
+
 <p>Internet DJ Console is a project started in March 2005 to provide a powerful yet
 easy to use source-client for individuals interested in streaming live radio shows over the
 Internet using Shoutcast or Icecast servers.</p>

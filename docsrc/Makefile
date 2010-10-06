@@ -1,6 +1,6 @@
-HTML = index.html tour.html tour_main.html tour_jingles.html tour_output.html tour_preferences.html install.html install_build.html install_first_run.html tutorials.html tutorials_icecast.html tutorials_shoutcast.html tutorials_voip.html
+HTML = index.html tour.html tour_main.html tour_jingles.html tour_output.html tour_preferences.html install.html install_standard.html install_build.html install_first_run.html tutorials.html tutorials_icecast.html tutorials_shoutcast.html tutorials_voip.html contact.html
 TEMPLATES = template_head.html__ template_tail.html__
-IMAGES = main-window.png jingles-window.png output-window.png prefs-general.png prefs-microphones.png prefs-jack-ports.png prefs-bindings.png
+IMAGES = main-window.png jingles-window.png output-window.png prefs-general.png prefs-microphones.png prefs-jack-ports.png prefs-bindings.png prefs-xchat.png
 
 STATIC = favicon.png style.css style_ie.css site-logo.png
 
@@ -51,4 +51,4 @@ docclean:
 siteclean:
 	rm -f site/*
 
-.PHONY: all doc site sitemarkup sitestatic clean docclean siteclean
+.PHONY: all doc site sitemarkup sitecss clean docclean siteclean

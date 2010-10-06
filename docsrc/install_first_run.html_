@@ -2,19 +2,30 @@
 ui('Installation: First run', 'install-first-run-nav')
 </script>
 
-<h4>Configuring Jack Audio Connection Kit</h4>
+<h4>The purpose of this page</h4>
 
-<h5>No Jack means no IDJC</h5>
+<p>Some system configuration needs to be done in order to be able to run IDJC. Fortunately it only needs
+to be done once and full details follow.</p>
 
-<p>In this section I'm going to be talking about Jack Audio Connection Kit (Jack from now on)
-and it's sound server, jackd. Forget IDJC exists for the moment as the following information
-applies to all applications that need Jack in order to run.</p>
+<h4>Configuring your system for JACK Audio Connection Kit</h4>
 
-<p>Jack needs real-time privileges in order to run smoothly because of the small sized buffers
+<h5>No JACK means no IDJC</h5>
+
+<p>I'm going to be talking about JACK Audio Connection Kit (or JACK) from now on
+and its sound server, <i>jackd</i>. Forget IDJC exists for the moment as the information on this page
+applies to all applications that require JACK in order to function.</p>
+
+<p>JACK needs real-time privileges in order to run smoothly because of the small sized buffers
 that it uses to transfer audio. Using small buffers keeps the audio time delay (latency) to a minimum
-which is a good thing if you are listening to the processed audio of your own just captured voice.</p>
+which is a good thing if you are listening to your voice being captured live but it does mean
+it's effectively running a just in time delivery system and does not want to be interrupted by
+the operating system effectively saying time's up I have to run these other apps.
+</p>
 
-<h5>Manually running jackd for the first time</h5>
+<p>By default the JACK sound server now requires real-time privileges in order to even start. Previous
+versions would not use real-time by default and audio data would be lost because of it.</p>
+
+<h5>Manually running <i>jackd</i> to see what happens</h5>
 <pre>$ jackd -d alsa
 jackd 0.118.0
 Copyright 2001-2009 Paul Davis, Stephane Letz, Jack O'Quinn, Torben Hohn and others.
@@ -35,13 +46,19 @@ After applying these changes, please re-login in order for them to take effect.
 You don't appear to have a sane system configuration. It is very likely that you
 encounter xruns. Please apply all the above mentioned changes and start jack again!</pre>
 
-<p>Okay, what just happened here is jackd just failed to start because it considers your system's
+<p>What just happened here is <i>jackd</i> just failed to start because it considers your system's
 configuration to be wrong.</p>
 
-<p>Using a text editor and root privileges, edit the file mentioned above. Add the two lines given to you
-at the end of the file. Save and exit. The following command will help.</p>
+<h5>Let's get configuring</h5>
 
-<pre>$ sudo nano /etc/security/limits.conf</pre>
+<p>Add the two lines mentioned above to the file also mentioned above.</p>
+
+<ul>
+<li><p>Ubuntu</p><pre class="reduced">$ sudo echo "@audio   -   rtprio   100" >> /etc/security/limits.conf
+$ sudo echo "@audio   -   nice     -10" >> /etc/security/limits.conf</pre></li>
+<li><p>Debian</p><pre class="reduced">$ su echo "@audio   -   rtprio   100" >> /etc/security/limits.conf
+$ su echo "@audio   -   nice     -10" >> /etc/security/limits.conf</pre></li>
+</ul>
 
 <p>Now that you have added all members of the audio group to the real-time privileges list lets
 make sure your user account has audio group membership. You can do this in the Ubuntu <i>System</i> menu
@@ -71,35 +88,31 @@ ALSA: use 2 periods for playback
 </pre>
 <p>This time it has successfully started so you can now run IDJC.</p>
 
-<h5>Making a simple jackd configuration file</h5>
+<h5>Making a simple JACK configuration file</h5>
 
 <pre>$ echo "/usr/bin/jackd -d alsa -r 44100 -p 256" > ~/.jackdrc</pre>
 
-<p>This will ensure that when jackd is started on demand that it will do so with a sample
+<p>This will ensure that when <i>jackd</i> is started on demand that it will do so with a sample
 rate equalling that of CD audio and therefore most likely your entire music collection.</p>
 
-<h5>Making jackd use a particular sound card</h5>
+<h5>Making JACK use a particular sound card</h5>
 
 <p>It's a two step process of finding the names of all the sound cards and specifying
-which one to use to jackd.</p>
+which one to use to <i>jackd</i>.</p>
 
-<p>In this example there is only one sound card.</p>
+<pre>$ cat /proc/asound/cards
+ 0 [Revolution71   ]: ICE1724 - M Audio Revolution-7.1
+                      M Audio Revolution-7.1 at 0xd000, irq 19
+ 1 [nanoKONTROL    ]: USB-Audio - nanoKONTROL
+                      KORG INC. nanoKONTROL at usb-0000:00:1d.0-2, full speed
+$ jackd -d alsa -d "Revolution71 -r 44100 -p 256"</pre>
 
-<pre>$ aplay -l
-**** List of PLAYBACK Hardware Devices ****
-card 0: Revolution71 [M Audio Revolution-7.1], device 0: ICE1724 [ICE1724]
-  Subdevices: 1/1
-  Subdevice #0: subdevice #0
-card 0: Revolution71 [M Audio Revolution-7.1], device 1: ICE1724 IEC958 [ICE1724 IEC958]
-  Subdevices: 1/1
-  Subdevice #0: subdevice #0
-card 0: Revolution71 [M Audio Revolution-7.1], device 2: ICE1724 Surrounds [ICE1724 Surround PCM]
-  Subdevices: 3/3
-  Subdevice #0: subdevice #0
-  Subdevice #1: subdevice #1
-  Subdevice #2: subdevice #2
-$ jackd -d alsa -d "Revolution71"</pre>
+<h5>Enabling MIDI events</h5>
+
+<pre>$ jackd -d alsa -r 44100 --midi raw</pre>
+
+<p>Only use the <i>--midi</i> option if you intend to use a MIDI device to control IDJC.</p>
 
 <h4>Finally</h4>
-<p>The program <i>qjackctl</i> can be used to start a Jack sound server. It has a nice graphical user
-interface and can generate a .jackdrc file as well.</p>
+<p>The program <i>qjackctl</i> can be used to start a JACK sound server. It has a nice graphical user
+interface and can generate a <i>.jackdrc</i> file as well.</p>

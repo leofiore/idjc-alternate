@@ -54,10 +54,15 @@
  strong{
   text-wrap:suppress;
  }
+ ul{
+  font-size:13px;
+ }
  ol{
   font-size:13px;
  }
-
+ li.content-page{
+  margin-bottom:10px;
+  }
  br.division{
   clear:both;
  }
@@ -117,7 +122,7 @@
  #sidebar-menu{
   font-size:17px;
   padding-left:7px;
-  margin-bottom:20px;
+  margin-bottom:22px;
   list-style-type:none;
  }
  #sidebar-menu ul{
@@ -147,6 +152,7 @@
  }
  #right-table{
   width:696px;
+  padding-bottom:6px;
  }
  #top-titlebar{
   background-color:#ccc;
@@ -154,7 +160,6 @@
  #top-titlebar h2{
   padding-left:10px;
  }
-
  #signature{
   font-size:11px;
  }

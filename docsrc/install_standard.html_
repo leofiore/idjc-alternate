@@ -1,0 +1,24 @@
+<script type="text/javascript">
+ui('Installation: Standard repository install', 'install-standard-nav')
+</script>
+
+<h4>The recommended way to install IDJC</h4>
+
+<h5>Installation examples</h5>
+
+<ul>
+<li><p>Ubuntu</p><pre class="reduced">$ sudo apt-get install idjc</pre></li>
+<li><p>Debian</p><pre class="reduced">$ su -c "apt-get install idjc"</pre></li>
+</ul>
+
+<p>You will be required to enter a password.</p>
+
+<h5>In summary</h5>
+
+<p>That's it as far as installing from the repository goes. Enjoy your program but see the
+<a href="install_first_run.html">First run</a> section because you will probably need to configure your
+system for working with <a href="http://www.jackaudio.org/">Jack Audio Connection Kit</a>
+which has some special requirements.</p>
+
+<p>If IDJC is unavailable in your distribution's repository or you would prefer to use a newer
+or more capable version <a href="install_build.html">this page</a> will be of interest.</p>

@@ -2,5 +2,13 @@
 ui('Tour', 'tour-nav')
 </script>
 
-<p>The following subsection takes you on a guided tour through the user interface, hopefully giving you
-an idea of the current capabilities of this application.</p>
+<h4>Screenshots and commentary</h4>
+
+<ul>
+
+<li class="content-page"><a href="tour_main.html">The main application window</a></li>
+<li class="content-page"><a href="tour_jingles.html">The jingles window</a></li>
+<li class="content-page"><a href="tour_output.html">The output window</a></li>
+<li class="content-page"><a href="tour_preferences.html">The preferences window</a></li>
+
+</ul>

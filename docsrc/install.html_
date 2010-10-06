@@ -2,38 +2,18 @@
 ui('Installation', 'install-nav')
 </script>
 
-
 <h4>Firstly, open a terminal</h4>
 
 <p>In this section and on the remainder of this site there will be instructions that are
 intended to be entered into a terminal. Those lines will be preceded by a <i>$</i> symbol and require
 the text that follows to be typed in exactly as written apart from any text appearing in
 <span style="color:red;" title="This is just an example.">red</span>, which will have some accompanying
-mouse-hover text explaining exactly what needs to be entered.</p>
+mouse-hover text.</p>
 
-<p>The terminal can be launched from the menu. It's under <strong>Applications->Accessories</strong>.</p>
-
-<h4>From the repository A.K.A. the preferred way (examples)</h4>
+<h4>Install and configure links</h4>
 
 <ul>
-<li><p>Ubuntu</p><pre class="reduced">$ sudo apt-get install idjc</pre></li>
-<li><p>Debian</p><pre class="reduced">$ su -c "apt-get install idjc"</pre></li>
+<li class="content-page"><a href="install_standard.html">Standard install from a code repository</a></li>
+<li class="content-page"><a href="install_build.html">Building and installing IDJC from source</a></li>
+<li class="content-page"><a href="install_first_run.html">Post install configuration prior to the first run</a></li>
 </ul>
-
-<p>You will be required to enter a password.</p>
-
-
-<h4>In summary</h4>
-
-<p>That's it as far as installing from the repository goes. Enjoy your program but see the
-<a href="install_first_run.html">First run</a> section because you will probably need to configure your
-system for working with <a href="http://www.jackaudio.org/">Jack Audio Connection Kit</a>
-which has some special requirements.</p>
-
-<p>No matter how you go about installing it, the program launcher will appear in
-your <strong>Applications->Internet</strong> menu.</p>
-
-<h4>I want the latest version please, with all the features enabled</h4>
-
-<p>If IDJC is unavailable in your distribution's repository or you would prefer to use a newer
-or more capable version the <a href="install_build.html">Building</a> page will be of interest.</p>

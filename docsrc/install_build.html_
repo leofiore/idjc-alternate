@@ -2,6 +2,22 @@
 ui('Installation: Building from source', 'install-build-nav')
 </script>
 
+<h4>Deciding if this is a good idea</h4>
+
+<p>The following list contains valid reasons for going to the trouble of installing IDJC from source.</p>
+
+<ul>
+<li>IDJC is absent from the repository.</li>
+<li>The repository version is ancient but functional.</li>
+<li>The repository version has features removed for fear of legal action.</li>
+<li>The repository version has a minimum set of features generally.</li>
+<li>The repository version is broken.</li>
+</ul>
+
+<h4>Removing old versions</h4>
+
+<p>It's a good idea to remove any old versions of IDJC at this point.</p>
+
 <h4>Installing dependencies</h4>
 <p>The following software is required to build IDJC or is used by IDJC at run-time.
 There should be similarly named binary packages in your package management system for all of these of

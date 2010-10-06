@@ -4,6 +4,8 @@ ui('Tour: Preferences', 'tour-preferences-nav')
 
 <a href="prefs-general.hq.png"><img class="clickthrough-left" src="prefs-general.png" alt="Preferences Window Screenshot (general)" title="Click for full size version" /></a>
 
+<h4>General</h4>
+
 <p>Here there are extensive controls that alter the way IDJC behaves on often subtle levels.</p>
 
 <p>The basic streamer option's effect is not so subtle. It allows you to stream just music
@@ -25,6 +27,8 @@ From the sidebar searching or filtering is also possible.</p>
 
 <a href="prefs-microphones.hq.png"><img class="clickthrough-right" src="prefs-microphones.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
 
+<h4>Microphone processing</h4>
+
 <p>A great deal of care has been taken to make sure your voice can be heard consistently
 over the mix. The controls to do this are placed in your hands so experimenting and making
 recordings for review are advised before going on air.</p>
@@ -34,7 +38,21 @@ it's all done in software. That said, a good microphone is still advised for the
 
 <br class="division" />
 
-<a href="prefs-jack-ports.hq.png"><img class="clickthrough-left" src="prefs-jack-ports.png" alt="Preferences Window Screenshot (JACK ports)" title="Click for full size version" /></a>
+<a href="prefs-xchat.hq.png"><img class="clickthrough-left" src="prefs-xchat.png" alt="Preferences Window Screenshot (XChat)" title="Click for full size version" /></a>
+
+<h4>XChat integration</h4>
+
+<p>The XChat feature works in conjunction with XChat and the XChat plugin, which has an install button here.</p>
+
+<p>Log into the channel you want to announce in with XChat and enter the details here as well.</p>
+
+<p>The announcements will start when a stream is up and running.</p>
+
+<br class="division" />
+
+<a href="prefs-jack-ports.hq.png"><img class="clickthrough-right" src="prefs-jack-ports.png" alt="Preferences Window Screenshot (JACK ports)" title="Click for full size version" /></a>
+
+<h4>JACK port bindings</h4>
 
 <p>IDJC is built on the technology of <a href="http://www.jackaudio.org/">Jack Audio Connection Kit</a>.
 As the name implies it facilitates audio connections and IDJC makes audio available on a number of such ports.</p>
@@ -46,7 +64,9 @@ allows the stream audio to be sent for processing by external applications.</p>
 
 <br class="division" />
 
-<a href="prefs-bindings.hq.png"><img class="clickthrough-right" src="prefs-bindings.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
+<a href="prefs-bindings.hq.png"><img class="clickthrough-left" src="prefs-bindings.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
+
+<h4>Key and MIDI bindings</h4>
 
 <p>Set and see in what way IDJC responds to key presses here.</p>
 

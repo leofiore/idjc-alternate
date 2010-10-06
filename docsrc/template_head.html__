@@ -25,7 +25,7 @@ function ui(title, menu) {
 
 </head>
 <body>
-<!--Hidden h1 title for search engine seeding.-->
+<!-- Hidden h1 title for search engine seeding -->
 <h1 class="unshown">Internet DJ Console Homepage IDJC</h1>
 <table id="main-table">
  <tr><td>
@@ -52,6 +52,7 @@ function ui(title, menu) {
                     <li><a href="install.html" id="install-nav">Installation</a></li>
                     <li>
                      <ul>
+                      <li><a href="install_standard.html" id="install-standard-nav">Standard</a></li>
                       <li><a href="install_build.html" id="install-build-nav">Building</a></li>
                       <li><a href="install_first_run.html" id="install-first-run-nav">First run</a></li>
                      </ul>
@@ -62,7 +63,6 @@ function ui(title, menu) {
                       <li><a href="tutorials_icecast.html" id="tutorials-icecast-nav">Icecast</a></li>
                       <li><a href="tutorials_shoutcast.html" id="tutorials-shoutcast-nav">Shoutcast</a></li>
                       <li><a href="tutorials_voip.html" id="tutorials-voip-nav">VoIP</a></li>
-                      <li><a href="tutorials_irc.html" id="tutorials-irc-nav">IRC</a></li>
                      </ul>
                     </li>
                     <li><a href="contact.html" id="contact-nav">Contact</a></li>
