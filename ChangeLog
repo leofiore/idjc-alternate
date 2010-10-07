@@ -2,7 +2,8 @@
 
 * Changes in version 0.8.4 *
 
-Can now open multiple idjc instances on the same jack sound server.
+Can now open multiple idjc instances on the same jack sound server using the
+-e command line switch.
 
 New server configuration dialog and notebook widget to replace the previous large scrolling window.
 

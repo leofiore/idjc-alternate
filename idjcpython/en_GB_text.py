@@ -635,7 +635,9 @@ Possible remedies would be to close the other audio app or configure the sound s
 If you are trying to connect to a named jack server, either set the environment variable JACK_DEFAULT_SERVER to that name or launch IDJC with the -j jackservername option. For example:
 
          $ jackd -n xyzzy -d alsa -r 44100 -p 2048 &
-         $ idjc -p profilename -j xyzzy"""
+         $ idjc -p profilename -j xyzzy
+
+If you are trying to open multiple instances of IDJC use the -e command line switch."""
 
 jack_entry = """Enter the name of the JACK audio port with which to bind and then click the set button to the right.
 Typing 'jack_lsp -p' in a console will give you a list of valid JACK audio ports. Note that inputs will only bind to output ports and outputs will only bind to input ports."""
@@ -1030,7 +1032,7 @@ previous_tip = "Previous track."
 
 profile_already_in_use = """IDJC could not be started because the profile is currently in use by another instance of IDJC.
 
-If you wish to run more than one instance of IDJC concurrently then in addition to using a different profile you also need to be running an additional JACK sound server.
+If you wish to run more than one instance of IDJC concurrently then in addition to using a different profile you also need to be using the -e command line switch or running on a different JACK sound server.
 
 For further information refer to the -p and -j command line options in the IDJC man page and also to the -n option for starting jackd."""
 
