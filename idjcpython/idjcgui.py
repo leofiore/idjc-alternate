@@ -22,15 +22,17 @@ license = "Released under the GNU General Public License V2.0"
 # version is set in the configure.in files
 METER_TEXT_SIZE = 8000
 
-console_help_message="""Usage:  idjc [-vh] [-p profile] [-j jackserver] [-m microphone] [-a auxiliary] [-t voipmode] [-s serverstart]
+console_help_message="""Usage:  idjc [-vhe] [-p profile] [-j jackserver] [-m microphone] [-a auxiliary] [-t voipmode] [-s serverstart]
             -v    display the version number and exit
             -h    show this help
+            -e    allow the launching of extra instances
             -p    select a new or existing application profile
-            -j    choose which JACK server to use
-            -m    choose which microphone inputs to open e.g. 12 for mics 1 and 2
+            -j    which JACK server to use
+            -m    which microphone inputs to open e.g. 12 for mics 1 and 2
             -a    open the auxiliary input - 1 is the only parameter allowed
             -t    the VOIP mode 0=Off, 1=Green phone, 2=Red phone
             -s    servers to connect to e.g. 13 for servers 1 and 3"""
+            
 
 import locale, os, sys, fcntl, subprocess
 
@@ -2213,14 +2215,13 @@ class MainWindow:
          raise self.initcleanexit
       
       self.init_profile()            # decide which profile to use
-      
-      # Name the mixer and sourceclient jack client IDs.
-      os.environ["mx_client_id"] = mx_id = "idjc-mx-" + self.profile
-      os.environ["sc_client_id"] = sc_id = "idjc-sc-" + self.profile
-      
-      print "jack client IDs:", mx_id, sc_id
-      
       print ln
+
+      # Name the mixer and sourceclient jack client IDs.
+      tail = "-" + self.profile if os.environ["EXTRA"] == "1" else ""
+      os.environ["mx_client_id"] = mx_id = "idjc-mx" + tail
+      os.environ["sc_client_id"] = sc_id = "idjc-sc" + tail
+      print "jack client IDs:", mx_id, sc_id
 
       self.session_loaded = False
  

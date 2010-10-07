@@ -1,11 +1,15 @@
-.TH "IDJC" 1 "2008-04-26" "VERSION" "Internet DJ Console"
+.TH "IDJC" 1 "2010-10-07" "VERSION" "Internet DJ Console"
 .SH NAME
-idjc - Be a DJ on the internet.
+idjc - be a dj on the internet
 .SH SYNOPSIS
-.BR "idjc [\-vh] [\-p " profile "] [\-j " jackserver "] [\-m " microphone "] [\-a " auxiliary "] [\-t " voipmode "] [\-s " serverstart "]"
+.BR "idjc [\-vhe] [\-p " profile "] [\-j " jackserver "] [\-m " microphone "] [\-a " auxiliary "] [\-t " voipmode "] [\-s " serverstart "]"
 .SH DESCRIPTION
 .B idjc
-launches a graphical shoutcast/icecast client that runs under GTK+ and the JACK audio connection kit. It's an Internet radio application for making live radio shows and or podcasts. Features include two main media players with a crossfader, a jingles player, microphone signal processing (compressor, noise gate), IRC track announcements with X-Chat, automatic stream start and shut-off, simultaneous mp3 and Ogg streaming to multiple servers at differing bit and sample rates, an extra input for connecting external JACK aware applications, a VOIP integration feature, audio level meters, and a dual recording facility.
+is a powerful yet easy to use source-client for individuals interested in streaming live radio shows over the Internet using Shoutcast or Icecast servers or for making static recordings.
+
+Features include two main media players with a crossfader, a jingles player, microphone signal processing (compressor, noise gate), IRC track announcements with X-Chat, automatic stream start/stop and reconnection, simultaneous mp3 and Ogg streaming to multiple servers at differing bit and sample rates, an aux input, a DSP interface, a VoIP integration feature, MIDI input device support, audio level meters.
+
+It uses GTK+ for the user interface and JACK Audio Connection Kit for the audio back-end permitting the inclusion of third-party audio components into the mix.
 .SH OPTIONS
 .B
 .IP \-v
@@ -13,6 +17,9 @@ Output version information and exit.
 .B
 .IP \-h
 Display a brief help message and exit.
+.B
+.IP \-e
+Allow the running of additional idjc instances on the same JACK sound server. The JACK client IDs are adjusted to include the profile name.
 .HP
 .BR \-p " profile"
 .br

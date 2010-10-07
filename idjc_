@@ -38,13 +38,14 @@ MICROPHONE=""
 AUXILIARY=""
 SERVERSTART=""
 VOIPMODE="0"
+EXTRA="0"
 
 function showusage {
-   echo "Usage: $0 [-vh] [-p profile] [-j jackserver] [-m microphones] [-a aux inputs] [-s servers] [-t telephony mode]"
+   echo "Usage: $0 [-vhe] [-p profile] [-j jackserver] [-m microphones] [-a aux inputs] [-s servers] [-t telephony mode]"
    echo "Try option -h for more info"
 }
 
-while getopts "vhp:j:m:a:s:t:" myoption
+while getopts "vhep:j:m:a:s:t:" myoption
    do
       case $myoption in
          v)
@@ -71,6 +72,9 @@ while getopts "vhp:j:m:a:s:t:" myoption
          t)
             VOIPMODE="$OPTARG"
             ;;
+         e)
+            EXTRA="1"
+            ;;
          *)
             showusage
             exit 5
@@ -78,7 +82,7 @@ while getopts "vhp:j:m:a:s:t:" myoption
       esac
    done
 
-export VERSION_ONLY SHOW_HELP APP_PROFILE JACK_SERVER MICROPHONE AUXILIARY SERVERSTART VOIPMODE
+export VERSION_ONLY SHOW_HELP APP_PROFILE JACK_SERVER MICROPHONE AUXILIARY SERVERSTART VOIPMODE EXTRA
 
 python=
 export python
