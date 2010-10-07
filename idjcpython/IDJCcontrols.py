@@ -679,7 +679,13 @@ class Controls(object):
 
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def x_focus(self, n, v, isd):
-        player= self.owner.player_right if v>=0x40 else self.owner.player_left
+        if isd:
+           if self.owner.player_left.treeview.is_focus():
+              player = self.owner.player_right
+           else:
+              player = self.owner.player_left
+        else:
+           player= self.owner.player_right if v>=0x40 else self.owner.player_left
         player.treeview.grab_focus()
 
     # Mic
