@@ -1,5 +1,11 @@
 	***   Changelog for Internet DJ Console.  Most recent changes first.   ***
 
+* Changes in version 0.8.5 *
+
+The number of microphones can be adjusted in the configuration file in pairs.
+
+Prefs window can be expanded in size.
+
 * Changes in version 0.8.4 *
 
 Can now open multiple idjc instances on the same jack sound server using the

@@ -22,6 +22,7 @@ pygtk.require('2.0')
 import gtk, os, licence_window, p3db, shutil
 from idjc_config import *
 from ln_text import ln
+from IDJCfree import int_object
 import IDJCcontrols
 
 class XChatInstaller(gtk.Button):
@@ -222,7 +223,6 @@ class AGCControl(gtk.Frame):
       hbox.pack_start(self.alt_name, True, True)
       self.alt_name.show()
       hbox.show()
-      
       
       self.set_label_widget(hbox)
       hbox.show()
@@ -627,7 +627,7 @@ class mixprefs:
       self.right_player_frame.set_sensitive(state)
       self.misc_session_frame.set_sensitive(state)
    
-   jack_ports= ("mic1", "mic2", "mic3", "mic4", "audl", "audr", "strl", "strr", "auxl", "auxr", "midi", "dol", "dor", "dil", "dir")
+   jack_ports= ("audl", "audr", "strl", "strr", "auxl", "auxr", "midi", "dol", "dor", "dil", "dir")
 
    def load_jack_port_settings(self):
       for port in self.jack_ports:
@@ -636,6 +636,13 @@ class mixprefs:
             getattr(self, port+"entry").set_text(file.readline()[:-1])
             getattr(self, port+"check").set_active(file.readline() == "1\n")
             file.close()
+            
+      for i, mic in enumerate(self.mic_jack_data):
+         pathname = self.parent.idjc + "mic" + str(i + 1)
+         if os.path.isfile(pathname):
+            file = open(pathname, "r")
+            mic[1].set_text(file.readline()[:-1])
+            mic[0].set_active(file.readline() == "1\n")
    
    def auto_click(self, widget, data):
       data.set_sensitive(not widget.get_active())
@@ -902,15 +909,27 @@ class mixprefs:
       else:         
          left.treeview.remove_column(left.rgtvcolumn)
          right.treeview.remove_column(right.rgtvcolumn)
+      
+   def cb_configure_event(self, window, event):
+         self.winx.set_value(event.width)
+         self.winy.set_value(event.height)
+         
+   def cb_realize(self, window):
+      window.resize(self.winx, self.winy)
          
    def __init__(self, parent):
       self.parent = parent
       self.parent.prefs_window = self
       self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+      self.window.set_size_request(-1, 480)
+      self.winx = int_object(1)
+      self.winy = int_object(1)      
+      self.window.connect("configure-event", self.cb_configure_event)
+      self.window.connect("realize", self.cb_realize)
       self.parent.window_group.add_window(self.window)
       self.window.set_title(ln.prefs_window + parent.profile_title)
       self.window.set_border_width(10)
-      self.window.set_resizable(False)
+      self.window.set_resizable(True)
       self.window.connect("delete_event",self.delete_event)
       self.window.set_destroy_with_parent(True)
       self.window.set_icon_from_file(pkgdatadir + "icon" + gfext)
@@ -921,7 +940,7 @@ class mixprefs:
       
       generalwindow = gtk.ScrolledWindow()
       generalwindow.set_border_width(8)
-      generalwindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
+      generalwindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       outervbox = gtk.VBox()
       generalwindow.add_with_viewport(outervbox)
       generalwindow.show()
@@ -1506,7 +1525,7 @@ class mixprefs:
       
       scrolled_window = gtk.ScrolledWindow()
       scrolled_window.set_border_width(0)
-      scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
+      scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       panevbox = gtk.VBox()
       scrolled_window.add_with_viewport(panevbox)
       scrolled_window.show()
@@ -1790,9 +1809,14 @@ class mixprefs:
        
       # Jack settings Tab      
                  
+      scrolled = gtk.ScrolledWindow()
+      scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       jack_vbox = gtk.VBox()
+      scrolled.add_with_viewport(jack_vbox)
+      scrolled.child.set_shadow_type(gtk.SHADOW_NONE)
       jack_vbox.set_spacing(3)
-      jack_vbox.set_border_width(4)
+      #jack_vbox.set_border_width(4)
+      jack_vbox.show()
       
       jackname = os.environ["IDJC_JACK_SERVER"]
       if jackname != "default":
@@ -1806,20 +1830,16 @@ class mixprefs:
       frame.add(vbox)
       frame.show()
       
-      box, self.mic1check, self.mic1entry, self.mic1update = make_entry_line(self, "mic_in_1: ", "MIC1", True)
-      vbox.add(box)
-      box, self.mic2check, self.mic2entry, self.mic2update = make_entry_line(self, "mic_in_2: ", "MIC2", True)
-      vbox.add(box)
-      box, self.mic3check, self.mic3entry, self.mic3update = make_entry_line(self, "mic_in_3: ", "MIC3", True)
-      vbox.add(box)
-      box, self.mic4check, self.mic4entry, self.mic4update = make_entry_line(self, "mic_in_4: ", "MIC4", True)
-      vbox.add(box)
-      jack_vbox.add(frame)
+      self.mic_jack_data = []
+      for i in range(1, num_micpairs * 2 + 1):
+         n = str(i)
+         box, check, entry, update = make_entry_line(self, "mic_in_" + n + ": ", "MIC" + n, True)
+         vbox.add(box)
+         self.mic_jack_data.append((check, entry, update))
+         if i < 5:
+            entry.set_text("system:capture_%d" % i)
+      jack_vbox.pack_start(frame, False)
       vbox.show()
-      self.mic1entry.set_text("system:capture_1")
-      self.mic2entry.set_text("system:capture_2")
-      self.mic3entry.set_text("system:capture_3")
-      self.mic4entry.set_text("system:capture_4")
       
       frame = gtk.Frame()
       frame.set_border_width(5)
@@ -1832,7 +1852,7 @@ class mixprefs:
       vbox.add(box)
       box, self.midicheck, self.midientry, self.midiupdate = make_entry_line(self, "midi_control: ", "MIDI", False)
       vbox.add(box)
-      jack_vbox.add(frame)
+      jack_vbox.pack_start(frame, False)
       vbox.show()
      
       frame = gtk.Frame()
@@ -1844,7 +1864,7 @@ class mixprefs:
       vbox.add(box)
       box, self.audrcheck, self.audrentry, self.audrupdate = make_entry_line(self, "dj_out_r: ", "AUDR", True)
       vbox.add(box)
-      jack_vbox.add(frame)
+      jack_vbox.pack_start(frame, False)
       vbox.show()
       self.audlentry.set_text("system:playback_1")
       self.audrentry.set_text("system:playback_2")
@@ -1858,7 +1878,7 @@ class mixprefs:
       vbox.add(box)
       box, self.strrcheck, self.strrentry, self.strrupdate = make_entry_line(self, "str_out_r: ", "STRR", True)
       vbox.add(box)
-      jack_vbox.add(frame)
+      jack_vbox.pack_start(frame, False)
       vbox.show()
       self.strlentry.set_text("system:playback_5")
       self.strrentry.set_text("system:playback_6")
@@ -1884,13 +1904,13 @@ class mixprefs:
       box, self.dircheck, self.direntry, self.dirupdate = make_entry_line(self, "dsp_in_r: ", "DIR", False)
       self.direntry.set_text("jamin:out_R")
       vbox.add(box)
-      jack_vbox.add(frame)
+      jack_vbox.pack_start(frame, False)
       vbox.show()
       
       jacklabel = gtk.Label(ln.jack_ports_tab)
-      self.notebook.append_page(jack_vbox, jacklabel)
-      jack_vbox.show()
+      self.notebook.append_page(scrolled, jacklabel)
       jacklabel.show()
+      scrolled.show()
 
       # Controls tab
       tab= IDJCcontrols.ControlsUI(self.parent.controls)
@@ -2098,6 +2118,8 @@ class mixprefs:
          "minwiny"       : self.parent.minwiny,
          "jingleswinx"   : self.parent.jingles.jingleswinx,
          "jingleswiny"   : self.parent.jingles.jingleswiny,
+         "prefswinx"     : self.winx,
+         "prefswiny"     : self.winy,
          "passspeed"     : self.parent.passspeed_adj,
          "normboost"     : self.normboost_adj,
          "normceiling"   : self.normceiling_adj,

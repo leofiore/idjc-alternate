@@ -2829,7 +2829,6 @@ class MainWindow:
       self.streammeterbox.show()
 
       # Table that contains 1, 2, or 4 microphone meters.
-      # When showing 3, one will be greyed out.
       self.micmeterbox = PaddedVBox(4, 2, 0, 1, 6)
       self.meterbox.pack_start(self.micmeterbox, False, False, 0)
       self.micmeterbox.show()
@@ -2858,9 +2857,20 @@ class MainWindow:
       self.tooltips.set_tip(stream_vu_box, ln.stream_vu_meter_tip)
        
       self.mic_meters = [MicMeter("Mic ", i) for i in range(1, num_micpairs * 2 + 1)]
-      for meter in self.mic_meters:
-         self.micmeterbox.pack_start(meter)
-         meter.show()
+      if len(self.mic_meters) <= 4:
+         for meter in self.mic_meters:
+            self.micmeterbox.pack_start(meter)
+            meter.show()
+      else:
+         table = gtk.Table(num_micpairs, 2)
+         table.set_row_spacings(4)
+         table.set_col_spacings(4)
+         self.micmeterbox.pack_start(table)
+         table.show()
+         for i, meter in enumerate(self.mic_meters):
+            row, col = divmod(i, 2)
+            table.attach(meter, col, col + 1, row, row + 1)
+            meter.show()
       
       self.tooltips.set_tip(self.micmeterbox, ln.mic_meter_tip)
 
