@@ -59,13 +59,8 @@ dtdist:
 	make dist
 	cp ${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz ${HOME}/Desktop
 
-# Gentoo specific
-# make and test the ebuild -- you need to set PORTDIR_OVERLAY to /usr/local/portage in your /etc/make.conf
-ebuild:
-	mkdir -p /usr/local/portage/media-sound/idjc/
-	cp idjc-ver.ebuild "/usr/local/portage/media-sound/idjc/${PACKAGE_TARNAME}-${PACKAGE_VERSION}.ebuild"
-	ebuild "/usr/local/portage/media-sound/idjc/${PACKAGE_TARNAME}-${PACKAGE_VERSION}.ebuild" digest
-	emerge "${PACKAGE_TARNAME}"
-	cp idjc-ver.ebuild "${PACKAGE_TARNAME}-${PACKAGE_VERSION}.ebuild"
+sfpublish:
+	make dist
+	curl --retry 3 --connect-timeout 10 -T ${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz -n sftp://frs.sourceforge.net/home/frs/project/i/id/idjc/idjc/0.8/
 
 .PHONY: idjc dtdist ebuild local 
