@@ -20,5 +20,6 @@ idjc_config.py:
 	@echo "num_encoders = "@STREAMERS_S@ >> idjc_config.py
 	@echo "num_recorders = "@RECORDERS_S@ >> idjc_config.py
 	@echo "enh_libshout = "${ENH_SHOUT} >> idjc_config.py
+	@echo "num_micpairs = 3" >> idjc_config.py
 
 .PHONY: idjc_config.py

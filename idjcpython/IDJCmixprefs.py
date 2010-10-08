@@ -200,7 +200,7 @@ class AGCControl(gtk.Frame):
    def __init__(self, approot, ui_name, commandname):
       self.approot = approot
       self.ui_name = ui_name
-      self.meter = getattr(approot, ("mic_" + ui_name + "_meter"))
+      self.meter = approot.mic_meters[int(ui_name) - 1]
       self.commandname = commandname
       self.valuesdict = {}
       self.booleandict = {}
@@ -1000,10 +1000,8 @@ class mixprefs:
       self.show_microphones.show()            
       
       self.show_all_microphones = gtk.RadioButton(None, ln.all)
-      self.show_all_microphones.connect("toggled", parent.mic_1_meter.always_show)
-      self.show_all_microphones.connect("toggled", parent.mic_2_meter.always_show)
-      self.show_all_microphones.connect("toggled", parent.mic_3_meter.always_show)
-      self.show_all_microphones.connect("toggled", parent.mic_4_meter.always_show)
+      for meter in parent.mic_meters:
+         self.show_all_microphones.connect("toggled", meter.always_show)
       hbox.pack_start(self.show_all_microphones, False, False)
       self.show_all_microphones.show()
       

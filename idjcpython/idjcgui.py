@@ -791,7 +791,7 @@ class MicMeter(gtk.VBox):
       else:
          self.show()
 
-   def __init__(self, labeltext):
+   def __init__(self, labelbasetext, index):
       gtk.VBox.__init__(self)
       self.set_border_width(0)
       lhbox = gtk.HBox()
@@ -805,6 +805,7 @@ class MicMeter(gtk.VBox):
       lhbox.pack_start(self.led, False, False)
       self.set_led(False)
       self.led.show()
+      labeltext = labelbasetext + str(index)
       label = gtk.Label(labeltext)
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, len(labeltext)))
@@ -2856,20 +2857,10 @@ class MainWindow:
       stream_vu_box.show()
       self.tooltips.set_tip(stream_vu_box, ln.stream_vu_meter_tip)
        
-      self.mic_1_meter = MicMeter("Mic 1")
-      self.mic_2_meter = MicMeter("Mic 2")
-      self.mic_3_meter = MicMeter("Mic 3")
-      self.mic_4_meter = MicMeter("Mic 4")
-
-      self.micmeterbox.pack_start(self.mic_1_meter)
-      self.micmeterbox.pack_start(self.mic_2_meter)
-      self.micmeterbox.pack_start(self.mic_3_meter)
-      self.micmeterbox.pack_start(self.mic_4_meter)
-      
-      self.mic_1_meter.show()
-      self.mic_2_meter.show()
-      self.mic_3_meter.show()
-      self.mic_4_meter.show()
+      self.mic_meters = [MicMeter("Mic ", i) for i in range(1, num_micpairs * 2 + 1)]
+      for meter in self.mic_meters:
+         self.micmeterbox.pack_start(meter)
+         meter.show()
       
       self.tooltips.set_tip(self.micmeterbox, ln.mic_meter_tip)
 
@@ -3057,10 +3048,6 @@ class MainWindow:
 
       # Variable map for stuff read from the mixer
       self.vumap = {
-         "mic_1_levels" : self.mic_1_meter,
-         "mic_2_levels" : self.mic_2_meter,
-         "mic_3_levels" : self.mic_3_meter,
-         "mic_4_levels" : self.mic_4_meter,
          "str_l_peak"   : self.str_l_peak,
          "str_r_peak"   : self.str_r_peak,
          "str_l_rms"    : self.str_l_rms_vu,
@@ -3082,6 +3069,9 @@ class MainWindow:
          "left_additional_metadata" : self.metadata_left_ctrl,
          "right_additional_metadata": self.metadata_right_ctrl
          }
+         
+      for i, mic in enumerate(self.mic_meters):
+         self.vumap.update({"mic_%d_levels" % (i + 1): mic})
 
       self.controls= IDJCcontrols.Controls(self)
       self.controls.load_prefs()

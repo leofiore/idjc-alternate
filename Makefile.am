@@ -53,6 +53,7 @@ local:
 	@echo "num_encoders = "@STREAMERS_S@ >> idjcpython/idjc_config.py
 	@echo "num_recorders = "@RECORDERS_S@ >> idjcpython/idjc_config.py
 	@echo "enh_libshout = "${ENH_SHOUT} >> idjcpython/idjc_config.py
+	@echo "num_micpairs = 3" >> idjcpython/idjc_config.py
 
 # Too lazy to copy this out from the source tree.
 dtdist:
