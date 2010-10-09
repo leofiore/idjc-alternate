@@ -111,6 +111,9 @@ class AGCControl(gtk.Frame):
       stringtosend = "AGCP=%s=%s\nACTN=%s\nend\n" % (wname, str(value), self.commandname)
       self.approot.mixer_write(stringtosend, True)
 
+   def set_partner(self, partner):
+      self.partner = partner
+
    def numline(self, label_text, wname, initial=0, mini=0, maxi=0, step=0, digits=0, adj=None):
       hbox = gtk.HBox()
       label = gtk.Label(label_text)
@@ -260,28 +263,27 @@ class AGCControl(gtk.Frame):
             
       hbox = gtk.HBox()
       self.group = gtk.CheckButton(ln.group)
+      self.booleandict[self.commandname + "_group"] = self.group
       hbox.pack_start(self.group, False, False, 0)
       self.group.show()
       ivbox.pack_start(hbox, False, False)
       hbox.show()
-      self.group1 = gtk.RadioButton(None, "1")
-      hbox.pack_start(self.group1, False, False)
-      self.group1.show()
-      self.group2 = gtk.RadioButton(self.group1, "2")
-      hbox.pack_start(self.group2, False, False)
-      self.group2.show()
-
-      self.booleandict[self.commandname + "_group"] = self.group
-      self.booleandict[self.commandname + "_group1"] = self.group1
-      self.booleandict[self.commandname + "_group2"] = self.group2
       
+      self.groups = []
+      for i in range(num_micpairs):
+         rb = gtk.RadioButton(None, str(i + 1))
+         if i:
+            rb.set_group(self.groups[0])
+         hbox.pack_start(rb, False)
+         rb.show()
+         self.booleandict[self.commandname + "_group%d" % (i + 1)] = rb
+         self.groups.append(rb)
+
       self.autoopen = gtk.CheckButton(ln.autoopen)
       ivbox.pack_start(self.autoopen, False, False)
       self.autoopen.show()
       set_tip(self.autoopen, ln.autoopen_tip)
       self.booleandict[self.commandname + "_autoopen"] = self.autoopen
-      
-      
 
       sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       panframe = gtk.Frame()
@@ -426,6 +428,7 @@ class AGCControl(gtk.Frame):
 
       self.complexity.set_active(1)
       indjmix.set_active(True)
+      self.partner = None
       self.active.emit("toggled")
 
 mIRC_colours = (                # Actually these are the XChat2 colours.
@@ -1170,6 +1173,7 @@ class mixprefs:
       # Reconnection dialog config
       
       self.recon_config = ReconnectionDialogConfig()
+      self.recon_config.set_border_width(3)
       parent.tooltips.set_tip(self.recon_config, ln.recon_tip)
       outervbox.pack_start(self.recon_config, False, False, 0)
       self.recon_config.show()
@@ -1535,8 +1539,9 @@ class mixprefs:
      
       # New AGC controls
       
+      mic_controls = []
       vbox = gtk.VBox()
-      for i in range(2):
+      for i in range(num_micpairs):
          uhbox = gtk.HBox(True)
          vbox.pack_start(uhbox, False, False, 0)
          uhbox.show()
@@ -1547,10 +1552,12 @@ class mixprefs:
             n = i * 2 + j
             micname = "mic_control_%d" % n
             c = AGCControl(self.parent, str(n + 1), micname)
-            setattr(self, micname, c)
             uhbox.add(c)
             c.show()
             parent.mic_opener.add_mic(c)
+            mic_controls.append(c)
+         mic_controls[-2].set_partner(mic_controls[-1])
+         mic_controls[-1].set_partner(mic_controls[-2])   
       parent.mic_opener.new_button_set()
 
       panevbox.pack_start(vbox, False, False, 0)
@@ -2036,9 +2043,10 @@ class mixprefs:
       self.dither.set_active(True)
       self.fastest_resample.set_active(True)
       self.enable_tooltips.set_active(True)
-      self.mic_control_0.active.set_active(True)
-      self.mic_control_0.alt_name.set_text("DJ")
-      self.mic_control_0.autoopen.set_active(True)
+      mic0 = mic_controls[0]
+      mic0.active.set_active(True)
+      mic0.alt_name.set_text("DJ")
+      mic0.autoopen.set_active(True)
       self.show_stream_meters.set_active(True)
       self.show_microphones.set_active(True)
       self.headroom.set_value(3.0)
@@ -2103,10 +2111,8 @@ class mixprefs:
          "mic_meters_active" : self.show_active_microphones,
          }
          
-      self.playersettingsdict.update(self.mic_control_0.booleandict)
-      self.playersettingsdict.update(self.mic_control_1.booleandict)
-      self.playersettingsdict.update(self.mic_control_2.booleandict)
-      self.playersettingsdict.update(self.mic_control_3.booleandict)
+      for mic_control in mic_controls:
+         self.playersettingsdict.update(mic_control.booleandict)
          
       self.valuesdict = {
          "interval"          : self.intervaladj,
@@ -2130,12 +2136,10 @@ class mixprefs:
          "rg_default"    : self.rg_defaultgain,
          "rg_boost"      : self.rg_boost,
          }
-         
-      self.valuesdict.update(self.mic_control_0.valuesdict) 
-      self.valuesdict.update(self.mic_control_1.valuesdict) 
-      self.valuesdict.update(self.mic_control_2.valuesdict) 
-      self.valuesdict.update(self.mic_control_3.valuesdict) 
-         
+
+      for mic_control in mic_controls:
+         self.valuesdict.update(mic_control.valuesdict)
+
       self.textdict = {                   # These are all text
          "prokuser"      : self.p3prefs.prokuser,
          "prokdatabase"  : self.p3prefs.prokdatabase,
@@ -2157,10 +2161,8 @@ class mixprefs:
          "con_delays"    : self.recon_config.csl,
          }
 
-      self.textdict.update(self.mic_control_0.textdict)
-      self.textdict.update(self.mic_control_1.textdict)
-      self.textdict.update(self.mic_control_2.textdict)
-      self.textdict.update(self.mic_control_3.textdict)
+      for mic_control in mic_controls:
+         self.textdict.update(mic_control.textdict)
 
       self.rangewidgets = (self.parent.deckadj,)
 

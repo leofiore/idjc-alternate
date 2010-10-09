@@ -169,23 +169,22 @@ class MicOpener(gtk.HBox):
       
    def new_button_set(self):
       # Clear away all child widgets.
-      self.forall(lambda x: x.destroy())
+      self.foreach(lambda x: x.destroy())
       self.mic2button = {}
       # New buttons arrive.
       free = []
-      group1 = []
-      group2 = []
+      group_list = [[] for x in xrange(num_micpairs)]
       for m in self.mic_list:
          if m.active.get_active():
             # Mics listed according to their group.
             if not m.group.get_active():
                free.append(m)
-            elif m.group1.get_active():
-               group1.append(m)
             else:
-               group2.append(m)
+               for i, mic_group in enumerate(m.groups):
+                  if mic_group.get_active():
+                     group_list[i].append(m)
       
-      for g in (group1, group2):
+      for g in group_list:
          if g:
             ui_names, full_names = self.mic_names(g)
             mb = MicButton("  ".join(full_names))
@@ -251,8 +250,8 @@ class MicOpener(gtk.HBox):
       self.mic_list.append(mic)
       mic.active.connect("toggled", self.cb_reconfigure)
       mic.group.connect("toggled", self.cb_reconfigure)
-      mic.group1.connect("toggled", self.cb_reconfigure)
-      mic.group2.connect("toggled", self.cb_reconfigure)
+      for mic_group in mic.groups:
+         mic_group.connect("toggled", self.cb_reconfigure)
       mic.alt_name.connect("changed", self.cb_reconfigure)
 
    def __init__(self, approot):
@@ -2223,6 +2222,7 @@ class MainWindow:
       os.environ["mx_client_id"] = mx_id = "idjc-mx" + tail
       os.environ["sc_client_id"] = sc_id = "idjc-sc" + tail
       print "jack client IDs:", mx_id, sc_id
+      os.environ["mx_mic_qty"] = num_micpairs * 2
 
       self.session_loaded = False
  
