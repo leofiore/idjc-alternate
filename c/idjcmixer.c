@@ -1,6 +1,6 @@
 /*
 #   idjcmixer.c: central core of IDJC's mixer.
-#   Copyright (C) 2005-2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2005-2010 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -117,8 +117,9 @@ sample_t left_peak = -1.0F, right_peak = -1.0F;
 int using_dsp;
 /* flag to indicate that stream audio be reduced for improved encode quality */
 int twodblimit;
-/* handles for mic processing function */
-struct mic *mic_1, *mic_2, *mic_3, *mic_4;
+/* handles for microphone */
+struct mic **mics;
+size_t n_mics;
 /* flag for mp3 decode capability */
 int have_mad;
 /* size of the fade buffer */
@@ -196,10 +197,6 @@ jack_port_t *dspin_left_port;
 jack_port_t *dspin_right_port;
 jack_port_t *stream_left_port;
 jack_port_t *stream_right_port;
-jack_port_t *mic_channel_1;
-jack_port_t *mic_channel_2;
-jack_port_t *mic_channel_3;
-jack_port_t *mic_channel_4;
 jack_port_t *aux_left_channel;
 jack_port_t *aux_right_channel;
 jack_port_t *phone_left_send;   /* used for VOIP */
@@ -220,10 +217,10 @@ jack_transport_state_t transport_state;
 struct xlplayer *plr_l, *plr_r, *plr_j, *plr_i; /* pipe reader instance stuctures */
 
 /* these are set in the parse routine - the contents coming from the GUI */
-char *mixer_string, *compressor_string, *gate_string, *microphone_string;
+char *mixer_string, *compressor_string, *gate_string, *microphone_string, *item_index;
 char *normalizer_string, *new_mic_string;
 char *micl, *micr, *auxl, *auxr, *midi, *audl, *audr, *strl, *strr, *action;
-char *mic1, *mic2, *mic3, *mic4;
+char *target_port_name;
 char *dol, *dor, *dil, *dir;
 char *oggpathname, *sndfilepathname, *avformatpathname, *speexpathname, *speextaglist, *speexcreatedby;
 char *playerpathname, *seek_s, *size, *playerplaylist, *loop, *resamplequality;
@@ -243,12 +240,10 @@ struct kvpdict kvpdict[] = {
          { "COMP", &compressor_string },/* packed full of data */
          { "GATE", &gate_string },
          { "MICS", &microphone_string },
+         { "INDX", &item_index },
          { "NORM", &normalizer_string },
          { "NMIC", &new_mic_string },
-         { "MIC1", &mic1 },
-         { "MIC2", &mic2 },
-         { "MIC3", &mic3 },
-         { "MIC4", &mic4 },
+         { "MIC",  &target_port_name },
          { "AUXL", &auxl },
          { "AUXR", &auxr },
          { "MIDI", &midi },
@@ -537,7 +532,6 @@ void process_audio(jack_nframes_t nframes)
    static jack_nframes_t alarm_index = 0;
    /* pointers to buffers provided by JACK */
    sample_t *lap, *rap, *lsp, *rsp, *lxp, *rxp, *lpsp, *rpsp, *lprp, *rprp;
-   sample_t *mp_1, *mp_2, *mp_3, *mp_4;
    sample_t *la_buffer, *ra_buffer, *ls_buffer, *rs_buffer, *lps_buffer, *rps_buffer;
    sample_t *dolp, *dorp, *dilp, *dirp, *dol_buffer, *dor_buffer, *dil_buffer, *dir_buffer;
    /* ponters to buffers for reading the media players */
@@ -553,6 +547,7 @@ void process_audio(jack_nframes_t nframes)
    jack_nframes_t midi_nevents, midi_eventi;
    int midi_command_type, midi_channel_id;
    int pitch_wheel;
+   struct mic **micp;
 
    if (timeout > 8000)
       {
@@ -632,10 +627,6 @@ void process_audio(jack_nframes_t nframes)
    dir_buffer = dirp = (sample_t *) jack_port_get_buffer (dspin_right_port, nframes);
    lps_buffer = lpsp = (sample_t *) jack_port_get_buffer (phone_left_send, nframes);
    rps_buffer = rpsp = (sample_t *) jack_port_get_buffer (phone_right_send, nframes);
-   mp_1 = (sample_t *) jack_port_get_buffer (mic_channel_1, nframes);
-   mp_2 = (sample_t *) jack_port_get_buffer (mic_channel_2, nframes);
-   mp_3 = (sample_t *) jack_port_get_buffer (mic_channel_3, nframes);
-   mp_4 = (sample_t *) jack_port_get_buffer (mic_channel_4, nframes);
    lxp = (sample_t *) jack_port_get_buffer (aux_left_channel, nframes);
    rxp = (sample_t *) jack_port_get_buffer (aux_right_channel, nframes);
    lprp = (sample_t *) jack_port_get_buffer (phone_left_recv, nframes);
@@ -735,6 +726,8 @@ void process_audio(jack_nframes_t nframes)
       new_normalizer_stats = FALSE;
       }
 
+   mic_process_start_all(mics, nframes);
+
    /* there are four mixer modes and the only seemingly efficient way to do them is */
    /* to basically copy a lot of code four times over hence the huge size */
    if (simple_mixer == FALSE && mixermode == NO_PHONE)  /* Fully featured mixer code */
@@ -742,30 +735,22 @@ void process_audio(jack_nframes_t nframes)
       memset(lps_buffer, 0, nframes * sizeof (sample_t)); /* send silence to VOIP */
       memset(rps_buffer, 0, nframes * sizeof (sample_t));
       for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, lxp++, rxp++,
-                mp_1++, mp_2++, mp_3++, mp_4++,
                 lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
          {       
          if (vol_smooth_count++ % 100 == 0) /* Can change volume level every so many samples */
             update_smoothed_volumes();
-         mic_process(mic_1, *mp_1);
-         mic_process(mic_2, *mp_2);
-         mic_process(mic_3, *mp_3);
-         mic_process(mic_4, *mp_4);
-         lc_s_micmix = mic_1->lcm + mic_2->lcm + mic_3->lcm + mic_4->lcm;
-         rc_s_micmix = mic_1->rcm + mic_2->rcm + mic_3->rcm + mic_4->rcm;
-         d_micmix = mic_1->unpmdj + mic_2->unpmdj + mic_3->unpmdj + mic_4->unpmdj;
+         
+         df = mic_process_all(mics) * dfmod;
+         for (micp = mics, lc_s_micmix = rc_s_micmix = d_micmix = 0.0f; *micp; micp++)
+            {
+            lc_s_micmix += (*micp)->lcm;
+            rc_s_micmix += (*micp)->rcm;
+            d_micmix += (*micp)->unpmdj;
+            }
        
          /* ducking calculation - disabled mics have df of 1.0 always */
          {
-             float df1 = mic_1->agc->df;
-             float df2 = mic_2->agc->df;
-             float df3 = mic_3->agc->df;
-             float df4 = mic_4->agc->df;
              float hr = db2level(current_headroom);
-             
-             float w1 = (df1 < df2) ? df1 : df2;
-             float w2 = (df3 < df4) ? df3 : df4;
-             df = ((w1 < w2) ? w1 : w2) * dfmod;
              df = (df < hr) ? df : hr;
          }
 
@@ -908,22 +893,22 @@ void process_audio(jack_nframes_t nframes)
       if (simple_mixer == FALSE && mixermode == PHONE_PUBLIC)
          {
          for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, lxp++, rxp++,
-                mp_1++, mp_2++, mp_3++, mp_4++,
                 lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++,
                 lpsp++, rpsp++, lprp++, rprp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
             {    
             if (vol_smooth_count++ % 100 == 0) /* Can change volume level every so many samples */
                update_smoothed_volumes();
-            mic_process(mic_1, *mp_1);
-            mic_process(mic_2, *mp_2);
-            mic_process(mic_3, *mp_3);
-            mic_process(mic_4, *mp_4);
-            /* All microphones to be soft unmuted by the user interface
-             * no muting of the dj mix to ensure a full conference takes place.
-             */
-            lc_s_micmix = mic_1->lcm + mic_2->lcm + mic_3->lcm + mic_4->lcm;
-            rc_s_micmix = mic_1->rcm + mic_2->rcm + mic_3->rcm + mic_4->rcm;
-            d_micmix = mic_1->unpm + mic_2->unpm + mic_3->unpm + mic_4->unpm;
+         
+            mic_process_all(mics);
+            for (micp = mics, lc_s_micmix = rc_s_micmix = d_micmix = 0.0f; *micp; micp++)
+               {
+               /* All microphones to be soft unmuted by the user interface
+                * no muting of the dj mix to ensure a full conference takes place.
+                */
+               lc_s_micmix += (*micp)->lcm;
+               rc_s_micmix += (*micp)->rcm;
+               d_micmix += (*micp)->unpm;
+               }
 
             /* No ducking */
             df = 1.0;
@@ -1072,21 +1057,20 @@ void process_audio(jack_nframes_t nframes)
          if (simple_mixer == FALSE && mixermode == PHONE_PRIVATE && mic_on == 0)
             {
             for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, lxp++, rxp++,
-            mp_1++, mp_2++, mp_3++, mp_4++,
             lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, lpsp++, rpsp++, 
             lprp++, rprp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
                {         
                if (vol_smooth_count++ % 100 == 0) /* Can change volume level every so many samples */
                   update_smoothed_volumes();
 
-               mic_process(mic_1, *mp_1);
-               mic_process(mic_2, *mp_2);
-               mic_process(mic_3, *mp_3);
-               mic_process(mic_4, *mp_4);
-               /* no muting of the dj mix to ensure a full conference takes place */
-               lc_s_micmix = mic_1->lc + mic_2->lc + mic_3->lc + mic_4->lc;
-               rc_s_micmix = mic_1->rc + mic_2->rc + mic_3->rc + mic_4->rc;
-               d_micmix = mic_1->unpm + mic_2->unpm + mic_3->unpm + mic_4->unpm;
+               mic_process_all(mics);
+               for (micp = mics, lc_s_micmix = rc_s_micmix = d_micmix = 0.0f; *micp; micp++)
+                  {
+                  /* no muting of the dj mix to ensure a full conference takes place */
+                  lc_s_micmix += (*micp)->lc;
+                  rc_s_micmix += (*micp)->rc;
+                  d_micmix += (*micp)->unpm;
+                  }
                
                /* No ducking */
                df = 1.0;
@@ -1234,31 +1218,23 @@ void process_audio(jack_nframes_t nframes)
             if (simple_mixer == FALSE && mixermode == PHONE_PRIVATE) /* note: mic is on */
                {
                for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, lxp++, rxp++,
-                     mp_1++, mp_2++, mp_3++, mp_4++,
                      lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, lpsp++, rpsp++,
                         iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
                   {
                   if (vol_smooth_count++ % 100 == 0) /* Can change volume level every so many samples */
                      update_smoothed_volumes();
-                  mic_process(mic_1, *mp_1);
-                  mic_process(mic_2, *mp_2);
-                  mic_process(mic_3, *mp_3);
-                  mic_process(mic_4, *mp_4);
-                  lc_s_micmix = mic_1->lcm + mic_2->lcm + mic_3->lcm + mic_4->lcm;
-                  rc_s_micmix = mic_1->rcm + mic_2->rcm + mic_3->rcm + mic_4->rcm;
-                  d_micmix = mic_1->unpmdj + mic_2->unpmdj + mic_3->unpmdj + mic_4->unpmdj;
-                
+
+                  df = mic_process_all(mics) * dfmod;
+                  for (micp = mics, lc_s_micmix = rc_s_micmix = d_micmix = 0.0f; *micp; micp++)
+                     {
+                     lc_s_micmix += (*micp)->lcm;
+                     rc_s_micmix += (*micp)->rcm;
+                     d_micmix += (*micp)->unpmdj;
+                     }
+
                   /* ducking calculation - disabled mics have df of 1.0 always */
                   {
-                      float df1 = mic_1->agc->df;
-                      float df2 = mic_2->agc->df;
-                      float df3 = mic_3->agc->df;
-                      float df4 = mic_4->agc->df;
                       float hr = db2level(current_headroom);
-                      
-                      float w1 = (df1 < df2) ? df1 : df2;
-                      float w2 = (df3 < df4) ? df3 : df4;
-                      df = ((w1 < w2) ? w1 : w2) * dfmod;
                       df = (df < hr) ? df : hr;
                   }
                      
@@ -1621,15 +1597,6 @@ int main(int argc, char **argv)
                                         JackPortIsOutput, 0);
    stream_right_port = jack_port_register(client, "str_out_r", JACK_DEFAULT_AUDIO_TYPE, 
                                         JackPortIsOutput, 0);
-   /* connects to the capture port normally, which can be set to things other than just mic */
-   mic_channel_1 = jack_port_register(client, "mic_in_1", JACK_DEFAULT_AUDIO_TYPE,
-                                        JackPortIsInput, 0);
-   mic_channel_2 = jack_port_register(client, "mic_in_2", JACK_DEFAULT_AUDIO_TYPE,
-                                        JackPortIsInput, 0);
-   mic_channel_3 = jack_port_register(client, "mic_in_3", JACK_DEFAULT_AUDIO_TYPE,
-                                        JackPortIsInput, 0);
-   mic_channel_4 = jack_port_register(client, "mic_in_4", JACK_DEFAULT_AUDIO_TYPE,
-                                        JackPortIsInput, 0);
    /* intended as a spare for connection to almost any jack app you like */
    aux_left_channel = jack_port_register(client, "aux_in_l", JACK_DEFAULT_AUDIO_TYPE,
                                         JackPortIsInput, 0);
@@ -1733,17 +1700,19 @@ int main(int argc, char **argv)
    str_pf_l = peakfilter_create(115e-6f, sr);
    str_pf_r = peakfilter_create(115e-6f, sr);
 
-   mic_1 = mic_init(sr);
-   mic_2 = mic_init(sr);
-   mic_3 = mic_init(sr);
-   mic_4 = mic_init(sr);
-   
-   if (!(mic_1 && mic_2 && mic_3 && mic_4))
+   /* allocate microphone resources */
+   n_mics = atoi(getenv("mx_mic_qty"));
+   mics = calloc(n_mics + 1, sizeof (struct mic *));
+   for (i = 0; i < n_mics; i++)
       {
-      fprintf(stderr, "mic_init failed\n");
-      exit(5);
-      }   
-         
+      mics[i] = mic_init(client, sr, i + 1);
+      if (!mics[i])
+         {
+         fprintf(stderr, "mic_init failed\n");
+         exit(5);
+         }
+      }
+   
    nframes = jack_get_sample_rate (client);
    lp_lc = ialloc(nframes);
    lp_rc = ialloc(nframes);
@@ -1805,6 +1774,8 @@ int main(int argc, char **argv)
       if (jack_closed_f == TRUE || g_shutdown == TRUE)
          break;
          
+fprintf(stderr, "%s\n", action);         
+         
       if (!strcmp(action, "sync"))
          {
          fprintf(stdout, "IDJC: sync reply\n");
@@ -1820,24 +1791,9 @@ int main(int argc, char **argv)
          fflush(stdout);
          }
 
-      if (!strcmp(action, "mic_control_0"))
+      if (!strcmp(action, "mic_control"))
          {
-         mic_valueparse(mic_1, mic_param);
-         }
-
-      if (!strcmp(action, "mic_control_1"))
-         {
-         mic_valueparse(mic_2, mic_param);
-         }
-
-      if (!strcmp(action, "mic_control_2"))
-         {
-         mic_valueparse(mic_3, mic_param);
-         }
-
-      if (!strcmp(action, "mic_control_3"))
-         {
-         mic_valueparse(mic_4, mic_param);
+         mic_valueparse(mics[atoi(item_index)], mic_param);
          }
 
       if (!strcmp(action, "headroom"))
@@ -2002,58 +1958,25 @@ int main(int argc, char **argv)
          }
       /* the means by which the jack ports are connected to the soundcard */
       /* notably the main app requests the connections */
-      if (!strcmp(action, "remakemic1"))
+      if (!strcmp(action, "remakemic"))
          {
-         jack_port_disconnect(client, mic_channel_1);
-         if (strcmp(mic1, "default"))
+fprintf(stderr, "%d %s\n", atoi(item_index), target_port_name);
+         struct mic *micptr = mics[atoi(item_index)];
+         
+         jack_port_disconnect(client, micptr->jack_port);
+         if (strcmp(target_port_name, "default"))
             {
-            if (mic1[0] != '\0')
-               jack_connect(client, mic1, jack_port_name(mic_channel_1));
+            if (target_port_name[0] != '\0')
+               jack_connect(client, target_port_name, jack_port_name(micptr->jack_port));
             }
+#if 0
+/* ToDo: this needs some work */
+
          else
             if (inport && inport[0])
                jack_connect(client, inport[0], jack_port_name(mic_channel_1));
+#endif
          }
-         
-      if (!strcmp(action, "remakemic2"))
-         {
-         jack_port_disconnect(client, mic_channel_2);
-         if (strcmp(mic2, "default"))
-            {
-            if (mic2[0] != '\0')
-               jack_connect(client, mic2, jack_port_name(mic_channel_2));
-            }
-         else
-            if (inport && inport[0] && inport[1])
-               jack_connect(client, inport[1], jack_port_name(mic_channel_2));
-         }
-
-      if (!strcmp(action, "remakemic3"))
-         {
-         jack_port_disconnect(client, mic_channel_3);
-         if (strcmp(mic3, "default"))
-            {
-            if (mic3[0] != '\0')
-               jack_connect(client, mic3, jack_port_name(mic_channel_3));
-            }
-         else
-            if (inport && inport[0] && inport[1] && inport[2])
-               jack_connect(client, inport[2], jack_port_name(mic_channel_3));
-         }
-         
-      if (!strcmp(action, "remakemic4"))
-         {
-         jack_port_disconnect(client, mic_channel_4);
-         if (strcmp(mic4, "default"))
-            {
-            if (mic4[0] != '\0')
-               jack_connect(client, mic4, jack_port_name(mic_channel_4));
-            }
-         else
-            if (inport && inport[0] && inport[1] && inport[2] && inport[3])
-               jack_connect(client, inport[3], jack_port_name(mic_channel_4));
-         }
-
       if (!strcmp(action, "remakeaudl"))
          {
          jack_port_disconnect(client, audio_left_port);
@@ -2173,10 +2096,7 @@ int main(int argc, char **argv)
             str_r_rms_db = (int) fabs(level2db(sqrt(str_r_meansqrd)));
             
          /* send the meter and other stats to the main app */
-         mic_stats("mic_1_levels", mic_1);
-         mic_stats("mic_2_levels", mic_2);
-         mic_stats("mic_3_levels", mic_3);
-         mic_stats("mic_4_levels", mic_4);
+         mic_stats_all(mics);
 
          /* forward any MIDI commands that have been queued since last time */
          pthread_mutex_lock(&midi_mutex);
@@ -2249,10 +2169,8 @@ int main(int argc, char **argv)
    jack_free_ports(outport);
    free(our_sc_str_in_l);
    free(our_sc_str_in_r);
-   mic_free(mic_1);
-   mic_free(mic_2);
-   mic_free(mic_3);
-   mic_free(mic_4);
+   mic_free_all(mics);
+   free(mics);
    peakfilter_destroy(str_pf_l);
    peakfilter_destroy(str_pf_r);
    /*beat_free(beat_lp);

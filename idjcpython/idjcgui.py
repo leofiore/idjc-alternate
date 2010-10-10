@@ -1,5 +1,5 @@
 #   idjcgui.py: Main python code of IDJC
-#   Copyright (C) 2005-2008 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2005-2010 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -2222,7 +2222,7 @@ class MainWindow:
       os.environ["mx_client_id"] = mx_id = "idjc-mx" + tail
       os.environ["sc_client_id"] = sc_id = "idjc-sc" + tail
       print "jack client IDs:", mx_id, sc_id
-      os.environ["mx_mic_qty"] = num_micpairs * 2
+      os.environ["mx_mic_qty"] = str(num_micpairs * 2)
 
       self.session_loaded = False
  

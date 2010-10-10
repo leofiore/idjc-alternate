@@ -46,8 +46,35 @@ static void calculate_gain_values(struct mic *self)
       }
    }
 
-void mic_process(struct mic *self, float input)
+void mic_process_start_all(struct mic **mics, jack_nframes_t nframes)
    {
+   while (*mics)   
+      mic_process_start(*mics++, nframes);
+   }
+
+void mic_process_start(struct mic *self, jack_nframes_t nframes)
+   {
+   self->nframes = nframes;
+   self->jadp = jack_port_get_buffer(self->jack_port, nframes);
+   }
+
+float mic_process_all(struct mic **mics)
+   {
+   float df, agcdf;   
+      
+   for (df = 1.0f; *mics; mics++)
+      {
+      mic_process(*mics);
+      df = (df > (agcdf = (*mics)->agc->df)) ? agcdf : df;
+      }
+      
+   return df;
+   }
+
+void mic_process(struct mic *self)
+   {
+   float input = *self->jadp++;
+
    if (self->active)
       {
       if (self->open && self->mute < 0.999999)
@@ -100,24 +127,32 @@ static int mic_getpeak(struct mic *self)
    return (peakdb < 0) ? peakdb : 0;
    }
 
-void mic_stats(char *key, struct mic *self)
+void mic_stats_all(struct mic **mics)
    {
-   fprintf(stdout, "%s=%d,%d,%d,%d\n", key, mic_getpeak(self),
+   while (*mics)
+      mic_stats(*mics++);
+   }
+
+void mic_stats(struct mic *self)
+   {
+   fprintf(stdout, "mic_%d_levels=%d,%d,%d,%d\n", self->id, mic_getpeak(self),
                   (int)(log10f(self->agc->red) * -20.0f),
                   (int)(log10f(self->agc->yellow) * -20.0f),
                   (int)(log10f(self->agc->green) * -20.0f));
    }
 
-struct mic *mic_init(int sample_rate)
+struct mic *mic_init(jack_client_t *client, int sample_rate, int id)
    {
    struct mic *self;
+   char port_name[10];
    
    if (!(self = calloc(1, sizeof (struct mic))))
       {
       fprintf(stderr, "mic_init: malloc failure\n");
       return NULL;
       }
-   
+
+   self->id = id;
    self->sample_rate = (float)sample_rate;   
    self->pan = 50;
    self->complexity = 1;
@@ -128,15 +163,28 @@ struct mic *mic_init(int sample_rate)
       free(self);
       return NULL;
       }
-      
+   snprintf(port_name, 10, "mic_in_%d", id);  
+   self->jack_port = jack_port_register(client, port_name,
+                     JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0); 
    calculate_gain_values(self);   
       
    return self;
    }
    
+void mic_free_all(struct mic **mics)
+   {
+   while (*mics)
+      {
+      mic_free(*mics);
+      *mics++ = NULL;
+      }
+   }
+   
 void mic_free(struct mic *self)
    {
+      
    agc_free(self->agc);
+   self->agc = NULL;
    free(self);
    }
    

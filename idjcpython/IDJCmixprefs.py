@@ -108,7 +108,7 @@ class AGCControl(gtk.Frame):
          value = widget.get_value()
       if isinstance(widget, (gtk.CheckButton, gtk.ComboBox)):
          value = (0, 1)[widget.get_active()]
-      stringtosend = "AGCP=%s=%s\nACTN=%s\nend\n" % (wname, str(value), self.commandname)
+      stringtosend = "INDX=%d\nAGCP=%s=%s\nACTN=%s\nend\n" % (self.index, wname, str(value), "mic_control")
       self.approot.mixer_write(stringtosend, True)
 
    def set_partner(self, partner):
@@ -201,11 +201,12 @@ class AGCControl(gtk.Frame):
          self.processed_box.hide()
          self.simple_box.show()
          
-   def __init__(self, approot, ui_name, commandname):
+   def __init__(self, approot, ui_name, commandname, index):
       self.approot = approot
       self.ui_name = ui_name
       self.meter = approot.mic_meters[int(ui_name) - 1]
       self.commandname = commandname
+      self.index = index
       self.valuesdict = {}
       self.booleandict = {}
       self.textdict = {}
@@ -481,7 +482,7 @@ def make_colour_box_menu(entry, callback):
    menu.show()
    return menu
 
-def make_entry_line(parent, item, code, hastoggle):
+def make_entry_line(parent, item, code, hastoggle, index=None):
    box = gtk.HBox(False, 0)
    box.set_border_width(4)
    box.set_spacing(5)
@@ -490,12 +491,12 @@ def make_entry_line(parent, item, code, hastoggle):
    entry.set_size_request(185, -1)
 
    savebutton = gtk.Button(ln.save)
-   savebutton.connect("clicked", parent.save_click, (code, entry))
+   savebutton.connect("clicked", parent.save_click, (code, entry, index))
    box.pack_end(savebutton, False, False, 0)
    savebutton.show()
 
    setbutton = gtk.Button(ln.set)
-   setbutton.connect("clicked", parent.update_click, (code, entry))
+   setbutton.connect("clicked", parent.update_click, (code, entry, index))
    box.pack_end(setbutton, False, False, 0)
    setbutton.show()
 
@@ -652,6 +653,8 @@ class mixprefs:
    
    def save_click(self, widget, data):
       filename = self.parent.idjc + data[0].lower()
+      if data[2] is not None:
+         filename += str(data[2] + 1)
       file = open(filename, "w")
       if data[1].flags() & gtk.SENSITIVE:
          file.write(data[1].get_text() + "\n" + "0\n")
@@ -659,12 +662,15 @@ class mixprefs:
          file.write(data[1].get_text() + "\n" + "1\n")
       file.close()
    
-   def update_click(self, widget, (code, entry)):
+   def update_click(self, widget, (code, entry, index)):
       if entry.flags() & gtk.SENSITIVE:
          entrytext = entry.get_text()
       else:
          entrytext = "default"
-      buffer = "ACTN=remake%s\n%s=%s\nend\n" % (code.lower(), code, entrytext)
+      if index is None:
+         buffer = "ACTN=remake%s\n%s=%s\nend\n" % (code.lower(), code, entrytext)
+      else:
+         buffer = "ACTN=remake%s\n%s=%s\nINDX=%d\nend\n" % (code.lower(), code, entrytext, index)
       self.parent.mixer_write(buffer, True)
       
    def delete_event(self, widget, event, data=None):
@@ -898,6 +904,8 @@ class mixprefs:
    def bind_jack_ports(self):
       for port in self.jack_ports:
          getattr(self, port+"update").clicked()
+      for mic_entry_line in self.mic_jack_data:
+         mic_entry_line[2].clicked()
 
    def cb_headroom(self, widget):
       self.parent.mixer_write("HEAD=%f\nACTN=headroom\nend\n" % widget.get_value(), True)
@@ -1551,7 +1559,7 @@ class mixprefs:
          for j in range(2):
             n = i * 2 + j
             micname = "mic_control_%d" % n
-            c = AGCControl(self.parent, str(n + 1), micname)
+            c = AGCControl(self.parent, str(n + 1), micname, n)
             uhbox.add(c)
             c.show()
             parent.mic_opener.add_mic(c)
@@ -1840,7 +1848,7 @@ class mixprefs:
       self.mic_jack_data = []
       for i in range(1, num_micpairs * 2 + 1):
          n = str(i)
-         box, check, entry, update = make_entry_line(self, "mic_in_" + n + ": ", "MIC" + n, True)
+         box, check, entry, update = make_entry_line(self, "mic_in_" + n + ": ", "MIC", True, i - 1)
          vbox.add(box)
          self.mic_jack_data.append((check, entry, update))
          if i < 5:
