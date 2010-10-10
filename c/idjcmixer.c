@@ -119,7 +119,6 @@ int using_dsp;
 int twodblimit;
 /* handles for microphone */
 struct mic **mics;
-size_t n_mics;
 /* flag for mp3 decode capability */
 int have_mad;
 /* size of the fade buffer */
@@ -1530,7 +1529,6 @@ static void jack_free_ports(const char **p)
 int main(int argc, char **argv)
    {
    FILE *fp =stdin;
-   const char **inport;
    const char **outport;
    int str_l_peak_db, str_r_peak_db;
    int str_l_rms_db, str_r_rms_db;
@@ -1701,18 +1699,8 @@ int main(int argc, char **argv)
    str_pf_r = peakfilter_create(115e-6f, sr);
 
    /* allocate microphone resources */
-   n_mics = atoi(getenv("mx_mic_qty"));
-   mics = calloc(n_mics + 1, sizeof (struct mic *));
-   for (i = 0; i < n_mics; i++)
-      {
-      mics[i] = mic_init(client, sr, i + 1);
-      if (!mics[i])
-         {
-         fprintf(stderr, "mic_init failed\n");
-         exit(5);
-         }
-      }
-   
+   mics = mic_init_all(atoi(getenv("mx_mic_qty")), client);
+
    nframes = jack_get_sample_rate (client);
    lp_lc = ialloc(nframes);
    lp_rc = ialloc(nframes);
@@ -1757,7 +1745,6 @@ int main(int argc, char **argv)
    fflush(stdout);
  
                 /* Scan for physical audio IO ports to use as defaults */
-   inport = jack_get_ports(client, NULL, NULL, JackPortIsPhysical | JackPortIsOutput);
    outport = jack_get_ports(client, NULL, NULL, JackPortIsPhysical | JackPortIsInput);
  
    /* Make voip input audio available on the voip output so you can hear your own voice */
@@ -1773,8 +1760,6 @@ int main(int argc, char **argv)
       {
       if (jack_closed_f == TRUE || g_shutdown == TRUE)
          break;
-         
-fprintf(stderr, "%s\n", action);         
          
       if (!strcmp(action, "sync"))
          {
@@ -1960,7 +1945,6 @@ fprintf(stderr, "%s\n", action);
       /* notably the main app requests the connections */
       if (!strcmp(action, "remakemic"))
          {
-fprintf(stderr, "%d %s\n", atoi(item_index), target_port_name);
          struct mic *micptr = mics[atoi(item_index)];
          
          jack_port_disconnect(client, micptr->jack_port);
@@ -1969,13 +1953,9 @@ fprintf(stderr, "%d %s\n", atoi(item_index), target_port_name);
             if (target_port_name[0] != '\0')
                jack_connect(client, target_port_name, jack_port_name(micptr->jack_port));
             }
-#if 0
-/* ToDo: this needs some work */
-
          else
-            if (inport && inport[0])
-               jack_connect(client, inport[0], jack_port_name(mic_channel_1));
-#endif
+            if (micptr->default_mapped_port_name)
+               jack_connect(client, micptr->default_mapped_port_name, jack_port_name(micptr->jack_port));
          }
       if (!strcmp(action, "remakeaudl"))
          {
@@ -2165,12 +2145,10 @@ fprintf(stderr, "%d %s\n", atoi(item_index), target_port_name);
    free(eot_alarm_table);
    free_signallookup_table();
    free_dblookup_table();
-   jack_free_ports(inport);
    jack_free_ports(outport);
    free(our_sc_str_in_l);
    free(our_sc_str_in_r);
    mic_free_all(mics);
-   free(mics);
    peakfilter_destroy(str_pf_l);
    peakfilter_destroy(str_pf_r);
    /*beat_free(beat_lp);
