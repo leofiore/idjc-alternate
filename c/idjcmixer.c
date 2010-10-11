@@ -2216,8 +2216,8 @@ int main(int argc, char **argv)
                    plr_l->have_data_f | (plr_l->current_audio_context & 0x1),
                    plr_r->have_data_f | (plr_r->current_audio_context & 0x1),
                    plr_i->have_data_f | (plr_i->current_audio_context & 0x1),
-                   left_peak > 0.02F || left_peak < 0.0F || plr_l->pause,
-                   right_peak > 0.02F || right_peak < 0.0F || plr_r->pause,
+                   left_peak > 0.001F || left_peak < 0.0F || plr_l->pause,
+                   right_peak > 0.001F || right_peak < 0.0F || plr_r->pause,
                    plr_l->current_audio_context,
                    plr_r->current_audio_context,
                    plr_j->current_audio_context,
@@ -2227,9 +2227,10 @@ int main(int argc, char **argv)
                    plr_l->dynamic_metadata.data_type,
                    plr_r->dynamic_metadata.data_type,
                    midi_output);
-
+                   
          /* tell the jack mixer it can reset its vu stats now */
          reset_vu_stats_f = TRUE;
+         left_peak = right_peak = -1.0F;
          if (plr_l->dynamic_metadata.data_type)
             send_metadata_update(&(plr_l->dynamic_metadata));
          if (plr_r->dynamic_metadata.data_type)
