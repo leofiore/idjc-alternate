@@ -848,6 +848,12 @@ mp4year = "Year"
 
 native = "Native"
 
+n_microphones = "The number of microphone audio channels"
+
+n_streamers = "The maximum number of concurrent streams"
+
+n_recorders = "The maximum number of concurrent recordings"
+
 new_profile_body = """Profile '%s' does
 not currently exist.
 Would you like to create it?"""
@@ -1129,6 +1135,8 @@ remove = "Remove"
 request_activate = "Activate"
 
 request_tab = "Request"
+
+requires_restart = " These settings take effect after restarting "
 
 resample_quality = "Quality"
 

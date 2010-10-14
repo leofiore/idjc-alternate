@@ -2,7 +2,7 @@
 
 * Changes in version 0.8.5 *
 
-The number of microphones can be adjusted in the configuration file in pairs.
+The number of available microphones, streamers, and recorders can be adjusted in Prefs->Feature set.
 
 Prefs window can be expanded in size.
 

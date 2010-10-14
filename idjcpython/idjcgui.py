@@ -34,7 +34,7 @@ console_help_message="""Usage:  idjc [-vhe] [-p profile] [-j jackserver] [-m mic
             -s    servers to connect to e.g. 13 for servers 1 and 3"""
             
 
-import locale, os, sys, fcntl, subprocess
+import locale, os, sys, fcntl, subprocess, ConfigParser
 
 def locale_encoding():
    read = subprocess.Popen(["locale", "-a"], stdout=subprocess.PIPE).stdout# I have to do all this because an exception 
@@ -96,6 +96,7 @@ except:
    import pango
 
 # import the python modules
+import idjc_config
 from idjc_config import *
 from IDJCmedia import *
 from sourceclientgui import *
@@ -173,7 +174,7 @@ class MicOpener(gtk.HBox):
       self.mic2button = {}
       # New buttons arrive.
       free = []
-      group_list = [[] for x in xrange(num_micpairs)]
+      group_list = [[] for x in xrange(idjc_config.num_micpairs)]
       for m in self.mic_list:
          if m.active.get_active():
             # Mics listed according to their group.
@@ -2206,7 +2207,7 @@ class MainWindow:
       self.denc = display_enc
       self.fenc = file_enc
       
-      print "%s Version %s\n%s\n%s\n" % (appname, version, copyright, license)
+      print "%s Version %s\n%s\n%s\n" % (appname, self.version, copyright, license)
       
       if os.environ["VERSION_ONLY"] == "1":
          raise self.initcleanexit
@@ -2217,12 +2218,27 @@ class MainWindow:
       self.init_profile()            # decide which profile to use
       print ln
 
+      config = ConfigParser.RawConfigParser()
+      config.read(self.idjc + 'limits')
+      try:
+         idjc_config.num_micpairs = config.getint('resource_count', 'n_mics') // 2
+      except ConfigParser.Error:
+         idjc_config.num_micpairs = 4
+      try:
+         idjc_config.num_streamers = idjc_config.num_encoders = config.getint('resource_count', 'n_streamers')
+      except ConfigParser.Error:
+         idjc_config.num_streamers = idjc_config.num_encoders = 6
+      try:
+         idjc_config.num_recorders = config.getint('resource_count', 'n_recorders')
+      except ConfigParser.Error:
+         idjc_config.num_recorders = 2
+
       # Name the mixer and sourceclient jack client IDs.
       tail = "-" + self.profile if os.environ["EXTRA"] == "1" else ""
       os.environ["mx_client_id"] = mx_id = "idjc-mx" + tail
       os.environ["sc_client_id"] = sc_id = "idjc-sc" + tail
       print "jack client IDs:", mx_id, sc_id
-      os.environ["mx_mic_qty"] = str(num_micpairs * 2)
+      os.environ["mx_mic_qty"] = str(idjc_config.num_micpairs * 2)
 
       self.session_loaded = False
  
@@ -2842,7 +2858,7 @@ class MainWindow:
 
       sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       self.stream_indicator = []
-      for i in range(num_streamers):
+      for i in range(idjc_config.num_streamers):
          self.stream_indicator.append(StreamMeter(1, 100))
       self.stream_indicator_box, self.listener_indicator = make_stream_meter_unit(ln.streams, self.stream_indicator, self.tooltips)
       self.streammeterbox.pack_start(self.stream_indicator_box, False, False, 0)
@@ -2856,13 +2872,13 @@ class MainWindow:
       stream_vu_box.show()
       self.tooltips.set_tip(stream_vu_box, ln.stream_vu_meter_tip)
        
-      self.mic_meters = [MicMeter("Mic ", i) for i in range(1, num_micpairs * 2 + 1)]
+      self.mic_meters = [MicMeter("Mic ", i) for i in range(1, idjc_config.num_micpairs * 2 + 1)]
       if len(self.mic_meters) <= 4:
          for meter in self.mic_meters:
             self.micmeterbox.pack_start(meter)
             meter.show()
       else:
-         table = gtk.Table(num_micpairs, 2)
+         table = gtk.Table(idjc_config.num_micpairs, 2)
          table.set_row_spacings(4)
          table.set_col_spacings(4)
          self.micmeterbox.pack_start(table)

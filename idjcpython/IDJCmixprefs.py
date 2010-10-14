@@ -20,6 +20,7 @@ __all__ = ['mixprefs']
 import pygtk
 pygtk.require('2.0')
 import gtk, os, licence_window, p3db, shutil
+import idjc_config
 from idjc_config import *
 from ln_text import ln
 from IDJCfree import int_object
@@ -271,7 +272,7 @@ class AGCControl(gtk.Frame):
       hbox.show()
       
       self.groups = []
-      for i in range(num_micpairs):
+      for i in range(idjc_config.num_micpairs):
          rb = gtk.RadioButton(None, str(i + 1))
          if i:
             rb.set_group(self.groups[0])
@@ -689,6 +690,14 @@ class mixprefs:
          file.close()
       except IOError:
          print "Error while writing out player defaults"
+      try:
+         file = open(self.parent.idjc + "limits", "w")
+         file.write("[resource_count]\n")
+         for name, widget in self.rrvaluesdict.iteritems():
+            file.write(name + "=" + str(int(widget.get_value())) + "\n")
+         file.close()
+      except IOError:
+         print "Error while writing out player defaults"
       if self.ask_profile.get_active():
          if os.path.isfile(self.parent.idjcroot + "do-not-ask-profile"):
             try:
@@ -953,15 +962,19 @@ class mixprefs:
       generalwindow.set_border_width(8)
       generalwindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       outervbox = gtk.VBox()
+      outervbox.set_spacing(5)
       generalwindow.add_with_viewport(outervbox)
       generalwindow.show()
       outervbox.set_border_width(3)
       
       featuresframe = gtk.Frame(" " + ln.feature_set + " ")
       featuresframe.set_border_width(3)
+      featuresvbox = gtk.VBox()
       hbox = gtk.HBox()
       hbox.set_border_width(2)
-      featuresframe.add(hbox)
+      featuresvbox.pack_start(hbox, False)
+      featuresframe.add(featuresvbox)
+      featuresvbox.show()
       outervbox.pack_start(featuresframe, False, False, 0)
       featuresframe.show()
       vbox = gtk.VBox()
@@ -998,6 +1011,42 @@ class mixprefs:
       hbox2.show()   
       hbox.pack_start(vbox, False, False, 9)     
       hbox.show()
+      
+      requires_restart = gtk.Frame(ln.requires_restart)
+      requires_restart.set_border_width(7)
+      featuresvbox.pack_start(requires_restart, False)
+      requires_restart.show()
+      
+      rrvbox = gtk.VBox()
+      rrvbox.set_border_width(9)
+      rrvbox.set_spacing(4)
+      requires_restart.add(rrvbox)
+      rrvbox.show()
+
+      def hjoin(*widgets):
+         hbox = gtk.HBox()
+         hbox.set_spacing(3)
+         for w in widgets:
+            hbox.pack_start(w, False)
+            w.show()
+         hbox.show()
+         return hbox
+
+      self.mic_qty_adj = gtk.Adjustment(idjc_config.num_micpairs * 2, 2.0, 10.0, 2.0)
+      spin = gtk.SpinButton(self.mic_qty_adj)
+      rrvbox.pack_start(hjoin(gtk.Label(ln.n_microphones), spin))
+   
+      self.stream_qty_adj = gtk.Adjustment(idjc_config.num_streamers, 1.0, 9.0, 1.0)
+      spin = gtk.SpinButton(self.stream_qty_adj)
+      rrvbox.pack_start(hjoin(gtk.Label(ln.n_streamers), spin))
+
+      self.recorder_qty_adj = gtk.Adjustment(idjc_config.num_recorders, 1.0, 4.0, 1.0)
+      spin = gtk.SpinButton(self.recorder_qty_adj)
+      rrvbox.pack_start(hjoin(gtk.Label(ln.n_recorders), spin))
+
+      self.rrvaluesdict = {"n_mics": self.mic_qty_adj,
+                           "n_streamers": self.stream_qty_adj,
+                           "n_recorders": self.recorder_qty_adj}
       
       # Meters on/off
       
@@ -1549,7 +1598,7 @@ class mixprefs:
       
       mic_controls = []
       vbox = gtk.VBox()
-      for i in range(num_micpairs):
+      for i in range(idjc_config.num_micpairs):
          uhbox = gtk.HBox(True)
          vbox.pack_start(uhbox, False, False, 0)
          uhbox.show()
@@ -1846,7 +1895,7 @@ class mixprefs:
       frame.show()
       
       self.mic_jack_data = []
-      for i in range(1, num_micpairs * 2 + 1):
+      for i in range(1, idjc_config.num_micpairs * 2 + 1):
          n = str(i)
          box, check, entry, update = make_entry_line(self, "mic_in_" + n + ": ", "MIC", True, i - 1)
          vbox.add(box)
@@ -2173,4 +2222,3 @@ class mixprefs:
          self.textdict.update(mic_control.textdict)
 
       self.rangewidgets = (self.parent.deckadj,)
-
