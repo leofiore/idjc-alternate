@@ -185,29 +185,6 @@ AC_CHECK_FUNCS([getline strndup canonicalize_file_name], :,
 # Use png or xpm for graphics
 AC_SUBST(EXT,[png])
 
-AC_ARG_VAR([STREAMERS], [The number of streamers that will be available])
-AC_ARG_VAR([RECORDERS], [The number of recorders that will be available])
-
-if test x$STREAMERS = x ; then
-   STREAMERS=6
-fi
-
-if test x$RECORDERS = x ; then
-   RECORDERS=2
-fi
-
-if test $STREAMERS -ge 1 -a $STREAMERS -le 9 ; then
-   AC_SUBST(STREAMERS_S, $STREAMERS)
-else
-   AC_MSG_ERROR("STREAMERS must be between 1 and 9 inclusive")
-fi
-
-if test $RECORDERS -ge 0 -a $RECORDERS -le 9 ; then
-   AC_SUBST(RECORDERS_S, $RECORDERS)
-else
-   AC_MSG_ERROR("RECORDERS must be between 0 and 9 inclusive")
-fi
-
 AC_ARG_ENABLE([static],AC_HELP_STRING([--disable-static],[build with shared libshout library]),[static=$enableval],[static="yes"])
 
 if test x$static = "xyes" ; then

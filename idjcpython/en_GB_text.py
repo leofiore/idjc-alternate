@@ -848,11 +848,13 @@ mp4year = "Year"
 
 native = "Native"
 
-n_microphones = "The number of microphone audio channels"
+n_microphones = "Microphone audio channels*"
 
-n_streamers = "The maximum number of concurrent streams"
+n_streamers = "Simultaneous stream(s)"
 
-n_recorders = "The maximum number of concurrent recordings"
+n_recorders = "Simultaneous recording(s)"
+
+n_feature_set_asterisk = "* In Fully Featured mode"
 
 new_profile_body = """Profile '%s' does
 not currently exist.

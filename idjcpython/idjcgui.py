@@ -2219,17 +2219,17 @@ class MainWindow:
       print ln
 
       config = ConfigParser.RawConfigParser()
-      config.read(self.idjc + 'limits')
+      config.read(self.idjc + 'config')
       try:
-         idjc_config.num_micpairs = config.getint('resource_count', 'n_mics') // 2
+         idjc_config.num_micpairs = config.getint('resource_count', 'num_micpairs') // 2
       except ConfigParser.Error:
-         idjc_config.num_micpairs = 4
+         idjc_config.num_micpairs = 2
       try:
-         idjc_config.num_streamers = idjc_config.num_encoders = config.getint('resource_count', 'n_streamers')
+         idjc_config.num_streamers = idjc_config.num_encoders = config.getint('resource_count', 'num_streamers')
       except ConfigParser.Error:
          idjc_config.num_streamers = idjc_config.num_encoders = 6
       try:
-         idjc_config.num_recorders = config.getint('resource_count', 'n_recorders')
+         idjc_config.num_recorders = config.getint('resource_count', 'num_recorders')
       except ConfigParser.Error:
          idjc_config.num_recorders = 2
 

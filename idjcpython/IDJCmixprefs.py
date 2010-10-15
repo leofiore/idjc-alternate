@@ -691,7 +691,7 @@ class mixprefs:
       except IOError:
          print "Error while writing out player defaults"
       try:
-         file = open(self.parent.idjc + "limits", "w")
+         file = open(self.parent.idjc + "config", "w")
          file.write("[resource_count]\n")
          for name, widget in self.rrvaluesdict.iteritems():
             file.write(name + "=" + str(int(widget.get_value())) + "\n")
@@ -1032,21 +1032,25 @@ class mixprefs:
          hbox.show()
          return hbox
 
-      self.mic_qty_adj = gtk.Adjustment(idjc_config.num_micpairs * 2, 2.0, 10.0, 2.0)
+      self.mic_qty_adj = gtk.Adjustment(idjc_config.num_micpairs * 2, 2.0, 12.0, 2.0)
       spin = gtk.SpinButton(self.mic_qty_adj)
-      rrvbox.pack_start(hjoin(gtk.Label(ln.n_microphones), spin))
+      rrvbox.pack_start(hjoin(spin, gtk.Label(ln.n_microphones)))
    
       self.stream_qty_adj = gtk.Adjustment(idjc_config.num_streamers, 1.0, 9.0, 1.0)
       spin = gtk.SpinButton(self.stream_qty_adj)
-      rrvbox.pack_start(hjoin(gtk.Label(ln.n_streamers), spin))
+      rrvbox.pack_start(hjoin(spin, gtk.Label(ln.n_streamers)))
 
-      self.recorder_qty_adj = gtk.Adjustment(idjc_config.num_recorders, 1.0, 4.0, 1.0)
+      self.recorder_qty_adj = gtk.Adjustment(idjc_config.num_recorders, 0.0, 4.0, 1.0)
       spin = gtk.SpinButton(self.recorder_qty_adj)
-      rrvbox.pack_start(hjoin(gtk.Label(ln.n_recorders), spin))
+      rrvbox.pack_start(hjoin(spin, gtk.Label(ln.n_recorders)))
+      
+      key_label = gtk.Label(ln.n_feature_set_asterisk)
+      rrvbox.pack_start(key_label)
+      key_label.show()
 
-      self.rrvaluesdict = {"n_mics": self.mic_qty_adj,
-                           "n_streamers": self.stream_qty_adj,
-                           "n_recorders": self.recorder_qty_adj}
+      self.rrvaluesdict = {"num_micpairs": self.mic_qty_adj,
+                           "num_streamers": self.stream_qty_adj,
+                           "num_recorders": self.recorder_qty_adj}
       
       # Meters on/off
       
