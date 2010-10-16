@@ -105,7 +105,7 @@ which one to use to <i>jackd</i>.</p>
                       M Audio Revolution-7.1 at 0xd000, irq 19
  1 [nanoKONTROL    ]: USB-Audio - nanoKONTROL
                       KORG INC. nanoKONTROL at usb-0000:00:1d.0-2, full speed
-$ jackd -d alsa -d "Revolution71 -r 44100 -p 256"</pre>
+$ jackd -d alsa -d Revolution71 -r 44100 -p 256</pre>
 
 <h5>Enabling MIDI events</h5>
 
