@@ -524,7 +524,7 @@ good_quality_resample = "Good"
 
 green_phone_tip = "Mix voice over IP audio to the output stream."
 
-group = "Group"
+group = "Button group"
 
 group_action = " Group Controls "
 
@@ -854,7 +854,7 @@ n_streamers = "Simultaneous stream(s)"
 
 n_recorders = "Simultaneous recording(s)"
 
-n_feature_set_asterisk = "* In Fully Featured mode"
+n_feature_set_asterisk = "* Works only in Fully Featured mode"
 
 new_profile_body = """Profile '%s' does
 not currently exist.

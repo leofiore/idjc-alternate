@@ -271,15 +271,11 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(hbox, False, False)
       hbox.show()
       
-      self.groups = []
-      for i in range(idjc_config.num_micpairs):
-         rb = gtk.RadioButton(None, str(i + 1))
-         if i:
-            rb.set_group(self.groups[0])
-         hbox.pack_start(rb, False)
-         rb.show()
-         self.booleandict[self.commandname + "_group%d" % (i + 1)] = rb
-         self.groups.append(rb)
+      self.groups_adj = gtk.Adjustment(1.0, 1.0, idjc_config.num_micpairs, 1.0)
+      self.valuesdict[self.commandname + "_groupnum"] = self.groups_adj
+      groups_spin = gtk.SpinButton(self.groups_adj, 0.0, 0)
+      hbox.pack_end(groups_spin, False)
+      groups_spin.show()
 
       self.autoopen = gtk.CheckButton(ln.autoopen)
       ivbox.pack_start(self.autoopen, False, False)

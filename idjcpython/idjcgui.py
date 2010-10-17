@@ -181,9 +181,7 @@ class MicOpener(gtk.HBox):
             if not m.group.get_active():
                free.append(m)
             else:
-               for i, mic_group in enumerate(m.groups):
-                  if mic_group.get_active():
-                     group_list[i].append(m)
+               group_list[int(m.groups_adj.props.value - 1)].append(m)
       
       for g in group_list:
          if g:
@@ -251,8 +249,7 @@ class MicOpener(gtk.HBox):
       self.mic_list.append(mic)
       mic.active.connect("toggled", self.cb_reconfigure)
       mic.group.connect("toggled", self.cb_reconfigure)
-      for mic_group in mic.groups:
-         mic_group.connect("toggled", self.cb_reconfigure)
+      mic.groups_adj.connect("notify::value", self.cb_reconfigure)
       mic.alt_name.connect("changed", self.cb_reconfigure)
 
    def __init__(self, approot):
