@@ -17,6 +17,7 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <jack/jack.h>
 #include "agc.h"
 
 struct mic
@@ -40,8 +41,9 @@ struct mic
    int pan_active;  /* whether to pan at all */
    
    /* state variables and resources */
+   int id;          /* numeric identifier */
    int active;      /* microphone is enabled */
-   struct agc *agc; /* automatic gain control */
+   struct agc *agc; /* automatic gain control and much more */
    float sample_rate; /* used for smoothed mute timing */
    float mgain;    /* mono gain value */
    float lgain;   /* left gain value */
@@ -49,11 +51,15 @@ struct mic
    float mute;    /* gain applied by soft mute control */
    float djmute;  /* gain applied for muting from the dj mix */
    float peak;    /* highest signal level since last call to mic_getpeak */
+   jack_port_t *jack_port; /* jack port handle */
+   jack_default_audio_sample_t *jadp; /* jack audio data pointer */
+   jack_nframes_t nframes; /* jack buffer size */
+   char *default_mapped_port_name; /* the natural partner port or NULL*/
    };
 
-void mic_process(struct mic *self, float input);
-void mic_stats(char *key, struct mic *self);
-struct mic *mic_init(int sample_rate);
-void mic_free(struct mic *self);
+void mic_process_start_all(struct mic **mics, jack_nframes_t nframes);
+float mic_process_all(struct mic **mics);
+void mic_stats_all(struct mic **mics);
+struct mic **mic_init_all(int n_mics, jack_client_t *client);
+void mic_free_all(struct mic **self);
 void mic_valueparse(struct mic *s, char *param);
-

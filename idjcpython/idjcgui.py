@@ -1,5 +1,5 @@
 #   idjcgui.py: Main python code of IDJC
-#   Copyright (C) 2005-2008 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2005-2010 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ console_help_message="""Usage:  idjc [-vhe] [-p profile] [-j jackserver] [-m mic
             -s    servers to connect to e.g. 13 for servers 1 and 3"""
             
 
-import locale, os, sys, fcntl, subprocess
+import locale, os, sys, fcntl, subprocess, ConfigParser
 
 def locale_encoding():
    read = subprocess.Popen(["locale", "-a"], stdout=subprocess.PIPE).stdout# I have to do all this because an exception 
@@ -96,6 +96,7 @@ except:
    import pango
 
 # import the python modules
+import idjc_config
 from idjc_config import *
 from IDJCmedia import *
 from sourceclientgui import *
@@ -169,23 +170,20 @@ class MicOpener(gtk.HBox):
       
    def new_button_set(self):
       # Clear away all child widgets.
-      self.forall(lambda x: x.destroy())
+      self.foreach(lambda x: x.destroy())
       self.mic2button = {}
       # New buttons arrive.
       free = []
-      group1 = []
-      group2 = []
+      group_list = [[] for x in xrange(idjc_config.num_micpairs)]
       for m in self.mic_list:
          if m.active.get_active():
             # Mics listed according to their group.
             if not m.group.get_active():
                free.append(m)
-            elif m.group1.get_active():
-               group1.append(m)
             else:
-               group2.append(m)
+               group_list[int(m.groups_adj.props.value - 1)].append(m)
       
-      for g in (group1, group2):
+      for g in group_list:
          if g:
             ui_names, full_names = self.mic_names(g)
             mb = MicButton("  ".join(full_names))
@@ -251,8 +249,7 @@ class MicOpener(gtk.HBox):
       self.mic_list.append(mic)
       mic.active.connect("toggled", self.cb_reconfigure)
       mic.group.connect("toggled", self.cb_reconfigure)
-      mic.group1.connect("toggled", self.cb_reconfigure)
-      mic.group2.connect("toggled", self.cb_reconfigure)
+      mic.groups_adj.connect("notify::value", self.cb_reconfigure)
       mic.alt_name.connect("changed", self.cb_reconfigure)
 
    def __init__(self, approot):
@@ -791,7 +788,7 @@ class MicMeter(gtk.VBox):
       else:
          self.show()
 
-   def __init__(self, labeltext):
+   def __init__(self, labelbasetext, index):
       gtk.VBox.__init__(self)
       self.set_border_width(0)
       lhbox = gtk.HBox()
@@ -805,6 +802,7 @@ class MicMeter(gtk.VBox):
       lhbox.pack_start(self.led, False, False)
       self.set_led(False)
       self.led.show()
+      labeltext = labelbasetext + str(index)
       label = gtk.Label(labeltext)
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, len(labeltext)))
@@ -2206,7 +2204,7 @@ class MainWindow:
       self.denc = display_enc
       self.fenc = file_enc
       
-      print "%s Version %s\n%s\n%s\n" % (appname, version, copyright, license)
+      print "%s Version %s\n%s\n%s\n" % (appname, self.version, copyright, license)
       
       if os.environ["VERSION_ONLY"] == "1":
          raise self.initcleanexit
@@ -2217,11 +2215,27 @@ class MainWindow:
       self.init_profile()            # decide which profile to use
       print ln
 
+      config = ConfigParser.RawConfigParser()
+      config.read(self.idjc + 'config')
+      try:
+         idjc_config.num_micpairs = config.getint('resource_count', 'num_micpairs') // 2
+      except ConfigParser.Error:
+         idjc_config.num_micpairs = 2
+      try:
+         idjc_config.num_streamers = idjc_config.num_encoders = config.getint('resource_count', 'num_streamers')
+      except ConfigParser.Error:
+         idjc_config.num_streamers = idjc_config.num_encoders = 6
+      try:
+         idjc_config.num_recorders = config.getint('resource_count', 'num_recorders')
+      except ConfigParser.Error:
+         idjc_config.num_recorders = 2
+
       # Name the mixer and sourceclient jack client IDs.
       tail = "-" + self.profile if os.environ["EXTRA"] == "1" else ""
       os.environ["mx_client_id"] = mx_id = "idjc-mx" + tail
       os.environ["sc_client_id"] = sc_id = "idjc-sc" + tail
       print "jack client IDs:", mx_id, sc_id
+      os.environ["mx_mic_qty"] = str(idjc_config.num_micpairs * 2)
 
       self.session_loaded = False
  
@@ -2828,7 +2842,6 @@ class MainWindow:
       self.streammeterbox.show()
 
       # Table that contains 1, 2, or 4 microphone meters.
-      # When showing 3, one will be greyed out.
       self.micmeterbox = PaddedVBox(4, 2, 0, 1, 6)
       self.meterbox.pack_start(self.micmeterbox, False, False, 0)
       self.micmeterbox.show()
@@ -2842,7 +2855,7 @@ class MainWindow:
 
       sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       self.stream_indicator = []
-      for i in range(num_streamers):
+      for i in range(idjc_config.num_streamers):
          self.stream_indicator.append(StreamMeter(1, 100))
       self.stream_indicator_box, self.listener_indicator = make_stream_meter_unit(ln.streams, self.stream_indicator, self.tooltips)
       self.streammeterbox.pack_start(self.stream_indicator_box, False, False, 0)
@@ -2856,20 +2869,21 @@ class MainWindow:
       stream_vu_box.show()
       self.tooltips.set_tip(stream_vu_box, ln.stream_vu_meter_tip)
        
-      self.mic_1_meter = MicMeter("Mic 1")
-      self.mic_2_meter = MicMeter("Mic 2")
-      self.mic_3_meter = MicMeter("Mic 3")
-      self.mic_4_meter = MicMeter("Mic 4")
-
-      self.micmeterbox.pack_start(self.mic_1_meter)
-      self.micmeterbox.pack_start(self.mic_2_meter)
-      self.micmeterbox.pack_start(self.mic_3_meter)
-      self.micmeterbox.pack_start(self.mic_4_meter)
-      
-      self.mic_1_meter.show()
-      self.mic_2_meter.show()
-      self.mic_3_meter.show()
-      self.mic_4_meter.show()
+      self.mic_meters = [MicMeter("Mic ", i) for i in range(1, idjc_config.num_micpairs * 2 + 1)]
+      if len(self.mic_meters) <= 4:
+         for meter in self.mic_meters:
+            self.micmeterbox.pack_start(meter)
+            meter.show()
+      else:
+         table = gtk.Table(idjc_config.num_micpairs, 2)
+         table.set_row_spacings(4)
+         table.set_col_spacings(4)
+         self.micmeterbox.pack_start(table)
+         table.show()
+         for i, meter in enumerate(self.mic_meters):
+            row, col = divmod(i, 2)
+            table.attach(meter, col, col + 1, row, row + 1)
+            meter.show()
       
       self.tooltips.set_tip(self.micmeterbox, ln.mic_meter_tip)
 
@@ -3057,10 +3071,6 @@ class MainWindow:
 
       # Variable map for stuff read from the mixer
       self.vumap = {
-         "mic_1_levels" : self.mic_1_meter,
-         "mic_2_levels" : self.mic_2_meter,
-         "mic_3_levels" : self.mic_3_meter,
-         "mic_4_levels" : self.mic_4_meter,
          "str_l_peak"   : self.str_l_peak,
          "str_r_peak"   : self.str_r_peak,
          "str_l_rms"    : self.str_l_rms_vu,
@@ -3082,6 +3092,9 @@ class MainWindow:
          "left_additional_metadata" : self.metadata_left_ctrl,
          "right_additional_metadata": self.metadata_right_ctrl
          }
+         
+      for i, mic in enumerate(self.mic_meters):
+         self.vumap.update({"mic_%d_levels" % (i + 1): mic})
 
       self.controls= IDJCcontrols.Controls(self)
       self.controls.load_prefs()

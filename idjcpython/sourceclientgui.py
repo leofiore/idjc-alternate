@@ -27,6 +27,7 @@ import os, time, fcntl, subprocess, urllib, urllib2, base64
 import xml.dom.minidom as mdom
 import xml.etree.ElementTree
 
+import idjc_config
 from idjc_config import *
 from ln_text import ln
 from IDJCfree import int_object, threadslock, DefaultEntry
@@ -1509,7 +1510,7 @@ class StreamTab(Tab):
       hbox.pack_start(self.start_player_action, False, False, 0)
       self.start_player_action.show()
       set_tip(self.start_player_action, ln.auto_start_player_tip)
-      if num_recorders:
+      if idjc_config.num_recorders:
          vseparator = gtk.VSeparator()
          hbox.pack_start(vseparator, True, False, 0)
          vseparator.show()
@@ -1517,7 +1518,7 @@ class StreamTab(Tab):
       self.start_recorder_action = AutoAction(ln.start_recorder, [ (chr(ord("1") + i), t.record_buttons.record_button.activate) for i, t in enumerate(self.source_client_gui.recordtabframe.tabs) ])
       
       hbox.pack_end(self.start_recorder_action, False, False, 0)
-      if num_recorders:
+      if idjc_config.num_recorders:
          self.start_recorder_action.show()
       set_tip(self.start_recorder_action, ln.auto_start_recorder_tip)
       ic_vbox.pack_start(hbox, False, False, 0)
@@ -2410,7 +2411,7 @@ class SourceClientGui:
       if reply != "succeeded":
          print self.server_errmsg
          self.app_exit()
-      self.send("encoders=%d\nstreamers=%d\nrecorders=%d\ncommand=threads_init\n" % (num_encoders, num_streamers, num_recorders))
+      self.send("encoders=%d\nstreamers=%d\nrecorders=%d\ncommand=threads_init\n" % (idjc_config.num_encoders, idjc_config.num_streamers, idjc_config.num_recorders))
       if self.receive() != "succeeded":
          print self.unexpected_reply
          print "failed to initialise threads\n"
@@ -2652,13 +2653,13 @@ class SourceClientGui:
       vbox.set_spacing(10)
       self.window.add(vbox)
       
-      self.recordtabframe = TabFrame(self, ln.record, num_recorders, RecordTab, pkgdatadir, (
+      self.recordtabframe = TabFrame(self, ln.record, idjc_config.num_recorders, RecordTab, pkgdatadir, (
                                                                 ("clear", "led_unlit_clear_border_64x64"),
                                                                 ("amber", "led_lit_amber_black_border_64x64"),
                                                                 ("red", "led_lit_red_black_border_64x64")),
                                                                 gfext,
                                                                 ln.record_tab_tip)
-      self.streamtabframe = StreamTabFrame(self, ln.stream, num_streamers, StreamTab, pkgdatadir, (
+      self.streamtabframe = StreamTabFrame(self, ln.stream, idjc_config.num_streamers, StreamTab, pkgdatadir, (
                                                                 ("clear", "led_unlit_clear_border_64x64"),
                                                                 ("amber", "led_lit_amber_black_border_64x64"),
                                                                 ("green", "led_lit_green_black_border_64x64")),
@@ -2677,7 +2678,7 @@ class SourceClientGui:
       for rectab in self.recordtabframe.tabs:
          rectab.source_dest.populate_stream_selector(ln.stream, self.streamtabframe.tabs)
       vbox.pack_start(self.recordtabframe, False, False, 0)
-      if num_recorders:
+      if idjc_config.num_recorders:
          self.recordtabframe.show()
       vbox.show()
       self.tabs = (self, )                      #

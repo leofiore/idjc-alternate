@@ -20,8 +20,10 @@ __all__ = ['mixprefs']
 import pygtk
 pygtk.require('2.0')
 import gtk, os, licence_window, p3db, shutil
+import idjc_config
 from idjc_config import *
 from ln_text import ln
+from IDJCfree import int_object
 import IDJCcontrols
 
 class XChatInstaller(gtk.Button):
@@ -107,8 +109,11 @@ class AGCControl(gtk.Frame):
          value = widget.get_value()
       if isinstance(widget, (gtk.CheckButton, gtk.ComboBox)):
          value = (0, 1)[widget.get_active()]
-      stringtosend = "AGCP=%s=%s\nACTN=%s\nend\n" % (wname, str(value), self.commandname)
+      stringtosend = "INDX=%d\nAGCP=%s=%s\nACTN=%s\nend\n" % (self.index, wname, str(value), "mic_control")
       self.approot.mixer_write(stringtosend, True)
+
+   def set_partner(self, partner):
+      self.partner = partner
 
    def numline(self, label_text, wname, initial=0, mini=0, maxi=0, step=0, digits=0, adj=None):
       hbox = gtk.HBox()
@@ -197,11 +202,12 @@ class AGCControl(gtk.Frame):
          self.processed_box.hide()
          self.simple_box.show()
          
-   def __init__(self, approot, ui_name, commandname):
+   def __init__(self, approot, ui_name, commandname, index):
       self.approot = approot
       self.ui_name = ui_name
-      self.meter = getattr(approot, ("mic_" + ui_name + "_meter"))
+      self.meter = approot.mic_meters[int(ui_name) - 1]
       self.commandname = commandname
+      self.index = index
       self.valuesdict = {}
       self.booleandict = {}
       self.textdict = {}
@@ -222,7 +228,6 @@ class AGCControl(gtk.Frame):
       hbox.pack_start(self.alt_name, True, True)
       self.alt_name.show()
       hbox.show()
-      
       
       self.set_label_widget(hbox)
       hbox.show()
@@ -260,28 +265,23 @@ class AGCControl(gtk.Frame):
             
       hbox = gtk.HBox()
       self.group = gtk.CheckButton(ln.group)
+      self.booleandict[self.commandname + "_group"] = self.group
       hbox.pack_start(self.group, False, False, 0)
       self.group.show()
       ivbox.pack_start(hbox, False, False)
       hbox.show()
-      self.group1 = gtk.RadioButton(None, "1")
-      hbox.pack_start(self.group1, False, False)
-      self.group1.show()
-      self.group2 = gtk.RadioButton(self.group1, "2")
-      hbox.pack_start(self.group2, False, False)
-      self.group2.show()
-
-      self.booleandict[self.commandname + "_group"] = self.group
-      self.booleandict[self.commandname + "_group1"] = self.group1
-      self.booleandict[self.commandname + "_group2"] = self.group2
       
+      self.groups_adj = gtk.Adjustment(1.0, 1.0, idjc_config.num_micpairs, 1.0)
+      self.valuesdict[self.commandname + "_groupnum"] = self.groups_adj
+      groups_spin = gtk.SpinButton(self.groups_adj, 0.0, 0)
+      hbox.pack_end(groups_spin, False)
+      groups_spin.show()
+
       self.autoopen = gtk.CheckButton(ln.autoopen)
       ivbox.pack_start(self.autoopen, False, False)
       self.autoopen.show()
       set_tip(self.autoopen, ln.autoopen_tip)
       self.booleandict[self.commandname + "_autoopen"] = self.autoopen
-      
-      
 
       sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       panframe = gtk.Frame()
@@ -426,6 +426,7 @@ class AGCControl(gtk.Frame):
 
       self.complexity.set_active(1)
       indjmix.set_active(True)
+      self.partner = None
       self.active.emit("toggled")
 
 mIRC_colours = (                # Actually these are the XChat2 colours.
@@ -478,7 +479,7 @@ def make_colour_box_menu(entry, callback):
    menu.show()
    return menu
 
-def make_entry_line(parent, item, code, hastoggle):
+def make_entry_line(parent, item, code, hastoggle, index=None):
    box = gtk.HBox(False, 0)
    box.set_border_width(4)
    box.set_spacing(5)
@@ -487,12 +488,12 @@ def make_entry_line(parent, item, code, hastoggle):
    entry.set_size_request(185, -1)
 
    savebutton = gtk.Button(ln.save)
-   savebutton.connect("clicked", parent.save_click, (code, entry))
+   savebutton.connect("clicked", parent.save_click, (code, entry, index))
    box.pack_end(savebutton, False, False, 0)
    savebutton.show()
 
    setbutton = gtk.Button(ln.set)
-   setbutton.connect("clicked", parent.update_click, (code, entry))
+   setbutton.connect("clicked", parent.update_click, (code, entry, index))
    box.pack_end(setbutton, False, False, 0)
    setbutton.show()
 
@@ -627,7 +628,7 @@ class mixprefs:
       self.right_player_frame.set_sensitive(state)
       self.misc_session_frame.set_sensitive(state)
    
-   jack_ports= ("mic1", "mic2", "mic3", "mic4", "audl", "audr", "strl", "strr", "auxl", "auxr", "midi", "dol", "dor", "dil", "dir")
+   jack_ports= ("audl", "audr", "strl", "strr", "auxl", "auxr", "midi", "dol", "dor", "dil", "dir")
 
    def load_jack_port_settings(self):
       for port in self.jack_ports:
@@ -636,12 +637,21 @@ class mixprefs:
             getattr(self, port+"entry").set_text(file.readline()[:-1])
             getattr(self, port+"check").set_active(file.readline() == "1\n")
             file.close()
+            
+      for i, mic in enumerate(self.mic_jack_data):
+         pathname = self.parent.idjc + "mic" + str(i + 1)
+         if os.path.isfile(pathname):
+            file = open(pathname, "r")
+            mic[1].set_text(file.readline()[:-1])
+            mic[0].set_active(file.readline() == "1\n")
    
    def auto_click(self, widget, data):
       data.set_sensitive(not widget.get_active())
    
    def save_click(self, widget, data):
       filename = self.parent.idjc + data[0].lower()
+      if data[2] is not None:
+         filename += str(data[2] + 1)
       file = open(filename, "w")
       if data[1].flags() & gtk.SENSITIVE:
          file.write(data[1].get_text() + "\n" + "0\n")
@@ -649,12 +659,15 @@ class mixprefs:
          file.write(data[1].get_text() + "\n" + "1\n")
       file.close()
    
-   def update_click(self, widget, (code, entry)):
+   def update_click(self, widget, (code, entry, index)):
       if entry.flags() & gtk.SENSITIVE:
          entrytext = entry.get_text()
       else:
          entrytext = "default"
-      buffer = "ACTN=remake%s\n%s=%s\nend\n" % (code.lower(), code, entrytext)
+      if index is None:
+         buffer = "ACTN=remake%s\n%s=%s\nend\n" % (code.lower(), code, entrytext)
+      else:
+         buffer = "ACTN=remake%s\n%s=%s\nINDX=%d\nend\n" % (code.lower(), code, entrytext, index)
       self.parent.mixer_write(buffer, True)
       
    def delete_event(self, widget, event, data=None):
@@ -670,6 +683,14 @@ class mixprefs:
             file.write(name + "=" + str(widget.get_value()) + "\n")
          for name, widget in self.textdict.iteritems():
             file.write(name + "=" + widget.get_text() + "\n")
+         file.close()
+      except IOError:
+         print "Error while writing out player defaults"
+      try:
+         file = open(self.parent.idjc + "config", "w")
+         file.write("[resource_count]\n")
+         for name, widget in self.rrvaluesdict.iteritems():
+            file.write(name + "=" + str(int(widget.get_value())) + "\n")
          file.close()
       except IOError:
          print "Error while writing out player defaults"
@@ -888,6 +909,8 @@ class mixprefs:
    def bind_jack_ports(self):
       for port in self.jack_ports:
          getattr(self, port+"update").clicked()
+      for mic_entry_line in self.mic_jack_data:
+         mic_entry_line[2].clicked()
 
    def cb_headroom(self, widget):
       self.parent.mixer_write("HEAD=%f\nACTN=headroom\nend\n" % widget.get_value(), True)
@@ -902,15 +925,27 @@ class mixprefs:
       else:         
          left.treeview.remove_column(left.rgtvcolumn)
          right.treeview.remove_column(right.rgtvcolumn)
+      
+   def cb_configure_event(self, window, event):
+         self.winx.set_value(event.width)
+         self.winy.set_value(event.height)
+         
+   def cb_realize(self, window):
+      window.resize(self.winx, self.winy)
          
    def __init__(self, parent):
       self.parent = parent
       self.parent.prefs_window = self
       self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+      self.window.set_size_request(-1, 480)
+      self.winx = int_object(1)
+      self.winy = int_object(1)      
+      self.window.connect("configure-event", self.cb_configure_event)
+      self.window.connect("realize", self.cb_realize)
       self.parent.window_group.add_window(self.window)
       self.window.set_title(ln.prefs_window + parent.profile_title)
       self.window.set_border_width(10)
-      self.window.set_resizable(False)
+      self.window.set_resizable(True)
       self.window.connect("delete_event",self.delete_event)
       self.window.set_destroy_with_parent(True)
       self.window.set_icon_from_file(pkgdatadir + "icon" + gfext)
@@ -921,17 +956,21 @@ class mixprefs:
       
       generalwindow = gtk.ScrolledWindow()
       generalwindow.set_border_width(8)
-      generalwindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
+      generalwindow.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       outervbox = gtk.VBox()
+      outervbox.set_spacing(5)
       generalwindow.add_with_viewport(outervbox)
       generalwindow.show()
       outervbox.set_border_width(3)
       
       featuresframe = gtk.Frame(" " + ln.feature_set + " ")
       featuresframe.set_border_width(3)
+      featuresvbox = gtk.VBox()
       hbox = gtk.HBox()
       hbox.set_border_width(2)
-      featuresframe.add(hbox)
+      featuresvbox.pack_start(hbox, False)
+      featuresframe.add(featuresvbox)
+      featuresvbox.show()
       outervbox.pack_start(featuresframe, False, False, 0)
       featuresframe.show()
       vbox = gtk.VBox()
@@ -969,6 +1008,46 @@ class mixprefs:
       hbox.pack_start(vbox, False, False, 9)     
       hbox.show()
       
+      requires_restart = gtk.Frame(ln.requires_restart)
+      requires_restart.set_border_width(7)
+      featuresvbox.pack_start(requires_restart, False)
+      requires_restart.show()
+      
+      rrvbox = gtk.VBox()
+      rrvbox.set_border_width(9)
+      rrvbox.set_spacing(4)
+      requires_restart.add(rrvbox)
+      rrvbox.show()
+
+      def hjoin(*widgets):
+         hbox = gtk.HBox()
+         hbox.set_spacing(3)
+         for w in widgets:
+            hbox.pack_start(w, False)
+            w.show()
+         hbox.show()
+         return hbox
+
+      self.mic_qty_adj = gtk.Adjustment(idjc_config.num_micpairs * 2, 2.0, 12.0, 2.0)
+      spin = gtk.SpinButton(self.mic_qty_adj)
+      rrvbox.pack_start(hjoin(spin, gtk.Label(ln.n_microphones)))
+   
+      self.stream_qty_adj = gtk.Adjustment(idjc_config.num_streamers, 1.0, 9.0, 1.0)
+      spin = gtk.SpinButton(self.stream_qty_adj)
+      rrvbox.pack_start(hjoin(spin, gtk.Label(ln.n_streamers)))
+
+      self.recorder_qty_adj = gtk.Adjustment(idjc_config.num_recorders, 0.0, 4.0, 1.0)
+      spin = gtk.SpinButton(self.recorder_qty_adj)
+      rrvbox.pack_start(hjoin(spin, gtk.Label(ln.n_recorders)))
+      
+      key_label = gtk.Label(ln.n_feature_set_asterisk)
+      rrvbox.pack_start(key_label)
+      key_label.show()
+
+      self.rrvaluesdict = {"num_micpairs": self.mic_qty_adj,
+                           "num_streamers": self.stream_qty_adj,
+                           "num_recorders": self.recorder_qty_adj}
+      
       # Meters on/off
       
       def showhide(toggle, target):
@@ -1000,10 +1079,8 @@ class mixprefs:
       self.show_microphones.show()            
       
       self.show_all_microphones = gtk.RadioButton(None, ln.all)
-      self.show_all_microphones.connect("toggled", parent.mic_1_meter.always_show)
-      self.show_all_microphones.connect("toggled", parent.mic_2_meter.always_show)
-      self.show_all_microphones.connect("toggled", parent.mic_3_meter.always_show)
-      self.show_all_microphones.connect("toggled", parent.mic_4_meter.always_show)
+      for meter in parent.mic_meters:
+         self.show_all_microphones.connect("toggled", meter.always_show)
       hbox.pack_start(self.show_all_microphones, False, False)
       self.show_all_microphones.show()
       
@@ -1153,6 +1230,7 @@ class mixprefs:
       # Reconnection dialog config
       
       self.recon_config = ReconnectionDialogConfig()
+      self.recon_config.set_border_width(3)
       parent.tooltips.set_tip(self.recon_config, ln.recon_tip)
       outervbox.pack_start(self.recon_config, False, False, 0)
       self.recon_config.show()
@@ -1508,7 +1586,7 @@ class mixprefs:
       
       scrolled_window = gtk.ScrolledWindow()
       scrolled_window.set_border_width(0)
-      scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
+      scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       panevbox = gtk.VBox()
       scrolled_window.add_with_viewport(panevbox)
       scrolled_window.show()
@@ -1518,8 +1596,9 @@ class mixprefs:
      
       # New AGC controls
       
+      mic_controls = []
       vbox = gtk.VBox()
-      for i in range(2):
+      for i in range(idjc_config.num_micpairs):
          uhbox = gtk.HBox(True)
          vbox.pack_start(uhbox, False, False, 0)
          uhbox.show()
@@ -1529,11 +1608,13 @@ class mixprefs:
          for j in range(2):
             n = i * 2 + j
             micname = "mic_control_%d" % n
-            c = AGCControl(self.parent, str(n + 1), micname)
-            setattr(self, micname, c)
+            c = AGCControl(self.parent, str(n + 1), micname, n)
             uhbox.add(c)
             c.show()
             parent.mic_opener.add_mic(c)
+            mic_controls.append(c)
+         mic_controls[-2].set_partner(mic_controls[-1])
+         mic_controls[-1].set_partner(mic_controls[-2])   
       parent.mic_opener.new_button_set()
 
       panevbox.pack_start(vbox, False, False, 0)
@@ -1792,9 +1873,14 @@ class mixprefs:
        
       # Jack settings Tab      
                  
+      scrolled = gtk.ScrolledWindow()
+      scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       jack_vbox = gtk.VBox()
+      scrolled.add_with_viewport(jack_vbox)
+      scrolled.child.set_shadow_type(gtk.SHADOW_NONE)
       jack_vbox.set_spacing(3)
-      jack_vbox.set_border_width(4)
+      #jack_vbox.set_border_width(4)
+      jack_vbox.show()
       
       jackname = os.environ["IDJC_JACK_SERVER"]
       if jackname != "default":
@@ -1808,20 +1894,16 @@ class mixprefs:
       frame.add(vbox)
       frame.show()
       
-      box, self.mic1check, self.mic1entry, self.mic1update = make_entry_line(self, "mic_in_1: ", "MIC1", True)
-      vbox.add(box)
-      box, self.mic2check, self.mic2entry, self.mic2update = make_entry_line(self, "mic_in_2: ", "MIC2", True)
-      vbox.add(box)
-      box, self.mic3check, self.mic3entry, self.mic3update = make_entry_line(self, "mic_in_3: ", "MIC3", True)
-      vbox.add(box)
-      box, self.mic4check, self.mic4entry, self.mic4update = make_entry_line(self, "mic_in_4: ", "MIC4", True)
-      vbox.add(box)
-      jack_vbox.add(frame)
+      self.mic_jack_data = []
+      for i in range(1, idjc_config.num_micpairs * 2 + 1):
+         n = str(i)
+         box, check, entry, update = make_entry_line(self, "mic_in_" + n + ": ", "MIC", True, i - 1)
+         vbox.add(box)
+         self.mic_jack_data.append((check, entry, update))
+         if i < 5:
+            entry.set_text("system:capture_%d" % i)
+      jack_vbox.pack_start(frame, False)
       vbox.show()
-      self.mic1entry.set_text("system:capture_1")
-      self.mic2entry.set_text("system:capture_2")
-      self.mic3entry.set_text("system:capture_3")
-      self.mic4entry.set_text("system:capture_4")
       
       frame = gtk.Frame()
       frame.set_border_width(5)
@@ -1834,7 +1916,7 @@ class mixprefs:
       vbox.add(box)
       box, self.midicheck, self.midientry, self.midiupdate = make_entry_line(self, "midi_control: ", "MIDI", False)
       vbox.add(box)
-      jack_vbox.add(frame)
+      jack_vbox.pack_start(frame, False)
       vbox.show()
      
       frame = gtk.Frame()
@@ -1846,7 +1928,7 @@ class mixprefs:
       vbox.add(box)
       box, self.audrcheck, self.audrentry, self.audrupdate = make_entry_line(self, "dj_out_r: ", "AUDR", True)
       vbox.add(box)
-      jack_vbox.add(frame)
+      jack_vbox.pack_start(frame, False)
       vbox.show()
       self.audlentry.set_text("system:playback_1")
       self.audrentry.set_text("system:playback_2")
@@ -1860,7 +1942,7 @@ class mixprefs:
       vbox.add(box)
       box, self.strrcheck, self.strrentry, self.strrupdate = make_entry_line(self, "str_out_r: ", "STRR", True)
       vbox.add(box)
-      jack_vbox.add(frame)
+      jack_vbox.pack_start(frame, False)
       vbox.show()
       self.strlentry.set_text("system:playback_5")
       self.strrentry.set_text("system:playback_6")
@@ -1886,13 +1968,13 @@ class mixprefs:
       box, self.dircheck, self.direntry, self.dirupdate = make_entry_line(self, "dsp_in_r: ", "DIR", False)
       self.direntry.set_text("jamin:out_R")
       vbox.add(box)
-      jack_vbox.add(frame)
+      jack_vbox.pack_start(frame, False)
       vbox.show()
       
       jacklabel = gtk.Label(ln.jack_ports_tab)
-      self.notebook.append_page(jack_vbox, jacklabel)
-      jack_vbox.show()
+      self.notebook.append_page(scrolled, jacklabel)
       jacklabel.show()
+      scrolled.show()
 
       # Controls tab
       tab= IDJCcontrols.ControlsUI(self.parent.controls)
@@ -2018,9 +2100,10 @@ class mixprefs:
       self.dither.set_active(True)
       self.fastest_resample.set_active(True)
       self.enable_tooltips.set_active(True)
-      self.mic_control_0.active.set_active(True)
-      self.mic_control_0.alt_name.set_text("DJ")
-      self.mic_control_0.autoopen.set_active(True)
+      mic0 = mic_controls[0]
+      mic0.active.set_active(True)
+      mic0.alt_name.set_text("DJ")
+      mic0.autoopen.set_active(True)
       self.show_stream_meters.set_active(True)
       self.show_microphones.set_active(True)
       self.headroom.set_value(3.0)
@@ -2085,10 +2168,8 @@ class mixprefs:
          "mic_meters_active" : self.show_active_microphones,
          }
          
-      self.playersettingsdict.update(self.mic_control_0.booleandict)
-      self.playersettingsdict.update(self.mic_control_1.booleandict)
-      self.playersettingsdict.update(self.mic_control_2.booleandict)
-      self.playersettingsdict.update(self.mic_control_3.booleandict)
+      for mic_control in mic_controls:
+         self.playersettingsdict.update(mic_control.booleandict)
          
       self.valuesdict = {
          "interval"          : self.intervaladj,
@@ -2100,6 +2181,8 @@ class mixprefs:
          "minwiny"       : self.parent.minwiny,
          "jingleswinx"   : self.parent.jingles.jingleswinx,
          "jingleswiny"   : self.parent.jingles.jingleswiny,
+         "prefswinx"     : self.winx,
+         "prefswiny"     : self.winy,
          "passspeed"     : self.parent.passspeed_adj,
          "normboost"     : self.normboost_adj,
          "normceiling"   : self.normceiling_adj,
@@ -2110,12 +2193,10 @@ class mixprefs:
          "rg_default"    : self.rg_defaultgain,
          "rg_boost"      : self.rg_boost,
          }
-         
-      self.valuesdict.update(self.mic_control_0.valuesdict) 
-      self.valuesdict.update(self.mic_control_1.valuesdict) 
-      self.valuesdict.update(self.mic_control_2.valuesdict) 
-      self.valuesdict.update(self.mic_control_3.valuesdict) 
-         
+
+      for mic_control in mic_controls:
+         self.valuesdict.update(mic_control.valuesdict)
+
       self.textdict = {                   # These are all text
          "prokuser"      : self.p3prefs.prokuser,
          "prokdatabase"  : self.p3prefs.prokdatabase,
@@ -2137,10 +2218,7 @@ class mixprefs:
          "con_delays"    : self.recon_config.csl,
          }
 
-      self.textdict.update(self.mic_control_0.textdict)
-      self.textdict.update(self.mic_control_1.textdict)
-      self.textdict.update(self.mic_control_2.textdict)
-      self.textdict.update(self.mic_control_3.textdict)
+      for mic_control in mic_controls:
+         self.textdict.update(mic_control.textdict)
 
       self.rangewidgets = (self.parent.deckadj,)
-
