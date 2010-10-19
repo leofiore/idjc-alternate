@@ -176,7 +176,7 @@ class MicOpener(gtk.HBox):
       free = []
       group_list = [[] for x in xrange(idjc_config.num_micpairs)]
       for m in self.mic_list:
-         if m.active.get_active():
+         if m.mode.get_active():
             # Mics listed according to their group.
             if not m.group.get_active():
                free.append(m)
@@ -247,7 +247,7 @@ class MicOpener(gtk.HBox):
       """mic: AGCControl object passed here to register it with this class."""
 
       self.mic_list.append(mic)
-      mic.active.connect("toggled", self.cb_reconfigure)
+      mic.mode.connect("changed", self.cb_reconfigure)
       mic.group.connect("toggled", self.cb_reconfigure)
       mic.groups_adj.connect("notify::value", self.cb_reconfigure)
       mic.alt_name.connect("changed", self.cb_reconfigure)

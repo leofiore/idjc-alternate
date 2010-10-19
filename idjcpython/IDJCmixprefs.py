@@ -108,12 +108,13 @@ class AGCControl(gtk.Frame):
       if isinstance(widget, (gtk.SpinButton, gtk.Scale)):
          value = widget.get_value()
       if isinstance(widget, (gtk.CheckButton, gtk.ComboBox)):
-         value = (0, 1)[widget.get_active()]
+         value = int(widget.get_active())
       stringtosend = "INDX=%d\nAGCP=%s=%s\nACTN=%s\nend\n" % (self.index, wname, str(value), "mic_control")
       self.approot.mixer_write(stringtosend, True)
 
    def set_partner(self, partner):
       self.partner = partner
+      self.mode.append_text(ln.mic_stereo + partner.ui_name)
 
    def numline(self, label_text, wname, initial=0, mini=0, maxi=0, step=0, digits=0, adj=None):
       hbox = gtk.HBox()
@@ -194,7 +195,7 @@ class AGCControl(gtk.Frame):
    def cb_pan_middle(self, button):
       self.pan.set_value(50)
 
-   def cb_complexity(self, combobox):
+   def cb_mode(self, combobox):
       if combobox.get_active():
          self.processed_box.show()
          self.simple_box.hide()
@@ -214,13 +215,12 @@ class AGCControl(gtk.Frame):
       gtk.Frame.__init__(self)
       set_tip = approot.tooltips.set_tip
       hbox = gtk.HBox()
-      self.active = gtk.CheckButton(ui_name)
-      set_tip(self.active, ln.agc_active_tip)
-      self.active.connect("toggled", self.cb_active)
-      self.active.connect("toggled", self.sendnewstats, "active")
-      self.booleandict[self.commandname + "_active"] = self.active
-      hbox.pack_start(self.active, False, False)
-      self.active.show()
+      hbox.set_spacing(3)
+
+      label = gtk.Label('<span weight="600">' + ui_name + "</span>")
+      label.set_use_markup(True)
+      hbox.pack_start(label, False)
+      label.show()
  
       self.alt_name = gtk.Entry()
       set_tip(self.alt_name, ln.alt_mic_name)
@@ -239,16 +239,16 @@ class AGCControl(gtk.Frame):
       self.add(self.vbox)
       self.vbox.show()
 
-      self.complexity = gtk.combo_box_new_text()
-      self.vbox.pack_start(self.complexity, False, False)
-      self.complexity.append_text(ln.mic_simple)
-      self.complexity.append_text(ln.mic_processed)
-      self.complexity.connect("changed", self.sendnewstats, "complexity")
-      self.complexity.emit("changed")
-      self.complexity.connect("changed", self.cb_complexity)
-      self.booleandict[self.commandname + "_complexity"] = self.complexity
-      self.complexity.show()
-      set_tip(self.complexity, ln.mic_complexity_tip)
+      self.mode = gtk.combo_box_new_text()
+      self.vbox.pack_start(self.mode, False, False)
+      for each in (ln.mic_off, ln.mic_simple, ln.mic_processed):
+         self.mode.append_text(each)
+      self.mode.connect("changed", self.sendnewstats, "mode")
+      self.mode.emit("changed")
+      self.mode.connect("changed", self.cb_mode)
+      self.booleandict[self.commandname + "_mode"] = self.mode
+      self.mode.show()
+      set_tip(self.mode, ln.mic_mode_tip)
 
       hbox = gtk.HBox()
       label = gtk.Label(ln.open_mic)
@@ -424,10 +424,9 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(indjmix, False, False)
       set_tip(indjmix, ln.in_dj_mix_tip)
 
-      self.complexity.set_active(1)
+      self.mode.set_active(0)
       indjmix.set_active(True)
       self.partner = None
-      self.active.emit("toggled")
 
 mIRC_colours = (                # Actually these are the XChat2 colours.
    (0xCCCCCCFF, "00"),          # XChat2 calls them mIRC colours, but I doubt they match.
@@ -678,7 +677,7 @@ class mixprefs:
       try:
          file = open(self.parent.idjc + "playerdefaults", "w")
          for name, widget in self.playersettingsdict.iteritems():
-            file.write(name + ("=False\n","=True\n")[widget.get_active()])
+            file.write(name + "=" + str(int(widget.get_active())) + "\n")
          for name, widget in self.valuesdict.iteritems():
             file.write(name + "=" + str(widget.get_value()) + "\n")
          for name, widget in self.textdict.iteritems():
@@ -721,11 +720,13 @@ class mixprefs:
             line = line.split("=")
             key = line[0].strip()
             value = line[1][:-1].strip()
-            if value == "True":
-               value = True
-            elif value == "False":
-               value = False
             if self.playersettingsdict.has_key(key):
+               if value == "True":
+                  value = True
+               elif value == "False":
+                  value = False
+               else:
+                  value = int(value)
                if key == "proktoggle":
                   proktogglevalue = value
                else:
@@ -2101,7 +2102,7 @@ class mixprefs:
       self.fastest_resample.set_active(True)
       self.enable_tooltips.set_active(True)
       mic0 = mic_controls[0]
-      mic0.active.set_active(True)
+      mic0.mode.set_active(1)
       mic0.alt_name.set_text("DJ")
       mic0.autoopen.set_active(True)
       self.show_stream_meters.set_active(True)

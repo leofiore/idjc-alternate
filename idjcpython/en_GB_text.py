@@ -772,11 +772,15 @@ mic_compression_level_tip = "Controls whether to display a meter indicating the 
 
 mic_in_phones = "Hearing your voice in your headphones (somewhat delayed) can be distracting which is why some users might want to turn this feature off."
 
+mic_off = "Deactivated"
+
 mic_simple = "Simple (low CPU drain)"
 
 mic_processed = "Full Signal Processing"
 
-mic_complexity_tip = "Use this to turn on microphone signal processing which may be all you need to make a cheap mic sound like a more expensive one or achieve a studio sound. The simple options on the other hand place less demand on the CPU and may be all you require."
+mic_stereo = "Partnered with Mic"
+
+mic_mode_tip = "The microphone mode."
 
 mic_off_tip = "Each time the microphone is turned off run the commands to the right."
 
