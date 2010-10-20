@@ -140,8 +140,9 @@ class AGCControl(gtk.Frame):
       ivbox.show()
       return ivbox
 
-   def widget_frame(self, widget, container, tip):
+   def widget_frame(self, widget, container, tip, modes):
       frame = gtk.Frame()
+      frame.modes = modes
       self.approot.tooltips.set_tip(frame, tip)
       frame.set_label_widget(widget)
       container.pack_start(frame, False, False, 0)
@@ -196,12 +197,18 @@ class AGCControl(gtk.Frame):
       self.pan.set_value(50)
 
    def cb_mode(self, combobox):
-      if combobox.get_active():
-         self.processed_box.show()
-         self.simple_box.hide()
-      else:
-         self.processed_box.hide()
-         self.simple_box.show()
+      mode = combobox.get_active()
+      def showhide(widget):
+         try:
+            modes = widget.modes
+         except:
+            pass
+         else:
+            if mode in modes:
+               widget.show()
+            else:
+               widget.hide()
+      self.vbox.foreach(showhide)
          
    def __init__(self, approot, ui_name, commandname, index):
       self.approot = approot
@@ -257,7 +264,7 @@ class AGCControl(gtk.Frame):
       self.status_led = gtk.Image()
       hbox.pack_start(self.status_led, False, False, 3)
       self.status_led.show()
-      ivbox = self.widget_frame(hbox, self.vbox, ln.open_unmute_tip)
+      ivbox = self.widget_frame(hbox, self.vbox, ln.open_unmute_tip, (1, 2))
       hbox.show()
       self.status_off_pb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "led_unlit_clear_border_64x64" + gfext, 12, 12)
       self.status_on_pb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "led_lit_green_black_border_64x64" + gfext, 12, 12)
@@ -285,6 +292,7 @@ class AGCControl(gtk.Frame):
 
       sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       panframe = gtk.Frame()
+      panframe.modes = (1, 2, 3)
       set_tip(panframe, ln.pan_tip)
       
       hbox = gtk.HBox()
@@ -354,6 +362,7 @@ class AGCControl(gtk.Frame):
       set_tip(indjmix, ln.in_dj_mix_tip)
 
       self.processed_box = gtk.VBox()
+      self.processed_box.modes = (2, )
       self.processed_box.set_spacing(2)
       self.vbox.pack_start(self.processed_box, False, False)
 
