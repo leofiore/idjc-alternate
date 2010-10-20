@@ -115,6 +115,12 @@ class AGCControl(gtk.Frame):
    def set_partner(self, partner):
       self.partner = partner
       self.mode.append_text(ln.mic_stereo + partner.ui_name)
+      self.mode.set_cell_data_func(self.mode_cell, self.mode_cell_data_func, partner.mode)
+
+   def mode_cell_data_func(self, celllayout, cell, model, iter, opposite):
+      index = model.get_path(iter)[0]
+      oindex = opposite.get_active()
+      cell.props.sensitive = not (((index == 0 or index == 3) and oindex == 3) or (index == 3 and oindex == 0))
 
    def numline(self, label_text, wname, initial=0, mini=0, maxi=0, step=0, digits=0, adj=None):
       hbox = gtk.HBox()
@@ -246,10 +252,15 @@ class AGCControl(gtk.Frame):
       self.add(self.vbox)
       self.vbox.show()
 
-      self.mode = gtk.combo_box_new_text()
+      mode_liststore = gtk.ListStore(str)
+      self.mode = gtk.ComboBox(mode_liststore)
+      self.mode_cell = gtk.CellRendererText()
+      self.mode.pack_start(self.mode_cell)
+      self.mode.set_attributes(self.mode_cell, text=0)
+      
       self.vbox.pack_start(self.mode, False, False)
       for each in (ln.mic_off, ln.mic_simple, ln.mic_processed):
-         self.mode.append_text(each)
+         mode_liststore.append((each, ))
       self.mode.connect("changed", self.sendnewstats, "mode")
       self.mode.emit("changed")
       self.mode.connect("changed", self.cb_mode)
