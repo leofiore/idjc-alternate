@@ -34,7 +34,9 @@ console_help_message="""Usage:  idjc [-vhe] [-p profile] [-j jackserver] [-m mic
             -s    servers to connect to e.g. 13 for servers 1 and 3"""
             
 
-import locale, os, sys, fcntl, subprocess, ConfigParser
+import locale, os, sys, fcntl, subprocess, ConfigParser, operator
+
+from IDJCfree import rich_safe
 
 def locale_encoding():
    read = subprocess.Popen(["locale", "-a"], stdout=subprocess.PIPE).stdout# I have to do all this because an exception 
@@ -117,6 +119,7 @@ class MicButton(gtk.ToggleButton):
       hbox.set_spacing(4)
       self.add(hbox)
       label = gtk.Label(labeltext)
+      label.set_use_markup(True)
       hbox.pack_start(label, False, False)
       label.show()
       self.image = gtk.Image()
@@ -158,50 +161,57 @@ class MicOpener(gtk.HBox):
       self.new_button_set()
       self.notify_others()
       
-   def mic_names(self, group):
-      ui_names = []
-      full_names = []
-      for m in group:
-         ui_names.append(m.ui_name)
-         alt = m.alt_name.get_text().strip()
-         full_names.append((m.ui_name + " " + alt) if alt else m.ui_name)
-         
-      return ui_names, full_names
-      
    def new_button_set(self):
-      # Clear away all child widgets.
+      # Clear away old button widgets.
       self.foreach(lambda x: x.destroy())
       self.mic2button = {}
-      # New buttons arrive.
-      free = []
+      joiner = ' <span foreground="red">&#64262;</span> '
+
+      # Button grouping and label text stored here temporarily.
       group_list = [[] for x in xrange(idjc_config.num_micpairs)]
+      
+      # Categorisation of microphones into button groups and selection of button text.
       for m in self.mic_list:
-         if m.mode.get_active():
+         if m.mode.get_active() in (1, 2):
+            # Find subordinate mic if there is one.
+            # Prefer alternate text over mic number if that info available.
+            if m.partner.mode.get_active() == 3:
+               # Ascending microphone order maintained on the opener buttons.
+               mm = sorted((m, m.partner), key=operator.attrgetter("ui_name"))
+               t = [rich_safe(t.alt_name.get_text().strip()) for t in mm]
+               if all(t):
+                  t = joiner.join(t)
+               else:
+                  t = t[0] or t[1] or joiner.join(t.ui_name for t in mm)
+            else:
+               # Partner is not a partner so to speak.
+               mm = (m, )
+               t = rich_safe(m.alt_name.get_text().strip()) or m.ui_name
+            
             # Mics listed according to their group.
             if not m.group.get_active():
-               free.append(m)
+               # Appending a new group-of-one for individual mics.
+               group_list.append([(mm, t)])
             else:
-               group_list[int(m.groups_adj.props.value - 1)].append(m)
-      
+               # Mic filed according to it's group.
+               group_list[int(m.groups_adj.props.value - 1)].append((mm, t))
+
+      # Opener buttons built here.      
       for g in group_list:
          if g:
-            ui_names, full_names = self.mic_names(g)
-            mb = MicButton("  ".join(full_names))
-            mb.connect("toggled", self.cb_mictoggle, g)
-            # One mic on in the group means remaining mics to be on also.
-            mb.set_active(any(m.open.get_active() for m in g))
+            mic_list = []
+            mb = MicButton(", ".join(t for mm, t in g))
+            active = False
+            for mm, t in g:
+               for m in mm:
+                  mic_list.append(m)
+                  if m.open.get_active():
+                     active = True
+                  self.mic2button[m.ui_name] = mb
+            mb.connect("toggled", self.cb_mictoggle, mic_list)
             self.add(mb)
             mb.show()
-            self.mic2button.update(dict.fromkeys(ui_names, mb))
-         
-      for m in free:
-         mb = MicButton(self.mic_names((m, ))[1][0])
-         # Button state set to match state of back end.
-         mb.set_active(m.open.get_active())
-         mb.connect("toggled", self.cb_mictoggle, (m,)) # Associate with one mic
-         self.mic2button[m.ui_name] = mb                # Reverse mapping
-         self.add(mb)
-         mb.show()
+            mb.set_active(active)  # Open all if any opener members are currently open.
 
       if self.all_forced_on:
          self.force_all_on(True)

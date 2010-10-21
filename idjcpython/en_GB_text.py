@@ -106,7 +106,7 @@ all = "All"
 
 alternate = "Alternate"
 
-alt_mic_name = "Extra open button text goes here e.g. DJ or Guest, to appear in the main window."
+alt_mic_name = "Alternate opener button text goes here e.g. DJ or Guest. When not specified the microphone number is used instead."
 
 announce_tip = "Enter the message you want to send here. To include the track currently playing use %s. You can also include colours using Ctrl+K (standard XChat/mIRC method) or from the context menu (right click)."
 
@@ -778,7 +778,7 @@ mic_simple = "Simple (low CPU drain)"
 
 mic_processed = "Full Signal Processing"
 
-mic_stereo = "Partnered with Mic"
+mic_stereo = "Partnered with Mic "
 
 mic_mode_tip = "The microphone mode."
 
