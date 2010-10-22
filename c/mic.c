@@ -50,6 +50,43 @@ static void mic_process_start(struct mic *self, jack_nframes_t nframes)
    {
    self->nframes = nframes;
    self->jadp = jack_port_get_buffer(self->jack_port, nframes);
+   
+   /* mic mode changes are handled here */
+   if (self->mode_request != self->mode)
+      {
+      if (self->mode == 0)
+         fprintf(stderr, "activated mic %d\n", self->id);
+         
+      if (self->mode == 2)
+         {
+         fprintf(stderr, "leaving fully processed mode, mic %d\n", self->id);
+         self->agc->df = self->agc->red = self->agc->yellow = self->agc->green = 1.0f;
+         }
+
+      if (self->mode_request == 3)
+         {
+         fprintf(stderr, "entering stereo mode, mic %d\n", self->id);
+         /* stereo mode switching code goes here */
+         }
+
+      if (self->mode == 3)
+         {
+         fprintf(stderr, "leaving stereo mode, mic %d\n", self->id);
+         /* stereo mode switching code goes here */
+         }
+
+      if (self->mode_request == 0)
+         {
+         fprintf(stderr, "deactivated mic %d\n", self->id);
+         self->open = 0;
+         self->mute = 0.0f;
+         self->unp = self->unpm = self->unpmdj = 0.0f;
+         self->lc = self->rc = self->lrc = self->lcm = self->rcm = 0.0f;
+         self->peak = peak_init;
+         }
+
+      self->mode = self->mode_request;
+      }
    }
 
 void mic_process_start_all(struct mic **mics, jack_nframes_t nframes)
@@ -58,12 +95,13 @@ void mic_process_start_all(struct mic **mics, jack_nframes_t nframes)
       mic_process_start(*mics++, nframes);
    }
 
-static void mic_process(struct mic *self)
+static void mic_process_stage1(struct mic *self)
    {
    float input = *self->jadp++;
 
    if (self->mode)
       {
+      /* mic open/close fade in/out */
       if (self->open && self->mute < 0.999999f)
          self->mute += (1.0f - self->mute) * 26.46f / self->sample_rate;
       else if (!self->open && self->mute > 0.0000004f)
@@ -71,11 +109,15 @@ static void mic_process(struct mic *self)
       else
          self->mute = self->open ? 1.0f : 0.0f;
          
+      /* initial jack audio data can be junk i.e. not valid floats */   
       if (isunordered(input, input))
          input = 0.0f;
         
+      /* unprocessed audio */  
       self->unp = input * self->mgain;
+      /* unprocessed audio + mute */
       self->unpm = self->unp * self->mute;
+      /* unprocessed audio + mute for the DJ mix */
       self->unpmdj = self->unpm * self->djmute;
 
       if (self->mode == 2)
@@ -83,11 +125,13 @@ static void mic_process(struct mic *self)
       else
          {
          self->lrc = self->unp;
-         self->agc->df = self->agc->red = self->agc->yellow = self->agc->green = 1.0f;
+         //self->agc->df = self->agc->red = self->agc->yellow = self->agc->green = 1.0f;
          }
 
+      /* left and right channel audio no mute - could be procesesed or not */
       self->lc = self->lrc * self->lgain;
       self->rc = self->lrc * self->rgain;
+      /* the same but with muting */
       self->lcm = self->lc * self->mute;
       self->rcm = self->rc * self->mute;
       
@@ -96,25 +140,35 @@ static void mic_process(struct mic *self)
       if (l > self->peak)
          self->peak = l;
       }
-   else
-      {
-      self->unp = self->unpm = self->unpmdj;
-      self->lc = self->rc = self->lrc = self->lcm = self->rcm = 0.0f;
-      self->agc->df = self->agc->red = self->agc->yellow = self->agc->green = 1.0f;
-      self->peak = peak_init;
-      }
+   }
+
+static void mic_process_stage2(struct mic *self)
+   {
+   }
+
+static void mic_process_stage3(struct mic *self)
+   {
    }
 
 float mic_process_all(struct mic **mics)
    {
+   static void (*mic_process[])(struct mic *) = {
+      mic_process_stage1, mic_process_stage2, mic_process_stage3, NULL };
+   void (**mpp)(struct mic *);
+   struct mic **mp;
    float df, agcdf;   
-      
-   for (df = 1.0f; *mics; mics++)
-      {
-      mic_process(*mics);
-      df = (df > (agcdf = (*mics)->agc->df)) ? agcdf : df;
-      }
-      
+
+   /* processing broken up into stages to allow state sharing between
+    * stereo pairs of microphones
+    */
+   for (mpp = mic_process; *mpp; mpp++)
+      for (mp = mics; *mp; mp++)
+         (*mpp)(*mp);
+         
+   /* ducking factor tally - lowest wins */
+   for (df = 1.0f, mp = mics; *mp; mp++)
+      df = (df > (agcdf = (*mp)->agc->df)) ? agcdf : df;
+        
    return df;
    }
 
@@ -155,7 +209,6 @@ static struct mic *mic_init(jack_client_t *client, int sample_rate, int id)
    self->id = id;
    self->sample_rate = (float)sample_rate;   
    self->pan = 50;
-   self->mode = 2;
    self->peak = peak_init;
    if (!(self->agc = agc_init(sample_rate, 0.01161f)))
       {
@@ -204,7 +257,6 @@ struct mic **mic_init_all(int n_mics, jack_client_t *client)
 
 static void mic_free(struct mic *self)
    {
-      
    agc_free(self->agc);
    self->agc = NULL;
    if (self->default_mapped_port_name)
@@ -236,7 +288,7 @@ void mic_valueparse(struct mic *self, char *param)
    
    if (!strcmp(key, "mode"))
       {
-      self->mode = value[0] - '0';
+      self->mode_request = value[0] - '0';
       calculate_gain_values(self);
       }
    else if (!strcmp(key, "pan"))

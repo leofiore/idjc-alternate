@@ -42,6 +42,7 @@ struct mic
    
    /* state variables and resources */
    int id;          /* numeric identifier */
+   int mode_request;/* request to change mode */
    struct agc *agc; /* automatic gain control and much more */
    float sample_rate; /* used for smoothed mute timing */
    float mgain;   /* mono gain value */

@@ -186,14 +186,7 @@ class AGCControl(gtk.Frame):
       if save:
          self.booleandict[self.commandname + "_" + wname] = cb
       return cb
-
-   def cb_active(self, widget):
-      sens = widget.get_active()
-      for each in (self.vbox, self.meter):
-          each.set_sensitive(sens)
-      if not sens:
-          self.open.set_active(False)
-          
+      
    def cb_open(self, widget):
       active = widget.get_active()
       self.meter.set_led(active)
@@ -204,6 +197,8 @@ class AGCControl(gtk.Frame):
 
    def cb_mode(self, combobox):
       mode = combobox.get_active()
+
+      # Show pertinent features for each mode.
       def showhide(widget):
          try:
             modes = widget.modes
@@ -215,6 +210,12 @@ class AGCControl(gtk.Frame):
             else:
                widget.hide()
       self.vbox.foreach(showhide)
+      
+      # Meter sensitivity. Deactivated => insensitive.
+      sens = mode != 0
+      self.meter.set_sensitive(sens)
+      if not sens:
+          self.open.set_active(False)
          
    def __init__(self, approot, ui_name, commandname, index):
       self.approot = approot
@@ -262,7 +263,6 @@ class AGCControl(gtk.Frame):
       for each in (ln.mic_off, ln.mic_simple, ln.mic_processed):
          mode_liststore.append((each, ))
       self.mode.connect("changed", self.sendnewstats, "mode")
-      self.mode.emit("changed")
       self.mode.connect("changed", self.cb_mode)
       self.booleandict[self.commandname + "_mode"] = self.mode
       self.mode.show()
