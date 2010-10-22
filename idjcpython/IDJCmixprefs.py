@@ -351,6 +351,7 @@ class AGCControl(gtk.Frame):
       self.simple_box = gtk.VBox()
       self.simple_box.set_spacing(2)
       self.vbox.pack_start(self.simple_box, False, False)
+      self.simple_box.modes = (1, )
 
       ivbox = self.frame(" " + ln.basic_controls + " ", self.simple_box)
       micgain = self.numline(ln.agc_boost, "gain", digits=1, adj=micgainadj)

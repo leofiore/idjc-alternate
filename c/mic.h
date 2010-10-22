@@ -36,16 +36,15 @@ struct mic
    int open;        /* mic open/close */
    int invert;      /* mic signal is inverted */
    float gain;      /* amount of signal boost in db */
-   int complexity;  /* level of processing of lc, rc */
+   int mode;        /* 0 = off, 1 = simple, 2 = complex, 3 = subordinate */
    int pan;         /* stereo panning on a scale 1-100 */
    int pan_active;  /* whether to pan at all */
    
    /* state variables and resources */
    int id;          /* numeric identifier */
-   int active;      /* microphone is enabled */
    struct agc *agc; /* automatic gain control and much more */
    float sample_rate; /* used for smoothed mute timing */
-   float mgain;    /* mono gain value */
+   float mgain;   /* mono gain value */
    float lgain;   /* left gain value */
    float rgain;   /* right gain value */
    float mute;    /* gain applied by soft mute control */

@@ -62,12 +62,12 @@ static void mic_process(struct mic *self)
    {
    float input = *self->jadp++;
 
-   if (self->active)
+   if (self->mode)
       {
-      if (self->open && self->mute < 0.999999)
-         self->mute += (1.0f - self->mute) * 26.46 / self->sample_rate;
-      else if (!self->open && self->mute > 0.0000004)
-         self->mute -= self->mute * 12.348 / self->sample_rate;
+      if (self->open && self->mute < 0.999999f)
+         self->mute += (1.0f - self->mute) * 26.46f / self->sample_rate;
+      else if (!self->open && self->mute > 0.0000004f)
+         self->mute -= self->mute * 12.348f / self->sample_rate;
       else
          self->mute = self->open ? 1.0f : 0.0f;
          
@@ -78,7 +78,7 @@ static void mic_process(struct mic *self)
       self->unpm = self->unp * self->mute;
       self->unpmdj = self->unpm * self->djmute;
 
-      if (self->complexity)
+      if (self->mode == 2)
          self->lrc = agc_process(self->agc, input, self->mute < 0.75f);
       else
          {
@@ -155,7 +155,7 @@ static struct mic *mic_init(jack_client_t *client, int sample_rate, int id)
    self->id = id;
    self->sample_rate = (float)sample_rate;   
    self->pan = 50;
-   self->complexity = 1;
+   self->mode = 2;
    self->peak = peak_init;
    if (!(self->agc = agc_init(sample_rate, 0.01161f)))
       {
@@ -234,14 +234,10 @@ void mic_valueparse(struct mic *self, char *param)
    key = strtok_r(param, "=", &save);
    value = strtok_r(NULL, "=", &save);  
    
-   if (!strcmp(key, "complexity"))
+   if (!strcmp(key, "mode"))
       {
-      self->complexity = (value[0] == '1') ? 1 : 0;
+      self->mode = value[0] - '0';
       calculate_gain_values(self);
-      }
-   else if (!strcmp(key, "active"))
-      {
-      self->active = (value[0] == '1') ? 1 : 0;
       }
    else if (!strcmp(key, "pan"))
       {
