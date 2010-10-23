@@ -48,9 +48,6 @@ static void calculate_gain_values(struct mic *self)
 
 static void mic_process_start(struct mic *self, jack_nframes_t nframes)
    {
-   self->nframes = nframes;
-   self->jadp = jack_port_get_buffer(self->jack_port, nframes);
-   
    /* mic mode changes are handled here */
    if (self->mode_request != self->mode)
       {
@@ -60,7 +57,7 @@ static void mic_process_start(struct mic *self, jack_nframes_t nframes)
       if (self->mode == 2)
          {
          fprintf(stderr, "leaving fully processed mode, mic %d\n", self->id);
-         self->agc->df = self->agc->red = self->agc->yellow = self->agc->green = 1.0f;
+         self->agc->df = self->agc->meter_red = self->agc->meter_yellow = self->agc->meter_green = 1.0f;
          }
 
       if (self->mode_request == 3)
@@ -87,6 +84,12 @@ static void mic_process_start(struct mic *self, jack_nframes_t nframes)
 
       self->mode = self->mode_request;
       }
+      
+   if (self->mode)
+      {
+      self->nframes = nframes;
+      self->jadp = jack_port_get_buffer(self->jack_port, nframes);
+      }
    }
 
 void mic_process_start_all(struct mic **mics, jack_nframes_t nframes)
@@ -95,7 +98,8 @@ void mic_process_start_all(struct mic **mics, jack_nframes_t nframes)
       mic_process_start(*mics++, nframes);
    }
 
-static void mic_process_stage1(struct mic *self)
+#if 0
+static void mic_process_OLD(struct mic *self)
    {
    float input = *self->jadp++;
 
@@ -141,13 +145,59 @@ static void mic_process_stage1(struct mic *self)
          self->peak = l;
       }
    }
+#endif
+
+static void mic_process_stage1(struct mic *self)
+   {
+   float input = *self->jadp++;
+
+   /* mic open/close fade in/out */
+   if (self->open && self->mute < 0.999999f)
+      self->mute += (1.0f - self->mute) * 26.46f / self->sample_rate;
+   else if (!self->open && self->mute > 0.0000004f)
+      self->mute -= self->mute * 12.348f / self->sample_rate;
+   else
+      self->mute = self->open ? 1.0f : 0.0f;
+      
+   /* initial jack audio data can be junk i.e. not valid floats */   
+   if (isunordered(input, input))
+      input = 0.0f;
+     
+   /* unprocessed audio */  
+   self->unp = input * self->mgain;
+   /* unprocessed audio + mute */
+   self->unpm = self->unp * self->mute;
+   /* unprocessed audio + mute for the DJ mix */
+   self->unpmdj = self->unpm * self->djmute;
+
+   if (self->mode == 2)
+      agc_process_stage1(self->agc, input);
+   }
 
 static void mic_process_stage2(struct mic *self)
    {
+   if (self->mode == 2)
+      agc_process_stage2(self->agc, self->mute < 0.75f);
    }
 
 static void mic_process_stage3(struct mic *self)
    {
+   if (self->mode == 2)
+      self->lrc = agc_process_stage3(self->agc);
+   else
+      self->lrc = self->unp;
+
+   /* left and right channel audio no mute - could be procesesed or not */
+   self->lc = self->lrc * self->lgain;
+   self->rc = self->lrc * self->rgain;
+   /* the same but with muting */
+   self->lcm = self->lc * self->mute;
+   self->rcm = self->rc * self->mute;
+   
+   /* record peak levels */
+   float l = fabsf(self->lrc);
+   if (l > self->peak)
+      self->peak = l;
    }
 
 float mic_process_all(struct mic **mics)
@@ -163,7 +213,8 @@ float mic_process_all(struct mic **mics)
     */
    for (mpp = mic_process; *mpp; mpp++)
       for (mp = mics; *mp; mp++)
-         (*mpp)(*mp);
+         if ((*mp)->mode)
+            (*mpp)(*mp);
          
    /* ducking factor tally - lowest wins */
    for (df = 1.0f, mp = mics; *mp; mp++)
@@ -184,9 +235,9 @@ static int mic_getpeak(struct mic *self)
 static void mic_stats(struct mic *self)
    {
    fprintf(stdout, "mic_%d_levels=%d,%d,%d,%d\n", self->id, mic_getpeak(self),
-                  (int)(log10f(self->agc->red) * -20.0f),
-                  (int)(log10f(self->agc->yellow) * -20.0f),
-                  (int)(log10f(self->agc->green) * -20.0f));
+                  (int)(log10f(self->agc->meter_red) * -20.0f),
+                  (int)(log10f(self->agc->meter_yellow) * -20.0f),
+                  (int)(log10f(self->agc->meter_green) * -20.0f));
    }
 
 void mic_stats_all(struct mic **mics)
