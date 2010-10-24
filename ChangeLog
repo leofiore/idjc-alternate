@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+Mic player headroom can be set far higher. 
+
 The number of available microphones, streamers, and recorders can be adjusted in Prefs->Feature set.
 
 Prefs window can be expanded in size.

@@ -1633,7 +1633,7 @@ class mixprefs:
       label = gtk.Label(ln.headroom)
       hbox.pack_start(label, False, False, 0)
       label.show()
-      headroom_adj = gtk.Adjustment(0.0, 0.0, 12.0, 0.5)
+      headroom_adj = gtk.Adjustment(0.0, 0.0, 32.0, 0.5)
       self.headroom = gtk.SpinButton(headroom_adj, digits=1)
       self.headroom.connect("value-changed", self.cb_headroom)
       hbox.pack_end(self.headroom, False, False, 0)
