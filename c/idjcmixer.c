@@ -461,7 +461,7 @@ void update_smoothed_volumes()
    mic_target = headroom_db * (mic_on ? -1.0F : 0.0F);
    if ((diff = mic_target - current_headroom))
       {
-      current_headroom += diff * 5880.0f / (sr * powf(headroom_db, 0.9f));
+      current_headroom += diff * 1600.0f / (sr * powf(headroom_db + 10.0f, 0.93f));
       if (mic_target)
          {
          if (diff > -0.00001F)
