@@ -39,7 +39,7 @@
 
 typedef jack_default_audio_sample_t sample_t;
 
-static const size_t rb_n_samples = 10000;       /* maximum number of samples to hold in the ring buffer */
+static const size_t rb_n_samples = 53000;       /* maximum number of samples to hold in the ring buffer */
 static uint32_t encoder_packet_magic_number = 'I' << 24 | 'D' << 16 | 'J' << 8 | 'C';
 
 int encoder_init_lame(struct threads_info *ti, struct universal_vars *uv, void *param)

@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+Encoder ringbuffer size increased to accommodate large JACK frame sizes.
+
 Mic player headroom can be set far higher. 
 
 The number of available microphones, streamers, and recorders can be adjusted in Prefs->Feature set.
