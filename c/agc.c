@@ -510,8 +510,6 @@ void agc_process_stage2(struct agc *s, int mic_is_mute)
             s->df -= s->ducker_attack;
             s->ducker_hold_timer = s->ducker_hold_timer_resetval;
             }
-
-
          }
 
       /* maintain a peak hold gain figure for the GUI compression meter

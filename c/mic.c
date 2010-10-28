@@ -63,13 +63,15 @@ static void mic_process_start(struct mic *self, jack_nframes_t nframes)
       if (self->mode_request == 3)
          {
          fprintf(stderr, "entering stereo mode, mic %d\n", self->id);
-         /* stereo mode switching code goes here */
+         self->host = self->partner;
+         self->agc->host = self->partner->agc;
          }
 
       if (self->mode == 3)
          {
          fprintf(stderr, "leaving stereo mode, mic %d\n", self->id);
-         /* stereo mode switching code goes here */
+         self->host = self;
+         self->agc->host = self->agc;
          }
 
       if (self->mode_request == 0)
@@ -149,7 +151,15 @@ static void mic_process_OLD(struct mic *self)
 
 static void mic_process_stage1(struct mic *self)
    {
-   float input = *self->jadp++;
+   float sample = *self->jadp++;
+
+   /* TODO: preprocessing code for stereo subordinate mic goes here */
+   self->sample = sample;
+   }
+
+static void mic_process_stage2(struct mic *self)
+   {
+   float sample = self->sample;
 
    /* mic open/close fade in/out */
    if (self->open && self->mute < 0.999999f)
@@ -160,27 +170,27 @@ static void mic_process_stage1(struct mic *self)
       self->mute = self->open ? 1.0f : 0.0f;
       
    /* initial jack audio data can be junk i.e. not valid floats */   
-   if (isunordered(input, input))
-      input = 0.0f;
+   if (isunordered(sample, sample))
+      sample = 0.0f;
      
    /* unprocessed audio */  
-   self->unp = input * self->mgain;
+   self->unp = sample * self->host->mgain;
    /* unprocessed audio + mute */
    self->unpm = self->unp * self->mute;
    /* unprocessed audio + mute for the DJ mix */
    self->unpmdj = self->unpm * self->djmute;
 
    if (self->mode == 2)
-      agc_process_stage1(self->agc, input);
+      agc_process_stage1(self->agc, sample);
    }
 
-static void mic_process_stage2(struct mic *self)
+static void mic_process_stage3(struct mic *self)
    {
    if (self->mode == 2)
       agc_process_stage2(self->agc, self->mute < 0.75f);
    }
 
-static void mic_process_stage3(struct mic *self)
+static void mic_process_stage4(struct mic *self)
    {
    if (self->mode == 2)
       self->lrc = agc_process_stage3(self->agc);
@@ -188,8 +198,8 @@ static void mic_process_stage3(struct mic *self)
       self->lrc = self->unp;
 
    /* left and right channel audio no mute - could be procesesed or not */
-   self->lc = self->lrc * self->lgain;
-   self->rc = self->lrc * self->rgain;
+   self->lc = self->lrc * self->host->lgain;
+   self->rc = self->lrc * self->host->rgain;
    /* the same but with muting */
    self->lcm = self->lc * self->mute;
    self->rcm = self->rc * self->mute;
@@ -202,8 +212,8 @@ static void mic_process_stage3(struct mic *self)
 
 float mic_process_all(struct mic **mics)
    {
-   static void (*mic_process[])(struct mic *) = {
-      mic_process_stage1, mic_process_stage2, mic_process_stage3, NULL };
+   static void (*mic_process[])(struct mic *) = {mic_process_stage1,
+         mic_process_stage2, mic_process_stage3, mic_process_stage4, NULL };
    void (**mpp)(struct mic *);
    struct mic **mp;
    float df, agcdf;   
@@ -257,6 +267,7 @@ static struct mic *mic_init(jack_client_t *client, int sample_rate, int id)
       return NULL;
       }
 
+   self->host = self;
    self->id = id;
    self->sample_rate = (float)sample_rate;   
    self->pan = 50;
@@ -299,6 +310,7 @@ struct mic **mic_init_all(int n_mics, jack_client_t *client)
          fprintf(stderr, "mic_init failed\n");
          exit(5);
          }
+      mics[i]->partner = mics[i ^ 1]; 
       mics[i]->default_mapped_port_name = (dp && *dp) ? strdup(*dp++) : NULL;
       }
    if (defaults)
