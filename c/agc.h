@@ -34,6 +34,7 @@ struct agc_RC_Filter
 struct agc
    {
    struct agc *host;       /* points to self or partner for stereo implementation */
+   struct agc *partner;
    float input;
    float ratio;
    float limit;
@@ -93,9 +94,11 @@ struct agc
    };
 
 struct agc *agc_init(int sample_rate, float lookahead);
+void agc_set_as_partners(struct agc *agc1, struct agc *agc2);
 void agc_process_stage1(struct agc *self, float input);
 void agc_process_stage2(struct agc *self, int mic_is_mute);
 float agc_process_stage3(struct agc *self);
+void agc_get_meter_levels(struct agc *self, int *red, int *yellow, int *green);
 void agc_free(struct agc *self);
 void agc_valueparse(struct agc *s, char *key, char *value);
 

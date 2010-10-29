@@ -25,6 +25,7 @@
 #include "mic.h"
 #include "dbconvert.h"
 
+
 static const float peak_init = 4.46e-7f; /* -127dB */
 
 static void calculate_gain_values(struct mic *self)
@@ -37,8 +38,6 @@ static void calculate_gain_values(struct mic *self)
       }
    else
       self->lgain = self->rgain = 1.0f;
-   
-   self->igain = self->invert ? -1.0f : 1.0f;
    }
 
 static void mic_process_start(struct mic *self, jack_nframes_t nframes)
@@ -98,55 +97,6 @@ void mic_process_start_all(struct mic **mics, jack_nframes_t nframes)
       mic_process_start(*mics++, nframes);
    }
 
-#if 0
-static void mic_process_OLD(struct mic *self)
-   {
-   float input = *self->jadp++;
-
-   if (self->mode)
-      {
-      /* mic open/close fade in/out */
-      if (self->open && self->mute < 0.999999f)
-         self->mute += (1.0f - self->mute) * 26.46f / self->sample_rate;
-      else if (!self->open && self->mute > 0.0000004f)
-         self->mute -= self->mute * 12.348f / self->sample_rate;
-      else
-         self->mute = self->open ? 1.0f : 0.0f;
-         
-      /* initial jack audio data can be junk i.e. not valid floats */   
-      if (isunordered(input, input))
-         input = 0.0f;
-        
-      /* unprocessed audio */  
-      self->unp = input * self->mgain;
-      /* unprocessed audio + mute */
-      self->unpm = self->unp * self->mute;
-      /* unprocessed audio + mute for the DJ mix */
-      self->unpmdj = self->unpm * self->djmute;
-
-      if (self->mode == 2)
-         self->lrc = agc_process(self->agc, input, self->mute < 0.75f);
-      else
-         {
-         self->lrc = self->unp;
-         //self->agc->df = self->agc->red = self->agc->yellow = self->agc->green = 1.0f;
-         }
-
-      /* left and right channel audio no mute - could be procesesed or not */
-      self->lc = self->lrc * self->lgain;
-      self->rc = self->lrc * self->rgain;
-      /* the same but with muting */
-      self->lcm = self->lc * self->mute;
-      self->rcm = self->rc * self->mute;
-      
-      /* record peak levels */
-      float l = fabsf(self->lrc);
-      if (l > self->peak)
-         self->peak = l;
-      }
-   }
-#endif
-
 static void mic_process_stage1(struct mic *self)
    {
    float sample = *self->jadp++;
@@ -178,14 +128,14 @@ static void mic_process_stage2(struct mic *self)
    /* unprocessed audio + mute for the DJ mix */
    self->unpmdj = self->unpm * host->djmute;
 
-   if (self->mode == 2)
+   if (host->mode == 2)
       agc_process_stage1(self->agc, sample);
    }
 
 static void mic_process_stage3(struct mic *self)
    {
    /* agc side-channel stuff */
-   if (self->mode == 2)
+   if (self->host->mode == 2)
       agc_process_stage2(self->agc, self->mute < 0.75f);
    }
 
@@ -193,14 +143,14 @@ static void mic_process_stage4(struct mic *self)
    {
    struct mic *host = self->host;   
       
-   if (self->mode == 2)
+   if (host->mode == 2)
       self->lrc = agc_process_stage3(self->agc);
    else
       self->lrc = self->unp;
 
    /* left and right channel audio no mute - could be procesesed or not */
-   self->lc = self->lrc * self->lgain * host->igain;
-   self->rc = self->lrc * self->rgain * host->igain;
+   self->lc = self->lrc * self->lgain;
+   self->rc = self->lrc * self->rgain;
    /* the same but with muting */
    self->lcm = self->lc * self->mute;
    self->rcm = self->rc * self->mute;
@@ -245,10 +195,11 @@ static int mic_getpeak(struct mic *self)
 
 static void mic_stats(struct mic *self)
    {
-   fprintf(stdout, "mic_%d_levels=%d,%d,%d,%d\n", self->id, mic_getpeak(self),
-                  (int)(log10f(self->agc->meter_red) * -20.0f),
-                  (int)(log10f(self->agc->meter_yellow) * -20.0f),
-                  (int)(log10f(self->agc->meter_green) * -20.0f));
+   int red, yellow, green;
+   
+   agc_get_meter_levels(self->host->agc, &red, &yellow, &green);
+   fprintf(stdout, "mic_%d_levels=%d,%d,%d,%d\n", self->id,
+                           mic_getpeak(self), red, yellow, green);
    }
 
 void mic_stats_all(struct mic **mics)
@@ -311,9 +262,16 @@ struct mic **mic_init_all(int n_mics, jack_client_t *client)
          fprintf(stderr, "mic_init failed\n");
          exit(5);
          }
-      mics[i]->partner = mics[i ^ 1]; 
       mics[i]->default_mapped_port_name = (dp && *dp) ? strdup(*dp++) : NULL;
       }
+      
+   for (i = 0; i < n_mics; i += 2)
+      {
+      mics[i]->partner = mics[i + 1];
+      mics[i + 1]->partner = mics[i];
+      agc_set_as_partners(mics[i]->agc, mics[i + 1]->agc);
+      }
+      
    if (defaults)
       jack_free(defaults);
    return mics;
@@ -353,7 +311,6 @@ void mic_valueparse(struct mic *self, char *param)
    if (!strcmp(key, "mode"))
       {
       self->mode_request = value[0] - '0';
-      calculate_gain_values(self);
       }
    else if (!strcmp(key, "pan"))
       {
@@ -372,7 +329,7 @@ void mic_valueparse(struct mic *self, char *param)
    else if(!strcmp(key, "invert"))
       {
       self->invert = (value[0] == '1') ? 1 : 0;
-      calculate_gain_values(self);
+      self->igain = self->invert ? -1.0f : 1.0f;
       }
    else if(!strcmp(key, "indjmix"))
       {
