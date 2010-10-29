@@ -38,18 +38,15 @@ static void calculate_gain_values(struct mic *self)
    else
       self->lgain = self->rgain = 1.0f;
    
-   if (self->invert)
-      {
-      self->mgain *= -1.0f;
-      self->lgain *= -1.0f;
-      self->rgain *= -1.0f;
-      }
+   self->igain = self->invert ? -1.0f : 1.0f;
    }
 
 static void mic_process_start(struct mic *self, jack_nframes_t nframes)
    {
+   int mode_request = self->mode_request;   
+      
    /* mic mode changes are handled here */
-   if (self->mode_request != self->mode)
+   if (mode_request != self->mode)
       {
       if (self->mode == 0)
          fprintf(stderr, "activated mic %d\n", self->id);
@@ -60,7 +57,7 @@ static void mic_process_start(struct mic *self, jack_nframes_t nframes)
          self->agc->df = self->agc->meter_red = self->agc->meter_yellow = self->agc->meter_green = 1.0f;
          }
 
-      if (self->mode_request == 3)
+      if (mode_request == 3)
          {
          fprintf(stderr, "entering stereo mode, mic %d\n", self->id);
          self->host = self->partner;
@@ -74,7 +71,7 @@ static void mic_process_start(struct mic *self, jack_nframes_t nframes)
          self->agc->host = self->agc;
          }
 
-      if (self->mode_request == 0)
+      if (mode_request == 0)
          {
          fprintf(stderr, "deactivated mic %d\n", self->id);
          self->open = 0;
@@ -84,11 +81,12 @@ static void mic_process_start(struct mic *self, jack_nframes_t nframes)
          self->peak = peak_init;
          }
 
-      self->mode = self->mode_request;
+      self->mode = mode_request;
       }
-      
+
    if (self->mode)
       {
+      /* initialisation for later mic stages */
       self->nframes = nframes;
       self->jadp = jack_port_get_buffer(self->jack_port, nframes);
       }
@@ -152,6 +150,9 @@ static void mic_process_OLD(struct mic *self)
 static void mic_process_stage1(struct mic *self)
    {
    float sample = *self->jadp++;
+   
+   if (isunordered(sample, sample))
+      sample = 0.0f;
 
    /* TODO: preprocessing code for stereo subordinate mic goes here */
    self->sample = sample;
@@ -159,26 +160,23 @@ static void mic_process_stage1(struct mic *self)
 
 static void mic_process_stage2(struct mic *self)
    {
-   float sample = self->sample;
+   struct mic *host = self->host;
+   float sample = self->sample * host->igain;
 
-   /* mic open/close fade in/out */
+   /* mic open/close perform fade */
    if (self->open && self->mute < 0.999999f)
       self->mute += (1.0f - self->mute) * 26.46f / self->sample_rate;
    else if (!self->open && self->mute > 0.0000004f)
       self->mute -= self->mute * 12.348f / self->sample_rate;
    else
       self->mute = self->open ? 1.0f : 0.0f;
-      
-   /* initial jack audio data can be junk i.e. not valid floats */   
-   if (isunordered(sample, sample))
-      sample = 0.0f;
-     
+    
    /* unprocessed audio */  
-   self->unp = sample * self->host->mgain;
+   self->unp = sample * host->mgain;
    /* unprocessed audio + mute */
    self->unpm = self->unp * self->mute;
    /* unprocessed audio + mute for the DJ mix */
-   self->unpmdj = self->unpm * self->djmute;
+   self->unpmdj = self->unpm * host->djmute;
 
    if (self->mode == 2)
       agc_process_stage1(self->agc, sample);
@@ -186,20 +184,23 @@ static void mic_process_stage2(struct mic *self)
 
 static void mic_process_stage3(struct mic *self)
    {
+   /* agc side-channel stuff */
    if (self->mode == 2)
       agc_process_stage2(self->agc, self->mute < 0.75f);
    }
 
 static void mic_process_stage4(struct mic *self)
    {
+   struct mic *host = self->host;   
+      
    if (self->mode == 2)
       self->lrc = agc_process_stage3(self->agc);
    else
       self->lrc = self->unp;
 
    /* left and right channel audio no mute - could be procesesed or not */
-   self->lc = self->lrc * self->host->lgain;
-   self->rc = self->lrc * self->host->rgain;
+   self->lc = self->lrc * self->lgain * host->igain;
+   self->rc = self->lrc * self->rgain * host->igain;
    /* the same but with muting */
    self->lcm = self->lc * self->mute;
    self->rcm = self->rc * self->mute;

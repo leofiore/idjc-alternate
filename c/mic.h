@@ -48,9 +48,10 @@ struct mic
    struct agc *agc; /* automatic gain control and much more */
    float sample;    /* storage for the audio sample undergoing processing */
    float sample_rate; /* used for smoothed mute timing */
-   float mgain;   /* mono gain value */
-   float lgain;   /* left gain value */
-   float rgain;   /* right gain value */
+   float mgain;   /* mono gain value (absolute gain) */
+   float lgain;   /* left gain value (pan relative) */
+   float rgain;   /* right gain value (pan relative) */
+   float igain;   /* inversion gain value (inversion relative) */
    float mute;    /* gain applied by soft mute control */
    float djmute;  /* gain applied for muting from the dj mix */
    float peak;    /* highest signal level since last call to mic_getpeak */
