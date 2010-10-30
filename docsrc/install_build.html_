@@ -48,6 +48,9 @@ which you typically want the library development packages whose names carry the 
       <td><a href="http://www.mega-nerd.com/SRC/">libsamplerate</a></td><td>0.1.4+</td><td>Required</td>
    </tr>
    <tr>
+      <td><a href="http://www.gtk.org/download.html">GLib2</a></td><td>2.0.0+</td><td>Required</td>
+   </tr>
+   <tr>
       <td><a href="http://lame.sourceforge.net/">Lame</a></td><td>3.97+</td><td>Recommended&#8212;provides support for streaming/recording in the mp3 format</td>
    </tr>
    <tr>

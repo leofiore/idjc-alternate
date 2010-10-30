@@ -105,12 +105,13 @@ class ReconnectionDialogConfig(gtk.Frame):
    
 class AGCControl(gtk.Frame):
    def sendnewstats(self, widget, wname):
-      if isinstance(widget, (gtk.SpinButton, gtk.Scale)):
-         value = widget.get_value()
-      if isinstance(widget, (gtk.CheckButton, gtk.ComboBox)):
-         value = int(widget.get_active())
-      stringtosend = "INDX=%d\nAGCP=%s=%s\nACTN=%s\nend\n" % (self.index, wname, str(value), "mic_control")
-      self.approot.mixer_write(stringtosend, True)
+      if wname != NotImplemented:
+         if isinstance(widget, (gtk.SpinButton, gtk.Scale)):
+            value = widget.get_value()
+         if isinstance(widget, (gtk.CheckButton, gtk.ComboBox)):
+            value = int(widget.get_active())
+         stringtosend = "INDX=%d\nAGCP=%s=%s\nACTN=%s\nend\n" % (self.index, wname, str(value), "mic_control")
+         self.approot.mixer_write(stringtosend, True)
 
    def set_partner(self, partner):
       self.partner = partner
@@ -429,18 +430,18 @@ class AGCControl(gtk.Frame):
        
       ivbox = self.frame(" " + ln.agc_other_options + " ", self.processed_box)
 
-      open_complex = self.check("", "open2", save=False)
+      open_complex = self.check("", NotImplemented, save=False)
       openaction.connect_proxy(open_complex)
       #ivbox.pack_start(open_complex, False, False)
       #set_tip(open_complex, ln.open_mic_tip)
-      invert_complex = self.check("", "invert2")
+      invert_complex = self.check("", NotImplemented, save=False)
       invertaction.connect_proxy(invert_complex)
       ivbox.pack_start(invert_complex, False, False)
       set_tip(invert_complex, ln.invert_mic_tip)
       phaserotate = self.check(ln.agc_phaserotator, "phaserotate")
       ivbox.pack_start(phaserotate, False, False, 0)
       set_tip(phaserotate, ln.agc_phaserotator_tip)
-      indjmix = self.check("", "indjmix2")
+      indjmix = self.check("", NotImplemented, save=False)
       indjmixaction.connect_proxy(indjmix)
       ivbox.pack_start(indjmix, False, False)
       set_tip(indjmix, ln.in_dj_mix_tip)

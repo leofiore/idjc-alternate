@@ -55,7 +55,7 @@ static void mic_process_start(struct mic *self, jack_nframes_t nframes)
       if (self->mode == 2)
          {
          fprintf(stderr, "leaving fully processed mode, mic %d\n", self->id);
-         agc_reset_stats(self->agc);
+         agc_reset(self->agc);
          }
 
       if (mode_request == 3)
@@ -226,7 +226,7 @@ static struct mic *mic_init(jack_client_t *client, int sample_rate, int id)
    self->sample_rate = (float)sample_rate;   
    self->pan = 50;
    self->peak = peak_init;
-   if (!(self->agc = agc_init(sample_rate, 0.01161f)))
+   if (!(self->agc = agc_init(sample_rate, 0.01161f, id)))
       {
       fprintf(stderr, "mic_init: agc_init failed\n");
       free(self);
@@ -308,7 +308,7 @@ void mic_valueparse(struct mic *self, char *param)
    char *save = NULL, *key, *value;
 
    key = strtok_r(param, "=", &save);
-   value = strtok_r(NULL, "=", &save);  
+   value = strtok_r(NULL, "=", &save); 
    
    if (!strcmp(key, "mode"))
       {
@@ -344,6 +344,6 @@ void mic_valueparse(struct mic *self, char *param)
          self->gain = atof(value);
          calculate_gain_values(self);
          }
-      agc_valueparse(self->agc, key, value);
+      agc_control(self->agc, key, value);
       }
    }

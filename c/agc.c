@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <glib.h>
+#include <pthread.h>
 
 #include "agc.h"
 
@@ -51,8 +53,18 @@ struct agc_RC_Filter
    struct agc_RC_Var var;
    };
    
+struct agc_RC_FilterGroup
+   {
+   struct agc_RC_Filter RC_HPF_initial[4];
+   struct agc_RC_Filter RC_HPF_detail;
+   struct agc_RC_Filter RC_LPF_detail;
+   struct agc_RC_Filter RC_PHR[4];
+   struct agc_RC_Filter RC_F_DS;
+   };
+   
 struct agc
    {
+   int id;
    struct agc *host;       /* points to self or partner for stereo implementation */
    struct agc *partner;
    float input;
@@ -70,48 +82,28 @@ struct agc
    int out_pos;
    float gain;
    float DC;
-   
    float ds_bias;
    float ds_gain;
    int   ds_state;
-
    int   RR_reset_point[4];     /* reset intervals used by all the envelope followers */
    float RR_signal[4];
    float RR_DS_high[4];
    float RR_DS_low[4];
-
    int   use_ducker;
    float df;
    float ducker_attack;
    float ducker_release;
    int   ducker_hold_timer;
    int   ducker_hold_timer_resetval;
-
-   /* microphone attenuation meter levels for the GUI */
-   float meter_red, meter_yellow, meter_green;
-   
-   /* Data for the highpass-filter. This is a simulated active RC-network.
-    * It is the first operation the microphone-audio-signal is processed 
-    * with. Removes DC as well as subsonic sounds...
-    */ 
-   struct agc_RC_Filter RC_HPF_initial[4];
+   float meter_signal_cap, meter_de_ess, meter_noise_gate;
    int hpstages;
-   
-   /* Just another RC-highpass used for enhancing HF-Detail */
    float hf_detail;
-   struct agc_RC_Filter RC_HPF_detail;
-   
-   /* Just another RC-filter this time a lowpass used for enhancing LF-Detail */
    float lf_detail;
-   struct agc_RC_Filter RC_LPF_detail;
-
-   /* Data for the rc-phase-rotator-network */
    int use_phaserotator;   
-   struct agc_RC_Filter RC_PHR[4];
-   
-   /* Data for the de-esser-filter-chain */
-   struct agc_RC_Filter RC_F_DS;
+   struct agc_RC_FilterGroup filters;
    };
+
+static GHashTable *control_ht;  /* used for looking up control functions */
 
 
 static float agc_12db_hpfilter(struct agc_RC_Coe *c, struct agc_RC_Var *v, float input)
@@ -152,26 +144,25 @@ void agc_process_stage1(struct agc *s, float input)
    /* An analog active RC-Highpassfilter network to remove DC and subsonic sounds
     * each stage has 12dB/octave of attenuation.
     */
-    
    for (int i = 0, q = s->host->hpstages; i < q; ++i)
-      input = agc_12db_hpfilter(&s->host->RC_HPF_initial[i].coe, &s->RC_HPF_initial[i].var, input);
+      input = agc_12db_hpfilter(&s->host->filters.RC_HPF_initial[i].coe, &s->filters.RC_HPF_initial[i].var, input);
 
    /* RC-Network (but with only one stage and without resonance/feedback (->6dB/octave))
     * used as HF-Detail-Filter 
     */
-   input = agc_6db_hpfilter(s->host->hf_detail, &s->host->RC_HPF_detail.coe, &s->RC_HPF_detail.var, input);
+   input = agc_6db_hpfilter(s->host->hf_detail, &s->host->filters.RC_HPF_detail.coe, &s->filters.RC_HPF_detail.var, input);
 
    /* RC-Network (but with only one stage and without resonance/feedback)
     * used as LF-Detail-Filter 
     */
-   input = agc_6db_lpfilter(s->host->lf_detail, &s->host->RC_LPF_detail.coe, &s->RC_LPF_detail.var, input); 
+   input = agc_6db_lpfilter(s->host->lf_detail, &s->host->filters.RC_LPF_detail.coe, &s->filters.RC_LPF_detail.var, input); 
 
    /* Phase-rotator done with RC-simulation
     * for good reasons doesn't use Q/resonance either...
     */
    if (s->host->use_phaserotator)
       for (int i = 0; i < 4; ++i)
-         input = agc_phaserotate(s->RC_PHR + i, input);
+         input = agc_phaserotate(s->filters.RC_PHR + i, input);
 
    /* feed input into ring-buffer, store input */
    s->buffer[s->in_pos % s->buffer_len] = s->input = input;
@@ -223,8 +214,8 @@ void agc_process_stage2(struct agc *s, int mic_is_mute)
        */
       {
          float ds_input;
-         struct agc_RC_Coe *c = &s->RC_F_DS.coe;
-         struct agc_RC_Var *v = &s->RC_F_DS.var;
+         struct agc_RC_Coe *c = &s->filters.RC_F_DS.coe;
+         struct agc_RC_Var *v = &s->filters.RC_F_DS.var;
          
          ds_input = input;
          ds_input += c->q * v->bp;
@@ -235,8 +226,8 @@ void agc_process_stage2(struct agc *s, int mic_is_mute)
       }
       
       /* follow the envelope of the de-esser high and low pass filtered signal */
-      ds_amph = agc_quad_rr(s->RR_DS_high, s->RR_reset_point, phase, s->RC_F_DS.var.hp);
-      ds_ampl = agc_quad_rr(s->RR_DS_low, s->RR_reset_point, phase, s->RC_F_DS.var.lp);
+      ds_amph = agc_quad_rr(s->RR_DS_high, s->RR_reset_point, phase, s->filters.RC_F_DS.var.hp);
+      ds_ampl = agc_quad_rr(s->RR_DS_low, s->RR_reset_point, phase, s->filters.RC_F_DS.var.lp);
       
       /* round-robin-4-peak-envelope-follower tracking the general signal level */
       amp = agc_quad_rr(s->RR_signal, s->RR_reset_point, phase, input);
@@ -321,30 +312,29 @@ void agc_process_stage2(struct agc *s, int mic_is_mute)
        */
       if ((s->out_pos & 0x7) == 0)
          {
-         s->meter_red = orig_factor / s->ratio;
-         s->meter_yellow = s->ds_state ? s->ds_gain : 1.0f;
-         s->meter_green = s->nr_state ? s->nr_gain : 1.0f;
+         s->meter_signal_cap = orig_factor / s->ratio;
+         s->meter_de_ess = s->ds_state ? s->ds_gain : 1.0f;
+         s->meter_noise_gate = s->nr_state ? s->nr_gain : 1.0f;
          }
       }
-      
-   /* modulate delayed signal with gain */
    }
 
 float agc_process_stage3(struct agc *s)
    {
+   /* modulate delayed signal with gain */
    return s->buffer[s->out_pos % s->buffer_len] * s->host->gain;
    }
 
-void agc_get_meter_levels(struct agc *s, int *red, int *yellow, int *green)
+void agc_get_meter_levels(struct agc *s, int *signal_cap, int *de_ess, int *noise_gate)
    {
    int level2db(float level)
       {
       return (int)(log10f(level) * -20.0f);
       }
       
-   *red = (int)level2db(s->meter_red);
-   *yellow = (int)level2db(s->meter_yellow);
-   *green = (int)level2db(s->meter_green);
+   *signal_cap = (int)level2db(s->meter_signal_cap);
+   *de_ess = (int)level2db(s->meter_de_ess);
+   *noise_gate = (int)level2db(s->meter_noise_gate);
    }
    
 float agc_get_ducking_factor(struct agc *s)
@@ -352,9 +342,22 @@ float agc_get_ducking_factor(struct agc *s)
    return s->df;
    }
    
-void agc_reset_stats(struct agc *s)
+void agc_reset(struct agc *s)
    {
-   s->df = s->meter_red = s->meter_yellow = s->meter_green = 1.0f;
+   struct agc_RC_Filter *f, *end;
+
+   /* wipe variables of all filters */
+   for (f = (struct agc_RC_Filter *)&s->filters,
+      end = (struct agc_RC_Filter *)((&s->filters) + 1); f < end; ++f)
+      {
+      memset(&f->var, 0, sizeof f->var); 
+      }
+
+   /* wipe audio buffer */
+   memset(s->buffer, 0, s->buffer_len);
+ 
+   /* wipe indicator settings */
+   s->df = s->meter_signal_cap = s->meter_de_ess = s->meter_noise_gate = 1.0f;
    }
 
 static void setup_ratio(struct agc *s, float ratio_db)
@@ -369,7 +372,7 @@ static void setup_subsonic(struct agc *s, float fCutoff)
    
    for (int i = 0; i < 4; ++i)
       {
-      c = &s->RC_HPF_initial[i].coe;
+      c = &s->filters.RC_HPF_initial[i].coe;
    
       c->f = fCutoff;
       c->q = 0.375f;
@@ -381,7 +384,7 @@ static void setup_subsonic(struct agc *s, float fCutoff)
 
 static void setup_lfdetail(struct agc *s, float multi, float fCutoff)
    {
-   struct agc_RC_Coe *c = &s->RC_LPF_detail.coe;
+   struct agc_RC_Coe *c = &s->filters.RC_LPF_detail.coe;
       
    s->lf_detail = multi;
    c->f = fCutoff;
@@ -393,7 +396,7 @@ static void setup_lfdetail(struct agc *s, float multi, float fCutoff)
 
 static void setup_hfdetail(struct agc *s, float multi, float fCutoff)
    {
-   struct agc_RC_Coe *c = &s->RC_HPF_detail.coe;   
+   struct agc_RC_Coe *c = &s->filters.RC_HPF_detail.coe;   
       
    s->hf_detail = multi;
    c->f = fCutoff;
@@ -401,6 +404,139 @@ static void setup_hfdetail(struct agc *s, float multi, float fCutoff)
    c->a = 1.0f - (1.0f / s->sRate) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f / s->sRate));
    c->b = 1.0f - c->a;
    c->c = (1.0f / (c->f * 2.0f * M_PI)) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f / s->sRate));
+   }
+
+static void control_phaserotate(struct agc *s, char *value)
+   {
+   s->use_phaserotator = (value[0] == '1');
+   } 
+
+static void control_gain(struct agc *s, char *value)
+   {
+   setup_ratio(s, strtof(value, NULL));
+   }
+   
+static void control_limit(struct agc *s, char *value)
+   {
+   s->limit = powf(2.0f, strtof(value, NULL) / 6.0f);
+   }
+
+static void control_ngthresh(struct agc *s, char *value)
+   {
+   s->nr_onthres = powf(2.0f, (strtof(value, NULL) - 1.0f) / 6.0f);
+   s->nr_offthres = powf(2.0f, (strtof(value, NULL) + 1.0f) / 6.0f);
+   }
+
+static void control_nggain(struct agc *s, char *value)
+   {
+   s->nr_gain = powf(2.0f, strtof(value, NULL) / 6.0f);
+   }
+
+static void control_duckenable(struct agc *s, char *value)
+   {
+   s->use_ducker = (value[0] == '1');
+   }
+
+static void control_duckrelease(struct agc *s, char *value)
+   {
+   s->ducker_release = 1000.0f / (strtof(value, NULL) * s->sRate);
+   }
+
+static void control_duckhold(struct agc *s, char *value)
+   {
+   s->ducker_hold_timer_resetval = atoi(value) * s->sRate / 1000;
+   }
+   
+static void control_deessbias(struct agc *s, char *value)
+   {
+   s->ds_bias = strtof(value, NULL);
+   }
+
+static void control_deessgain(struct agc *s, char *value)
+   {
+   s->ds_gain = powf(2.0f, strtof(value, NULL) / 6.0f);
+   }
+
+static void control_hpcutoff(struct agc *s, char *value)
+   {
+   setup_subsonic(s, strtof(value, NULL));
+   }
+
+static void control_hpstages(struct agc *s, char *value)
+   {
+   s->hpstages = (int)(strtof(value, NULL) + 0.5f);
+   }
+
+static void control_hfmulti(struct agc *s, char *value)
+   {
+   setup_hfdetail(s, strtof(value, NULL), s->filters.RC_HPF_detail.coe.f);
+   }
+
+static void control_hfcutoff(struct agc *s, char *value)
+   {
+   setup_hfdetail(s, s->hf_detail, strtof(value, NULL));
+   }
+
+static void control_lfmulti(struct agc *s, char *value)
+   {
+   setup_lfdetail(s, strtof(value, NULL), s->filters.RC_LPF_detail.coe.f);
+   }
+
+static void control_lfcutoff(struct agc *s, char *value)
+   {
+   setup_lfdetail(s, s->lf_detail, strtof(value, NULL));
+   }
+
+static void free_control_hash_table()
+   {
+   g_hash_table_destroy(control_ht);
+   }
+
+static void setup_control_hash_table()
+   {
+   struct
+   {
+   char *key;
+   void (*value)(struct agc *, char *);
+   } *htdp, htdata[] = {
+      {"phaserotate", control_phaserotate},
+      {"gain", control_gain},
+      {"limit", control_limit},
+      {"ngthresh", control_ngthresh},
+      {"nggain", control_nggain}, 
+      {"duckenable", control_duckenable},
+      {"duckrelease", control_duckrelease},
+      {"duckhold", control_duckhold},
+      {"deessbias", control_deessbias},
+      {"deessgain", control_deessgain},
+      {"hpcutoff", control_hpcutoff},
+      {"hpstages", control_hpstages},
+      {"hfmulti", control_hfmulti},
+      {"hfcutoff", control_hfcutoff},
+      {"lfmulti", control_lfmulti},
+      {"lfcutoff", control_lfcutoff},
+      {NULL, NULL}};
+
+   if (!(control_ht = g_hash_table_new(g_str_hash, g_str_equal)))
+      {
+      fprintf(stderr, "agc setup_control_hash_table failed\n");
+      return;
+      }
+   
+   for (htdp = htdata; htdp->key; ++htdp)
+      g_hash_table_insert(control_ht, htdp->key, htdp->value);
+      
+   atexit(free_control_hash_table);
+   }
+
+void agc_control(struct agc *s, char *key, char *value)
+   {
+   void (*fn)(struct agc *, char *);
+   
+   if (!(fn = g_hash_table_lookup(control_ht, key)))
+      fprintf(stderr, "agc_control: lookup error for key %s\n", key);
+   else
+      fn(s, value);
    }
 
 void agc_set_as_partners(struct agc *agc1, struct agc *agc2)
@@ -417,10 +553,13 @@ void agc_set_partnered_mode(struct agc *s, int boolean)
       s->host = s;
    }
 
-struct agc *agc_init(int sRate, float lookahead)
+struct agc *agc_init(int sRate, float lookahead, int id)
    {
    struct agc *s;
    struct agc_RC_Coe *c;
+   static pthread_once_t control_hash_table_once = PTHREAD_ONCE_INIT;
+   
+   pthread_once(&control_hash_table_once, setup_control_hash_table);
 
    if (!(s = calloc(1, sizeof (struct agc))))
       {
@@ -435,6 +574,7 @@ struct agc *agc_init(int sRate, float lookahead)
       return NULL;
       }
 
+   s->id = id;
    s->host = s->partner = s;
 
    {
@@ -458,7 +598,7 @@ struct agc *agc_init(int sRate, float lookahead)
    
    s->ds_bias  =  0.35f; /* lpf * bias / hpf exceeds 1 for de-esser to go active */
    s->ds_gain  =  0.5f;  /* attenuate signal by this amount */
-   s->meter_red = s->meter_yellow = s->meter_green = 1.0f;  /* initial meter info */
+   s->meter_signal_cap = s->meter_de_ess = s->meter_noise_gate = 1.0f;
    
    /* setup coefficients for the ducker */
    s->ducker_release = 1.0f / (0.250f * s->sRate); /* 250ms */
@@ -480,7 +620,7 @@ struct agc *agc_init(int sRate, float lookahead)
    s->use_phaserotator = 1;
    for (int i = 0; i < 4; ++i)
       {
-      c = &s->RC_PHR[i].coe;
+      c = &s->filters.RC_PHR[i].coe;
       
       c->f = 300.0f;
       c->q = 0.0f;
@@ -490,7 +630,7 @@ struct agc *agc_init(int sRate, float lookahead)
       }
    
    /* setup coefficients for the de-esser-sidechain highpass/lowpass filter */
-   c = &s->RC_F_DS.coe;
+   c = &s->filters.RC_F_DS.coe;
    c->f = 1000.0f;
    c->q = 1.000f;
    c->a = 1.0f - (1.0f / s->sRate) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f / s->sRate));
@@ -504,103 +644,4 @@ void agc_free(struct agc *s)
    {
    free(s->buffer);
    free(s);
-   }
-
-void agc_valueparse(struct agc *s, char *key, char *value)
-   {
-   if (!strcmp(key, "phaserotate"))
-      {
-      s->use_phaserotator = (value[0] == '1');
-      return;
-      }
-
-   if (!strcmp(key, "gain"))
-      {
-      setup_ratio(s, strtof(value, NULL));
-      return;
-      }
-
-   if (!strcmp(key, "limit"))
-      {
-      s->limit = powf(2.0f, strtof(value, NULL) / 6.0f);
-      return;
-      }
-
-   if (!strcmp(key, "ngthresh"))
-      {
-      s->nr_onthres = powf(2.0f, (strtof(value, NULL) - 1.0f) / 6.0f);
-      s->nr_offthres = powf(2.0f, (strtof(value, NULL) + 1.0f) / 6.0f);
-      return;
-      }
-
-   if (!strcmp(key, "nggain"))
-      {
-      s->nr_gain = powf(2.0f, strtof(value, NULL) / 6.0f);
-      return;
-      }
-
-   if (!strcmp(key, "duckenable"))
-      {
-      s->use_ducker = (value[0] == '1');
-      return;
-      }
-
-   if (!strcmp(key, "duckrelease"))
-      {
-      s->ducker_release = 1000.0f / (strtof(value, NULL) * s->sRate);
-      return;
-      }
-
-   if (!strcmp(key, "duckhold"))
-      {
-      s->ducker_hold_timer_resetval = atoi(value) * s->sRate / 1000;
-      return;
-      }
-
-   if (!strcmp(key, "deessbias"))
-      {
-      s->ds_bias = strtof(value, NULL);
-      return;
-      }
-
-   if (!strcmp(key, "deessgain"))
-      {
-      s->ds_gain = powf(2.0f, strtof(value, NULL) / 6.0f);
-      return;
-      }
-
-   if (!strcmp(key, "hpcutoff"))
-      {
-      setup_subsonic(s, strtof(value, NULL));
-      return;
-      }
-
-   if (!strcmp(key, "hpstages"))
-      {
-      s->hpstages = (int)(strtof(value, NULL) + 0.5f);
-      }
-
-   if (!strcmp(key, "hfmulti"))
-      {
-      setup_hfdetail(s, strtof(value, NULL), s->RC_HPF_detail.coe.f);
-      return;
-      }
-
-   if (!strcmp(key, "hfcutoff"))
-      {
-      setup_hfdetail(s, s->hf_detail, strtof(value, NULL));
-      return;
-      }
-
-   if (!strcmp(key, "lfmulti"))
-      {
-      setup_lfdetail(s, strtof(value, NULL), s->RC_LPF_detail.coe.f);
-      return;
-      }
-
-   if (!strcmp(key, "lfcutoff"))
-      {
-      setup_lfdetail(s, s->lf_detail, strtof(value, NULL));
-      return;
-      }
    }

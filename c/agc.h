@@ -18,17 +18,36 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
+/* opaque pointer */
 struct agc;
 
-struct agc *agc_init(int sample_rate, float lookahead);
+/* initialisation */
+struct agc *agc_init(int sample_rate, float lookahead, int id);
+
+/* declare another agc to be pairable for stereo */
 void agc_set_as_partners(struct agc *agc1, struct agc *agc2);
+
+/* initiate or cancel stereo mode - called on subordinate */
 void agc_set_partnered_mode(struct agc *self, int boolean);
+
+/* run each of these in turn, intersperse paired mics
+ * parameter mic_is_mute toggles ducker operation
+ */
 void agc_process_stage1(struct agc *self, float input);
 void agc_process_stage2(struct agc *self, int mic_is_mute);
 float agc_process_stage3(struct agc *self);
-void agc_get_meter_levels(struct agc *self, int *red, int *yellow, int *green);
-float agc_get_ducking_factor(struct agc *self);
-void agc_reset_stats(struct agc *self);
-void agc_free(struct agc *self);
-void agc_valueparse(struct agc *s, char *key, char *value);
 
+/* the amount of attenuation broken down into three parts */
+void agc_get_meter_levels(struct agc *self, int *signal_cap, int *de_ess, int *noise_gate);
+
+/* the amount of ducking to apply */
+float agc_get_ducking_factor(struct agc *self);
+
+/* call this when going idle for a while - accumulated data is flushed */
+void agc_reset(struct agc *self);
+
+/* take down */
+void agc_free(struct agc *self);
+
+/* configuration from control strings */
+void agc_control(struct agc *s, char *key, char *value);
