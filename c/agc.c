@@ -25,35 +25,126 @@
 
 #include "agc.h"
 
-
-static float agc_12db_hpfilter(struct agc_RC_Filter *c, struct agc_RC_Filter *h, float input)
+/* coefficients of agc_RC_Filter */   
+struct agc_RC_Coe
    {
-   input += h->q * c->bp;
-   c->hp = h->c * ( c->hp + input - c->last_in );
-   c->bp = c->bp * h->a + c->hp * h->b;
-   c->last_in = input;
-   return c->hp;
+   float a;
+   float b;
+   float c;
+   float f;
+   float q;
+   };
+
+/* variables of agc_RC_Filter */
+struct agc_RC_Var
+   {
+   float last_in;
+   float lp;
+   float bp;
+   float hp;
+   };
+
+/* structure for an RC filter */
+struct agc_RC_Filter
+   {
+   struct agc_RC_Coe coe;
+   struct agc_RC_Var var;
+   };
+   
+struct agc
+   {
+   struct agc *host;       /* points to self or partner for stereo implementation */
+   struct agc *partner;
+   float input;
+   float ratio;
+   float limit;
+   float nr_gain;
+   float nr_onthres;
+   float nr_offthres;
+   float gain_interval_amount; /* agc gain can move by this amount each interval */
+   int nr_state;
+   float *buffer;          /* eventual buffer size depends on sample rate */
+   int buffer_len;
+   int sRate;              /* the sample rate in use by JACK */
+   int in_pos;
+   int out_pos;
+   float gain;
+   float DC;
+   
+   float ds_bias;
+   float ds_gain;
+   int   ds_state;
+
+   int   RR_reset_point[4];     /* reset intervals used by all the envelope followers */
+   float RR_signal[4];
+   float RR_DS_high[4];
+   float RR_DS_low[4];
+
+   int   use_ducker;
+   float df;
+   float ducker_attack;
+   float ducker_release;
+   int   ducker_hold_timer;
+   int   ducker_hold_timer_resetval;
+
+   /* microphone attenuation meter levels for the GUI */
+   float meter_red, meter_yellow, meter_green;
+   
+   /* Data for the highpass-filter. This is a simulated active RC-network.
+    * It is the first operation the microphone-audio-signal is processed 
+    * with. Removes DC as well as subsonic sounds...
+    */ 
+   struct agc_RC_Filter RC_HPF_initial[4];
+   int hpstages;
+   
+   /* Just another RC-highpass used for enhancing HF-Detail */
+   float hf_detail;
+   struct agc_RC_Filter RC_HPF_detail;
+   
+   /* Just another RC-filter this time a lowpass used for enhancing LF-Detail */
+   float lf_detail;
+   struct agc_RC_Filter RC_LPF_detail;
+
+   /* Data for the rc-phase-rotator-network */
+   int use_phaserotator;   
+   struct agc_RC_Filter RC_PHR[4];
+   
+   /* Data for the de-esser-filter-chain */
+   struct agc_RC_Filter RC_F_DS;
+   };
+
+
+static float agc_12db_hpfilter(struct agc_RC_Coe *c, struct agc_RC_Var *v, float input)
+   {
+   input += c->q * v->bp;
+   v->hp = c->c * (v->hp + input - v->last_in);
+   v->bp = v->bp * c->a + v->hp * c->b;
+   v->last_in = input;
+   return v->hp;
    }
 
-static float agc_6db_hpfilter(float detail, struct agc_RC_Filter *c, struct agc_RC_Filter *h, float input)
+static float agc_6db_hpfilter(float detail, struct agc_RC_Coe *c, struct agc_RC_Var *v, float input)
    {
-   c->hp = h->c * (c->hp + input - c->last_in);
-   c->last_in = input;
-   return input + c->hp * detail;
+   v->hp = c->c * (v->hp + input - v->last_in);
+   v->last_in = input;
+   return input + v->hp * detail;
    }
 
-static float agc_6db_lpfilter(float detail, struct agc_RC_Filter *c, struct agc_RC_Filter *h, float input)
+static float agc_6db_lpfilter(float detail, struct agc_RC_Coe *c, struct agc_RC_Var *v, float input)
    {
-   c->lp = c->lp * h->a + input * h->b;
-   return input + c->lp * detail;
+   v->lp = v->lp * c->a + input * c->b;
+   return input + v->lp * detail;
    }
 
-static float agc_phaserotate(struct agc_RC_Filter *c, float input)
+static float agc_phaserotate(struct agc_RC_Filter *f, float input)
    {
-   c->hp = c->c * (c->hp + input - c->last_in);
-   c->lp = c->lp * c->a + input * c->b;
-   c->last_in = input;
-   return c->lp - c->hp;
+   struct agc_RC_Coe *c = &f->coe;
+   struct agc_RC_Var *v = &f->var;
+      
+   v->hp = c->c * (v->hp + input - v->last_in);
+   v->lp = v->lp * c->a + input * c->b;
+   v->last_in = input;
+   return v->lp - v->hp;
    }
 
 void agc_process_stage1(struct agc *s, float input)
@@ -63,17 +154,17 @@ void agc_process_stage1(struct agc *s, float input)
     */
     
    for (int i = 0, q = s->host->hpstages; i < q; ++i)
-      input = agc_12db_hpfilter(s->RC_HPF_initial + i, s->host->RC_HPF_initial + i, input);
+      input = agc_12db_hpfilter(&s->host->RC_HPF_initial[i].coe, &s->RC_HPF_initial[i].var, input);
 
    /* RC-Network (but with only one stage and without resonance/feedback (->6dB/octave))
     * used as HF-Detail-Filter 
     */
-   input = agc_6db_hpfilter(s->host->hf_detail, &s->RC_HPF_detail, &s->host->RC_HPF_detail, input);
+   input = agc_6db_hpfilter(s->host->hf_detail, &s->host->RC_HPF_detail.coe, &s->RC_HPF_detail.var, input);
 
    /* RC-Network (but with only one stage and without resonance/feedback)
     * used as LF-Detail-Filter 
     */
-   input = agc_6db_lpfilter(s->host->lf_detail, &s->RC_LPF_detail, &s->host->RC_LPF_detail, input); 
+   input = agc_6db_lpfilter(s->host->lf_detail, &s->host->RC_LPF_detail.coe, &s->RC_LPF_detail.var, input); 
 
    /* Phase-rotator done with RC-simulation
     * for good reasons doesn't use Q/resonance either...
@@ -99,7 +190,7 @@ static float agc_quad_rr(float *storage, int *reset_point, int phase, float inpu
    for (int i = 0; i < 4; ++i, ++storage, ++reset_point)
       {
       if (*reset_point == phase)
-         *storage = 0;
+         *storage = 0.0f;
       if (input > *storage)
          *storage = input;
       if (*storage > highest)
@@ -115,7 +206,7 @@ void agc_process_stage2(struct agc *s, int mic_is_mute)
    /* phase for use by all of the envelope-followers */
    float phase;
    /* de-esser values */
-   float ds_input, ds_amph, ds_ampl;
+   float ds_amph, ds_ampl;
    /* the input signal level as computed by the envelope follower */
    float amp;
    /* the amplification factor */
@@ -130,15 +221,22 @@ void agc_process_stage2(struct agc *s, int mic_is_mute)
      
       /* De-Esser sidechain-filter - does high and low pass filtering
        */
-      ds_input = input;
-      ds_input += s->RC_F_DS.q * s->RC_F_DS.bp;
-      s->RC_F_DS.lp = s->RC_F_DS.lp * s->RC_F_DS.a + ds_input * s->RC_F_DS.b;
-      s->RC_F_DS.hp = s->RC_F_DS.c * ( s->RC_F_DS.hp + input - s->RC_F_DS.last_in );
-      s->RC_F_DS.bp = s->RC_F_DS.bp * s->RC_F_DS.a + s->RC_F_DS.hp * s->RC_F_DS.b;
-      s->RC_F_DS.last_in = ds_input;
+      {
+         float ds_input;
+         struct agc_RC_Coe *c = &s->RC_F_DS.coe;
+         struct agc_RC_Var *v = &s->RC_F_DS.var;
+         
+         ds_input = input;
+         ds_input += c->q * v->bp;
+         v->lp = v->lp * c->a + ds_input * c->b;
+         v->hp = c->c * (v->hp + input - v->last_in );
+         v->bp = v->bp * c->a + v->hp * c->b;
+         v->last_in = ds_input;
+      }
+      
       /* follow the envelope of the de-esser high and low pass filtered signal */
-      ds_amph = agc_quad_rr(s->RR_DS_high, s->RR_reset_point, phase, s->RC_F_DS.hp);
-      ds_ampl = agc_quad_rr(s->RR_DS_low, s->RR_reset_point, phase, s->RC_F_DS.lp);
+      ds_amph = agc_quad_rr(s->RR_DS_high, s->RR_reset_point, phase, s->RC_F_DS.var.hp);
+      ds_ampl = agc_quad_rr(s->RR_DS_low, s->RR_reset_point, phase, s->RC_F_DS.var.lp);
       
       /* round-robin-4-peak-envelope-follower tracking the general signal level */
       amp = agc_quad_rr(s->RR_signal, s->RR_reset_point, phase, input);
@@ -248,6 +346,16 @@ void agc_get_meter_levels(struct agc *s, int *red, int *yellow, int *green)
    *yellow = (int)level2db(s->meter_yellow);
    *green = (int)level2db(s->meter_green);
    }
+   
+float agc_get_ducking_factor(struct agc *s)
+   {
+   return s->df;
+   }
+   
+void agc_reset_stats(struct agc *s)
+   {
+   s->df = s->meter_red = s->meter_yellow = s->meter_green = 1.0f;
+   }
 
 static void setup_ratio(struct agc *s, float ratio_db)
    {
@@ -257,33 +365,42 @@ static void setup_ratio(struct agc *s, float ratio_db)
 
 static void setup_subsonic(struct agc *s, float fCutoff)
    {
-   s->RC_HPF_initial[0].f = fCutoff;
-   s->RC_HPF_initial[0].q = 0.375f;
-   s->RC_HPF_initial[0].a = 1.0f - (1.0f/s->sRate) / ((1.0f / (s->RC_HPF_initial[0].f * 2.0f * M_PI)) + (1.0f/s->sRate));
-   s->RC_HPF_initial[0].b = 1.0f - s->RC_HPF_initial[0].a;
-   s->RC_HPF_initial[0].c = (1.0f/(s->RC_HPF_initial[0].f*2.0f*M_PI)) / ( (1.0f/(s->RC_HPF_initial[0].f*2.0f*M_PI)) + (1.0f/s->sRate));
+   struct agc_RC_Coe *c;
    
-   s->RC_HPF_initial[3] = s->RC_HPF_initial[2] = s->RC_HPF_initial[1] = s->RC_HPF_initial[0];
+   for (int i = 0; i < 4; ++i)
+      {
+      c = &s->RC_HPF_initial[i].coe;
+   
+      c->f = fCutoff;
+      c->q = 0.375f;
+      c->a = 1.0f - (1.0f/s->sRate) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f/s->sRate));
+      c->b = 1.0f - c->a;
+      c->c = (1.0f/(c->f * 2.0f * M_PI)) / ((1.0f/(c->f * 2.0f * M_PI)) + (1.0f/s->sRate));
+      }
    }
 
 static void setup_lfdetail(struct agc *s, float multi, float fCutoff)
    {
+   struct agc_RC_Coe *c = &s->RC_LPF_detail.coe;
+      
    s->lf_detail = multi;
-   s->RC_LPF_detail.f = fCutoff;
-   s->RC_LPF_detail.q = 0.375f;
-   s->RC_LPF_detail.a = 1.0f - (1.0f/s->sRate) / ( (1.0f/(s->RC_LPF_detail.f*2.0f*M_PI)) + (1.0f/s->sRate) );
-   s->RC_LPF_detail.b = 1.0f - s->RC_LPF_detail.a;
-   s->RC_LPF_detail.c = (1.0f/(s->RC_LPF_detail.f*2.0f*M_PI)) / ( (1.0f/(s->RC_LPF_detail.f*2.0f*M_PI)) + (1.0f/s->sRate) );
+   c->f = fCutoff;
+   c->q = 0.375f;
+   c->a = 1.0f - (1.0f/s->sRate) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f/s->sRate));
+   c->b = 1.0f - c->a;
+   c->c = (1.0f / (c->f * 2.0f * M_PI)) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f / s->sRate));
    }
 
 static void setup_hfdetail(struct agc *s, float multi, float fCutoff)
    {
+   struct agc_RC_Coe *c = &s->RC_HPF_detail.coe;   
+      
    s->hf_detail = multi;
-   s->RC_HPF_detail.f = fCutoff;
-   s->RC_HPF_detail.q = 0.375f;
-   s->RC_HPF_detail.a = 1.0f - (1.0f/s->sRate) / ( (1.0f/(s->RC_HPF_detail.f*2.0f*M_PI)) + (1.0f/s->sRate) );
-   s->RC_HPF_detail.b = 1.0f - s->RC_HPF_detail.a;
-   s->RC_HPF_detail.c = (1.0f/(s->RC_HPF_detail.f*2.0f*M_PI)) / ( (1.0f/(s->RC_HPF_detail.f*2.0f*M_PI)) + (1.0f/s->sRate) );
+   c->f = fCutoff;
+   c->q = 0.375f;
+   c->a = 1.0f - (1.0f / s->sRate) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f / s->sRate));
+   c->b = 1.0f - c->a;
+   c->c = (1.0f / (c->f * 2.0f * M_PI)) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f / s->sRate));
    }
 
 void agc_set_as_partners(struct agc *agc1, struct agc *agc2)
@@ -292,9 +409,18 @@ void agc_set_as_partners(struct agc *agc1, struct agc *agc2)
    agc2->partner = agc1;
    } 
 
+void agc_set_partnered_mode(struct agc *s, int boolean)
+   {
+   if (boolean)
+      s->host = s->partner;
+   else
+      s->host = s;
+   }
+
 struct agc *agc_init(int sRate, float lookahead)
    {
    struct agc *s;
+   struct agc_RC_Coe *c;
 
    if (!(s = calloc(1, sizeof (struct agc))))
       {
@@ -350,22 +476,26 @@ struct agc *agc_init(int sRate, float lookahead)
    /* setup coefficients for the LF-Detail lowpass */
    setup_lfdetail(s, 4.0f, 150.0f);
    
-   /* setup coefficients for the phase-rotator, first stage */
+   /* setup coefficients for the phase rotator */
    s->use_phaserotator = 1;
-   s->RC_PHR[0].f = 300.0f;
-   s->RC_PHR[0].q = 0.000f;
-   s->RC_PHR[0].a = 1.0f - (1.0f/s->sRate) / ( (1.0f/(s->RC_PHR[0].f*2.0f*M_PI)) + (1.0f/s->sRate) );
-   s->RC_PHR[0].b = 1.0f - s->RC_PHR[0].a;
-   s->RC_PHR[0].c = (1.0f/(s->RC_PHR[0].f*2.0f*M_PI)) / ( (1.0f/(s->RC_PHR[0].f*2.0f*M_PI)) + (1.0f/s->sRate) );
-   /* copy settings for the further three stages */
-   s->RC_PHR[3] = s->RC_PHR[2] = s->RC_PHR[1] = s->RC_PHR[0];
+   for (int i = 0; i < 4; ++i)
+      {
+      c = &s->RC_PHR[i].coe;
+      
+      c->f = 300.0f;
+      c->q = 0.0f;
+      c->a = 1.0f - (1.0f / s->sRate) / ((1.0f/(c->f * 2.0f * M_PI)) + (1.0f / s->sRate));
+      c->b = 1.0f - c->a;
+      c->c = (1.0f / (c->f * 2.0f * M_PI)) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f / s->sRate));
+      }
    
    /* setup coefficients for the de-esser-sidechain highpass/lowpass filter */
-   s->RC_F_DS.f = 1000.0f;
-   s->RC_F_DS.q = 1.000f;
-   s->RC_F_DS.a = 1.0f - (1.0f/s->sRate) / ( (1.0f/(s->RC_F_DS.f*2.0f*M_PI)) + (1.0f/s->sRate) );
-   s->RC_F_DS.b = 1.0f - s->RC_F_DS.a;
-   s->RC_F_DS.c = (1.0f/(s->RC_F_DS.f*2.0f*M_PI)) / ( (1.0f/(s->RC_F_DS.f*2.0f*M_PI)) + (1.0f/s->sRate) );
+   c = &s->RC_F_DS.coe;
+   c->f = 1000.0f;
+   c->q = 1.000f;
+   c->a = 1.0f - (1.0f / s->sRate) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f / s->sRate));
+   c->b = 1.0f - c->a;
+   c->c = (1.0f / (c->f * 2.0f * M_PI)) / ((1.0f / (c->f * 2.0f * M_PI)) + (1.0f / s->sRate));
 
    return s;
    }
@@ -452,7 +582,7 @@ void agc_valueparse(struct agc *s, char *key, char *value)
 
    if (!strcmp(key, "hfmulti"))
       {
-      setup_hfdetail(s, strtof(value, NULL), s->RC_HPF_detail.f);
+      setup_hfdetail(s, strtof(value, NULL), s->RC_HPF_detail.coe.f);
       return;
       }
 
@@ -464,7 +594,7 @@ void agc_valueparse(struct agc *s, char *key, char *value)
 
    if (!strcmp(key, "lfmulti"))
       {
-      setup_lfdetail(s, strtof(value, NULL), s->RC_LPF_detail.f);
+      setup_lfdetail(s, strtof(value, NULL), s->RC_LPF_detail.coe.f);
       return;
       }
 

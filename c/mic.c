@@ -25,6 +25,8 @@
 #include "mic.h"
 #include "dbconvert.h"
 
+#define FALSE 0
+#define TRUE (!FALSE)
 
 static const float peak_init = 4.46e-7f; /* -127dB */
 
@@ -53,21 +55,21 @@ static void mic_process_start(struct mic *self, jack_nframes_t nframes)
       if (self->mode == 2)
          {
          fprintf(stderr, "leaving fully processed mode, mic %d\n", self->id);
-         self->agc->df = self->agc->meter_red = self->agc->meter_yellow = self->agc->meter_green = 1.0f;
+         agc_reset_stats(self->agc);
          }
 
       if (mode_request == 3)
          {
          fprintf(stderr, "entering stereo mode, mic %d\n", self->id);
          self->host = self->partner;
-         self->agc->host = self->partner->agc;
+         agc_set_partnered_mode(self->agc, TRUE);
          }
 
       if (self->mode == 3)
          {
          fprintf(stderr, "leaving stereo mode, mic %d\n", self->id);
          self->host = self;
-         self->agc->host = self->agc;
+         agc_set_partnered_mode(self->agc, FALSE);
          }
 
       if (mode_request == 0)
@@ -179,7 +181,7 @@ float mic_process_all(struct mic **mics)
          
    /* ducking factor tally - lowest wins */
    for (df = 1.0f, mp = mics; *mp; mp++)
-      df = (df > (agcdf = (*mp)->agc->df)) ? agcdf : df;
+      df = (df > (agcdf = agc_get_ducking_factor((*mp)->agc))) ? agcdf : df;
         
    return df;
    }
