@@ -932,6 +932,8 @@ open_mic_tip = "Allow microphone audio into the mix."
 
 other_mic_options = "General Mic Options"
 
+paired_frame_tip = "These controls are provided to obtain a decent match between the two microphones."
+
 pan = "Stereo Panning"
 
 pan_tip = """Stereo panning is the selection of where an audio source sits from left to right within the stereo mix.
@@ -1134,6 +1136,8 @@ red_phone_tip = "Mix voice over IP audio to the DJ only."
 
 refresh_jingles_tip = "Cause the playlist to be refreshed. This is for when items have been added or removed from the jingles playlist folder located at '~/.idjc/profiles/[active profile]/jingles'."
 
+relative_gain = "Relative Gain"
+
 remaining = "Remaining"
 
 remove = "Remove"
@@ -1250,6 +1254,8 @@ settings_warning_tip = "Adjust these settings carefully since they can have subt
 sideline = "Sideline"
 
 sideline_tip = "A user interface clutter removal feature for unused or problematic streams."
+
+signal_matching = " Signal Matching "
 
 silence_killer = "End tracks early: those that have quiet endings"
 

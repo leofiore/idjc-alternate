@@ -106,7 +106,8 @@ static void mic_process_stage1(struct mic *self)
    if (isunordered(sample, sample))
       sample = 0.0f;
 
-   /* TODO: preprocessing code for stereo subordinate mic goes here */
+   if (self->mode == 3)
+      sample *= self->rel_igain * self->rel_gain;
    self->sample = sample;
    }
 
@@ -336,6 +337,14 @@ void mic_valueparse(struct mic *self, char *param)
    else if(!strcmp(key, "indjmix"))
       {
       self->djmute = (value[0] == '1') ? 1.0f : 0.0f;
+      }
+   else if(!strcmp(key, "pairedinvert"))
+      {
+      self->rel_igain = (value[0] == '1') ? -1.0f : 1.0f;
+      }
+   else if(!strcmp(key, "pairedgain"))
+      {
+      self->rel_gain = powf(10.0f, atof(value) * 0.05);
       }
    else
       {

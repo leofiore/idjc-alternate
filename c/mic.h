@@ -55,6 +55,8 @@ struct mic
    float mute;    /* gain applied by soft mute control */
    float djmute;  /* gain applied for muting from the dj mix */
    float peak;    /* highest signal level since last call to mic_getpeak */
+   float rel_igain; /* invert for paired mic */
+   float rel_gain;  /* signal level trim for paired mic */
    jack_port_t *jack_port; /* jack port handle */
    jack_default_audio_sample_t *jadp; /* jack audio data pointer */
    jack_nframes_t nframes; /* jack buffer size */
