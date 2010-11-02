@@ -2,7 +2,7 @@
 
 * Changes in version 0.8.5 *
 
-Glib added to dependencies. Handles hash table duties in agc code.
+Glib added to dependencies. Handles hash table duties in agc code. Hash tables and other GLib features may be used internally to a greater degree as code gets rewritten.
 
 Improvements to the front panel mic open button text. Alt text overrides the mic number, stereo mics are indicated.
 

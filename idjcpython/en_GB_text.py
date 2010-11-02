@@ -1136,7 +1136,7 @@ red_phone_tip = "Mix voice over IP audio to the DJ only."
 
 refresh_jingles_tip = "Cause the playlist to be refreshed. This is for when items have been added or removed from the jingles playlist folder located at '~/.idjc/profiles/[active profile]/jingles'."
 
-relative_gain = "Relative Gain"
+relative_gain = "Relative Gain (dB)"
 
 remaining = "Remaining"
 

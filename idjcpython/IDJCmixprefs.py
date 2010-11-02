@@ -104,6 +104,8 @@ class ReconnectionDialogConfig(gtk.Frame):
       vbox.add(self.lj(self.attempt_reconnection, 20))
    
 class AGCControl(gtk.Frame):
+   can_mark = all(hasattr(gtk.Scale, x) for x in ('add_mark', 'clear_marks'))
+   
    def sendnewstats(self, widget, wname):
       if wname != NotImplemented:
          if isinstance(widget, (gtk.SpinButton, gtk.Scale)):
@@ -339,7 +341,12 @@ class AGCControl(gtk.Frame):
       pancenterbox = gtk.HBox()
       pancenter = gtk.Button()
       pancenter.connect("clicked", self.cb_pan_middle)
-      pancenterbox.pack_start(pancenter, True, False)
+      if self.can_mark:
+         self.pan.add_mark(50.0, gtk.POS_BOTTOM, None)
+         self.pan.add_mark(25.0, gtk.POS_BOTTOM, None)
+         self.pan.add_mark(75.0, gtk.POS_BOTTOM, None)
+      else:
+         pancenterbox.pack_start(pancenter, True, False)
       panvbox.pack_start(pancenterbox, False, False)
       self.vbox.pack_start(panframe, False, False)
       panframe.show_all()
@@ -377,8 +384,6 @@ class AGCControl(gtk.Frame):
       self.open = self.check("", "open", save=False)
       openaction.connect_proxy(self.open)
       self.open.connect("toggled", self.cb_open)
-      #ivbox.pack_start(self.open, False, False)
-      #set_tip(self.open, ln.open_mic_tip)
       
       invert_simple = self.check("", "invert")
       invertaction.connect_proxy(invert_simple)

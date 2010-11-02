@@ -71,7 +71,7 @@ which you typically want the library development packages whose names carry the 
    </tr>
 </table>
 <p>For Ubuntu users, this command should be enough to satisfy all of the above.</p>
-<pre class="ie6-one-line-pre">$ sudo apt-get install build-essential libc6-dev libjack-dev jackd libvorbis-dev libsamplerate0-dev libsndfile1-dev python-gtk2-dev libmad0-dev libavcodec-dev libavformat-dev libmp3lame-dev flac vorbis-tools python-mutagen libspeex-dev</pre>
+<pre class="ie6-one-line-pre">$ sudo apt-get install build-essential libc6-dev libglib2.0-dev libjack-dev jackd libvorbis-dev libsamplerate0-dev libsndfile1-dev python-gtk2-dev libmad0-dev libavcodec-dev libavformat-dev libmp3lame-dev flac vorbis-tools python-mutagen libspeex-dev</pre>
 
 <h4>Obtaining the IDJC source code</h4>
 <p>There are two options available to you. One is to get the official release (recommended), the other is to
