@@ -48,6 +48,9 @@ which you typically want the library development packages whose names carry the 
       <td><a href="http://www.mega-nerd.com/SRC/">libsamplerate</a></td><td>0.1.4+</td><td>Required</td>
    </tr>
    <tr>
+      <td><a href="http://www.gtk.org/download.html">GLib2</a></td><td>2.0.0+</td><td>Required</td>
+   </tr>
+   <tr>
       <td><a href="http://lame.sourceforge.net/">Lame</a></td><td>3.97+</td><td>Recommended&#8212;provides support for streaming/recording in the mp3 format</td>
    </tr>
    <tr>
@@ -68,7 +71,7 @@ which you typically want the library development packages whose names carry the 
    </tr>
 </table>
 <p>For Ubuntu users, this command should be enough to satisfy all of the above.</p>
-<pre class="ie6-one-line-pre">$ sudo apt-get install build-essential libc6-dev libjack-dev jackd libvorbis-dev libsamplerate0-dev libsndfile1-dev python-gtk2-dev libmad0-dev libavcodec-dev libavformat-dev libmp3lame-dev flac vorbis-tools python-mutagen libspeex-dev</pre>
+<pre class="ie6-one-line-pre">$ sudo apt-get install build-essential libc6-dev libglib2.0-dev libjack-dev jackd libvorbis-dev libsamplerate0-dev libsndfile1-dev python-gtk2-dev libmad0-dev libavcodec-dev libavformat-dev libmp3lame-dev flac vorbis-tools python-mutagen libspeex-dev</pre>
 
 <h4>Obtaining the IDJC source code</h4>
 <p>There are two options available to you. One is to get the official release (recommended), the other is to

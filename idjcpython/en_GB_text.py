@@ -106,7 +106,7 @@ all = "All"
 
 alternate = "Alternate"
 
-alt_mic_name = "Extra open button text goes here e.g. DJ or Guest, to appear in the main window."
+alt_mic_name = "Alternate opener button text goes here e.g. DJ or Guest. When not specified the microphone number is used instead."
 
 announce_tip = "Enter the message you want to send here. To include the track currently playing use %s. You can also include colours using Ctrl+K (standard XChat/mIRC method) or from the context menu (right click)."
 
@@ -772,11 +772,15 @@ mic_compression_level_tip = "Controls whether to display a meter indicating the 
 
 mic_in_phones = "Hearing your voice in your headphones (somewhat delayed) can be distracting which is why some users might want to turn this feature off."
 
+mic_off = "Deactivated"
+
 mic_simple = "Simple (low CPU drain)"
 
 mic_processed = "Full Signal Processing"
 
-mic_complexity_tip = "Use this to turn on microphone signal processing which may be all you need to make a cheap mic sound like a more expensive one or achieve a studio sound. The simple options on the other hand place less demand on the CPU and may be all you require."
+mic_stereo = "Partnered with Mic "
+
+mic_mode_tip = "The microphone mode."
 
 mic_off_tip = "Each time the microphone is turned off run the commands to the right."
 
@@ -927,6 +931,8 @@ open_unmute_tip = "This controls the allocation of front panel open/unmute butto
 open_mic_tip = "Allow microphone audio into the mix."
 
 other_mic_options = "General Mic Options"
+
+paired_frame_tip = "These controls are provided to obtain a decent match between the two microphones."
 
 pan = "Stereo Panning"
 
@@ -1130,6 +1136,8 @@ red_phone_tip = "Mix voice over IP audio to the DJ only."
 
 refresh_jingles_tip = "Cause the playlist to be refreshed. This is for when items have been added or removed from the jingles playlist folder located at '~/.idjc/profiles/[active profile]/jingles'."
 
+relative_gain = "Relative Gain (dB)"
+
 remaining = "Remaining"
 
 remove = "Remove"
@@ -1246,6 +1254,8 @@ settings_warning_tip = "Adjust these settings carefully since they can have subt
 sideline = "Sideline"
 
 sideline_tip = "A user interface clutter removal feature for unused or problematic streams."
+
+signal_matching = " Signal Matching "
 
 silence_killer = "End tracks early: those that have quiet endings"
 

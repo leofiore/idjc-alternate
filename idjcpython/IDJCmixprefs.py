@@ -104,16 +104,26 @@ class ReconnectionDialogConfig(gtk.Frame):
       vbox.add(self.lj(self.attempt_reconnection, 20))
    
 class AGCControl(gtk.Frame):
+   can_mark = all(hasattr(gtk.Scale, x) for x in ('add_mark', 'clear_marks'))
+   
    def sendnewstats(self, widget, wname):
-      if isinstance(widget, (gtk.SpinButton, gtk.Scale)):
-         value = widget.get_value()
-      if isinstance(widget, (gtk.CheckButton, gtk.ComboBox)):
-         value = (0, 1)[widget.get_active()]
-      stringtosend = "INDX=%d\nAGCP=%s=%s\nACTN=%s\nend\n" % (self.index, wname, str(value), "mic_control")
-      self.approot.mixer_write(stringtosend, True)
+      if wname != NotImplemented:
+         if isinstance(widget, (gtk.SpinButton, gtk.Scale)):
+            value = widget.get_value()
+         if isinstance(widget, (gtk.CheckButton, gtk.ComboBox)):
+            value = int(widget.get_active())
+         stringtosend = "INDX=%d\nAGCP=%s=%s\nACTN=%s\nend\n" % (self.index, wname, str(value), "mic_control")
+         self.approot.mixer_write(stringtosend, True)
 
    def set_partner(self, partner):
       self.partner = partner
+      self.mode.append_text(ln.mic_stereo + partner.ui_name)
+      self.mode.set_cell_data_func(self.mode_cell, self.mode_cell_data_func, partner.mode)
+
+   def mode_cell_data_func(self, celllayout, cell, model, iter, opposite):
+      index = model.get_path(iter)[0]
+      oindex = opposite.get_active()
+      cell.props.sensitive = not (((index == 0 or index == 3) and oindex == 3) or (index == 3 and oindex == 0))
 
    def numline(self, label_text, wname, initial=0, mini=0, maxi=0, step=0, digits=0, adj=None):
       hbox = gtk.HBox()
@@ -139,8 +149,9 @@ class AGCControl(gtk.Frame):
       ivbox.show()
       return ivbox
 
-   def widget_frame(self, widget, container, tip):
+   def widget_frame(self, widget, container, tip, modes):
       frame = gtk.Frame()
+      frame.modes = modes
       self.approot.tooltips.set_tip(frame, tip)
       frame.set_label_widget(widget)
       container.pack_start(frame, False, False, 0)
@@ -178,14 +189,7 @@ class AGCControl(gtk.Frame):
       if save:
          self.booleandict[self.commandname + "_" + wname] = cb
       return cb
-
-   def cb_active(self, widget):
-      sens = widget.get_active()
-      for each in (self.vbox, self.meter):
-          each.set_sensitive(sens)
-      if not sens:
-          self.open.set_active(False)
-          
+      
    def cb_open(self, widget):
       active = widget.get_active()
       self.meter.set_led(active)
@@ -194,13 +198,27 @@ class AGCControl(gtk.Frame):
    def cb_pan_middle(self, button):
       self.pan.set_value(50)
 
-   def cb_complexity(self, combobox):
-      if combobox.get_active():
-         self.processed_box.show()
-         self.simple_box.hide()
-      else:
-         self.processed_box.hide()
-         self.simple_box.show()
+   def cb_mode(self, combobox):
+      mode = combobox.get_active()
+
+      # Show pertinent features for each mode.
+      def showhide(widget):
+         try:
+            modes = widget.modes
+         except:
+            pass
+         else:
+            if mode in modes:
+               widget.show()
+            else:
+               widget.hide()
+      self.vbox.foreach(showhide)
+      
+      # Meter sensitivity. Deactivated => insensitive.
+      sens = mode != 0
+      self.meter.set_sensitive(sens)
+      if not sens:
+          self.open.set_active(False)
          
    def __init__(self, approot, ui_name, commandname, index):
       self.approot = approot
@@ -214,13 +232,12 @@ class AGCControl(gtk.Frame):
       gtk.Frame.__init__(self)
       set_tip = approot.tooltips.set_tip
       hbox = gtk.HBox()
-      self.active = gtk.CheckButton(ui_name)
-      set_tip(self.active, ln.agc_active_tip)
-      self.active.connect("toggled", self.cb_active)
-      self.active.connect("toggled", self.sendnewstats, "active")
-      self.booleandict[self.commandname + "_active"] = self.active
-      hbox.pack_start(self.active, False, False)
-      self.active.show()
+      hbox.set_spacing(3)
+
+      label = gtk.Label('<span weight="600">' + ui_name + "</span>")
+      label.set_use_markup(True)
+      hbox.pack_start(label, False)
+      label.show()
  
       self.alt_name = gtk.Entry()
       set_tip(self.alt_name, ln.alt_mic_name)
@@ -239,16 +256,20 @@ class AGCControl(gtk.Frame):
       self.add(self.vbox)
       self.vbox.show()
 
-      self.complexity = gtk.combo_box_new_text()
-      self.vbox.pack_start(self.complexity, False, False)
-      self.complexity.append_text(ln.mic_simple)
-      self.complexity.append_text(ln.mic_processed)
-      self.complexity.connect("changed", self.sendnewstats, "complexity")
-      self.complexity.emit("changed")
-      self.complexity.connect("changed", self.cb_complexity)
-      self.booleandict[self.commandname + "_complexity"] = self.complexity
-      self.complexity.show()
-      set_tip(self.complexity, ln.mic_complexity_tip)
+      mode_liststore = gtk.ListStore(str)
+      self.mode = gtk.ComboBox(mode_liststore)
+      self.mode_cell = gtk.CellRendererText()
+      self.mode.pack_start(self.mode_cell)
+      self.mode.set_attributes(self.mode_cell, text=0)
+      
+      self.vbox.pack_start(self.mode, False, False)
+      for each in (ln.mic_off, ln.mic_simple, ln.mic_processed):
+         mode_liststore.append((each, ))
+      self.mode.connect("changed", self.sendnewstats, "mode")
+      self.mode.connect("changed", self.cb_mode)
+      self.booleandict[self.commandname + "_mode"] = self.mode
+      self.mode.show()
+      set_tip(self.mode, ln.mic_mode_tip)
 
       hbox = gtk.HBox()
       label = gtk.Label(ln.open_mic)
@@ -257,7 +278,7 @@ class AGCControl(gtk.Frame):
       self.status_led = gtk.Image()
       hbox.pack_start(self.status_led, False, False, 3)
       self.status_led.show()
-      ivbox = self.widget_frame(hbox, self.vbox, ln.open_unmute_tip)
+      ivbox = self.widget_frame(hbox, self.vbox, ln.open_unmute_tip, (1, 2))
       hbox.show()
       self.status_off_pb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "led_unlit_clear_border_64x64" + gfext, 12, 12)
       self.status_on_pb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "led_lit_green_black_border_64x64" + gfext, 12, 12)
@@ -285,6 +306,7 @@ class AGCControl(gtk.Frame):
 
       sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       panframe = gtk.Frame()
+      panframe.modes = (1, 2, 3)
       set_tip(panframe, ln.pan_tip)
       
       hbox = gtk.HBox()
@@ -319,10 +341,31 @@ class AGCControl(gtk.Frame):
       pancenterbox = gtk.HBox()
       pancenter = gtk.Button()
       pancenter.connect("clicked", self.cb_pan_middle)
-      pancenterbox.pack_start(pancenter, True, False)
+      if self.can_mark:
+         self.pan.add_mark(50.0, gtk.POS_BOTTOM, None)
+         self.pan.add_mark(25.0, gtk.POS_BOTTOM, None)
+         self.pan.add_mark(75.0, gtk.POS_BOTTOM, None)
+      else:
+         pancenterbox.pack_start(pancenter, True, False)
       panvbox.pack_start(pancenterbox, False, False)
       self.vbox.pack_start(panframe, False, False)
       panframe.show_all()
+
+      pairedframe = gtk.Frame(ln.signal_matching)
+      set_tip(pairedframe, ln.paired_frame_tip)
+      pairedframe.modes = (3, )
+      self.vbox.pack_start(pairedframe, False)
+      pairedvbox = gtk.VBox()
+      pairedvbox.set_border_width(3)
+      pairedframe.add(pairedvbox)
+      pairedvbox.show()
+      pairedmicgainadj = gtk.Adjustment(0.0, -20.0, +20.0, 0.1, 2)
+      pairedmicgain = self.numline(ln.relative_gain, "pairedgain", digits=1, adj=pairedmicgainadj)
+      pairedvbox.pack_start(pairedmicgain, False)
+      pairedmicgain.show()
+      pairedinvert = self.check(ln.invert_mic, "pairedinvert")
+      pairedvbox.pack_start(pairedinvert, False)
+      pairedinvert.show()
 
       micgainadj = gtk.Adjustment(5.0, -20.0, +30.0, 0.1, 2)
       openaction = gtk.ToggleAction("open", ln.open_mic, ln.open_mic_tip, None)
@@ -332,6 +375,7 @@ class AGCControl(gtk.Frame):
       self.simple_box = gtk.VBox()
       self.simple_box.set_spacing(2)
       self.vbox.pack_start(self.simple_box, False, False)
+      self.simple_box.modes = (1, )
 
       ivbox = self.frame(" " + ln.basic_controls + " ", self.simple_box)
       micgain = self.numline(ln.agc_boost, "gain", digits=1, adj=micgainadj)
@@ -340,8 +384,6 @@ class AGCControl(gtk.Frame):
       self.open = self.check("", "open", save=False)
       openaction.connect_proxy(self.open)
       self.open.connect("toggled", self.cb_open)
-      #ivbox.pack_start(self.open, False, False)
-      #set_tip(self.open, ln.open_mic_tip)
       
       invert_simple = self.check("", "invert")
       invertaction.connect_proxy(invert_simple)
@@ -354,6 +396,7 @@ class AGCControl(gtk.Frame):
       set_tip(indjmix, ln.in_dj_mix_tip)
 
       self.processed_box = gtk.VBox()
+      self.processed_box.modes = (2, )
       self.processed_box.set_spacing(2)
       self.vbox.pack_start(self.processed_box, False, False)
 
@@ -408,26 +451,25 @@ class AGCControl(gtk.Frame):
        
       ivbox = self.frame(" " + ln.agc_other_options + " ", self.processed_box)
 
-      open_complex = self.check("", "open2", save=False)
+      open_complex = self.check("", NotImplemented, save=False)
       openaction.connect_proxy(open_complex)
       #ivbox.pack_start(open_complex, False, False)
       #set_tip(open_complex, ln.open_mic_tip)
-      invert_complex = self.check("", "invert2")
+      invert_complex = self.check("", NotImplemented, save=False)
       invertaction.connect_proxy(invert_complex)
       ivbox.pack_start(invert_complex, False, False)
       set_tip(invert_complex, ln.invert_mic_tip)
       phaserotate = self.check(ln.agc_phaserotator, "phaserotate")
       ivbox.pack_start(phaserotate, False, False, 0)
       set_tip(phaserotate, ln.agc_phaserotator_tip)
-      indjmix = self.check("", "indjmix2")
+      indjmix = self.check("", NotImplemented, save=False)
       indjmixaction.connect_proxy(indjmix)
       ivbox.pack_start(indjmix, False, False)
       set_tip(indjmix, ln.in_dj_mix_tip)
 
-      self.complexity.set_active(1)
+      self.mode.set_active(0)
       indjmix.set_active(True)
       self.partner = None
-      self.active.emit("toggled")
 
 mIRC_colours = (                # Actually these are the XChat2 colours.
    (0xCCCCCCFF, "00"),          # XChat2 calls them mIRC colours, but I doubt they match.
@@ -678,7 +720,7 @@ class mixprefs:
       try:
          file = open(self.parent.idjc + "playerdefaults", "w")
          for name, widget in self.playersettingsdict.iteritems():
-            file.write(name + ("=False\n","=True\n")[widget.get_active()])
+            file.write(name + "=" + str(int(widget.get_active())) + "\n")
          for name, widget in self.valuesdict.iteritems():
             file.write(name + "=" + str(widget.get_value()) + "\n")
          for name, widget in self.textdict.iteritems():
@@ -721,11 +763,13 @@ class mixprefs:
             line = line.split("=")
             key = line[0].strip()
             value = line[1][:-1].strip()
-            if value == "True":
-               value = True
-            elif value == "False":
-               value = False
             if self.playersettingsdict.has_key(key):
+               if value == "True":
+                  value = True
+               elif value == "False":
+                  value = False
+               else:
+                  value = int(value)
                if key == "proktoggle":
                   proktogglevalue = value
                else:
@@ -2101,7 +2145,7 @@ class mixprefs:
       self.fastest_resample.set_active(True)
       self.enable_tooltips.set_active(True)
       mic0 = mic_controls[0]
-      mic0.active.set_active(True)
+      mic0.mode.set_active(1)
       mic0.alt_name.set_text("DJ")
       mic0.autoopen.set_active(True)
       self.show_stream_meters.set_active(True)

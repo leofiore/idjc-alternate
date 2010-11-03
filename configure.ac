@@ -40,6 +40,8 @@ PKG_CHECK_MODULES([LIBSAMPLERATE], [samplerate])
 
 PKG_CHECK_MODULES([LIBSNDFILE], [sndfile])
 
+PKG_CHECK_MODULES([GLIB], [glib-2.0])
+
 AC_ARG_ENABLE([ffmpeg],
    AC_HELP_STRING([--disable-ffmpeg],[remove capability to decode m4a/wma/avi files]),[makeffmpeg=$enableval],[makeffmpeg="maybe"])
 
