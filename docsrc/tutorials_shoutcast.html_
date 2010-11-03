@@ -16,6 +16,7 @@ to take that burden, for a price.</p>
 
 <p>Shoutcast may not be available in your Linux distribution. Not really a problem since it's available
 as a presumably statically linked binary from <a href="http://www.shoutcast.com">http://www.shoutcast.com</a>.
+It's important that you avoid version 2 because IDJC does not support it yet.
 </p>
 
 <h4>Setting up Shoutcast</h4>

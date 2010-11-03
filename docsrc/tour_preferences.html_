@@ -75,3 +75,6 @@ The superiority of such a set-up will become apparent with use.</p>
 
 <p>Key presses are collected from the Main and Jingles windows only and depend on focus whereas MIDI
 events apply to all applications that are configured to receive them.</p>
+
+<p>The list shown to the left represents the inputs that have bindings already assigned to them and not
+the complete list of possible actions which is much larger.</p>

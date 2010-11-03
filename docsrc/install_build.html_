@@ -85,7 +85,7 @@ $ tar xzvf idjc-<span style="color:red;" title="Replace with the actual version 
 $ cd idjc-<span style="color:red;" title="Replace with the actual version number.">[version]</span>/</pre>
 
 <h5>Option 2: Obtaining the development sources</h5>
-<pre>$ sudo apt-get install git-core
+<pre>$ sudo apt-get install git-core autoconf libtool
 $ git clone git://idjc.git.sourceforge.net/gitroot/idjc/idjc
 $ cd idjc/
 $ ./env-up</pre>
