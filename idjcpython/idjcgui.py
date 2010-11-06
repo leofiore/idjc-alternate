@@ -36,8 +36,6 @@ console_help_message="""Usage:  idjc [-vhe] [-p profile] [-j jackserver] [-m mic
 
 import locale, os, sys, fcntl, subprocess, ConfigParser, operator
 
-from IDJCfree import rich_safe
-
 def locale_encoding():
    read = subprocess.Popen(["locale", "-a"], stdout=subprocess.PIPE).stdout# I have to do all this because an exception 
    validlocales = read.read()           # refuses to be trapped for some reason
@@ -104,7 +102,7 @@ from IDJCmedia import *
 from sourceclientgui import *
 from IDJCmixprefs import *
 from IDJCjingles import *
-from IDJCfree import int_object, threadslock
+from IDJCfree import int_object, threadslock, rich_safe
 import IDJCcontrols
 import tooltips
 import p3db
