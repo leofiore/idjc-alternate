@@ -108,31 +108,36 @@ import tooltips
 import p3db
 
 class MicButton(gtk.ToggleButton):
+   @property
+   def flash(self):
+      return self.__flash
+   @flash.setter
+   def flash(self, value):
+      self.__flash = bool(value)
+      self.__indicate()
+  
    @staticmethod
-   def indicate(self):
-      to_show, to_hide = (1, 0) if self.get_active() else (0, 1)
-      self.images[to_show].show()
-      self.images[to_hide].hide()
-      self.images[2].hide()
-      self.flash_state = True
-   
-   @threadslock
-   def timeout(self):
-      if self.flash_state:
-         self.emit("toggled")
-      else:
-         for image, action in zip(self.images, ("hide", "hide", "show")):
-            getattr(image, action)()
+   def __cb_toggle(self):
+      self.__indicate()
+      if self.get_active() and self.flash:
+         self.__images[2].hide()
+         self.__images[1].show()
 
-      self.flash_state = not self.flash_state or not self.get_active() or not self.flashing or not self.props.sensitive
-      return True
-      
-   def set_flashing(self, flashing):
-      """Interface to get mic graphic to flash when the mic is active and sensitive.
-      
-      Intended as a reminder to the user to mute the damn microphone."""
-     
-      self.flashing = flashing
+   def __indicate(self):
+      images = self.__images
+
+      if self.get_active():
+         images[0].hide()
+         if self.flash:
+            images[1].hide()
+            images[2].show()
+         else:
+            images[2].hide()
+            images[1].show()
+      else:
+         images[1].hide()
+         images[2].hide()
+         images[0].show()
    
    def __init__(self, labeltext):
       gtk.ToggleButton.__init__(self)
@@ -152,25 +157,27 @@ class MicButton(gtk.ToggleButton):
          i.set_from_pixbuf(pb)
          hbox.pack_start(i, False)
          return i
-      self.images = [image(x) for x in ("mic_off", "mic_on", "mic_unshown")]
+      self.__images = [image(x) for x in ("mic_off", "mic_on", "mic_unshown")]
       pad = gtk.HBox()
       hbox.pack_start(pad, True, True)
       pad.show()
       hbox.show()
-      self.set_flashing(False)
-      self.connect("toggled", self.indicate)
+      self.connect("toggled", self.__cb_toggle)
       self.emit("toggled")
-      timeout = glib.timeout_add(700, self.timeout)
-      self.connect("destroy", lambda w: glib.source_remove(timeout))
+      self.__flash = False
    
 class MicOpener(gtk.HBox):
+   @property
+   def any_mic_selected(self):
+      return self._any_mic_selected
+   
    def notify_others(self):
       approot = self.approot
       # Player headroom for mic-audio toggle.
       sts = "ACTN=anymic\nFLAG=%d\nend\n" % self.any_mic_selected
       approot.mixer_write(sts, True)
       # Aux/Mic mutex implemented here.
-      if self.any_mic_selected == False:
+      if not self.any_mic_selected:
          approot.prefs_window.mic_off_event.activate()
       else:
          if approot.prefs_window.mic_aux_mutex.get_active() and approot.aux_select.get_active():
@@ -183,9 +190,10 @@ class MicOpener(gtk.HBox):
       approot.new_mixermode(approot.mixermode)
 
    def cb_mictoggle(self, button, mics):
+      self._flashing_timer = 0
       for mic in mics:
          mic.open.set_active(button.get_active())
-      self.any_mic_selected = any(x.get_active() for x in self.mic2button.itervalues())
+      self._any_mic_selected = any(mb.get_active() for mb in self.buttons)
       self.notify_others()
 
    def cb_reconfigure(self, widget, trigger=None):
@@ -196,6 +204,7 @@ class MicOpener(gtk.HBox):
       # Clear away old button widgets.
       self.foreach(lambda x: x.destroy())
       self.mic2button = {}
+      self.buttons = []
       joiner = ' <span foreground="red">&#64262;</span> '
 
       # Button grouping and label text stored here temporarily.
@@ -232,6 +241,7 @@ class MicOpener(gtk.HBox):
          if g:
             mic_list = []
             mb = MicButton(", ".join(t for mm, t in g))
+            self.buttons.append(mb)
             active = False
             for mm, t in g:
                for m in mm:
@@ -244,7 +254,7 @@ class MicOpener(gtk.HBox):
             mb.show()
             mb.set_active(active)  # Open all if any opener members are currently open.
 
-      if self.all_forced_on:
+      if self._forced_on_mode:
          self.force_all_on(True)
             
       if not self.mic2button:
@@ -253,9 +263,24 @@ class MicOpener(gtk.HBox):
          self.add(l)
          l.show()
      
+   @threadslock
+   def cb_flash_timeout(self):
+
+      if self._flash_test():
+         self._flashing_timer += 1
+      else:
+         self._flashing_timer = 0
+
+      flash_value = bool((self._flashing_timer % 2) if self._flashing_timer > 7 else 0)
+
+      for mb in self.buttons:
+         mb.flash = flash_value
+
+      return True
+     
    def force_all_on(self, val):
-      self.all_forced_on = val
-      for mb in self.mic2button.itervalues():
+      self._forced_on_mode = val
+      for mb in self.buttons:
          if val:
             mb.set_active(True)
          mb.set_sensitive(not val)
@@ -275,7 +300,7 @@ class MicOpener(gtk.HBox):
          pass
 
    def close_all(self):
-      for mb in self.mic2button.itervalues():
+      for mb in self.buttons:
          mb.set_active(False)
 
    def open(self, val):
@@ -288,18 +313,24 @@ class MicOpener(gtk.HBox):
       """mic: AGCControl object passed here to register it with this class."""
 
       self.mic_list.append(mic)
-      mic.mode.connect("changed", self.cb_reconfigure)
-      mic.group.connect("toggled", self.cb_reconfigure)
-      mic.groups_adj.connect("notify::value", self.cb_reconfigure)
-      mic.alt_name.connect("changed", self.cb_reconfigure)
+      for attr, signal in zip (("mode", "group", "groups_adj", "alt_name"),
+                               ("changed", "toggled", "notify::value", "changed")):
+         getattr(mic, attr).connect(signal, self.cb_reconfigure)
 
-   def __init__(self, approot):
+   def __init__(self, approot, flash_test):
       self.approot = approot
+      self._flash_test = flash_test
       gtk.HBox.__init__(self)
       self.set_spacing(2)
       self.mic_list = []
-      self.any_mic_selected = False
-      self.all_forced_on = False
+      self.buttons = []
+      self.mic2button = {}
+      self._any_mic_selected = False
+      self._forced_on_mode = False
+      self._flashing_mode = False
+      self._flashing_timer = 0
+      timeout = glib.timeout_add(700, self.cb_flash_timeout)
+      self.connect("destroy", lambda w: glib.source_remove(timeout))
 
 class PaddedVBox(gtk.VBox):
    def vbox_pack_start(self, *args, **kwargs):
@@ -2207,6 +2238,11 @@ class MainWindow:
    class initcleanexit:
       pass
 
+   def flash_test(self):
+      """True if the mic button needs to be flashing now or soon.""" 
+      return self.prefs_window.flash_mic.get_active() and \
+               (self.player_left.is_playing or self.player_right.is_playing)
+
    def __init__(self):
       self.appname = appname
       self.version = version
@@ -2459,7 +2495,7 @@ class MainWindow:
       self.tooltips.set_tip(self.aux_select, ln.aux_toggle_tip)
       
       # microphone open/unmute dynamic widget cluster thingy
-      self.mic_opener = MicOpener(self)
+      self.mic_opener = MicOpener(self, self.flash_test)
       self.mic_opener.viewlevels = (5,)
       self.hbox10.pack_start(self.mic_opener, True, True)
       self.mic_opener.show()

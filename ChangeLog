@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+Mic icon flashes after a certain amount of time when a player is on.
+
 Mic indicates on status by the addition of a halo around the microphone icon in the opener button.
 
 Encoder ringbuffer size increased to accommodate large JACK frame sizes.

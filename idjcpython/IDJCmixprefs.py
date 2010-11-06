@@ -1233,6 +1233,11 @@ class mixprefs:
       self.ask_profile.show()
       parent.tooltips.set_tip(self.ask_profile, ln.ask_profile_tip)
       
+      self.flash_mic = gtk.CheckButton(ln.flash_mic_button)
+      vbox.pack_start(self.flash_mic, False)
+      self.flash_mic.show()
+      parent.tooltips.set_tip(self.flash_mic, ln.flash_mic_button_tip)
+      
       self.bigger_box_toggle = gtk.CheckButton(ln.big_box_toggle)
       vbox.pack_start(self.bigger_box_toggle, False, False, 0)
       self.bigger_box_toggle.connect("toggled", self.callback, "bigger box")
@@ -2140,6 +2145,7 @@ class mixprefs:
       self.notebook.show()
 
       # These on by default
+      self.flash_mic.set_active(True)
       self.djalarm.set_active(True)
       self.dither.set_active(True)
       self.fastest_resample.set_active(True)
@@ -2210,6 +2216,7 @@ class mixprefs:
          "str_meters"    : self.show_stream_meters,
          "mic_meters"    : self.show_microphones,
          "mic_meters_active" : self.show_active_microphones,
+         "flash_mic"     : self.flash_mic,
          }
          
       for mic_control in mic_controls:

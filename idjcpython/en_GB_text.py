@@ -490,6 +490,10 @@ flacmetadata = "Metadata"
 
 flacmetadata_tip = "You can prevent the sending of metadata by turning this feature off. This will prevent certain players from dropping the stream or inserting an audible gap every time the song title changes."
 
+flash_mic_button = "Microphone reminder - flashes the mic button icon"
+
+flash_mic_button_tip = "A reminder to turn the microphone off when a main player is active and any particular mic button is still engaged."
+
 format = "Format"
 
 format_info_bar_tip = "Information about how the encoder is currently configured is displayed here."
