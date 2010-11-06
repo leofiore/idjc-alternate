@@ -90,7 +90,7 @@ except:
 
 import pygtk
 pygtk.require('2.0')
-import gtk, gobject, time, fcntl, signal, stat, cairo, socket, pickle
+import gtk, gobject, time, fcntl, signal, stat, cairo, socket, pickle, glib
 
 try:
    pango.Font   # some users will not need to import pango explicitly
@@ -110,6 +110,32 @@ import tooltips
 import p3db
 
 class MicButton(gtk.ToggleButton):
+   @staticmethod
+   def indicate(self):
+      to_show, to_hide = (1, 0) if self.get_active() else (0, 1)
+      self.images[to_show].show()
+      self.images[to_hide].hide()
+      self.images[2].hide()
+      self.flash_state = True
+   
+   @threadslock
+   def timeout(self):
+      if self.flash_state:
+         self.emit("toggled")
+      else:
+         for image, action in zip(self.images, ("hide", "hide", "show")):
+            getattr(image, action)()
+
+      self.flash_state = not self.flash_state or not self.get_active() or not self.flashing or not self.props.sensitive
+      return True
+      
+   def set_flashing(self, flashing):
+      """Interface to get mic graphic to flash when the mic is active and sensitive.
+      
+      Intended as a reminder to the user to mute the damn microphone."""
+     
+      self.flashing = flashing
+   
    def __init__(self, labeltext):
       gtk.ToggleButton.__init__(self)
       hbox = gtk.HBox()
@@ -122,15 +148,22 @@ class MicButton(gtk.ToggleButton):
       label.set_use_markup(True)
       hbox.pack_start(label, False, False)
       label.show()
-      self.image = gtk.Image()
-      pb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "mic4" + gfext, 47, 20)
-      self.image.set_from_pixbuf(pb)
-      hbox.pack_start(self.image, False, False)
-      self.image.show()
+      def image(name):
+         i = gtk.Image()
+         pb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + name + gfext, 47, 20)
+         i.set_from_pixbuf(pb)
+         hbox.pack_start(i, False)
+         return i
+      self.images = [image(x) for x in ("mic_off", "mic_on", "mic_unshown")]
       pad = gtk.HBox()
       hbox.pack_start(pad, True, True)
       pad.show()
       hbox.show()
+      self.set_flashing(False)
+      self.connect("toggled", self.indicate)
+      self.emit("toggled")
+      timeout = glib.timeout_add(700, self.timeout)
+      self.connect("destroy", lambda w: glib.source_remove(timeout))
    
 class MicOpener(gtk.HBox):
    def notify_others(self):
