@@ -25,6 +25,8 @@ from idjc_config import *
 from ln_text import ln
 
 class jingles:
+   NORMAL = 70  # Target level for hightest main player fader.
+
    def cleanup(self):
       self.stop.clicked()
       self.saved_interlude = self.interlude_player_track
@@ -135,16 +137,29 @@ class jingles:
       if playlist is not None:
          self.playing = True
          if self.nomute == False:
-            self.volume = self.parent.deckadj.get_value()
+            self.volume1 = self.parent.deckadj.get_value()
+            self.volume2 = self.parent.deck2adj.get_value()
             if mute_f:
                self.interludevolume = self.interadj.get_value()
-               self.interadj.set_value(100.0) 
-               self.parent.deckadj.set_value(100.0)
-               self.parent.deck2adj.set_value(100.0)
+               self.interadj.set_value(0.0) 
+               self.parent.deckadj.set_value(0.0)
+               self.parent.deck2adj.set_value(0.0)
             else:
                self.interludevolume = -1
-               self.parent.deckadj.set_value(30.0)
-               self.parent.deck2adj.set_value(30.0)
+               
+               # Normalise main player volume to cls.NORMAL on the highest of the two player volume levels
+               # have the lower of the two levels track the higher value.
+               # Where the highest volume level is below the normal level do nothing to the level.
+               # When the jingles player is done the volume levels are restored.
+               
+               if self.parent.prefs_window.dual_volume.get_active():
+                  highest = max((self.volume1, self.volume2))
+               else:
+                  highest = self.volume2 = self.volume1
+                 
+               delta = min((self.NORMAL - highest, 0)) 
+               self.parent.deckadj.set_value(self.volume1 + delta)
+               self.parent.deck2adj.set_value(self.volume2 + delta)
          self.parent.deckadj.value_changed()
          string_to_send = "LOOP=0\nPLPL=%s\nACTN=playmanyjingles\nend\n" % self.pack_playlistlist(playlist)
          self.parent.mixer_write(string_to_send, True)
@@ -180,8 +195,12 @@ class jingles:
             print "stop without flush"
             self.stop.clicked() # this will take care of resetting the play button without triggering a flush
          if self.nomute == False:
-            self.parent.deckadj.set_value(self.volume)
-            self.parent.deck2adj.set_value(self.volume)
+            # Don't move the level if user moved it upwards.
+            v1 = self.parent.deckadj.get_value()
+            v2 = self.parent.deck2adj.get_value()
+            if max((v1, v2)) <= self.NORMAL:
+               self.parent.deckadj.set_value(self.volume1)
+               self.parent.deck2adj.set_value(self.volume2)
             if self.interludevolume != -1:
                self.interadj.set_value(self.interludevolume)
          else:
