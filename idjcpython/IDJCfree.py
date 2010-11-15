@@ -102,7 +102,7 @@ def threadslock(f):
    return newf
 
 class DefaultEntry(gtk.Entry):
-   def __init__(self, default_text):
+   def __init__(self, default_text, sensitive_override=False):
       gtk.Entry.__init__(self)
       self.connect("focus-in-event", self.on_focus_in)
       self.connect("focus-out-event", self.on_focus_out)
@@ -110,6 +110,7 @@ class DefaultEntry(gtk.Entry):
       self.connect("icon-press", self.on_icon_press)
       self.connect("realize", self.on_realize)
       self.default_text = default_text
+      self.sensitive_override = sensitive_override
 
    def on_realize(self, entry):
       layout = self.get_layout().copy()
@@ -138,7 +139,7 @@ class DefaultEntry(gtk.Entry):
          self.props.primary_icon_pixbuf = self.empty_pixbuf
       
    def get_text(self):
-      if self.flags() & gtk.SENSITIVE:
+      if (self.flags() & gtk.SENSITIVE) or self.sensitive_override:
          return gtk.Entry.get_text(self).strip() or self.default_text
       else:
          return ""

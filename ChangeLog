@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+Prokyon3 database settings recovered when saved in active mode. Hostname now saved as well.
+
 Regression fix for player levels when a jingle is playing.
 
 Mic icon flashes after a certain amount of time when a player is on.
