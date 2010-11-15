@@ -2252,6 +2252,7 @@ class mixprefs:
          "prokuser"      : self.p3prefs.prokuser,
          "prokdatabase"  : self.p3prefs.prokdatabase,
          "prokpassword"  : self.p3prefs.prokpassword,
+         "prokhostname"  : self.p3prefs.prokhostname,
          "announcenick"  : self.nickentry,
          "announcechan"  : self.channelsentry, 
          "announcemess"  : self.announcemessageentry,
