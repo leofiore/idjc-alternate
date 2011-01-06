@@ -26,6 +26,9 @@
 #include "mp3tagread.h"
 #include "bsdcompat.h"
 
+#define TRUE 1
+#define FALSE 0
+
 #if 0
 static void unsynchronise(struct mp3decode_id3data *us)
    {
@@ -276,7 +279,7 @@ static void decode_id3_frames(struct mp3taginfo *ti, struct id3data *d)
       }
    }
 
-static void id3_tag_read(struct mp3taginfo *ti, FILE *fp)
+static int id3_tag_read(struct mp3taginfo *ti, FILE *fp, int skip)
    {
    long start = ftell(fp);
    long tagsize, ehsize, frames_end;
@@ -317,10 +320,11 @@ static void id3_tag_read(struct mp3taginfo *ti, FILE *fp)
                }
          case 3:
             frames_end = start + 10 + tagsize;
-            break;
+            if (!skip)
+               break;
          default:
             fseek(fp, tagsize, SEEK_CUR);       /* skip over the tag */
-            return;
+            return TRUE;
          }
 
       if ((id.data = malloc(id.size = frames_end - ftell(fp))) == NULL || (!fread(id.data, id.size, 1, fp)))
@@ -352,9 +356,11 @@ static void id3_tag_read(struct mp3taginfo *ti, FILE *fp)
       free(id.data);
       if (flags & 0x10)                 /* skip over the footer if present */
          fseek(fp, 10, SEEK_CUR);
+      return TRUE;
       }
-   else
-      fseek(fp, start, SEEK_SET);       /* not ID3 so restore the file pointer */
+
+   fseek(fp, start, SEEK_SET);       /* not ID3 so restore the file pointer */
+   return FALSE;
    }
 
 /********************************************************************************/
@@ -522,7 +528,9 @@ static void xing_tag_read(struct mp3taginfo *ti, FILE *fp)
 
 void mp3_tag_read(struct mp3taginfo *ti, FILE *fp)
    {
-   id3_tag_read(ti, fp);
+   if (id3_tag_read(ti, fp, FALSE))
+      while(id3_tag_read(ti, fp, TRUE))
+         fprintf(stderr, "Surplus ID3 tag skipped\n");
    xing_tag_read(ti, fp);
    }
 
