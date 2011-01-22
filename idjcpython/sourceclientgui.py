@@ -2309,18 +2309,20 @@ class SourceClientGui:
          pw = self.parent.prefs_window
          self.last_message_time = time.time()
          try:
-            file = open(self.parent.idjcroot + "timer.xchat", "w")
-            fcntl.flock(file.fileno(), fcntl.LOCK_EX)
-            file.write("d" + str(len(self.parent.prefs_window.timernickentry.get_text().encode("utf-8"))) + ":" + self.parent.prefs_window.timernickentry.get_text().encode("utf-8"))
-            file.write("d" + str(len(self.parent.prefs_window.timerchannelsentry.get_text().encode("utf-8"))) + ":" + self.parent.prefs_window.timerchannelsentry.get_text().encode("utf-8"))
-            cookedmessage = self.parent.prefs_window.timermessageentry.get_text().replace(u"%s", self.parent.metadata).encode("utf-8")
-            file.write("d" + str(len(cookedmessage)) + ":" + cookedmessage)
-            timestr = str(int(time.time()))
-            file.write("d" + str(len(timestr)) + ":" + timestr)
-            fcntl.flock(file.fileno(), fcntl.LOCK_UN)
-            file.close()
+            with open(self.parent.idjcroot + "timer.xchat", "w") as file:
+               try:
+                  fcntl.flock(file.fileno(), fcntl.LOCK_EX)
+                  file.write("d" + str(len(self.parent.prefs_window.timernickentry.get_text().encode("utf-8"))) + ":" + self.parent.prefs_window.timernickentry.get_text().encode("utf-8"))
+                  file.write("d" + str(len(self.parent.prefs_window.timerchannelsentry.get_text().encode("utf-8"))) + ":" + self.parent.prefs_window.timerchannelsentry.get_text().encode("utf-8"))
+                  cookedmessage = self.parent.prefs_window.timermessageentry.get_text().replace(u"%s", self.parent.metadata).encode("utf-8")
+                  file.write("d" + str(len(cookedmessage)) + ":" + cookedmessage)
+                  timestr = str(int(time.time()))
+                  file.write("d" + str(len(timestr)) + ":" + timestr)
+               finally:
+                  fcntl.flock(file.fileno(), fcntl.LOCK_UN)
          except IOError:
             print "Problem writing the timer file to disk"
+
       if update_listeners:
          self.parent.listener_indicator.set_text(str(l_count))
       return True

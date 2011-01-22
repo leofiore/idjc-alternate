@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+Fix to XChat plugin installer. Polished XChat file locking code.
+
 Prokyon3 database settings recovered when saved in active mode. Hostname now saved as well.
 
 Regression fix for player levels when a jingle is playing.

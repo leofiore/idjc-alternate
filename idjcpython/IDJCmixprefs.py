@@ -27,18 +27,22 @@ from IDJCfree import int_object
 import IDJCcontrols
 
 class XChatInstaller(gtk.Button):
+   pluginname = "idjc-announce.py"
+   
    def check_plugin(self):
-      if os.path.exists(os.path.join(self.home, ".xchat2")):
+      if os.path.exists(os.path.join(self.home, ".xchat2", self.pluginname)):
          self.set_sensitive(False)
          self.set_label(ln.xchat_install_done)
          return True
       return False
          
    def cb_install(self, widget):
-      plugin = "idjc-announce.py"
-      source = os.path.join(plugindir, plugin)
-      dest = os.path.join(self.home, plugin)
-      shutil.copy(source, dest)
+      source = os.path.join(plugindir, self.pluginname)
+      try:
+         os.mkdir(os.path.join(self.home, ".xchat2"))
+      except:
+         pass
+      shutil.copy(source, os.path.join(self.home, ".xchat2", self.pluginname))
       if not self.check_plugin():
          self.set_label(ln.xchat_install_failed)
 

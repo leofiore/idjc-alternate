@@ -1252,11 +1252,12 @@ class MainWindow:
 
    def xchat_announce_the_track(self, message):
       try:
-         file = open(self.idjcroot + "announce.xchat", "w")
-         fcntl.flock(file.fileno(), fcntl.LOCK_EX)
-         file.write(message)
-         fcntl.flock(file.fileno(), fcntl.LOCK_UN)
-         file.close()
+         with open(self.idjcroot + "announce.xchat", "w") as file:
+            try:
+               fcntl.flock(file.fileno(), fcntl.LOCK_EX)
+               file.write(message)
+            finally:
+               fcntl.flock(file.fileno(), fcntl.LOCK_UN)
       except IOError:
          print "Problem writing the announcement file to disk"
       return False  
@@ -2030,8 +2031,6 @@ class MainWindow:
                if line.startswith("new_metadata="):
                   self.update_songname(self.player_right, line, self.metadata_right_ctrl.get_value())
                   break
-         #self.left_compressor_gain.set_meter_value(int(self.left_compression_level), int(self.left_deess_level), int(self.left_noisegate_level))
-         #self.right_compressor_gain.set_meter_value(int(self.right_compression_level), int(self.right_deess_level), int(self.right_noisegate_level))
 
          # Carry out MIDI-triggered actions *after* reading them from the
          # response to requestlevels. This is so that any trailing lines after the
