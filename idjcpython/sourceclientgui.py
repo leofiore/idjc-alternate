@@ -172,8 +172,8 @@ class ConnectionDialog(gtk.Dialog):
       if response_id == gtk.RESPONSE_ACCEPT:
          for entry in (self.hostname, self.mountpoint, self.loginname, self.password):
             entry.set_text(entry.get_text().strip())
-         if self.mountpoint.get_text() and not self.mountpoint.get_text().startswith("/"):
-            self.mountpoint.set_text("/" + self.mountpoint.get_text())
+         self.hostname.set_text(self.hostname.get_text().split("://")[-1].strip())
+         self.mountpoint.set_text("/" + self.mountpoint.get_text().lstrip("/"))
 
          data = ListLine(check_stats=self.stats.get_active(),
                          server_type=self.servertype.get_active(),

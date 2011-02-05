@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+Sanitised the text inputs of the server dialog. Cleans off :// protocol prefixes and extra / characters on mount points.
+
 The return of the main panel recording indicator(s). Gone since version 0.7.
 
 Copyright year updated to 2011.
