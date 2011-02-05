@@ -1,5 +1,5 @@
 #   idjcgui.py: Main python code of IDJC
-#   Copyright (C) 2005-2010 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2005-2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -16,8 +16,8 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 
 appname= "Internet DJ Console"
-copyright = "Copyright 2005-2010 Stephen Fairchild"
-copyright2 = u"\xA9 2005-2010 Stephen Fairchild"        # As above but uses copyright character (c)
+copyright = "Copyright 2005-2011 Stephen Fairchild"
+copyright2 = u"\xA9 2005-2011 Stephen Fairchild"        # As above but uses copyright character (c)
 license = "Released under the GNU General Public License V2.0"
 # version is set in the configure.in files
 METER_TEXT_SIZE = 8000
@@ -909,6 +909,60 @@ class MicMeter(gtk.VBox):
       hbox.pack_start(self.attenuation, False, False)
       self.attenuation.show()
       self.show_while_inactive = True
+
+
+class RecIndicator(gtk.HBox):
+   colour = "clear", "red", "amber"
+   def set_indicator(self, colour):
+      self.image.set_from_pixbuf(self.led[self.colour.index(colour)])
+   def __init__(self, label_text):
+      gtk.HBox.__init__(self)
+      label = gtk.Label(label_text)
+      self.pack_start(label)
+      label.show()
+      attrlist = pango.AttrList()
+      attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, 1))
+      label.set_attributes(attrlist)   
+      self.image = gtk.Image()
+      self.pack_start(self.image, False)
+      self.image.show()
+      
+      self.led = [gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + which + gfext, 9, 9) for which in (
+               "led_unlit_clear_border_64x64", "led_lit_red_black_border_64x64",
+               "led_lit_amber_black_border_64x64")]
+      self.set_indicator("clear") 
+
+
+class RecordingPanel(gtk.VBox):
+   def __init__(self, howmany):
+      gtk.VBox.__init__(self)
+      label = gtk.Label(ln.record)
+      attrlist = pango.AttrList()
+      attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, len(ln.record)))
+      label.set_attributes(attrlist)
+      self.pack_start(label)
+      label.show()
+      frame = gtk.Frame()
+      frame.set_border_width(4)
+      self.pack_start(frame)
+      frame.show()
+      hbox = gtk.HBox()
+      hbox.set_spacing(1)
+      hbox.set_border_width(3)
+      frame.add(hbox)
+      hbox.show()
+      box = [gtk.VBox(), gtk.VBox()]
+      for each in box:
+         each.set_spacing(4)
+         hbox.pack_start(each)
+         each.show()
+      self.indicator = []
+      for i in range(howmany):
+         ind = RecIndicator(str(i+1))
+         self.indicator.append(ind)
+         box[i%2].pack_start(ind, False)
+         ind.show()
+
 
 # A dialog window for electing to create a new profile
 class profile_import_dialog(gtk.Dialog):
@@ -2937,6 +2991,11 @@ class MainWindow:
       self.streammeterbox.pack_start(self.stream_indicator_box, False, False, 0)
       self.stream_indicator_box.show()
       sg.add_widget(self.stream_indicator_box)
+
+      if idjc_config.num_recorders:
+         self.recording_panel = RecordingPanel(idjc_config.num_recorders)
+         self.streammeterbox.pack_start(self.recording_panel, False)
+         self.recording_panel.show()
 
       self.str_l_rms_vu = vumeter()
       self.str_r_rms_vu = vumeter()

@@ -2068,6 +2068,11 @@ class RecordTab(Tab):
       Tab.send(self, "dev_type=recorder\n" + string_to_send)
    def receive(self):
       return Tab.receive(self)
+   def show_indicator(self, colour):
+      Tab.show_indicator(self, colour)
+      self.scg.parent.recording_panel.indicator[self.numeric_id].set_indicator(colour)
+      
+      
    def __init__(self, scg, numeric_id, indicator_lookup):
       Tab.__init__(self, scg, numeric_id, indicator_lookup)
       self.scg = scg

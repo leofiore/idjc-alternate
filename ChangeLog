@@ -2,6 +2,10 @@
 
 * Changes in version 0.8.5 *
 
+The return of the main panel recording indicator(s). Gone since version 0.7.
+
+Copyright year updated to 2011.
+
 Fix to XChat plugin installer. Polished XChat file locking code.
 
 Prokyon3 database settings recovered when saved in active mode. Hostname now saved as well.
@@ -12,7 +16,7 @@ Mic icon flashes after a certain amount of time when a player is on.
 
 Mic indicates on status by the addition of a halo around the microphone icon in the opener button.
 
-Encoder ringbuffer size increased to accommodate large JACK frame sizes.
+Encoder ringbuffer size increased to accommodate really large JACK frame sizes.
 
 Mic player headroom can be set far higher. 
 
