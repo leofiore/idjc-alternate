@@ -452,6 +452,8 @@ external_directory = "Choose a folder/directory of music."
 
 extra_info = "Stream Info"
 
+fadeover = "Fade Over"
+
 fade_none_menu = "No Fade"
 
 fade_5_menu = "Fade 5s"
@@ -1006,7 +1008,9 @@ playlist_modes_tip = """This sets the playlist mode which defines player behavio
 
 'External' draws it's tracks from an external playlist or directory one at a time. Useful for when you want to stream massive playlists.
 
-'Alternate' causes the next track to be cued up before starting the opposite player. The crossfader is moved over."""
+'Alternate' causes the next track to be cued up before starting the opposite player. The crossfader is moved over.
+
+'Fade Over' will crossfade to the other player at the end of every track."""
 
 playlistfilter_all = "All file types"
 

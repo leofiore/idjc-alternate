@@ -1478,7 +1478,7 @@ class IDJC_Media_Player:
             treeselection = self.treeview.get_selection()
             if self.is_playing == False:
                treeselection.select_path(0) # park on the first menu item
-      elif mode_text == ln.loop_all or mode_text == ln.cue_up:
+      elif mode_text == ln.loop_all or mode_text == ln.cue_up or mode_text == ln.fadeover:
          iter = self.next_real_track(self.iter_playing)
          if iter is None:
             iter = self.first_real_track()
@@ -1789,17 +1789,18 @@ class IDJC_Media_Player:
             if self.alarm_cid != cid:
                gobject.timeout_add(1000, self.deferred_alarm)
                self.alarm_cid = cid
-      # Initial autocrossfade -- start the other player.
-      if self.model_playing.iter_next(self.iter_playing) is not None and self.model_playing.get_value(self.model_playing.iter_next(self.iter_playing), 0) == ">crossfade" and self.pl_mode.get_active() == 0 and int(self.progress_current_figure) >= int(self.progress_stop_figure) -15:
-         if self.other_player_initiated == False:
+      # Check if the crossfade needs scheduling.      
+      if self.pl_mode.get_active_text() == ln.fadeover or (self.pl_mode.get_active() == 0 and self.fade_inspect()):
+         eot_crosstime = int(self.progress_stop_figure) - self.parent.passspeed_adj.props.value - int(self.progress_current_figure)
+         # Start other player
+         if not self.other_player_initiated and eot_crosstime <= 1:
             if self.playername == "left":
                self.parent.player_right.play.clicked()
             else:
                self.parent.player_left.play.clicked()
             self.other_player_initiated = True
-      # Now we do the crossfade
-      if self.model_playing.iter_next(self.iter_playing) is not None and self.model_playing.get_value(self.model_playing.iter_next(self.iter_playing), 0) == ">crossfade" and self.pl_mode.get_active() == 0 and int(self.progress_current_figure) >= int(self.progress_stop_figure) -9:
-         if self.crossfader_initiated == False:
+         # Now do the crossfade
+         if not self.crossfader_initiated and eot_crosstime <= 0:
             self.parent.passbutton.clicked()
             self.crossfader_initiated = True
             desired_direction = (self.playername == "left")
@@ -1853,6 +1854,23 @@ class IDJC_Media_Player:
    def stop_inspect(self):
       stoppers = (">stopplayer", ">announcement")
       horizon = (">transfer", ">crossfade", ">openaux", ">jumptotop")
+      i = self.iter_playing
+      m = self.model_playing
+      while 1:
+         i = m.iter_next(i)
+         if i is None:
+            return True
+         v = m.get_value(i, 0)
+         if v and v[0] != ">":
+            return False
+         if v in stoppers:
+            return True
+         if v in horizon:
+            return False
+
+   def fade_inspect(self):
+      stoppers = (">crossfade")
+      horizon = (">transfer", ">stopplayer", ">announcement", ">jumptotop")
       i = self.iter_playing
       m = self.model_playing
       while 1:
@@ -3560,6 +3578,7 @@ class IDJC_Media_Player:
       self.pl_mode.append_text(ln.cue_up)
       self.pl_mode.append_text(ln.external)
       self.pl_mode.append_text(ln.alternate)
+      self.pl_mode.append_text(ln.fadeover)
       self.pl_mode.set_active(0)
       self.pl_mode.connect("changed", self.cb_playlist_mode)
       parent.tooltips.set_tip(self.pl_mode, ln.playlist_modes_tip)

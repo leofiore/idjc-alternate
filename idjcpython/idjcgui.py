@@ -233,7 +233,7 @@ class MicOpener(gtk.HBox):
                # Appending a new group-of-one for individual mics.
                group_list.append([(mm, t)])
             else:
-               # Mic filed according to it's group.
+               # Mic filed according to its group.
                group_list[int(m.groups_adj.props.value - 1)].append((mm, t))
 
       # Opener buttons built here.      
