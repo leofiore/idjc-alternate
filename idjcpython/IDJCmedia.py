@@ -3138,85 +3138,86 @@ class IDJC_Media_Player:
       celltext = model.get_value(iter, 0)
       if celltext[:4] == "<b>>":
          celltext = celltext[3:-4]
-      if celltext[0] == ">" and self.pl_mode.get_active() == 0:
+      if celltext[0] == ">":
          cell_renderer.set_property("xalign", 0.45)
          cell_renderer.set_property("ypad", 0)
          cell_renderer.set_property("scale", 0.75)
          cell_renderer.set_property("cell-background-set", True)
          cell_renderer.set_property("background-set", True)
          cell_renderer.set_property("foreground-set", True)
-         
-         if celltext == ">fade10":
-            cell_renderer.set_property("cell-background", "dark red")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "dark red")
-            cell_renderer.set_property("text", ln.fade_10_menu)
-         if celltext == ">fade5":
-            cell_renderer.set_property("cell-background", "dark red")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "dark red")
-            cell_renderer.set_property("text", ln.fade_5_menu)
-         if celltext == ">fadenone":
-            cell_renderer.set_property("cell-background", "dark red")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "dark red")
-            cell_renderer.set_property("text", ln.fade_none_menu)
-         if celltext == ">announcement":
-            cell_renderer.set_property("cell-background", "dark blue")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "dark blue")
-            cell_renderer.set_property("text", ln.announcement_element)
-         if celltext == ">openaux":
-            cell_renderer.set_property("cell-background", "light green")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "light green")
-            cell_renderer.set_property("text", ln.open_aux_element)
-         if celltext == ">normalspeed":
-            cell_renderer.set_property("cell-background", "dark green")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "dark green")
-            cell_renderer.set_property("text", ln.normal_speed_element)
-         if celltext == ">stopplayer":
-            cell_renderer.set_property("cell-background", "red")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "red")
-            cell_renderer.set_property("text", ln.stop_control_element)
-         if celltext == ">jumptotop":
-            cell_renderer.set_property("cell-background", "dark magenta")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "dark magenta")
-            cell_renderer.set_property("text", ln.jump_to_top_control_element)
-         if celltext == ">stopstreaming":
-            cell_renderer.set_property("cell-background", "black")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "black")
-            cell_renderer.set_property("text", ln.stream_disconnect_element)
-         if celltext == ">stoprecording":
-            cell_renderer.set_property("cell-background", "black")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "black")
-            cell_renderer.set_property("text", ln.stop_recording_element)
-         if celltext == ">transfer":
-            cell_renderer.set_property("cell-background", "magenta")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "magenta")
-            if self.playername == "left":
-               cell_renderer.set_property("text", ln.transfer_control_ltr_element)
-            else:
-               cell_renderer.set_property("text", ln.transfer_control_rtl_element)
-         if celltext == ">crossfade":
-            cell_renderer.set_property("cell-background", "blue")
-            cell_renderer.set_property("background", "gray")
-            cell_renderer.set_property("foreground", "blue")
-            if self.playername == "left":
-               cell_renderer.set_property("text", ln.crossfade_control_ltr_element)
-            else:
-               cell_renderer.set_property("text", ln.crossfade_control_rtl_element)
-      else:
-         if celltext[0] == ">":
-            cell_renderer.set_property("visible", False)
+         if self.pl_mode.get_active() == 0:
+            if celltext == ">fade10":
+               cell_renderer.set_property("cell-background", "dark red")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "dark red")
+               cell_renderer.set_property("text", ln.fade_10_menu)
+            if celltext == ">fade5":
+               cell_renderer.set_property("cell-background", "dark red")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "dark red")
+               cell_renderer.set_property("text", ln.fade_5_menu)
+            if celltext == ">fadenone":
+               cell_renderer.set_property("cell-background", "dark red")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "dark red")
+               cell_renderer.set_property("text", ln.fade_none_menu)
+            if celltext == ">announcement":
+               cell_renderer.set_property("cell-background", "dark blue")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "dark blue")
+               cell_renderer.set_property("text", ln.announcement_element)
+            if celltext == ">openaux":
+               cell_renderer.set_property("cell-background", "light green")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "light green")
+               cell_renderer.set_property("text", ln.open_aux_element)
+            if celltext == ">normalspeed":
+               cell_renderer.set_property("cell-background", "dark green")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "dark green")
+               cell_renderer.set_property("text", ln.normal_speed_element)
+            if celltext == ">stopplayer":
+               cell_renderer.set_property("cell-background", "red")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "red")
+               cell_renderer.set_property("text", ln.stop_control_element)
+            if celltext == ">jumptotop":
+               cell_renderer.set_property("cell-background", "dark magenta")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "dark magenta")
+               cell_renderer.set_property("text", ln.jump_to_top_control_element)
+            if celltext == ">stopstreaming":
+               cell_renderer.set_property("cell-background", "black")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "black")
+               cell_renderer.set_property("text", ln.stream_disconnect_element)
+            if celltext == ">stoprecording":
+               cell_renderer.set_property("cell-background", "black")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "black")
+               cell_renderer.set_property("text", ln.stop_recording_element)
+            if celltext == ">transfer":
+               cell_renderer.set_property("cell-background", "magenta")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "magenta")
+               if self.playername == "left":
+                  cell_renderer.set_property("text", ln.transfer_control_ltr_element)
+               else:
+                  cell_renderer.set_property("text", ln.transfer_control_rtl_element)
+            if celltext == ">crossfade":
+               cell_renderer.set_property("cell-background", "blue")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "blue")
+               if self.playername == "left":
+                  cell_renderer.set_property("text", ln.crossfade_control_ltr_element)
+               else:
+                  cell_renderer.set_property("text", ln.crossfade_control_rtl_element)
          else:
-            cell_renderer.set_property("visible", True)
+            cell_renderer.set_property("cell-background", "darkgray")
+            cell_renderer.set_property("background", "darkgray")
+            cell_renderer.set_property("foreground", "white")
+            cell_renderer.set_property("markup", "<i>Ignored playlist control</i>")
+      else:
          cell_renderer.set_property("foreground-set", False)
          cell_renderer.set_property("cell-background-set", False)
          cell_renderer.set_property("background-set", False)

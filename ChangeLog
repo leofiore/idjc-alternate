@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+In playlist modes that don't suppport playlist controls a null control is rendered in the playlist instead of a blank space as was done previously.
+
 Auto crossfade now takes into account the fade speed for timing.
 
 New playlist mode 'Fade Over' does the same thing as the crossfade playlist control but for every track.
