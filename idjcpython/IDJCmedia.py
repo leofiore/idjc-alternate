@@ -55,12 +55,12 @@ except:
    from nt import namedtuple
 
 # Named tuple for a playlist row.
-class PlayerRow(namedtuple("PlayerRow", "rsmeta filename length meta encoding title artist replaygain cuesheet")):
+class PlayerRow(namedtuple("PlayerRow", "rsmeta filename length meta encoding title artist replaygain cuesheet album")):
    def __nonzero__(self):
       return self.rsmeta != "<s>valid</s>"
 
 # Playlist value indicating a file isn't valid.
-NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None)
+NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None, "")
 
 # Replay Gain value to indicate default.
 RGDEF = 100.0
@@ -221,7 +221,6 @@ class CuesheetPlaylist(gtk.Frame):
       duration = gtk.TreeViewColumn(ln.cue_duration, renderer_duration)
       duration.add_attribute(renderer_duration, "duration", 7)
       self.treeview.append_column(duration)
-
 
 class ButtonFrame(gtk.Frame):
    def __init__(self, title):
@@ -813,16 +812,18 @@ class IDJC_Media_Player:
          
       element = PlayerRow('<span foreground="dark green">(Cue Sheet)</span>' + rich_safe(metadata),
             cue_pathname, totalframes // 75 + 1, metadata, "utf-8",
-            global_cue_title, global_cue_performer, RGDEF, cuesheet_liststore)
+            global_cue_title, global_cue_performer, RGDEF, cuesheet_liststore, "")
          
       return element
    
    def get_media_metadata(self, filename):
       artist = u""
       title = u""
+      album = u""
       length = 0
       artist_retval = u""
       title_retval = u""
+      album_retval = u""
       
       # Strip away any file:// prefix
       if filename.count("file://", 0, 7):
@@ -876,6 +877,7 @@ class IDJC_Media_Player:
             rg = RGDEF
          artist = audio.get("ARTIST", [u""])
          title = audio.get("TITLE", [u""])
+         album = audio.get("ALBUM", [u""])
       # ID3 is tried second so it can supercede APE tag data.
       try:
          audio = EasyID3(filename)
@@ -894,6 +896,11 @@ class IDJC_Media_Player:
             title = audio["title"]
          except:
             pass
+         try:
+            album = audio["album"]
+         except:
+            pass
+         
          
       # Trying for metadata from native tagging formats.
       if avcodec and avformat and filext == ".avi":
@@ -904,6 +911,8 @@ class IDJC_Media_Player:
                artist = line[21:].strip()
             if line.startswith("avformatinfo: title="):
                title = line[20:].strip()
+            if line.startswith("avformatinfo: album="):
+               album = line[20:].strip()
             if line.startswith("avformatinfo: duration="):
                length = int(line[23:-1])
             if line == "avformatinfo: end\n":
@@ -921,6 +930,8 @@ class IDJC_Media_Player:
                artist = line[30:-1]
             if line.startswith("idjcmixer: sndfileinfo title="):
                title = line[29:-1]
+            if line.startswith("idjcmixer: sndfileinfo album="):
+               album = line[29:-1]
             if line == "idjcmixer: sndfileinfo end\n":
                break
          if length == None:
@@ -937,6 +948,8 @@ class IDJC_Media_Player:
                artist = line[11:].strip()
             if line.startswith("OIR:TITLE="):
                title = line[10:].strip()
+            if line.startswith("OIR:ALBUM="):
+               album = line[10:].strip()
             if line.startswith("OIR:LENGTH="):
                length = int(float(line[11:].strip()))
             if line.startswith("OIR:REPLAYGAIN_TRACK_GAIN="):
@@ -963,6 +976,10 @@ class IDJC_Media_Player:
                   title = audio["\xa9nam"][0]
                except:
                   pass
+               try:
+                  album = audio["\xa9alb"][0]
+               except:
+                  pass
             elif isinstance(audio, MP3):
                # The LAME tag is the last port of call for Replay Gain info
                # due to it frequently being based on the source audio.
@@ -986,6 +1003,13 @@ class IDJC_Media_Player:
                   pass
                else:
                   title = "/".join((unicode(y) for y in x))
+
+               try:
+                  x = list(audio["Album"])
+               except:
+                  pass
+               else:
+                  album = "/".join((unicode(y) for y in x))
                
                try:
                   rg = float(unicode(audio["replaygain_track_gain"][-1]).rstrip(" dB"))
@@ -997,6 +1021,9 @@ class IDJC_Media_Player:
          
       if isinstance(title, list):
          title = u"/".join(title)
+
+      if isinstance(album, list):
+         album = u"/".join(album)
       
       if isinstance(artist, str):
          try:
@@ -1009,18 +1036,28 @@ class IDJC_Media_Player:
             title = title.decode("utf-8", "strict")
          except:
             title = title.decode("latin1", "replace")
+
+      if isinstance(album, str):
+         try:
+            album = album.decode("utf-8", "strict")
+         except:
+            album = album.decode("latin1", "replace")
             
       assert(isinstance(artist, unicode))
       assert(isinstance(title, unicode))
+      assert(isinstance(album, unicode))
       
       if length == 0:
          length = 1
       
-      if artist and title:
+      if artist and title and album:
          meta_name = artist + u" - " + title
-         return PlayerRow(rich_safe(meta_name), filename, length, meta_name, encoding, title, artist, rg, cuesheet)
+         return PlayerRow(rich_safe(meta_name), filename, length, meta_name, encoding, title, artist, rg, cuesheet, album)
+      elif artist and title:
+         meta_name = artist + u" - " + title
+         return PlayerRow(rich_safe(meta_name), filename, length, meta_name, encoding, title, artist, rg, cuesheet, album_retval)
       else:
-         return PlayerRow(rsmeta_name, filename, length, meta_name, encoding, title_retval, artist_retval, rg, cuesheet)
+         return PlayerRow(rsmeta_name, filename, length, meta_name, encoding, title_retval, artist_retval, rg, cuesheet, album_retval)
 
    # Update playlist entries for a given filename e.g. when tag has been edited
    def update_playlist(self, newdata):
@@ -2151,6 +2188,12 @@ class IDJC_Media_Player:
                      track.appendChild(title)
                      titleText = doc.createTextNode(each[5])
                      title.appendChild(titleText)
+                     
+                  if each[9]:
+                     album = doc.createElement('album')
+                     track.appendChild(album)
+                     albumText = doc.createTextNode(each[9])
+                     album.appendChild(albumText)
                      
                   duration = doc.createElement('duration')
                   track.appendChild(duration)
@@ -3378,8 +3421,8 @@ class IDJC_Media_Player:
       # The first one gets rendered and is derived from id3 tags or just is the filename
       # when the id3 tag is not sufficient.
       # The second one always is the filename and is passed to the player.
-      self.liststore = gtk.ListStore(str, str, int, str, str, str, str, float, CueSheetListStore)
-      self.templist = gtk.ListStore(str, str, int, str, str, str, str, float, CueSheetListStore)
+      self.liststore = gtk.ListStore(str, str, int, str, str, str, str, float, CueSheetListStore, str)
+      self.templist = gtk.ListStore(str, str, int, str, str, str, str, float, CueSheetListStore, str)
       self.treeview = gtk.TreeView(self.liststore)
       self.rgcellrender = gtk.CellRendererText()
       self.playtimecellrender = gtk.CellRendererText()
