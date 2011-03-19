@@ -144,7 +144,6 @@ float dfmod;                            /* used to reduce the ducking factor */
 float dj_audio_level;                   /* used to reduce the level of dj audio */
 float dj_audio_gain = 1.0;              /* same as above but not in dB */
 float current_dj_audio_level = 0.0;
-float pat3;                             /* constant for third crossfader pattern */
 
 struct compressor stream_limiter =
    {
@@ -319,7 +318,8 @@ void update_smoothed_volumes()
    static float interlude_autovol = -128.0F, old_autovol = -128.0F;
    float vol;
    float xprop, yprop;
-   const float bias = 0.35386F;
+   const float bias = 0.35386f;
+   const float pat3 = 0.9504953575f;
 
    timeout++;
    
@@ -1706,8 +1706,6 @@ int main(int argc, char **argv)
       for (i = 0; i < FB_SIZE; i++)
          fade_table[i] = powf(f, i);
       }
-
-   pat3 = powf(10.0f, -441.0f/20000.0f);  /* crossfader pattern 3 constant */
 
    str_pf_l = peakfilter_create(115e-6f, sr);
    str_pf_r = peakfilter_create(115e-6f, sr);

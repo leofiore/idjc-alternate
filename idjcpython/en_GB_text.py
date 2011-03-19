@@ -280,7 +280,9 @@ cross_left_tip = "Move the crossfader fully left."
 
 cross_middle_tip = "Move the crossfader to the middle of its range of travel."
 
-cross_pattern_tip = "This changes the response curve of the crossfader."
+cross_pattern_tip = """This selects the response curve of the crossfader.
+
+The mid-point attenuations are -3dB, 0dB, and -22dB respectively."""
 
 cross_right_tip = "Move the crossfader fully right."
 
