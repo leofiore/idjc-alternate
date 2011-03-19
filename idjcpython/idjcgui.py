@@ -2881,6 +2881,7 @@ class MainWindow:
       self.crosspattern.add_attribute(cell, 'pixbuf', 0)
       liststore.append((gtk.gdk.pixbuf_new_from_file(pkgdatadir + "classic_cross" + gfext), ))
       liststore.append((gtk.gdk.pixbuf_new_from_file(pkgdatadir + "mk2_cross" + gfext), ))
+      liststore.append((gtk.gdk.pixbuf_new_from_file(pkgdatadir + "pat3" + gfext), ))
       pvbox.pack_start(self.crosspattern, True, True, 0)
       self.crosspattern.show()
       self.crossbox.pack_start(patternbox, False, False, 0)

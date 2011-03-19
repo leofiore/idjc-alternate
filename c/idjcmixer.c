@@ -144,6 +144,7 @@ float dfmod;                            /* used to reduce the ducking factor */
 float dj_audio_level;                   /* used to reduce the level of dj audio */
 float dj_audio_gain = 1.0;              /* same as above but not in dB */
 float current_dj_audio_level = 0.0;
+float pat3;                             /* constant for third crossfader pattern */
 
 struct compressor stream_limiter =
    {
@@ -377,6 +378,18 @@ void update_smoothed_volumes()
             }
          else
             cross_left = cross_right = 1.0;
+         }
+      else if (current_crosspattern == 2)
+         {
+         if (current_crossfade == 100)
+            cross_left = 0.0f;
+         else
+            cross_left = powf(pat3, current_crossfade);
+            
+         if (current_crossfade == 0)
+            cross_right = 0.0f;
+         else
+            cross_right = powf(pat3, 100 - current_crossfade);
          }
       }
 
@@ -1688,12 +1701,13 @@ int main(int argc, char **argv)
       plr_r->fadeindex = FB_SIZE;
       plr_j->fadeindex = FB_SIZE;
       plr_i->fadeindex = FB_SIZE;
+
+      float f = powf(10.0f, -441.0f/((FB_SIZE) * 200.0f));
       for (i = 0; i < FB_SIZE; i++)
-         {
-         fade_table[i] = pow10f(i / -20000.0 * 44100.0 / FB_SIZE);
-         /*fade_table[i] = powf(fade_table[i], 0.1f);*/
-         }
+         fade_table[i] = powf(f, i);
       }
+
+   pat3 = powf(10.0f, -441.0f/20000.0f);  /* crossfader pattern 3 constant */
 
    str_pf_l = peakfilter_create(115e-6f, sr);
    str_pf_r = peakfilter_create(115e-6f, sr);
