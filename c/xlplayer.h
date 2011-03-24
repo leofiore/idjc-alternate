@@ -55,6 +55,7 @@ struct xlp_dynamic_metadata     /* song titles can change mid-file */
    char *artist;
    char *title;
    char *artist_title;
+   char *album;
    int current_audio_context;
    int rbdelay;
    enum metadata_t data_type;
@@ -187,7 +188,7 @@ void xlplayer_demux_channel_data(struct xlplayer *self, jack_default_audio_sampl
 void xlplayer_write_channel_data(struct xlplayer *self);
 
 /* provide data for sending back to the user interface */
-void xlplayer_set_dynamic_metadata(struct xlplayer *xlplayer, enum metadata_t type, char *artist, char *title, char *artist_title, int delay);
+void xlplayer_set_dynamic_metadata(struct xlplayer *xlplayer, enum metadata_t type, char *artist, char *title, char *artist_title, char *album, int delay);
 
 /* return the delay caused by the ringbuffer */
 int xlplayer_calc_rbdelay(struct xlplayer *xlplayer);

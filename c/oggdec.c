@@ -145,6 +145,7 @@ static int vorbis_get_samplerate(struct oggdec_vars *self)  /* attempt to get AR
       
       obtain_tag_info("artist", &self->artist[self->ix], TRUE);
       obtain_tag_info("title", &self->title[self->ix], TRUE);
+      obtain_tag_info("album", &self->album[self->ix], TRUE);
       obtain_tag_info("replaygain_track_gain", &self->replaygain[self->ix], FALSE);
       }
    else
@@ -329,6 +330,7 @@ static void oggflac_metadata_callback(const FLAC__StreamDecoder *decoder, const 
 
          copy_tag("artist=", &self->artist[self->ix], TRUE);
          copy_tag("title=", &self->title[self->ix], TRUE);
+         copy_tag("album=", &self->album[self->ix], TRUE);
          copy_tag("replaygain_track_gain=", &self->replaygain[self->ix], FALSE);
          }
       else
@@ -445,12 +447,14 @@ static void speex_get_comments(struct oggdec_vars *self, char *comments, int len
       handle_keyval(key, val, &self->artist[self->ix], "author", TRUE);
       handle_keyval(key, val, &self->artist[self->ix], "artist", TRUE);
       handle_keyval(key, val, &self->title[self->ix], "title", TRUE);
+      handle_keyval(key, val, &self->album[self->ix], "album", TRUE);
       handle_keyval(key, val, &self->replaygain[self->ix], "replaygain_track_gain", FALSE);
       free(key);
       }
    
    self->artist[self->ix] = NULL;
    self->title[self->ix] = NULL;
+   self->album[self->ix] = NULL;
    
    if (length < 8)
       {
@@ -501,6 +505,8 @@ static void speex_get_comments(struct oggdec_vars *self, char *comments, int len
       self->artist[self->ix] = strdup("");
    if (self->title[self->ix] == NULL)
       self->title[self->ix] = strdup("");
+   if (self->album[self->ix] == NULL)
+      self->album[self->ix] = strdup("");
    }
 
 static int speex_get_samplerate(struct oggdec_vars *self)
@@ -600,6 +606,8 @@ static off_t oggscan_eos(struct oggdec_vars *self, off_t offset, off_t offset_en
          self->artist[self->n_streams - 1] = strdup("");
          self->title  = realloc(self->title,  self->n_streams * sizeof (char *));
          self->title[self->n_streams - 1] = strdup("");
+         self->album  = realloc(self->album,  self->n_streams * sizeof (char *));
+         self->album[self->n_streams - 1] = strdup("");
          self->replaygain = realloc(self->replaygain, self->n_streams * sizeof (char *));
          self->replaygain[self->n_streams - 1] = strdup("");
          self->streamtype = realloc(self->streamtype, self->n_streams * sizeof (enum streamtype_t));
@@ -809,12 +817,13 @@ static struct oggdec_vars *oggdecode_get_metadata(char *pathname)
          "serial number    %d\n"
          "artist           %s\n"
          "title            %s\n"
+         "album            %s\n"
          "samplerate       %d\n"
          "channels         %d\n"
          "start time (s)   %lf\n"
          "duration (s)     %lf\n",
          (int)self->bos_offset[i], self->granule_count[i],
-         self->serial[i], self->artist[i], self->title[i], samplerate,
+         self->serial[i], self->artist[i], self->title[i], self->album[i], samplerate,
          self->channels[i], self->start_time[i], self->duration[i]);
 #endif
       }
@@ -837,6 +846,8 @@ static void oggdecode_free_metadata(struct oggdec_vars *self)
             free(self->artist[i]);
          if (self->title[i])
             free(self->title[i]);
+         if (self->album[i])
+            free(self->album[i]);
          }
          
       free(self->bos_offset);
@@ -844,6 +855,7 @@ static void oggdecode_free_metadata(struct oggdec_vars *self)
       free(self->serial);
       free(self->artist);
       free(self->title);
+      free(self->album);
       free(self->streamtype);
       free(self->start_time);
       free(self->duration);
@@ -953,14 +965,14 @@ void oggdecode_dynamic_dispatcher(struct xlplayer *xlplayer)
             delay = 0;
          
          if (s->artist[s->ix][0] && s->title[s->ix][0])
-            xlplayer_set_dynamic_metadata(xlplayer, DM_SPLIT_U8, s->artist[s->ix], s->title[s->ix], "", delay);
+            xlplayer_set_dynamic_metadata(xlplayer, DM_SPLIT_U8, s->artist[s->ix], s->title[s->ix], "", s->album[s->ix], delay);
          else
             if (s->title[s->ix][0])
-               xlplayer_set_dynamic_metadata(xlplayer, DM_JOINED_U8, "", "", s->title[s->ix], delay);
+               xlplayer_set_dynamic_metadata(xlplayer, DM_JOINED_U8, "", "", s->title[s->ix], "", delay);
             else
                {
                fprintf(stderr, "oggdecode_dynamic_dispatcher: insufficient metadata\n");
-               xlplayer_set_dynamic_metadata(xlplayer, DM_NOTAG, "", "", "", delay);
+               xlplayer_set_dynamic_metadata(xlplayer, DM_NOTAG, "", "", "", "", delay);
                }
          
          xlplayer->usedelay = TRUE;
@@ -1049,7 +1061,7 @@ int oggdecode_reg(struct xlplayer *xlplayer)
       }
    }
 
-int oggdecode_get_metainfo(char *pathname, char **artist, char **title, double *length, char **replaygain)
+int oggdecode_get_metainfo(char *pathname, char **artist, char **title, char **album, double *length, char **replaygain)
    {
    struct oggdec_vars *self;
    int has_pbtime;
@@ -1068,7 +1080,8 @@ int oggdecode_get_metainfo(char *pathname, char **artist, char **title, double *
           * possess a metaheader */
          *artist = realloc(*artist, 1);
          *title  = realloc(*title, 1);
-         *artist[0] = *title[0] = '\0';
+         *album  = realloc(*album, 1);
+         *artist[0] = *title[0] = *album[0] = '\0';
          }
       else
          {
@@ -1094,6 +1107,18 @@ int oggdecode_get_metainfo(char *pathname, char **artist, char **title, double *
             {
             *title = realloc(*title, 1);
             *title[0] = '\0';
+            }
+
+         if (self->album[0])
+            { 
+            if (*album)
+               free(*album);
+            *album = strdup(self->album[0]);
+            }
+         else
+            {
+            *album = realloc(*album, 1);
+            *album[0] = '\0';
             }
 
          if (self->replaygain[0])

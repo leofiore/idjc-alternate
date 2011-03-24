@@ -549,6 +549,7 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
    self->dynamic_metadata.artist = NULL;
    self->dynamic_metadata.title = NULL;
    self->dynamic_metadata.artist_title = NULL;
+   self->dynamic_metadata.album = NULL;
    self->dynamic_metadata.current_audio_context = 0;
    self->dynamic_metadata.rbdelay = 0;
    pthread_create(&self->thread, NULL, (void *(*)(void *)) xlplayer_main, self);
@@ -857,7 +858,7 @@ int xlplayer_calc_rbdelay(struct xlplayer *xlplayer)
    return jack_ringbuffer_read_space(xlplayer->left_ch) * 1000 / (sizeof (sample_t) * xlplayer->samplerate);
    }
 
-void xlplayer_set_dynamic_metadata(struct xlplayer *xlplayer, enum metadata_t type, char *artist, char *title, char *artist_title, int delay)
+void xlplayer_set_dynamic_metadata(struct xlplayer *xlplayer, enum metadata_t type, char *artist, char *title, char *artist_title, char *album, int delay)
    {
    struct xlp_dynamic_metadata *dm = &(xlplayer->dynamic_metadata);
    
@@ -869,9 +870,12 @@ void xlplayer_set_dynamic_metadata(struct xlplayer *xlplayer, enum metadata_t ty
       free(dm->title);
    if (dm->artist_title)
       free(dm->artist_title);
+   if (dm->album)
+      free(dm->album);
    dm->artist = strdup(artist);
    dm->title = strdup(title);
    dm->artist_title = strdup(artist_title);
+   dm->album = strdup(album);
    dm->current_audio_context = xlplayer->current_audio_context;
    dm->rbdelay = delay;
    pthread_mutex_unlock(&(dm->meta_mutex));

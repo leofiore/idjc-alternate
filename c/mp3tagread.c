@@ -315,7 +315,7 @@ static int id3_tag_read(struct mp3taginfo *ti, FILE *fp, int skip)
                   {
                   fprintf(stderr, "read_id3v2_tag: error, tag size not large enough for extended header\n");
                   fseek(fp, start + 10 + tagsize, SEEK_SET);
-                  return;
+                  return TRUE;
                   }
                }
          case 3:
@@ -331,7 +331,7 @@ static int id3_tag_read(struct mp3taginfo *ti, FILE *fp, int skip)
          {
          fprintf(stderr, "read_id3_v2_tag: failed to read tag data\n");
          fseek(fp, start + 10 + tagsize, SEEK_SET);
-         return;
+         return TRUE;
          }
 
       if (ti->version == 3)
@@ -347,7 +347,7 @@ static int id3_tag_read(struct mp3taginfo *ti, FILE *fp, int skip)
                {
                fprintf(stderr, "read_id3_tag: error, tag size not large enough for extended header\n");
                fseek(fp, start + 10 + tagsize, SEEK_SET);
-               return;
+               return TRUE;
                }
             }
          }

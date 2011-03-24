@@ -1551,7 +1551,7 @@ int main(int argc, char **argv)
    int i, new_left_pause, new_right_pause;
    static int old_aux_on = 0;
    jack_nframes_t nframes;
-   char *artist = NULL, *title = NULL, *replaygain = NULL;
+   char *artist = NULL, *title = NULL, *album = NULL, *replaygain = NULL;
    double length;
    int sync = FALSE;
    int use_dsp;
@@ -1873,9 +1873,9 @@ int main(int argc, char **argv)
       
       if (!strcmp(action, "ogginforequest"))
          {
-         if (oggdecode_get_metainfo(oggpathname, &artist, &title, &length, &replaygain))
+         if (oggdecode_get_metainfo(oggpathname, &artist, &title, &album, &length, &replaygain))
             {
-            fprintf(stdout, "OIR:ARTIST=%s\nOIR:TITLE=%s\nOIR:LENGTH=%f\nOIR:REPLAYGAIN_TRACK_GAIN=%s\nOIR:end\n", artist, title, length, replaygain);
+            fprintf(stdout, "OIR:ARTIST=%s\nOIR:TITLE=%s\nOIR:ALBUM=%s\nOIR:LENGTH=%f\nOIR:REPLAYGAIN_TRACK_GAIN=%s\nOIR:end\n", artist, title, album, length, replaygain);
             fflush(stdout);
             }
          else

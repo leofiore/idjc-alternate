@@ -289,13 +289,23 @@ fprintf(stderr, "avcodecdecode_reg: registered\n");
 void avformatinfo(char *pathname)
    {
    AVFormatContext *ic;
+   AVMetadata *mc;
+   AVMetadataTag *tag;
+   const int flags = AV_METADATA_DONT_STRDUP_KEY | AV_METADATA_DONT_STRDUP_VAL;
+   char *keys[] = {"artist", "title", "album", NULL}, **kp;
    
    pthread_once(&once_control, once_init);
    if (av_open_input_file(&ic, pathname, NULL, 0, NULL) >= 0)
       {
       av_find_stream_info(ic);
-      printf("avformatinfo: artist=%s\n", ic->author);
-      printf("avformatinfo: title=%s\n", ic->title);
+      mc = ic->metadata;
+
+      for(kp = keys; *kp; kp++)
+         {
+         if ((tag = av_metadata_get(mc, *kp, NULL, flags)))
+            printf("avformatinfo: %s=%s\n", tag->key, tag->value);
+         }
+     
       printf("avformatinfo: duration=%d\n", (int)(ic->duration / AV_TIME_BASE));
       av_close_input_file(ic);
       }

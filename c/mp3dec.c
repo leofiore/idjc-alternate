@@ -386,7 +386,7 @@ static void mp3decode_play(struct xlplayer *xlplayer)
    if (chapter && chapter != self->current_chapter)
       {
       self->current_chapter = chapter;
-      xlplayer_set_dynamic_metadata(xlplayer, metadata_form[chapter->encoding], "", "", chapter->text, delay);
+      xlplayer_set_dynamic_metadata(xlplayer, metadata_form[chapter->encoding], "", "", chapter->text, "", delay);
       }
    }
 
@@ -449,7 +449,7 @@ int mp3decode_reg(struct xlplayer *xlplayer)
             if ((chapter = mp3_tag_chapter_scan(&self->taginfo, xlplayer->play_progress_ms + 70)))
                {
                self->current_chapter = chapter;
-               xlplayer_set_dynamic_metadata(xlplayer, metadata_form[chapter->encoding], "", "", chapter->text, 0);
+               xlplayer_set_dynamic_metadata(xlplayer, metadata_form[chapter->encoding], "", "", chapter->text, "", 0);
                }
             return ACCEPTED;
          }
