@@ -1341,6 +1341,7 @@ class IDJC_Media_Player:
          # These two are used for ogg metadata
          self.title = unicode(model.get_value(iter, 5)).encode("utf-8", "replace")
          self.artist = unicode(model.get_value(iter, 6)).encode("utf-8", "replace")
+         self.album = unicode(model.get_value(iter, 9)).encode("utf-8", "replace")
          self.parent.send_new_mixer_stats()      
       # rt is the run time in seconds of our song
       rt = model.get_value(iter, 2)
@@ -3967,6 +3968,7 @@ class IDJC_Media_Player:
       self.flush = False
       self.title = ""
       self.artist = ""
+      self.album = ""
       self.gapless = False
       self.seek_file_valid = False
       self.digiprogress_type = 0

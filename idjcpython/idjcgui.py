@@ -1250,14 +1250,17 @@ class MainWindow:
          self.songname = self.player_left.songname
          self.artist = self.player_left.artist
          self.title = self.player_left.title
+         self.album = self.player_left.album
       elif meta == 1:
          self.songname = self.player_right.songname
          self.artist = self.player_right.artist
          self.title = self.player_right.title
+         self.album = self.player_right.album
       elif meta == -1:
          self.songname = ""
          self.artist = ""
          self.title = ""
+         self.album = ""
 
       # update metadata on stream if it has changed
       if self.metadata != self.songname:
@@ -1300,7 +1303,7 @@ class MainWindow:
                         xtp(message_text.encode("utf-8")),
                         xtp(str(int(time.time() + self.prefs_window.announcedelayadj.get_value())))))
                gobject.timeout_add(int(self.prefs_window.announcedelayadj.get_value() * 1000 - 500), self.xchat_announce_the_track, xchat_text_packet)
-            self.server_window.new_metadata(self.artist, self.title, self.metadata)
+            self.server_window.new_metadata(self.artist, self.title, self.album, self.metadata)
          else:
             self.window.set_title(self.appname + self.profile_title)
 
@@ -1334,6 +1337,7 @@ class MainWindow:
       gen = self.songname_decode(data)
       artist = gen.next()
       title = gen.next()
+      album = gen.next()
       artist_title = gen.next()
       player_context = int(gen.next())
       time_lag = int(gen.next())
@@ -1344,14 +1348,17 @@ class MainWindow:
          song = artist_title.decode("utf-8", "replace")
          artist = ""
          title = artist_title
+         album = ""
       if infotype == 3:
          song = artist.decode("iso8859-1", "replace") + u" - " + title.decode("iso8859-1", "replace")
          artist = artist.decode("iso8859-1", "replace").encode("utf-8", "replace")
          title = title.decode("iso8859-1", "replace").encode("utf-8", "replace")
+         album = title.decode("iso8859-1", "replace").encode("utf-8", "replace")
       if infotype == 4:
          song = artist_title.decode("iso8859-1", "replace")
          artist = ""
          title = song.encode("utf-8", "replace")
+         album = ""
       if infotype == 7:
          model = player.model_playing
          iter = player.iter_playing
@@ -1359,20 +1366,22 @@ class MainWindow:
          song = model.get_value(iter, 3)
          artist = model.get_value(iter, 6)
          title = model.get_value(iter, 5)
+         album = model.get_value(iter, 9)
       if infotype > 4 and infotype < 7: # unicode chapter tags unsupported
          return
       if not player_context & 1:
          time_lag = 0
       else:
          time_lag = int(time_lag / player.pbspeedfactor)
-      gobject.timeout_add(time_lag, self.new_songname_timeout, (song, artist, title, player, player_context))
+      gobject.timeout_add(time_lag, self.new_songname_timeout, (song, artist, title, album, player, player_context))
 
    @threadslock
-   def new_songname_timeout(self, (song, artist, title, player, player_context)):
+   def new_songname_timeout(self, (song, artist, title, album, player, player_context)):
       if player.player_cid == (player_context | 1):
          player.songname = song
          player.artist = artist
          player.title = title
+         player.album = album
          self.send_new_mixer_stats()
       else:
          print "context mismatch, player context id =", player.player_cid, "metadata update carries context id =", player_context

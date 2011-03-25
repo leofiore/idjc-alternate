@@ -612,7 +612,7 @@ int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, voi
          if (!(encoder_new_metadata(ti, uv, other)))
             return FAILED;
       for (int i = 0; i < ti->n_recorders; i++)
-         if (!(recorder_new_metadata(ti->recorder[i], ev->artist, ev->title)))
+         if (!(recorder_new_metadata(ti->recorder[i], ev->artist, ev->title, ev->album)))
             return FAILED;  
       }
    else
@@ -624,6 +624,8 @@ int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, voi
          free(self->artist);
       if (self->title)
          free(self->title);
+      if (self->album)
+         free(self->album);
       if (self->artist_title)
          free(self->artist_title);
       if (self->artist_title_mp3)
@@ -632,6 +634,10 @@ int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, voi
          self->artist = strdup(ev->artist);
       else
          self->artist = strdup("");
+      if (ev->album)
+         self->album = strdup(ev->album);
+      else
+         self->album = strdup("");
       if (ev->title)
          self->title = strdup(ev->title);
       else
@@ -644,7 +650,7 @@ int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, voi
          self->artist_title_mp3 = strdup(ev->artist_title_mp3);
       else
          self->artist_title_mp3 = strdup("");
-      if (!(self->artist && self->title && self->artist_title && self->artist_title_mp3))
+      if (!(self->artist && self->title && self->album && self->artist_title && self->artist_title_mp3))
          {
          pthread_mutex_unlock(&self->metadata_mutex);
          fprintf(stderr, "encoder_new_metadata: malloc failure\n");
@@ -702,6 +708,7 @@ struct encoder *encoder_init(struct threads_info *ti, int numeric_id)
    self->numeric_id = numeric_id;
    self->artist = strdup("");
    self->title = strdup("");
+   self->album = strdup("");
    self->artist_title = strdup("");
    self->artist_title_mp3 = strdup("");
    self->metaformat = strdup("%s");
@@ -738,6 +745,8 @@ void encoder_destroy(struct encoder *self)
       free(self->artist);
    if (self->title)
       free(self->title);
+   if (self->album)
+      free(self->album);
    if (self->artist_title)
       free(self->artist_title);
    if (self->artist_title_mp3)

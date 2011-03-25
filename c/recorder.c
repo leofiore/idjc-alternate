@@ -705,29 +705,33 @@ int recorder_make_report(struct recorder *self)
    return SUCCEEDED;
    }
 
-int recorder_new_metadata(struct recorder *self, char *artist, char *title)
+int recorder_new_metadata(struct recorder *self, char *artist, char *title, char *album)
    {
-   char *new_artist, *new_title;
-   char *old_artist, *old_title;
+   char *new_artist, *new_title, *new_album;
+   char *old_artist, *old_title, *old_album;
    
    new_artist = strdup(artist);
    new_title = strdup(title);
-   if (!new_artist || !new_title)
+   new_album = strdup(album);
+   if (!new_artist || !new_title || !new_album)
       {
       fprintf(stderr, "recorder_new_metadata: malloc failure\n");
       return FAILED;
       }
    old_artist = self->artist;
    old_title = self->title;
+   old_album = self->album;
    
    pthread_mutex_lock(&self->artist_title_mutex);
    self->artist = new_artist;
    self->title = new_title;
+   self->album = new_album;
    self->new_artist_title = TRUE;
    pthread_mutex_unlock(&self->artist_title_mutex);
    
    free(old_artist);
    free(old_title);
+   free(old_album);
    
    return SUCCEEDED;
    }
@@ -957,6 +961,7 @@ struct recorder *recorder_init(struct threads_info *ti, int numeric_id)
    self->numeric_id = numeric_id;
    self->artist = strdup("");
    self->title = strdup("");
+   self->album = strdup("");
    pthread_mutex_init(&self->artist_title_mutex, NULL);
    pthread_create(&self->thread_h, NULL, recorder_main, self);
    return self;
@@ -969,5 +974,6 @@ void recorder_destroy(struct recorder *self)
    pthread_mutex_destroy(&self->artist_title_mutex);
    free(self->artist);
    free(self->title);
+   free(self->album);
    free(self);
    }

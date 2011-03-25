@@ -216,6 +216,7 @@ int main()
       { "metaformat_mp3",   &ev.metaformat_mp3 },
       { "artist",           &ev.artist },
       { "title",            &ev.title },
+      { "album",            &ev.album },
       { "artist_title",     &ev.artist_title },
       { "artist_title_mp3", &ev.artist_title_mp3 },
       { "freeformat_mp3",   &ev.freeformat_mp3 },

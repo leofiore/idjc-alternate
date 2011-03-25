@@ -41,12 +41,15 @@ static void live_ogg_build_metadata(struct encoder *encoder, struct loe_data *s)
       free(s->artist);
    if (s->title)
       free(s->title);
+   if (s->album)
+      free(s->album);
    pthread_mutex_lock(&encoder->metadata_mutex);
    for (count = 0, r = encoder->metaformat; (r = strstr(r, "%s")); count++, r += 2);
    if (count == 0)
       {
       /* handle metadata does not contain artist - title */
       s->artist = NULL;
+      s->album = NULL;
       if (encoder->metaformat && encoder->metaformat[0] != '\0')
          s->title = strdup(encoder->metaformat);
       else
@@ -65,6 +68,10 @@ static void live_ogg_build_metadata(struct encoder *encoder, struct loe_data *s)
             s->title = strdup(encoder->title);
          else
             s->title = NULL;
+         if (encoder->album && encoder->album[0] != '\0')
+            s->album = strdup(encoder->album);
+         else
+            s->album = NULL;
          }
       else
          {
@@ -97,11 +104,12 @@ static void live_ogg_build_metadata(struct encoder *encoder, struct loe_data *s)
                }
             }
          s->artist = NULL;
+         s->album = NULL;
          }
       }
    encoder->new_metadata = FALSE;
    pthread_mutex_unlock(&encoder->metadata_mutex);
-   fprintf(stderr, "live_ogg_build_metadata: metadata for encoder %d\nartist=%s\ntitle=%s\n", encoder->numeric_id, s->artist, s->title);
+   fprintf(stderr, "live_ogg_build_metadata: metadata for encoder %d\nartist=%s\ntitle=%s\nalbum=%s\n", encoder->numeric_id, s->artist, s->title, s->album);
    }
 
 int live_ogg_write_packet(struct encoder *encoder, ogg_page *op, int flags)
@@ -174,6 +182,8 @@ static void live_ogg_encoder_main(struct encoder *encoder)
          vorbis_comment_add_tag(&s->vc, "ARTIST", s->artist);
       if (s->title)
          vorbis_comment_add_tag(&s->vc, "TITLE", s->title);
+      if (s->album)
+         vorbis_comment_add_tag(&s->vc, "ALBUM", s->album);
       vorbis_analysis_headerout(&s->vd, &s->vc, &header_main, &header_comments, &header_codebooks);
       ogg_stream_packetin(&s->os, &header_main);
       ogg_stream_packetin(&s->os, &header_comments);

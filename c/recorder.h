@@ -104,6 +104,7 @@ struct recorder
    FILE *fpcue;
    char *artist;
    char *title;
+   char *album;
    int artist_title_writes;
    pthread_mutex_t artist_title_mutex;
    int new_artist_title;
@@ -116,6 +117,6 @@ int recorder_stop(struct threads_info *ti, struct universal_vars *uv, void *othe
 int recorder_pause(struct threads_info *ti, struct universal_vars *uv, void *other);
 int recorder_unpause(struct threads_info *ti, struct universal_vars *uv, void *other);
 int recorder_make_report(struct recorder *self);
-int recorder_new_metadata(struct recorder *self, char *artist, char *title);
+int recorder_new_metadata(struct recorder *self, char *artist, char *title, char *album);
 
 #endif

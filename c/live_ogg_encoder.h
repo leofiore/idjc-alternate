@@ -27,6 +27,7 @@ struct loe_data
    long min_bitrate;
    char *artist;                /* ogg metadata is split into two strings */
    char *title;
+   char *album;
    vorbis_info      vi;
    vorbis_block     vb;
    vorbis_dsp_state vd;
