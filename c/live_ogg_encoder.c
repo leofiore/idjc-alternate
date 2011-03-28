@@ -30,88 +30,6 @@
 
 typedef jack_default_audio_sample_t sample_t;
 
-static void live_ogg_build_metadata(struct encoder *encoder, struct loe_data *s)
-   {
-   char *r, *w, *e, *marker;    /* read, write, end, the placemarker string */
-   int count;   /* the number of occurrences of marker in metaformat */
-   int len;     /* the length of the substitute string */
-   size_t size;
-
-   if (s->artist)
-      free(s->artist);
-   if (s->title)
-      free(s->title);
-   if (s->album)
-      free(s->album);
-   pthread_mutex_lock(&encoder->metadata_mutex);
-   for (count = 0, r = encoder->metaformat; (r = strstr(r, "%s")); count++, r += 2);
-   if (count == 0)
-      {
-      /* handle metadata does not contain artist - title */
-      s->artist = NULL;
-      s->album = NULL;
-      if (encoder->metaformat && encoder->metaformat[0] != '\0')
-         s->title = strdup(encoder->metaformat);
-      else
-         s->title = NULL;
-      }
-   else
-      {
-      /* handle metadata only contains artist - title */
-      if (count == 1 && !strcmp(encoder->metaformat, "%s"))
-         {
-         if (encoder->artist && encoder->artist[0] != '\0')
-            s->artist = strdup(encoder->artist);
-         else
-            s->artist = NULL;
-         if (encoder->title && encoder->title[0] != '\0')
-            s->title = strdup(encoder->title);
-         else
-            s->title = NULL;
-         if (encoder->album && encoder->album[0] != '\0')
-            s->album = strdup(encoder->album);
-         else
-            s->album = NULL;
-         }
-      else
-         {
-         /* handle a mix of possible multiple "artist - title" and or other text */
-         /* in python: artist = metaformat.replace("%s", artist_title) */
-         /* in C see below LOL */
-         s->title = malloc(size = count * strlen(encoder->artist_title) + strlen(encoder->metaformat) - count * strlen(marker = "%s") + 1);
-         if (!s->title)
-            fprintf(stderr, "live_ogg_build_metadata: malloc failure\n");
-         else
-            {
-            len = strlen(encoder->artist_title);
-            r = encoder->metaformat;
-            w = s->title;
-            for (;;)
-               {
-               if ((e = strstr(r, marker)))
-                  {
-                  memcpy(w, r, e - r);  /* copy the text before the %s */
-                  w += e - r;           /* advance write pointer */
-                  memcpy(w, encoder->artist_title, len); /* copy artist - title */
-                  w += len;             /* advance the write pointer */
-                  r = e + 2;            /* skip over the %s */
-                  }
-               else
-                  {
-                  strcpy(w, r); /* copy the remaining text and null terminate */
-                  break;        /* finished */
-                  }
-               }
-            }
-         s->artist = NULL;
-         s->album = NULL;
-         }
-      }
-   encoder->new_metadata = FALSE;
-   pthread_mutex_unlock(&encoder->metadata_mutex);
-   fprintf(stderr, "live_ogg_build_metadata: metadata for encoder %d\nartist=%s\ntitle=%s\nalbum=%s\n", encoder->numeric_id, s->artist, s->title, s->album);
-   }
-
 int live_ogg_write_packet(struct encoder *encoder, ogg_page *op, int flags)
    {
    struct encoder_op_packet packet;
@@ -177,7 +95,7 @@ static void live_ogg_encoder_main(struct encoder *encoder)
       vorbis_comment_init(&s->vc);
       /* this function takes raw metadata and does something type specific with it */
       if (encoder->new_metadata)
-         live_ogg_build_metadata(encoder, encoder->encoder_private);
+         //live_ogg_build_metadata(encoder, encoder->encoder_private);
       if (s->artist)
          vorbis_comment_add_tag(&s->vc, "ARTIST", s->artist);
       if (s->title)

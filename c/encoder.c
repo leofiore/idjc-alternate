@@ -626,10 +626,8 @@ int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, voi
          free(self->title);
       if (self->album)
          free(self->album);
-      if (self->artist_title)
-         free(self->artist_title);
-      if (self->artist_title_mp3)
-         free(self->artist_title_mp3);
+      if (self->artist_title_lat1)
+         free(self->artist_title_lat1);
       if (ev->artist)
          self->artist = strdup(ev->artist);
       else
@@ -642,15 +640,11 @@ int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, voi
          self->title = strdup(ev->title);
       else
          self->title = strdup("");
-      if (ev->artist_title)
-         self->artist_title = strdup(ev->artist_title);
+      if (ev->artist_title_lat1)
+         self->artist_title_lat1 = strdup(ev->artist_title_lat1);
       else
-         self->artist_title = strdup("");
-      if (ev->artist_title_mp3)
-         self->artist_title_mp3 = strdup(ev->artist_title_mp3);
-      else
-         self->artist_title_mp3 = strdup("");
-      if (!(self->artist && self->title && self->album && self->artist_title && self->artist_title_mp3))
+         self->artist_title_lat1 = strdup("");
+      if (!(self->artist && self->title && self->album && self->artist_title_lat1))
          {
          pthread_mutex_unlock(&self->metadata_mutex);
          fprintf(stderr, "encoder_new_metadata: malloc failure\n");
@@ -709,8 +703,7 @@ struct encoder *encoder_init(struct threads_info *ti, int numeric_id)
    self->artist = strdup("");
    self->title = strdup("");
    self->album = strdup("");
-   self->artist_title = strdup("");
-   self->artist_title_mp3 = strdup("");
+   self->artist_title_lat1 = strdup("");
    self->metaformat = strdup("%s");
    self->metaformat_mp3 = strdup("%s");
    while ((self->oggserial = rand()) + 20000 < 0 || self->oggserial < 100);
@@ -747,10 +740,8 @@ void encoder_destroy(struct encoder *self)
       free(self->title);
    if (self->album)
       free(self->album);
-   if (self->artist_title)
-      free(self->artist_title);
-   if (self->artist_title_mp3)
-      free(self->artist_title_mp3);
+   if (self->artist_title_lat1)
+      free(self->artist_title_lat1);
    free(self);
    }
 

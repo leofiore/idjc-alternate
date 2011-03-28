@@ -2396,14 +2396,15 @@ class SourceClientGui:
                self.source_client_crash_count -= 1
                self.uptime = time.time()
          
-   def new_metadata(self, artist, title, album, artist_title):
-      print "album ###", album
-      if self.parent.prefs_window.mp3_utf8.get_active():
-         artist_title_mp3 = artist_title.encode("utf-8", "replace")
+   def new_metadata(self, artist, title, album):
+      if artist:
+         artist_title = artist + " - " + title
       else:
-         artist_title_mp3 = artist_title.encode("iso8859-1", "replace")
-      artist_title = artist_title.encode("utf-8", "replace").strip()
-      self.send("artist=%s\ntitle=%s\nalbum=%s\nartist_title=%s\nartist_title_mp3=%s\ncommand=new_metadata\n" % (artist.strip(), title.strip(), album.strip(), artist_title.strip(), artist_title_mp3.strip()))
+         artist_title = title
+      if not self.parent.prefs_window.mp3_utf8.get_active():
+         artist_title_lat1 = artist_title.decode("utf-8", "replace").encode("iso8859-1", "replace")
+
+      self.send("artist=%s\ntitle=%s\nalbum=%s\nartist_title_lat1=%s\ncommand=new_metadata\n" % (artist.strip(), title.strip(), album.strip(), artist_title_lat1.strip()))
       if self.receive() == "succeeded":
          print "updated metadata successfully" 
    def source_client_open(self):

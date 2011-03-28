@@ -1262,16 +1262,17 @@ class MainWindow:
          self.title = ""
          self.album = ""
 
+      self.new_metadata = (self.songname, self.artist, self.title, self.album)
       # update metadata on stream if it has changed
-      if self.metadata != self.songname:
-         self.metadata = self.songname                  # now we need to send the new metadata
-         print "song title: %s\n" % self.metadata.encode(self.denc, "replace")
-         if self.metadata != u"":
-            self.window.set_title("%s :: IDJC%s" % (self.metadata, self.profile_title))
+      if self.new_metadata != self.old_metadata:
+         self.old_metadata = self.new_metadata             # now we need to send the new metadata
+         print "song title: %s\n" % self.songname.encode(self.denc, "replace")
+         if self.songname != u"":
+            self.window.set_title("%s :: IDJC%s" % (self.songname, self.profile_title))
             tm = time.localtime()
             ts = "%02d:%02d :: " % (tm[3], tm[4])       # hours and minutes
             self.history_buffer.place_cursor(self.history_buffer.get_end_iter())
-            self.history_buffer.insert_at_cursor(ts + self.metadata + "\n")
+            self.history_buffer.insert_at_cursor(ts + self.songname + "\n")
             adjustment = self.history_window.get_vadjustment()
             adjustment.set_value(adjustment.upper)
             try:
@@ -1280,14 +1281,14 @@ class MainWindow:
                print "unable to open history.log for writing"
             else:
                try:
-                  file.write(time.strftime("%x %X :: ") + self.metadata.encode("utf-8") + "\n")
+                  file.write(time.strftime("%x %X :: ") + self.songname.encode("utf-8") + "\n")
                except IOError:
                   print "unable to append to file \"history.log\""
                file.close()
 
             try: # The song the DJ is listening to for the xchat /listening trigger
                file = open(self.idjcroot + "songtitle", "w")
-               file.write(self.metadata)                # <--- This is wrong
+               file.write(self.songname)                # <--- This is wrong
                file.close()
             except IOError:
                print "Failed to write the song title to disk"
@@ -1296,14 +1297,14 @@ class MainWindow:
             # note how the announcement is done on a time delay
             
             if self.prefs_window.announce_enable.get_active() and self.server_window.is_streaming:
-               message_text = self.prefs_window.announcemessageentry.get_text().replace(u"%s", self.metadata)
+               message_text = self.prefs_window.announcemessageentry.get_text().replace(u"%s", self.songname)
                xchat_text_packet = "".join((
                         xtp(self.prefs_window.nickentry.get_text().encode("utf-8")),
                         xtp(self.prefs_window.channelsentry.get_text().encode("utf-8")),
                         xtp(message_text.encode("utf-8")),
                         xtp(str(int(time.time() + self.prefs_window.announcedelayadj.get_value())))))
                gobject.timeout_add(int(self.prefs_window.announcedelayadj.get_value() * 1000 - 500), self.xchat_announce_the_track, xchat_text_packet)
-            self.server_window.new_metadata(self.artist, self.title, self.album, self.metadata)
+            self.server_window.new_metadata(self.artist, self.title, self.album)
          else:
             self.window.set_title(self.appname + self.profile_title)
 
@@ -3151,7 +3152,7 @@ class MainWindow:
       self.newmetadata = False
       self.showing_left_file_requester = False
       self.showing_right_file_requester = False
-      self.metadata = ""
+      self.old_metadata = ("",) * 4
       self.simplemixer = False
       self.crosspass = 0
 

@@ -63,8 +63,7 @@ struct encoder_vars
    char *artist;                /* used for ogg metadata - always utf-8 */
    char *title;
    char *album;
-   char *artist_title;
-   char *artist_title_mp3;
+   char *artist_title_lat1;
    char *freeformat_mp3;
    };
 
@@ -144,8 +143,7 @@ struct encoder
    char *artist;                /* used for ogg metadata - always utf-8 */
    char *title;
    char *album;
-   char *artist_title;
-   char *artist_title_mp3;      /* used for mp3 metadata */
+   char *artist_title_lat1;     /* default for mp3 stream metadata */
    int new_metadata;
    int flush;
    int oggserial;               /* n.b. not restricted to ogg useage */

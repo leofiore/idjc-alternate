@@ -217,8 +217,7 @@ int main()
       { "artist",           &ev.artist },
       { "title",            &ev.title },
       { "album",            &ev.album },
-      { "artist_title",     &ev.artist_title },
-      { "artist_title_mp3", &ev.artist_title_mp3 },
+      { "artist_title_lat1", &ev.artist_title_lat1 },
       { "freeformat_mp3",   &ev.freeformat_mp3 },
       { "stream_source",    &sv.stream_source },        /* streamer_vars */
       { "server_type",      &sv.server_type },

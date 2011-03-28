@@ -32,101 +32,6 @@
 #define SUCCEEDED 1
 #define FAILED 0
 
-static void live_oggflac_build_metadata(struct encoder *encoder, struct lofe_data *s)
-   {
-   char *r, *w, *e, *marker;    /* read, write, end, the placemarker string */
-   int count;   /* the number of occurrences of marker in metaformat */
-   int len;     /* the length of the substitute string */
-   size_t size;
-
-   if (s->artist)
-      free(s->artist);
-   if (s->title)
-      free(s->title);
-   pthread_mutex_lock(&encoder->metadata_mutex);
-   for (count = 0, r = encoder->metaformat; (r = strstr(r, "%s")); count++, r += 2);
-   if (count == 0)
-      {
-      /* handle metadata does not contain artist - title */
-      s->artist = NULL;
-      if (encoder->metaformat && encoder->metaformat[0] != '\0')
-         {
-         if (!(s->title = malloc(strlen(encoder->metaformat) + 7)))
-            {
-            fprintf(stderr, "live_oggflac_build_metadata: malloc failure\n");
-            return;
-            }
-         sprintf(s->title, "TITLE=%s", encoder->metaformat);
-         }
-      else
-         s->title = NULL;
-      }
-   else
-      {
-      /* handle metadata only contains artist - title */
-      if (count == 1 && !strcmp(encoder->metaformat, "%s"))
-         {
-         if (encoder->artist && encoder->artist[0] != '\0')
-            {
-            if (!(s->artist = malloc(strlen(encoder->artist) + 8)))
-               {
-               fprintf(stderr, "live_oggflac_build_metadata: malloc failure\n");
-               return;
-               }
-            sprintf(s->artist, "ARTIST=%s", encoder->artist);
-            }
-         else
-            s->artist = NULL;
-         if (encoder->title && encoder->title[0] != '\0')
-            {
-            if (!(s->title = malloc(strlen(encoder->title) + 7)))
-               {
-               fprintf(stderr, "live_oggflac_build_metadata: malloc failure\n");
-               return;
-               }
-            sprintf(s->title, "TITLE=%s", encoder->title);
-            }
-         else
-            s->title = NULL;
-         }
-      else
-         {
-         /* handle a mix of possible multiple "artist - title" and or other text */
-         /* in python: artist = metaformat.replace("%s", artist_title) */
-         /* in C see below LOL */
-         s->title = malloc(size = count * strlen(encoder->artist_title) + strlen(encoder->metaformat) - count * strlen(marker = "%s") + 7);
-         if (!s->title)
-            fprintf(stderr, "live_ogg_build_metadata: malloc failure\n");
-         else
-            {
-            strcpy(s->title, "TITLE=");
-            len = strlen(encoder->artist_title);
-            r = encoder->metaformat;
-            w = s->title + 6;
-            for (;;)
-               {
-               if ((e = strstr(r, marker)))
-                  {
-                  memcpy(w, r, e - r);  /* copy the text before the %s */
-                  w += e - r;           /* advance write pointer */
-                  memcpy(w, encoder->artist_title, len); /* copy artist - title */
-                  w += len;             /* advance the write pointer */
-                  r = e + 2;            /* skip over the %s */
-                  }
-               else
-                  {
-                  strcpy(w, r); /* copy the remaining text and null terminate */
-                  break;        /* finished */
-                  }
-               }
-            }
-         s->artist = NULL;
-         }
-      }
-   encoder->new_metadata = FALSE;
-   pthread_mutex_unlock(&encoder->metadata_mutex);
-   fprintf(stderr, "live_oggflac_build_metadata: metadata for encoder %d\n%s\n%s\n", encoder->numeric_id, s->artist, s->title);
-   }
 
 static FLAC__int32 **live_oggflac_encoder_make_pcm(struct encoder_ip_data *id, struct lofe_data *s)
    {
@@ -275,7 +180,7 @@ static void live_oggflac_encoder_main(struct encoder *encoder)
          size_t dlen = 0;
          FLAC__StreamMetadata_VorbisComment *vc;
          
-         live_oggflac_build_metadata(encoder, s);
+         //live_oggflac_build_metadata(encoder, s);
          if (s->artist)
             {
             nmeta++;

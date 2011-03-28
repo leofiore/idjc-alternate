@@ -900,7 +900,7 @@ class IDJC_Media_Player:
             album = audio["album"]
          except:
             pass
-         
+          
          
       # Trying for metadata from native tagging formats.
       if avcodec and avformat and filext == ".avi":
@@ -1075,6 +1075,7 @@ class IDJC_Media_Player:
          self.songname = item[3]        # update metadata on server
          self.title = item[5].encode("utf-8")
          self.artist = item[6].encode("utf-8")
+         self.album = item[9].encode("utf-8")
          self.player_restart()
          self.parent.send_new_mixer_stats()
       

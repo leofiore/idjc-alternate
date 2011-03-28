@@ -924,7 +924,7 @@ normrise = "Rise"
 
 not_connected = "Not Connected"
 
-notag = "No Tag"
+notag = "Bad Tag"
 
 off = "Off"
 

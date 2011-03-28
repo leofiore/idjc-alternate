@@ -31,68 +31,6 @@
 
 typedef jack_default_audio_sample_t sample_t;
 
-static void live_mp3_build_metadata(struct encoder *encoder, struct lme_data *s)
-   {
-   char *r, *w, *e, *marker;    /* read, write, end, the placemarker string */
-   int count;   /* the number of occurrences of marker in metaformat */
-   int len;     /* the length of the substitute string */
-   size_t size;
-
-   if (s->metadata)
-      free(s->metadata);
-   pthread_mutex_lock(&encoder->metadata_mutex);
-   for (count = 0, r = encoder->metaformat_mp3; (r = strstr(r, "%s")); count++, r += 2);
-   if (count == 0)
-      s->metadata = strdup(encoder->metaformat_mp3);
-   else
-      { 
-      /* handle metadata only contains artist - title */
-      if (count == 1 && !strcmp(encoder->metaformat_mp3, "%s"))
-         {
-         if (encoder->artist_title_mp3)
-            s->metadata = strdup(encoder->artist_title_mp3);
-         else
-            s->metadata = strdup("");
-         }
-      else
-         {
-         /* handle a mix of possible multiple "artist - title" and or other text */
-         /* in python: artist_title = metaformat.replace("%s", artist_title) */
-         /* in C see below LOL */
-         s->metadata = malloc(size = count * strlen(encoder->artist_title_mp3) + strlen(encoder->metaformat_mp3) - count * strlen(marker = "%s") + 1);
-         if (!s->metadata)
-            fprintf(stderr, "live_mp3_build_metadata: malloc failure\n");
-         else
-            {
-            len = strlen(encoder->artist_title_mp3);
-            r = encoder->metaformat_mp3;
-            w = s->metadata;
-            for (;;)
-               {
-               if ((e = strstr(r, marker)))
-                  {
-                  memcpy(w, r, e - r);  /* copy the text before the %s */
-                  w += e - r;           /* advance write pointer */
-                  memcpy(w, encoder->artist_title_mp3, len); /* copy artist - title */
-                  w += len;             /* advance the write pointer */
-                  r = e + 2;            /* skip over the %s */
-                  }
-               else
-                  {
-                  strcpy(w, r); /* copy the remaining text and null terminate */
-                  break;        /* finished */
-                  }
-               }
-            }
-         if (strlen(s->metadata) != size - 1)
-            fprintf(stderr, "WARNING live_mp3_build_metadata: size allocated does not match data\n");
-         }
-      }
-   encoder->new_metadata = FALSE;
-   pthread_mutex_unlock(&encoder->metadata_mutex);
-   fprintf(stderr, "live_mp3_build_metadata: metadata for encoder %d\nmetadata=%s\n", encoder->numeric_id, s->metadata);
-   }
-
 static int live_mp3_write_packet(struct encoder *encoder, struct lme_data *s, unsigned char *buffer, size_t buffersize, int flags)
    {
    struct encoder_op_packet packet;
@@ -187,7 +125,7 @@ static void live_mp3_encoder_main(struct encoder *encoder)
             }
          if (encoder->new_metadata)
             {
-            live_mp3_build_metadata(encoder, s);
+            //live_mp3_build_metadata(encoder, s);
             if (s->metadata)
                live_mp3_write_packet(encoder, s, (unsigned char *)s->metadata, strlen(s->metadata) + 1, PF_METADATA | s->packetflags);
             s->packetflags = PF_UNSET;
