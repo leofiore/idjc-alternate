@@ -601,7 +601,7 @@ int encoder_update(struct threads_info *ti, struct universal_vars *uv, void *oth
    return encoder_start(ti, uv, other);
    }
  
-int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, void *other)
+int encoder_new_song_metadata(struct threads_info *ti, struct universal_vars *uv, void *other)
    {
    struct encoder *self;
    struct encoder_vars *ev = other;
@@ -609,7 +609,7 @@ int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, voi
    if (uv->tab == -1)
       {
       for (uv->tab = 0; uv->tab < ti->n_encoders; uv->tab++)
-         if (!(encoder_new_metadata(ti, uv, other)))
+         if (!(encoder_new_song_metadata(ti, uv, other)))
             return FAILED;
       for (int i = 0; i < ti->n_recorders; i++)
          if (!(recorder_new_metadata(ti->recorder[i], ev->artist, ev->title, ev->album)))
@@ -650,32 +650,32 @@ int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, voi
          fprintf(stderr, "encoder_new_metadata: malloc failure\n");
          return FAILED;
          }
-      self->new_metadata = TRUE;
+      /* we won't set new_metadata to true here, but wait for custom (per stream) metadata to arrive first */
       pthread_mutex_unlock(&self->metadata_mutex);
       return SUCCEEDED;
       }
    return SUCCEEDED;
    }
 
-int encoder_new_metaformat(struct threads_info *ti, struct universal_vars *uv, void *other)
+int encoder_new_custom_metadata(struct threads_info *ti, struct universal_vars *uv, void *other)
    {
    struct encoder *self = ti->encoder[uv->tab];
    struct encoder_vars *ev = other;
 
    pthread_mutex_lock(&self->metadata_mutex);
    self->new_metadata = FALSE;
-   if (self->metaformat)
-      free(self->metaformat);
-   if (self->metaformat_mp3)
-      free(self->metaformat_mp3);
-   self->metaformat = ev->metaformat;
-   ev->metaformat = NULL;
-   self->metaformat_mp3 = ev->metaformat_mp3;
-   ev->metaformat_mp3 = NULL;
-   if (!self->metaformat)
-      self->metaformat = strdup("");
-   if (!self->metaformat_mp3)
-      self->metaformat_mp3 = strdup("");
+   if (self->custom_meta)
+      free(self->custom_meta);
+   if (self->custom_meta_lat1)
+      free(self->custom_meta_lat1);
+   self->custom_meta = ev->custom_meta;
+   ev->custom_meta = NULL;
+   self->custom_meta_lat1 = ev->custom_meta_lat1;
+   ev->custom_meta_lat1 = NULL;
+   if (!self->custom_meta)
+      self->custom_meta = strdup("");
+   if (!self->custom_meta_lat1)
+      self->custom_meta_lat1 = strdup("");
    self->new_metadata = TRUE;
    pthread_mutex_unlock(&self->metadata_mutex);
    return SUCCEEDED;
@@ -704,8 +704,8 @@ struct encoder *encoder_init(struct threads_info *ti, int numeric_id)
    self->title = strdup("");
    self->album = strdup("");
    self->artist_title_lat1 = strdup("");
-   self->metaformat = strdup("%s");
-   self->metaformat_mp3 = strdup("%s");
+   self->custom_meta = strdup("%s");
+   self->custom_meta_lat1 = strdup("%s");
    while ((self->oggserial = rand()) + 20000 < 0 || self->oggserial < 100);
    pthread_mutex_init(&self->mutex, NULL);
    pthread_mutex_init(&self->metadata_mutex, NULL);
@@ -730,10 +730,10 @@ void encoder_destroy(struct encoder *self)
       free(self->rs_input[0]);
    if (self->rs_input[1])
       free(self->rs_input[1]);
-   if (self->metaformat)
-      free(self->metaformat);
-   if (self->metaformat_mp3)
-      free(self->metaformat_mp3);
+   if (self->custom_meta)
+      free(self->custom_meta);
+   if (self->custom_meta_lat1)
+      free(self->custom_meta_lat1);
    if (self->artist)
       free(self->artist);
    if (self->title)

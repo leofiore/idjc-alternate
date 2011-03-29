@@ -58,8 +58,8 @@ struct encoder_vars
    char *use_metadata;
    char *filename;              /* for streaming a pre-recorded file */
    char *offset;
-   char *metaformat;            /* extra/replacement information to use for metadata */
-   char *metaformat_mp3;        /* as above but could be latin1 encoded */
+   char *custom_meta;            /* extra/replacement information to use for metadata */
+   char *custom_meta_lat1;        /* as above but could be latin1 encoded */
    char *artist;                /* used for ogg metadata - always utf-8 */
    char *title;
    char *album;
@@ -138,13 +138,13 @@ struct encoder
    struct encoder_op *output_chain;     /* one output buffer per client connection */
    struct encoder_header_buffer *header_buffer; /* point to needed headers or NULL */
    enum performance_warning performance_warning_indicator; /* indicates ringbuffer overflow condition */
-   char *metaformat;            /* extra/replacement information to use for metadata */
-   char *metaformat_mp3;        /* as above but could be latin1 encoded */
-   char *artist;                /* used for ogg metadata - always utf-8 */
+   char *custom_meta;           /* when this is set it is used for stream metadata - in the title tag of ogg streams */
+   char *custom_meta_lat1;      /* as above but could be latin1 encoded - for mp3 stream metadata */
+   char *artist;                /* used for recordings' metadata - always utf-8 */
    char *title;
    char *album;
-   char *artist_title_lat1;     /* default for mp3 stream metadata */
-   int new_metadata;
+   char *artist_title_lat1;     /* default for mp3 stream metadata - used when no custom metadata is set */
+   int new_metadata;            /* a trigger flag */
    int flush;
    int oggserial;               /* n.b. not restricted to ogg useage */
    double timestamp;            /* running counter in seconds for current serial */
@@ -165,8 +165,8 @@ void encoder_unregister_client(struct encoder_op *op);
 int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *other);
 int encoder_stop(struct threads_info *ti, struct universal_vars *uv, void *other);
 int encoder_update(struct threads_info *ti, struct universal_vars *uv, void *other);
-int encoder_new_metadata(struct threads_info *ti, struct universal_vars *uv, void *other);
-int encoder_new_metaformat(struct threads_info *ti, struct universal_vars *uv, void *other);
+int encoder_new_song_metadata(struct threads_info *ti, struct universal_vars *uv, void *other);
+int encoder_new_custom_metadata(struct threads_info *ti, struct universal_vars *uv, void *other);
 void encoder_src_data_cleanup(struct encoder *self);
 struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, int min_samples_needed, int max_samples, float **caller_supplied_buffer);
 void encoder_ip_data_free(struct encoder_ip_data *id);
