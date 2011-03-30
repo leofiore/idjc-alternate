@@ -835,61 +835,6 @@ class SimpleFramedSpin(gtk.Frame):
       self.add(vbox)
       vbox.show()
 
-class MetadataBar(gtk.HBox):
-   def send(self, widget):
-      utf8meta = self.metadata_entry.get_text().encode("utf-8", "replace").strip()
-      if self.source_client_gui.parent.prefs_window.mp3_utf8.get_active():
-         mp3meta = utf8meta
-      else:
-         mp3meta = self.metadata_entry.get_text().encode("iso8859-1", "replace").strip()
-      if not utf8meta:
-         utf8meta = mp3meta = "%s"
-      for index, checkbutton in enumerate(self.enablers):
-         if checkbutton.get_active(): 
-            self.source_client_gui.send("tab_id=%d\ndev_type=encoder\nmetaformat=%s\nmetaformat_mp3=%s\ncommand=new_metaformat\n" % (index, utf8meta, mp3meta))
-   
-   def cb_cb(self, widget):
-      for enabler in self.enablers:
-         if enabler.get_active():
-            self.metadata_update_button.set_sensitive(True)
-            break
-      else:
-         self.metadata_update_button.set_sensitive(False)
-         
-   def __init__(self, parent, qty, default_text=""):
-      self.source_client_gui = parent
-      gtk.HBox.__init__(self)
-      self.set_spacing(13)
-      left_hbox = gtk.HBox()
-      label = gtk.Label(ln.metadata)
-      left_hbox.pack_start(label, False, False, 0)
-      self.pack_start(left_hbox, False, False, 0)
-      left_hbox.show()
-      label.show()
-      self.enablers = []
-      for tab in range(qty):
-         cb = gtk.CheckButton(str(tab + 1))
-         cb.set_active(True)
-         cb.connect("toggled", self.cb_cb)
-         self.enablers.append(cb)
-         left_hbox.pack_start(cb, False, False, 0)
-         cb.show()
-         parent.parent.tooltips.set_tip(cb, ln.metadata_checkbox_tip)
-      right_hbox = gtk.HBox()
-      right_hbox.set_spacing(5)
-      self.pack_start(right_hbox, True, True, 0)
-      right_hbox.show()
-      self.metadata_entry = gtk.Entry()
-      self.metadata_entry.set_text("%s")
-      right_hbox.pack_start(self.metadata_entry, True, True, 0)
-      self.metadata_entry.show()
-      self.metadata_update_button = gtk.Button(ln.update)
-      self.metadata_update_button.connect("clicked", self.send)
-      right_hbox.pack_start(self.metadata_update_button, False, False, 0)
-      self.metadata_update_button.show()
-      parent.parent.tooltips.set_tip(self.metadata_entry, ln.metadata_entry_tip)
-      parent.parent.tooltips.set_tip(self.metadata_update_button, ln.metadata_update_tip)
-      
 class Tab(gtk.VBox):
    def show_indicator(self, colour):
       thematch = self.indicator_lookup[colour]
@@ -1373,14 +1318,25 @@ class StreamTab(Tab):
          cell.set_property("sensitive", True)
    
    def cb_metadata(self, widget):
-      utf8meta = self.metadata.get_text().encode("utf-8", "replace").strip()
+      r = self.metadata.get_text().encode("utf-8", "replace").strip().split("%%")
+      
+      subst = dict(zip(("%r", "%t", "%l"), ((getattr(self.scg.parent, x) or "<Unknown>") for x in ("artist", "title", "album"))))
+      print "[[[[[[[[[[[[[", subst["%r"]
+      
+
+      custom_meta = "cm" 
+      
+
+
+
+      custom_meta = custom_meta or "%s"
+
       if self.scg.parent.prefs_window.mp3_utf8.get_active():
-         mp3meta = utf8meta
+         custom_meta_lat1 = custom_meta
       else:
-         mp3meta = self.metadata.get_text().encode("iso8859-1", "replace").strip()
-      if not utf8meta:
-         utf8meta = mp3meta = "%s"
-      self.scg.send("tab_id=%d\ndev_type=encoder\nmetaformat=%s\nmetaformat_mp3=%s\ncommand=new_metaformat\n" % (self.numeric_id, utf8meta, mp3meta))
+         custom_meta_lat1 = custom_meta.decode("utf-8").encode("iso8859-1", "replace").strip()
+
+      self.scg.send("tab_id=%d\ndev_type=encoder\ncustom_meta=%s\ncustom_meta_lat1=%s\ncommand=new_custom_metadata\n" % (self.numeric_id, custom_meta, custom_meta_lat1))
   
    
    @threadslock
