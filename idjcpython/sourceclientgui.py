@@ -30,7 +30,7 @@ import xml.etree.ElementTree
 import idjc_config
 from idjc_config import *
 from ln_text import ln
-from IDJCfree import int_object, threadslock, DefaultEntry
+from IDJCfree import int_object, threadslock, DefaultEntry, string_multireplace
 from IDJCservdialog import *
 from threading import Thread
 
@@ -1318,22 +1318,18 @@ class StreamTab(Tab):
          cell.set_property("sensitive", True)
    
    def cb_metadata(self, widget):
-      table = zip(("%r", "%t", "%l"), ((getattr(self.scg.parent, x) or "<Unknown>") for x in ("artist", "title", "album")))
-      parts = self.metadata.get_text().encode("utf-8", "replace").strip().split("%%")
-      custom_meta = []
-
-      for part in parts:
-         for pattern, replacement in table:
-            part = part.replace(pattern, replacement)
-         custom_meta.append(part)
-      custom_meta = "%".join(custom_meta)
-
+      table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((getattr(self.scg.parent, x) or "<Unknown>") for x in ("artist", "title", "album")))
+      raw_cm = self.metadata.get_text().encode("utf-8", "replace").strip()
+      cm = string_multireplace(raw_cm, table)
+      
+      print cm
+      
       if self.scg.parent.prefs_window.mp3_utf8.get_active():
-         custom_meta_lat1 = custom_meta
+         cm_lat1 = cm
       else:
-         custom_meta_lat1 = custom_meta.decode("utf-8").encode("iso8859-1", "replace").strip()
+         cm_lat1 = cm.decode("utf-8").encode("iso8859-1", "replace").strip()
 
-      self.scg.send("tab_id=%d\ndev_type=encoder\ncustom_meta=%s\ncustom_meta_lat1=%s\ncommand=new_custom_metadata\n" % (self.numeric_id, custom_meta, custom_meta_lat1))
+      self.scg.send("tab_id=%d\ndev_type=encoder\ncustom_meta=%s\ncustom_meta_lat1=%s\ncommand=new_custom_metadata\n" % (self.numeric_id, cm, cm_lat1))
   
    
    @threadslock

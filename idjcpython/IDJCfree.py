@@ -154,3 +154,15 @@ class DefaultEntry(gtk.Entry):
             self.props.primary_icon_pixbuf = self.empty_pixbuf
          except AttributeError:
             pass
+
+# string_multireplace: replace multiple items in a string without side effects
+def string_multireplace(part, table):
+   if not table:
+      return part
+      
+   parts = part.split(table[0][0])
+   t_next = table[1:]
+   for i, each in enumerate(parts):
+      parts[i] = string_multireplace(each, t_next)
+      
+   return table[0][1].join(parts)
