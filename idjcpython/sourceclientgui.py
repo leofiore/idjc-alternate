@@ -1318,18 +1318,15 @@ class StreamTab(Tab):
          cell.set_property("sensitive", True)
    
    def cb_metadata(self, widget):
-      r = self.metadata.get_text().encode("utf-8", "replace").strip().split("%%")
-      
-      subst = dict(zip(("%r", "%t", "%l"), ((getattr(self.scg.parent, x) or "<Unknown>") for x in ("artist", "title", "album"))))
-      print "[[[[[[[[[[[[[", subst["%r"]
-      
+      table = zip(("%r", "%t", "%l"), ((getattr(self.scg.parent, x) or "<Unknown>") for x in ("artist", "title", "album")))
+      parts = self.metadata.get_text().encode("utf-8", "replace").strip().split("%%")
+      custom_meta = []
 
-      custom_meta = "cm" 
-      
-
-
-
-      custom_meta = custom_meta or "%s"
+      for part in parts:
+         for pattern, replacement in table:
+            part = part.replace(pattern, replacement)
+         custom_meta.append(part)
+      custom_meta = "%".join(custom_meta)
 
       if self.scg.parent.prefs_window.mp3_utf8.get_active():
          custom_meta_lat1 = custom_meta
@@ -1486,7 +1483,6 @@ class StreamTab(Tab):
       hbox.pack_start(label, False)
       label.show()
       self.metadata = gtk.Entry()
-      self.metadata.set_text("%s")
       set_tip(self.metadata, ln.metadata_entry_tip)
       hbox.pack_start(self.metadata)
       self.metadata.show()
@@ -2360,9 +2356,13 @@ class SourceClientGui:
       if not self.parent.prefs_window.mp3_utf8.get_active():
          artist_title_lat1 = artist_title.decode("utf-8", "replace").encode("iso8859-1", "replace")
 
-      self.send("artist=%s\ntitle=%s\nalbum=%s\nartist_title_lat1=%s\ncommand=new_metadata\n" % (artist.strip(), title.strip(), album.strip(), artist_title_lat1.strip()))
+      self.send("artist=%s\ntitle=%s\nalbum=%s\nartist_title_lat1=%s\ncommand=new_song_metadata\n" % (artist.strip(), title.strip(), album.strip(), artist_title_lat1.strip()))
       if self.receive() == "succeeded":
-         print "updated metadata successfully" 
+         print "updated song metadata successfully"
+
+      for tab in self.streamtabframe.tabs:         # Update the custom metadata on all stream tabs.
+         tab.metadata_update.clicked()
+      
    def source_client_open(self):
       try:
          sp_sc = subprocess.Popen([libexecdir + "idjcsourceclient"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
