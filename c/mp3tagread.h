@@ -27,6 +27,13 @@ struct id3data
    int size;
    };
 
+struct chapter_text
+   {
+   char *text;
+   int encoding;
+   size_t length;
+   };
+
 struct chapter
    {
    struct chapter *next;
@@ -34,9 +41,9 @@ struct chapter
    unsigned int time_end;
    unsigned int byte_begin;
    unsigned int byte_end;
-   char *text;
-   int encoding;
-   int length;
+   struct chapter_text artist;
+   struct chapter_text title;
+   struct chapter_text album;
    };
 
 struct mp3taginfo

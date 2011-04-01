@@ -964,16 +964,13 @@ void oggdecode_dynamic_dispatcher(struct xlplayer *xlplayer)
          else
             delay = 0;
          
-         if (s->artist[s->ix][0] && s->title[s->ix][0])
-            xlplayer_set_dynamic_metadata(xlplayer, DM_SPLIT_U8, s->artist[s->ix], s->title[s->ix], "", s->album[s->ix], delay);
+         if (s->artist[s->ix][0] || s->title[s->ix][0])
+            xlplayer_set_dynamic_metadata(xlplayer, DM_SPLIT_U8, s->artist[s->ix], s->title[s->ix], s->album[s->ix], delay);
          else
-            if (s->title[s->ix][0])
-               xlplayer_set_dynamic_metadata(xlplayer, DM_JOINED_U8, "", "", s->title[s->ix], "", delay);
-            else
-               {
-               fprintf(stderr, "oggdecode_dynamic_dispatcher: insufficient metadata\n");
-               xlplayer_set_dynamic_metadata(xlplayer, DM_NOTAG, "", "", "", "", delay);
-               }
+            {
+            fprintf(stderr, "oggdecode_dynamic_dispatcher: insufficient metadata\n");
+            xlplayer_set_dynamic_metadata(xlplayer, DM_NOTAG, "", "", "", delay);
+            }
          
          xlplayer->usedelay = TRUE;
          return;

@@ -29,6 +29,7 @@
 #define TRUE 1
 #define FALSE 0
 
+
 #if 0
 static void unsynchronise(struct mp3decode_id3data *us)
    {
@@ -142,6 +143,7 @@ static unsigned int bigendianint(unsigned char *ptr)
    return (a << 8) | *ptr;
    }
 
+#if 0
 static int decode_tit2(struct mp3taginfo *ti, unsigned char *start, struct chapter *chap)
    {
    struct id3data us;
@@ -173,12 +175,65 @@ static int decode_tit2(struct mp3taginfo *ti, unsigned char *start, struct chapt
    free(us.data);
    return 0;
    }
+#endif
+
+static int decode_text_tag(struct mp3taginfo *ti, unsigned char *start, struct chapter_text *ct)
+   {
+   struct id3data us;
+   size_t l;
+   char *src, *dest;
+
+   if (ct->text)     /* start over if there is a duplicate tag */
+      {
+      free(ct->text);
+      memset(ct, '\0', sizeof (struct chapter_text));
+      }
+
+   set_id3_data(&us, start, ti->version);
+   if (ti->version == 4 && (start[9] & 0x2))
+      resynchronise(&us);
+   if (((ct->encoding = us.data[0]) > 1 && ti->version == 3) || ct->encoding > 3)
+      {
+      fprintf(stderr, "decode_tit2: unsupported character encoding\n");
+      goto bailout;
+      }
+   if (us.data[us.size - 1])  /* handle potential null termination */
+      {
+      ct->length = us.size - 1;
+      fprintf(stderr, "not null terminated\n");
+      }
+   else
+      {
+      ct->length = us.size - 2;
+      fprintf(stderr, "null terminated\n");
+      }
+   if (!(ct->text = malloc(ct->length + 1)))
+      {
+      fprintf(stderr, "malloc failure\n");
+      goto bailout;
+      }
+
+   /* copy, substituting separating nulls with / characters */
+   for (src = (char *)us.data + 1, dest = ct->text, l = ct->length; l; --l, ++src, ++dest)
+       if (*src != '\0')  
+          *dest = *src;
+       else
+          *dest = '/';
+   *dest = '\0';
+   
+   free(us.data);
+   return 1;
+   bailout:
+   free(us.data);
+   return 0;
+   }
 
 static void decode_chap(struct mp3taginfo *ti, unsigned char *start)
    {
    struct id3data us;
    unsigned char *ptr, *end;
    struct chapter *chapdata;
+   struct chapter_text *chaptext;
    int adv;
 
    if (!(chapdata = calloc(1, sizeof (struct chapter))))
@@ -203,19 +258,30 @@ static void decode_chap(struct mp3taginfo *ti, unsigned char *start)
    chapdata->byte_begin = bigendianint(ptr += 4);
    chapdata->byte_end   = bigendianint(ptr += 4);
    ptr += 4;
-   while ((ptr + 10 < end) && (ptr + (adv = 10 + get_frame_size(ptr, ti->version)) <= end))
+   for (; (ptr + 10 < end) && (ptr + (adv = 10 + get_frame_size(ptr, ti->version)) <= end); ptr += adv)
       {
-      if (!memcmp(ptr, "TIT2", 4))
+      if (!memcmp(ptr, "TPE1", 4))
+         chaptext = &chapdata->artist;
+      else if (!memcmp(ptr, "TIT2", 4))
+         chaptext = &chapdata->title;
+      else if (!memcmp(ptr, "TALB", 4))
+         chaptext = &chapdata->album;
+      else
+         continue;
+      
+      if (!(decode_text_tag(ti, ptr, chaptext)))
          {
-         if (!(decode_tit2(ti, ptr, chapdata)))
-            {
-            free(us.data);
-            return;
-            }
-         break;
+         free(us.data);
+         return;
          }
-      ptr += adv;
       }
+
+   if (!chapdata->artist.text)
+      chapdata->artist.text = strdup("");
+   if (!chapdata->title.text)
+      chapdata->title.text = strdup("");
+   if (!chapdata->album.text)
+      chapdata->album.text = strdup("");
 
    if (!(ti->first_chapter))
       ti->first_chapter = ti->last_chapter = chapdata;
@@ -225,7 +291,8 @@ static void decode_chap(struct mp3taginfo *ti, unsigned char *start)
       ti->last_chapter = chapdata;
       }
 
-   fprintf(stderr, "Chapter info\ntime begin %d\ntime end %d\nbyte begin %d\nbyte end %d\n:%s:\n\n", chapdata->time_begin, chapdata->time_end, chapdata->byte_begin, chapdata->byte_end, chapdata->text);
+   fprintf(stderr, "Chapter info\ntime begin %d\ntime end %d\nbyte begin %d\nbyte end %d\n", chapdata->time_begin, chapdata->time_end, chapdata->byte_begin, chapdata->byte_end);
+   fprintf(stderr, "Artist: %s\nTitle : %s\nAlbum : %s\n", chapdata->artist.text, chapdata->title.text, chapdata->album.text);
    free(us.data);
    }
 
@@ -540,8 +607,9 @@ void mp3_tag_cleanup(struct mp3taginfo *ti)
    
    while ((oldc = c))
       {
-      if (c->text)
-         free(c->text);
+      free(c->artist.text);
+      free(c->title.text);
+      free(c->album.text);
       c = c->next;
       free(oldc);
       }

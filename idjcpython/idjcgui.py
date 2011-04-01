@@ -1339,7 +1339,6 @@ class MainWindow:
       artist = gen.next()
       title = gen.next()
       album = gen.next()
-      artist_title = gen.next()
       player_context = int(gen.next())
       time_lag = int(gen.next())
       

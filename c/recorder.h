@@ -39,7 +39,9 @@ struct recorder_vars
  * compression ratio to provide for the creation of a seek table in the Xing tag */
 struct metadata_item
    {
-   char *artist_title;
+   char *artist;
+   char *title;
+   char *album;
    int time_offset;
    int byte_offset;
    int time_offset_end;

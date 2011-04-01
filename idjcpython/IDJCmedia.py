@@ -1050,14 +1050,11 @@ class IDJC_Media_Player:
       if length == 0:
          length = 1
       
-      if artist and title and album:
+      if artist and title:
          meta_name = artist + u" - " + title
          return PlayerRow(rich_safe(meta_name), filename, length, meta_name, encoding, title, artist, rg, cuesheet, album)
-      elif artist and title:
-         meta_name = artist + u" - " + title
-         return PlayerRow(rich_safe(meta_name), filename, length, meta_name, encoding, title, artist, rg, cuesheet, album_retval)
       else:
-         return PlayerRow(rsmeta_name, filename, length, meta_name, encoding, title_retval, artist_retval, rg, cuesheet, album_retval)
+         return PlayerRow(rsmeta_name, filename, length, meta_name, encoding, title_retval, artist, rg, cuesheet, album)
 
    # Update playlist entries for a given filename e.g. when tag has been edited
    def update_playlist(self, newdata):

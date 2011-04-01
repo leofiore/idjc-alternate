@@ -124,17 +124,17 @@ static int recorder_write_id3_tag(struct recorder *self, FILE *fp)
    struct metadata_item *mi;
    struct id3_tag *tag;
    struct id3_frame *chap;
-   struct id3_frame *tit2;
-   struct id3_frame *tlen;
 
    tag = id3_tag_new(0, 512);
-   tlen = id3_numeric_string_frame_new("TLEN", self->recording_length_ms);
-   id3_add_frame(tag, tlen);
+   id3_add_frame(tag, id3_numeric_string_frame_new("TLEN", self->recording_length_ms));
    for (mi = self->mi_first; mi; mi = mi->next)
       {
       chap = id3_chap_frame_new("", mi->time_offset, mi->time_offset_end, mi->byte_offset, mi->byte_offset_end);
-      tit2 = id3_text_frame_new("TIT2", mi->artist_title, 3, 1);
-      id3_embed_frame(chap, tit2);
+      id3_embed_frame(chap, id3_text_frame_new("TIT2", mi->title, 3, 1));
+      if (mi->album[0])
+         id3_embed_frame(chap, id3_text_frame_new("TALB", mi->album, 3, 1));
+      if (mi->artist[0])
+         id3_embed_frame(chap, id3_text_frame_new("TPE1", mi->artist, 3, 1));
       id3_add_frame(tag, chap);
       }
    id3_compile(tag);
@@ -151,9 +151,8 @@ static int recorder_write_id3_tag(struct recorder *self, FILE *fp)
 static int recorder_create_mp3_cuesheet(struct recorder *self)
    {
    struct metadata_item *mi;
-   char *bp;
    FILE *fp;
-   int i;
+   int i, mm, ss, ff;
    
    if (!(fp = fopen(self->cuepathname, "wb")))
       {
@@ -168,19 +167,21 @@ static int recorder_create_mp3_cuesheet(struct recorder *self)
    for (i = 1, mi = self->mi_first; mi; i++, mi = mi->next)
       {
       fprintf(fp, "  TRACK %02d AUDIO\r\n", i);
-      if ((bp = strstr(mi->artist_title, " - ")))
+      if (mi->title[0])
+         fprintf(fp, "    TITLE \"%s\"\r\n", mi->title);
+      if (mi->artist[0])
+         fprintf(fp, "    PERFORMER \"%s\"\r\n", mi->artist);
+      
+      /* the first index must be zero - it's in the cue file standard */
+      if (i > 1)
          {
-         fprintf(fp, "    TITLE \"%s\"\r\n", bp + 3);
-         fprintf(fp, "    PERFORMER \"");
-         if (!(fwrite(mi->artist_title, bp - mi->artist_title, 1, fp)))
-            fprintf(stderr, "error writing cuesheet\n");
-         fputc('"', fp);
-         fputc('\r', fp);
-         fputc('\n', fp);
+         mm = mi->time_offset / 60000;
+         ss = mi->time_offset / 1000 % 60;
+         ff = mi->time_offset % 1000 * 75 / 1000;
          }
       else
-         fprintf(fp, "    TITLE \"%s\"\r\n", mi->artist_title);
-      fprintf(fp, "    INDEX 01 %02d:%02d:%02d\r\n", mi->time_offset / 60000, mi->time_offset / 1000 % 60, mi->time_offset % 1000 * 75 / 1000);
+         mm = ss =ff = 0;
+      fprintf(fp, "    INDEX 01 %02d:%02d:%02d\r\n", mm, ss, ff);
       }
    
    fclose(fp);
@@ -429,29 +430,36 @@ static void recorder_display_logged_metadata2(struct metadata_item2 *mi2)
 static void recorder_append_metadata(struct recorder *self, struct encoder_op_packet *packet)
    {
    struct metadata_item *mi;
+   char *artist, *title, *album, *stringp;
 
-   if (packet && self->mi_last && !strcmp(self->mi_last->artist_title, packet->data))
+   if (packet)
+      {
+      stringp = packet->data;
+      strsep(&stringp, "\n");   /* we discard the first value */
+      artist = strsep(&stringp, "\n");
+      title  = strsep(&stringp, "\n");
+      album  = strsep(&stringp, "");
+      }
+   else
+      artist = title = album = "";
+
+   if (packet && self->mi_last && !strcmp(self->mi_last->artist, artist)
+            && !strcmp(self->mi_last->title, title)
+            && !strcmp(self->mi_last->album, album))
       {
       fprintf(stderr, "recorder_append_metadata: duplicate artist-title, skipping\n");
       return;
       }
+
    if (!(mi = calloc(1, sizeof (struct metadata_item))))
       {
-      fprintf(stderr, "recoder_append_metadata: malloc failure\n");
+      fprintf(stderr, "recorder_append_metadata: malloc failure\n");
       return;
       }
-   if (packet)
-      {
-      if (!(mi->artist_title = malloc(packet->header.data_size)))
-         {
-         fprintf(stderr, "recorder_append_metadata: malloc failure\n");
-         free(mi);
-         return;
-         }
-      strcpy(mi->artist_title, packet->data);
-      }
-   else
-      mi->artist_title = strdup("");
+
+   mi->artist = strdup(artist);
+   mi->title = strdup(title);
+   mi->album = strdup(album);
    mi->time_offset = self->recording_length_ms;
    mi->byte_offset = self->bytes_written;
    if (!(self->mi_first))
@@ -469,7 +477,12 @@ static void recorder_append_metadata(struct recorder *self, struct encoder_op_pa
          self->mi_last = mi;
          }
       else
+         {
+         free(mi->artist);
+         free(mi->title);
+         free(mi->album);
          free(mi);
+         }
       }
    }
 
@@ -481,7 +494,9 @@ static void recorder_free_metadata(struct recorder *self)
       {
       oldmi = mi;
       mi = mi->next;
-      free(oldmi->artist_title);
+      free(oldmi->artist);
+      free(oldmi->title);
+      free(oldmi->album);
       free(oldmi);
       }
    self->mi_first = NULL;
@@ -494,7 +509,8 @@ static void recorder_display_logged_metadata(struct metadata_item *mi)
       {
       fprintf(stderr, "The following metadata was logged.\n");
       do {
-         fprintf(stderr, "Start(ms): %06d Byte: %08d Text: %s\nFinish(ms): %06d Finish byte %08d\n", mi->time_offset, mi->byte_offset, mi->artist_title, mi->time_offset_end, mi->byte_offset_end);
+         fprintf(stderr, "Start(ms): %06d Byte: %08d Finish(ms): %06d Finish byte %08d\n", mi->time_offset, mi->byte_offset, mi->time_offset_end, mi->byte_offset_end);
+         fprintf(stderr, "Artist: %s\nTitle:  %s\nAlbum:  %s\n---\n", mi->artist, mi->title, mi->album);
          } while ((mi = mi->next));
       }
    else
