@@ -31,6 +31,29 @@
 
 typedef jack_default_audio_sample_t sample_t;
 
+static void live_mp3_packetize_metadata(struct encoder *e, struct lme_data * const s)
+   {
+   size_t l = 4;
+   char *stream_meta;
+   
+   if (e->custom_meta_lat1[0])
+      stream_meta = e->custom_meta_lat1;
+   else
+      stream_meta = e->artist_title_lat1;
+      
+   l += strlen(stream_meta);
+   l += strlen(e->artist);
+   l += strlen(e->title);
+   l += strlen(e->album);
+   
+   if ((s->metadata = realloc(s->metadata, l)))
+      snprintf(s->metadata, l, "%s\n%s\n%s\n%s", stream_meta, e->artist, e->title, e->album);
+   else
+      fprintf(stderr, "malloc failure\n");
+      
+   e->new_metadata = FALSE;
+   }
+
 static int live_mp3_write_packet(struct encoder *encoder, struct lme_data *s, unsigned char *buffer, size_t buffersize, int flags)
    {
    struct encoder_op_packet packet;
@@ -125,7 +148,7 @@ static void live_mp3_encoder_main(struct encoder *encoder)
             }
          if (encoder->new_metadata)
             {
-            //live_mp3_build_metadata(encoder, s);
+            live_mp3_packetize_metadata(encoder, s);
             if (s->metadata)
                live_mp3_write_packet(encoder, s, (unsigned char *)s->metadata, strlen(s->metadata) + 1, PF_METADATA | s->packetflags);
             s->packetflags = PF_UNSET;
@@ -150,6 +173,8 @@ static void live_mp3_encoder_main(struct encoder *encoder)
    encoder->run_encoder = NULL;
    encoder->flush = FALSE;
    encoder->encoder_private = NULL;
+   if (s->metadata)
+      free(s->metadata);
    free(s);
    fprintf(stderr, "live_mp3_encoder_main: finished cleanup\n");
    }

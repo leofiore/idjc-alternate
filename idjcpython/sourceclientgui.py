@@ -1322,8 +1322,6 @@ class StreamTab(Tab):
       raw_cm = self.metadata.get_text().encode("utf-8", "replace").strip()
       cm = string_multireplace(raw_cm, table)
       
-      print cm
-      
       if self.scg.parent.prefs_window.mp3_utf8.get_active():
          cm_lat1 = cm
       else:
