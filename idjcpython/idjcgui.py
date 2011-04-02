@@ -102,7 +102,7 @@ from IDJCmedia import *
 from sourceclientgui import *
 from IDJCmixprefs import *
 from IDJCjingles import *
-from IDJCfree import int_object, threadslock, rich_safe
+from IDJCfree import int_object, threadslock, rich_safe, string_multireplace
 import IDJCcontrols
 import tooltips
 import p3db
@@ -1297,11 +1297,12 @@ class MainWindow:
             # note how the announcement is done on a time delay
             
             if self.prefs_window.announce_enable.get_active() and self.server_window.is_streaming:
-               message_text = self.prefs_window.announcemessageentry.get_text().replace(u"%s", self.songname)
+               raw = self.prefs_window.announcemessageentry.get_text().strip().encode("utf-8")
+               table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((getattr(self, x) or "<Unknown>") for x in ("artist", "title", "album")))
                xchat_text_packet = "".join((
                         xtp(self.prefs_window.nickentry.get_text().encode("utf-8")),
                         xtp(self.prefs_window.channelsentry.get_text().encode("utf-8")),
-                        xtp(message_text.encode("utf-8")),
+                        xtp(string_multireplace(raw, table)),
                         xtp(str(int(time.time() + self.prefs_window.announcedelayadj.get_value())))))
                gobject.timeout_add(int(self.prefs_window.announcedelayadj.get_value() * 1000 - 500), self.xchat_announce_the_track, xchat_text_packet)
             self.server_window.new_metadata(self.artist, self.title, self.album)

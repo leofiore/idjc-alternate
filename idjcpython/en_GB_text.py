@@ -108,7 +108,7 @@ alternate = "Alternate"
 
 alt_mic_name = "Alternate opener button text goes here e.g. DJ or Guest. When not specified the microphone number is used instead."
 
-announce_tip = "Enter the message you want to send here. To include the track currently playing use %s. You can also include colours using Ctrl+K (standard XChat/mIRC method) or from the context menu (right click)."
+announce_tip = "Enter the message you want to send here. Use %r, %t, %l for artist, title, album metadata. You can also include colours using Ctrl+K (standard XChat/mIRC method) or from the context menu (right click)."
 
 announcement_countdown_label = "(mm:ss)   "
 
@@ -752,7 +752,7 @@ metadata = "Metadata: "
 
 metadata_checkbox_tip = "Choose the streams upon which you wish to reformat the metadata."
 
-metadata_entry_tip = "You can enter text to accompany the stream here, as well as incorporating the title of the currently playing track by including %s at the appropriate point."
+metadata_entry_tip = "You can enter text to accompany the stream here and can specify placemarkers %r %t %l for artist title and album, or leave this text field blank to use default metadata."
 
 metadata_source_crossfader = "Crossfader"
 
@@ -1277,7 +1277,7 @@ shell_commands_tip = "Enter bash shell commands to run, separated by a semicolon
 
 show_microphone_meters = "Microphone Meters"
 
-song_placemarker = "Song name place marker = %s"
+song_placemarker = "Use %r %t %l for artist, title, album."
 
 speed_variance = "Enable the main-player speed/pitch controls"
 

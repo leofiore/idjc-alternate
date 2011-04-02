@@ -2265,8 +2265,10 @@ class SourceClientGui:
                   fcntl.flock(file.fileno(), fcntl.LOCK_EX)
                   file.write("d" + str(len(self.parent.prefs_window.timernickentry.get_text().encode("utf-8"))) + ":" + self.parent.prefs_window.timernickentry.get_text().encode("utf-8"))
                   file.write("d" + str(len(self.parent.prefs_window.timerchannelsentry.get_text().encode("utf-8"))) + ":" + self.parent.prefs_window.timerchannelsentry.get_text().encode("utf-8"))
-                  cookedmessage = self.parent.prefs_window.timermessageentry.get_text().replace(u"%s", self.parent.metadata).encode("utf-8")
-                  file.write("d" + str(len(cookedmessage)) + ":" + cookedmessage)
+                  raw = self.parent.prefs_window.timermessageentry.get_text().encode("utf-8")
+                  table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((getattr(self.parent, x) or "<Unknown>") for x in ("artist", "title", "album")))
+                  cooked = string_multireplace(raw, table)
+                  file.write("d" + str(len(cooked)) + ":" + cooked)
                   timestr = str(int(time.time()))
                   file.write("d" + str(len(timestr)) + ":" + timestr)
                finally:

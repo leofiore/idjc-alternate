@@ -152,6 +152,7 @@ static void *streamer_main(void *args)
                   }
                if (packet->header.flags & PF_METADATA)  /* tell server about new mp3 metadata */
                   {
+                  *strpbrk(packet->data, "\n") = '\0';
                   fprintf(stderr, "streamer_main: packet is mp3 metadata: %s\n", (char *)packet->data);
                   shout_metadata_add(self->shout_meta, "song", packet->data);
                   switch (shout_set_metadata(self->shout, self->shout_meta))
