@@ -17,6 +17,9 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef HAVE_OGGENC
+#define HAVE_OGGENC
+
 #include <vorbis/vorbisenc.h>
 #include <jack/jack.h>
 #include "sourceclient.h"
@@ -50,3 +53,5 @@ int live_ogg_test_values(struct threads_info *ti, struct universal_vars *uv, voi
 int live_ogg_write_packet(struct encoder *encoder, ogg_page *op, int flags);
 void live_ogg_capture_metadata(struct encoder *e, struct ogg_tag_data *td);
 void live_ogg_free_metadata(struct ogg_tag_data *td);
+
+#endif

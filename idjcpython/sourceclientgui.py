@@ -2351,6 +2351,8 @@ class SourceClientGui:
          artist_title = title
       if not self.parent.prefs_window.mp3_utf8.get_active():
          artist_title_lat1 = artist_title.decode("utf-8", "replace").encode("iso8859-1", "replace")
+      else:
+         artist_title_lat1 = artist_title
 
       self.send("artist=%s\ntitle=%s\nalbum=%s\nartist_title_lat1=%s\ncommand=new_song_metadata\n" % (artist.strip(), title.strip(), album.strip(), artist_title_lat1.strip()))
       if self.receive() == "succeeded":

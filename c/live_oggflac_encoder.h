@@ -23,15 +23,15 @@
 
 #include "sourceclient.h"
 #include <FLAC/all.h>
+#include "live_ogg_encoder.h"
 
 struct lofe_data
    {
+   struct ogg_tag_data tag_data;
    FLAC__StreamEncoder *enc;
    int bits_per_sample;
    int use_metadata;
    FLAC__StreamMetadata *metadata[1];
-   char *artist;
-   char *title;
    FLAC__byte *pab;
    size_t pab_rqd;
    size_t pab_size;

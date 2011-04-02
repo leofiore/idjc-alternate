@@ -282,7 +282,7 @@ static void oggflac_metadata_callback(const FLAC__StreamDecoder *decoder, const 
    struct oggdec_vars *self = client_data;
    const FLAC__StreamMetadata_StreamInfo *si;
    const FLAC__StreamMetadata_VorbisComment *vc;
-   int i;
+   int i, use_alt_tags;
    
    int match(char *t, char *comment)
       {
@@ -335,12 +335,26 @@ static void oggflac_metadata_callback(const FLAC__StreamDecoder *decoder, const 
          fprintf(stderr, "oggflac_metadata_callback: got vorbis comment metadata block\n");
          vc = &metadata->data.vorbis_comment;
          fprintf(stderr, "There are %u comment tags\n", (unsigned)vc->num_comments);
+         use_alt_tags = FALSE;
          for (i = 0; i < vc->num_comments; i++)
+            {
+            if (match("trk-title", (char *)vc->comments[i].entry))
+               use_alt_tags = TRUE;
             fprintf(stderr, "%s\n", vc->comments[i].entry);
+            }
 
-         copy_tag("artist=", &self->artist[self->ix], TRUE);
-         copy_tag("title=", &self->title[self->ix], TRUE);
-         copy_tag("album=", &self->album[self->ix], TRUE);
+         if (use_alt_tags)
+            {
+            copy_tag("trk-artist=", &self->artist[self->ix], TRUE);
+            copy_tag("trk-title=", &self->title[self->ix], TRUE);
+            copy_tag("trk-album=", &self->album[self->ix], TRUE);
+            }
+         else
+            {
+            copy_tag("artist=", &self->artist[self->ix], TRUE);
+            copy_tag("title=", &self->title[self->ix], TRUE);
+            copy_tag("album=", &self->album[self->ix], TRUE);
+            }
          copy_tag("replaygain_track_gain=", &self->replaygain[self->ix], FALSE);
          }
       else
@@ -410,11 +424,71 @@ static int flac_get_samplerate(struct oggdec_vars *self)
 
 #ifdef HAVE_SPEEX
 
+static int speex_comment_count(char *comments, int length, char *match_string)
+   {
+   char *c=comments;
+   int len, i, nb_fields, count = 0;
+   char *end;
+
+   if (length < 8)
+      {
+      fprintf (stderr, "Invalid/corrupted comments\n");
+      return -1;
+      }
+   
+   end = c + length;
+   len = readint(c, 0);
+   c += 4;
+   
+   if (c + len > end)
+      {
+      fprintf (stderr, "Invalid/corrupted comments\n");
+      return -1;
+      }
+
+   c += len;
+   if (c + 4 > end)
+      {
+      fprintf (stderr, "Invalid/corrupted comments\n");
+      return -1;
+      }
+
+   nb_fields = readint(c, 0);
+   c += 4;
+   for (i = 0; i < nb_fields; i++)
+      {
+      if (c + 4 > end)
+         {
+         fprintf (stderr, "Invalid/corrupted comments\n");
+         return -1;
+         }
+      
+      len = readint(c, 0);
+      c += 4;
+      if (c + len > end)
+         {
+         fprintf (stderr, "Invalid/corrupted comments\n");
+         return -1;
+         }
+      
+      if (!strncasecmp(c, match_string, strlen(match_string)))
+         count += 1;
+      c += len;
+      }
+   return count;
+   }
+
 static void speex_get_comments(struct oggdec_vars *self, char *comments, int length)
    {
    char *c=comments;
-   int len, i, nb_fields;
+   int len, i, nb_fields, use_alt;
    char *end;
+
+   use_alt = speex_comment_count(comments, length, "trk-title") ? TRUE : FALSE;
+   if (use_alt)
+      fprintf(stderr, "using alternative speex tags\n");
+   else
+      fprintf(stderr, "using regular speex tags\n");
 
    void handle_keyval(char *key, char *val, char **target, char *match, int multiple)
       {
@@ -439,7 +513,6 @@ static void speex_get_comments(struct oggdec_vars *self, char *comments, int len
   
    void handle_comment(char *comment, int comment_length)
       {
-      
       char *key = malloc(comment_length + 1);
       char *val;
       
@@ -454,10 +527,20 @@ static void speex_get_comments(struct oggdec_vars *self, char *comments, int len
          }
       *val++ = '\0';
 
-      handle_keyval(key, val, &self->artist[self->ix], "author", TRUE);
-      handle_keyval(key, val, &self->artist[self->ix], "artist", TRUE);
-      handle_keyval(key, val, &self->title[self->ix], "title", TRUE);
-      handle_keyval(key, val, &self->album[self->ix], "album", TRUE);
+      if (use_alt)
+         {
+         handle_keyval(key, val, &self->artist[self->ix], "trk-author", TRUE);
+         handle_keyval(key, val, &self->artist[self->ix], "trk-artist", TRUE);
+         handle_keyval(key, val, &self->title[self->ix], "trk-title", TRUE);
+         handle_keyval(key, val, &self->album[self->ix], "trk-album", TRUE);
+         }
+      else
+         {
+         handle_keyval(key, val, &self->artist[self->ix], "author", TRUE);
+         handle_keyval(key, val, &self->artist[self->ix], "artist", TRUE);
+         handle_keyval(key, val, &self->title[self->ix], "title", TRUE);
+         handle_keyval(key, val, &self->album[self->ix], "album", TRUE);
+         }
       handle_keyval(key, val, &self->replaygain[self->ix], "replaygain_track_gain", FALSE);
       free(key);
       }

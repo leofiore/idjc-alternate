@@ -162,9 +162,30 @@ static FLAC__StreamEncoderWriteStatus live_oggflac_encoder_write_cb(const FLAC__
    return FLAC__STREAM_ENCODER_WRITE_STATUS_OK;
    }
 
+static char *prepend(char *before, char *after)
+   {
+   char *new;
+   
+   if (!(new = malloc(strlen(before) + strlen(after) + 1)))
+      {
+      fprintf(stderr, "malloc failure\n");
+      return NULL;
+      }
+      
+   strcpy(new, before);
+   strcat(new, after);
+   free(after);
+   return new;
+   }
+
+#define PREPEND(b, a) a = prepend(b, a); nmeta++; dlen += strlen(a);
+#define CPREPEND(b, a) if (a && a[0]) { PREPEND(b, a); }
+#define APPEND(a) if (a && a[0]) { vc->comments[i].length = strlen(a); vc->comments[i].entry = (FLAC__byte *)a; i++; }
+
 static void live_oggflac_encoder_main(struct encoder *encoder)
    {
    struct lofe_data * const s = encoder->encoder_private;
+   struct ogg_tag_data *t = &s->tag_data;
 
    if (encoder->encoder_state == ES_STARTING)
       {
@@ -180,19 +201,22 @@ static void live_oggflac_encoder_main(struct encoder *encoder)
          size_t dlen = 0;
          FLAC__StreamMetadata_VorbisComment *vc;
          
-         //live_oggflac_build_metadata(encoder, s);
-         if (s->artist)
+         live_ogg_capture_metadata(encoder, t);
+         
+         if (t->custom && t->custom[0])
             {
-            nmeta++;
-            dlen += strlen(s->artist);
+            PREPEND("title=", t->custom)
+            CPREPEND("trk-artist=", t->artist)
+            CPREPEND("trk-title=", t->title)
+            CPREPEND("trk-album=", t->album)
             }
-            
-         if (s->title)
+         else
             {
-            nmeta++;
-            dlen += strlen(s->title);
+            CPREPEND("artist=", t->artist)
+            CPREPEND("title=", t->title)
+            CPREPEND("album=", t->album)
             }
-            
+
          if (nmeta)
             {
             if (s->metadata[0] == NULL)
@@ -210,25 +234,12 @@ static void live_oggflac_encoder_main(struct encoder *encoder)
             s->metadata[0]->is_last = TRUE;
             s->metadata[0]->length = nmeta * 4 + dlen + 8;
             
-            if (vc->comments == NULL)
-               if (!(vc->comments = calloc(nmeta, sizeof (FLAC__StreamMetadata_VorbisComment_Entry))))
-                  {
-                  fprintf(stderr, "live_oggflac_encoder_main: malloc failure\n");
-                  goto bailout;
-                  }
+            vc->comments = realloc(vc->comments, nmeta * sizeof (FLAC__StreamMetadata_VorbisComment_Entry));
             
-            if (s->artist)
-               {
-               vc->comments[i].length = strlen(s->artist);
-               vc->comments[i].entry = (FLAC__byte *)s->artist;
-               i++;
-               }
-               
-            if (s->title)
-               {
-               vc->comments[i].length = strlen(s->title);
-               vc->comments[i].entry = (FLAC__byte *)s->title;
-               }
+            APPEND(t->custom)
+            APPEND(t->artist)
+            APPEND(t->title)
+            APPEND(t->album)
             }
          }
 
@@ -306,7 +317,7 @@ static void live_oggflac_encoder_main(struct encoder *encoder)
             free(s->metadata[0]->data.vorbis_comment.comments);
          free(s->metadata[0]);
          }
-      
+      live_ogg_free_metadata(t);
       free(s);
       }
    
