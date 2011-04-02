@@ -36,6 +36,8 @@ static void live_mp3_packetize_metadata(struct encoder *e, struct lme_data * con
    size_t l = 4;
    char *stream_meta;
    
+   pthread_mutex_lock(&e->metadata_mutex);
+   
    if (e->custom_meta_lat1[0])
       stream_meta = e->custom_meta_lat1;
    else
@@ -52,6 +54,7 @@ static void live_mp3_packetize_metadata(struct encoder *e, struct lme_data * con
       fprintf(stderr, "malloc failure\n");
       
    e->new_metadata = FALSE;
+   pthread_mutex_unlock(&e->metadata_mutex);
    }
 
 static int live_mp3_write_packet(struct encoder *encoder, struct lme_data *s, unsigned char *buffer, size_t buffersize, int flags)

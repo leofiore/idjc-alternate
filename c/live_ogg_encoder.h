@@ -21,13 +21,19 @@
 #include <jack/jack.h>
 #include "sourceclient.h"
 
-struct loe_data
+struct ogg_tag_data
    {
-   long max_bitrate;            /* ogg upper and lower bitrate settings */
-   long min_bitrate;
-   char *artist;                /* ogg metadata is split into two strings */
+   char *custom;
+   char *artist;
    char *title;
    char *album;
+   };
+
+struct loe_data
+   {
+   struct ogg_tag_data tag_data;
+   long max_bitrate;            /* ogg upper and lower bitrate settings */
+   long min_bitrate;
    vorbis_info      vi;
    vorbis_block     vb;
    vorbis_dsp_state vd;
@@ -42,3 +48,5 @@ struct loe_data
 int live_ogg_encoder_init(struct encoder *encoder, struct encoder_vars *ev);
 int live_ogg_test_values(struct threads_info *ti, struct universal_vars *uv, void *other);
 int live_ogg_write_packet(struct encoder *encoder, ogg_page *op, int flags);
+void live_ogg_capture_metadata(struct encoder *e, struct ogg_tag_data *td);
+void live_ogg_free_metadata(struct ogg_tag_data *td);

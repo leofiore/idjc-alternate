@@ -30,6 +30,32 @@
 
 typedef jack_default_audio_sample_t sample_t;
 
+void live_ogg_capture_metadata(struct encoder *e, struct ogg_tag_data *t)
+   {
+   live_ogg_free_metadata(t);
+
+   pthread_mutex_lock(&e->metadata_mutex);
+   t->custom = strdup(e->custom_meta);
+   t->artist = strdup(e->artist);
+   t->title  = strdup(e->title);
+   t->album  = strdup(e->album);
+   e->new_metadata = FALSE;
+   pthread_mutex_unlock(&e->metadata_mutex);
+   }
+
+void live_ogg_free_metadata(struct ogg_tag_data *t)
+   {
+   if (t->custom)
+      free(t->custom);
+   if (t->artist)
+      free(t->artist);
+   if (t->title)
+      free(t->title);
+   if (t->album)
+      free(t->album);
+   memset(t, '\0', sizeof (struct ogg_tag_data));
+   }
+
 int live_ogg_write_packet(struct encoder *encoder, ogg_page *op, int flags)
    {
    struct encoder_op_packet packet;
@@ -65,6 +91,7 @@ static void live_ogg_encoder_main(struct encoder *encoder)
    int cycle_restart = FALSE, cycle_restart2 = FALSE, packet_flags = PF_INITIAL | PF_OGG | PF_HEADER;
    float **buffer;
    ogg_int64_t oldgranulepos;
+   struct ogg_tag_data *t = &s->tag_data;
    
    if (encoder->encoder_state == ES_STARTING)
       {
@@ -95,13 +122,27 @@ static void live_ogg_encoder_main(struct encoder *encoder)
       vorbis_comment_init(&s->vc);
       /* this function takes raw metadata and does something type specific with it */
       if (encoder->new_metadata)
-         //live_ogg_build_metadata(encoder, encoder->encoder_private);
-      if (s->artist)
-         vorbis_comment_add_tag(&s->vc, "ARTIST", s->artist);
-      if (s->title)
-         vorbis_comment_add_tag(&s->vc, "TITLE", s->title);
-      if (s->album)
-         vorbis_comment_add_tag(&s->vc, "ALBUM", s->album);
+         live_ogg_capture_metadata(encoder, t);
+      
+      if (t->custom && t->custom[0])
+         {
+         vorbis_comment_add_tag(&s->vc, "TITLE", t->custom);
+         if (t->artist && t->artist[0])
+            vorbis_comment_add_tag(&s->vc, "TRK-ARTIST", t->artist);
+         if (t->title && t->title[0])
+            vorbis_comment_add_tag(&s->vc, "TRK-TITLE", t->title);
+         if (t->album && t->album[0])
+            vorbis_comment_add_tag(&s->vc, "TRK-ALBUM", t->album);
+         }
+      else
+         {
+         if (t->artist && t->artist[0])
+            vorbis_comment_add_tag(&s->vc, "ARTIST", t->artist);
+         if (t->title && t->title[0])
+            vorbis_comment_add_tag(&s->vc, "TITLE", t->title);
+         if (t->album && t->album[0])
+            vorbis_comment_add_tag(&s->vc, "ALBUM", t->album);
+         }
       vorbis_analysis_headerout(&s->vd, &s->vc, &header_main, &header_comments, &header_codebooks);
       ogg_stream_packetin(&s->os, &header_main);
       ogg_stream_packetin(&s->os, &header_comments);
@@ -206,6 +247,7 @@ static void live_ogg_encoder_main(struct encoder *encoder)
    encoder->run_encoder = NULL;
    encoder->flush = FALSE;
    encoder->encoder_private = NULL;
+   live_ogg_free_metadata(&s->tag_data);
    free(s);
    fprintf(stderr, "live_ogg_encoder_main: finished cleanup\n");
    return;

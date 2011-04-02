@@ -143,9 +143,19 @@ static int vorbis_get_samplerate(struct oggdec_vars *self)  /* attempt to get AR
       samplerate = self->samplerate[self->ix] = vi.rate;
       self->channels[self->ix] = vi.channels;
       
-      obtain_tag_info("artist", &self->artist[self->ix], TRUE);
-      obtain_tag_info("title", &self->title[self->ix], TRUE);
-      obtain_tag_info("album", &self->album[self->ix], TRUE);
+      if (vorbis_comment_query_count(&vc, "trk-title"))
+         {
+         obtain_tag_info("trk-artist", &self->artist[self->ix], TRUE);
+         obtain_tag_info("trk-title", &self->title[self->ix], TRUE);
+         obtain_tag_info("trk-album", &self->album[self->ix], TRUE);
+         }
+      else
+         {
+         obtain_tag_info("artist", &self->artist[self->ix], TRUE);
+         obtain_tag_info("title", &self->title[self->ix], TRUE);
+         obtain_tag_info("album", &self->album[self->ix], TRUE);
+         }
+     
       obtain_tag_info("replaygain_track_gain", &self->replaygain[self->ix], FALSE);
       }
    else
