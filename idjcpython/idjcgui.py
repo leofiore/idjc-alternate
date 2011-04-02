@@ -1342,24 +1342,29 @@ class MainWindow:
       album = gen.next()
       player_context = int(gen.next())
       time_lag = int(gen.next())
-      
+  
       if infotype == 1:
+         if not artist and " - " in title:
+            artist, title = title.split(" - ")
          song = artist.decode("utf-8", "replace") + u" - " + title.decode("utf-8", "replace")
       if infotype == 2:
          song = artist_title.decode("utf-8", "replace")
-         artist = ""
-         title = artist_title
-         album = ""
+         if not artist and " - " in title:
+            artist, title = title.split(" - ")
       if infotype == 3:
+         if not artist and " - " in title:
+            artist, title = title.split(" - ")
          song = artist.decode("iso8859-1", "replace") + u" - " + title.decode("iso8859-1", "replace")
          artist = artist.decode("iso8859-1", "replace").encode("utf-8", "replace")
          title = title.decode("iso8859-1", "replace").encode("utf-8", "replace")
-         album = title.decode("iso8859-1", "replace").encode("utf-8", "replace")
+         album = album.decode("iso8859-1", "replace").encode("utf-8", "replace")
       if infotype == 4:
-         song = artist_title.decode("iso8859-1", "replace")
-         artist = ""
-         title = song.encode("utf-8", "replace")
-         album = ""
+         song = title.decode("iso8859-1", "replace")
+         if not artist and " - " in title:
+            artist, title = title.split(" - ")
+         artist = artist.decode("iso8859-1", "replace").encode("utf-8", "replace")
+         title = title.decode("iso8859-1", "replace").encode("utf-8", "replace")
+         album = album.decode("iso8859-1", "replace").encode("utf-8", "replace")
       if infotype == 7:
          model = player.model_playing
          iter = player.iter_playing

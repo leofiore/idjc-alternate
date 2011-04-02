@@ -1078,7 +1078,7 @@ class IDJC_Media_Player:
       
    # Shut down our media players when we exit.
    def cleanup(self):
-      self.exiting = True               # I added this because, well the reason totally sucks TBH
+      self.exiting = True 
       if self.player_is_playing:
          self.stop.clicked()
       self.save_session()
