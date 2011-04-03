@@ -18,7 +18,7 @@
 import pygtk
 pygtk.require('2.0')
 import os.path, sys, re
-import gtk, gobject, pango
+import gtk, gobject, pango, collections, time
 from ln_text import ln
 from idjc_config import *
 from IDJCfree import *
@@ -324,6 +324,58 @@ def action_method(*modes):
 
 # Controls ___________________________________________________________________
 
+
+class RepeatCache(collections.MutableSet):
+    """A smart keyboard repeat cache -- implements time to live.
+
+    Downstrokes are logged along with the time. Additional downstrokes
+    refresh the TTL value for the key. This is done through checking the
+    cached Binding before the TTL has run out, otherwise the cached
+    entry is removed.
+
+    The __contains__ method runs the TTL cache purge.
+    """
+    
+    @property
+    def ttl(self):
+        """Time To Live.
+        
+        The duration a keystroke is valid in the absence of repeats.""" 
+        return self._ttl
+    @ttl.setter
+    def ttl(self, ttl):
+        assert(isinstance(ttl, (float, int)))
+        self._ttl = ttl
+    
+    def __init__(self, ttl=0.8):
+        self.ttl = ttl
+        self._cache = {}
+    
+    def __len__(self):
+        return len(self._cache)
+        
+    def __iter__(self):
+        return iter(self._cache)
+
+    def __contains__(self, key):
+        if key in self._cache:
+            if self._cache[key] < time.time():
+                del self._cache[key]
+                return False
+            else:
+                self._cache[key] = time.time() + self._ttl
+                return True
+        else:
+            return False
+            
+    def add(self, key):
+        self._cache[key] = time.time() + self._ttl
+            
+    def discard(self, key):
+        if key in self._cache:
+            del self._cache[key]
+
+
 class Controls(object):
     """Dispatch and implementation of input events to action methods.
     """
@@ -338,7 +390,7 @@ class Controls(object):
         self.editing= None
         self.lookup= {}
         self.highlights= {}
-        self.repeat_cache= set()
+        self.repeat_cache= RepeatCache()
 
         # Default minimal set of bindings, if not overridden by prefs file
         # This matches the hotkeys previously built into IDJC
