@@ -244,7 +244,7 @@ conn_col_mount = "Mount point      "
 
 conn_col_listeners = "Listeners"
 
-connect_disconnect_nonconfig = "Server Not Configured"
+connect_disconnect_nonconfig = "No Master Server Configured"
 
 connected_to_history = "connected to"
 

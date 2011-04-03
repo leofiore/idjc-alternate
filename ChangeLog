@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+Fixed a bug that was causing incorrect text on the server connection button.
+
 Streams and recordings now support album metadata. New custom metadata formatting tags exist to support this change.
 
 A new crossfader profile has been added which closely matches the inter track fade.
@@ -14,7 +16,7 @@ New playlist mode 'Fade Over' does the same thing as the crossfade playlist cont
 
 Sanitised the text inputs of the server dialog. Cleans off :// protocol prefixes and extra / characters on mount points.
 
-The return of the main panel recording indicator(s). Gone since version 0.7.
+The return of the main panel recording indicator(s) - missing since version 0.7.
 
 Copyright year updated to 2011.
 

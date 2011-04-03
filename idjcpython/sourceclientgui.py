@@ -196,6 +196,7 @@ class ConnectionDialog(gtk.Dialog):
                new_iter = model.append(data)
          tree_selection.select_path(model.get_path(new_iter))
          tree_selection.get_tree_view().scroll_to_cell(model.get_path(new_iter))
+         tree_selection.get_tree_view().get_model().row_changed(model.get_path(new_iter), new_iter)
       self.destroy()
       
    def _on_servertype_changed(self, servertype):
@@ -541,7 +542,7 @@ class ConnectionPane(gtk.VBox):
       scrolled.show()
       self.liststore = gtk.ListStore(*[x[1] for x in LISTFORMAT])
       self.liststore.connect("row-deleted", lambda x, y: self.set_button(tab))
-      self.liststore.connect("row-inserted", lambda x, y, z: self.set_button(tab))
+      self.liststore.connect("row-changed", lambda x, y, z: self.set_button(tab))
       self.set_button(tab)
       self.treeview = gtk.TreeView(self.liststore)
       set_tip(self.treeview, ln.connections_table_tip)
@@ -643,38 +644,6 @@ class ConnectionPane(gtk.VBox):
       hbox.pack_start(bbox)
       vbox.pack_start(hbox, False)
       hbox.show_all()
-      
-      """
-      sep = gtk.HSeparator()
-      vbox.pack_start(sep, False, False, 0)
-      sep.show()
-      hbox = gtk.HBox()
-      hbox.set_spacing(6)
-      label = gtk.Label(ln.get_stats)
-      hbox.pack_start(label, False, False, 0)
-      label.show()
-      """
-      #self.stats_never = gtk.RadioButton(None, ln.get_stats_never)
-      """
-      hbox.pack_start(self.stats_never, False, False, 0)
-      self.stats_never.show()
-      """
-      #self.stats_always = gtk.RadioButton(self.stats_never, ln.get_stats_always)
-      """
-      hbox.pack_start(self.stats_always, False, False, 0)
-      self.stats_always.show()
-      """
-      #self.stats_ifconnected = gtk.RadioButton(self.stats_never, ln.get_stats_ifconnected)
-      """
-      self.stats_ifconnected.set_active(True)
-      hbox.pack_start(self.stats_ifconnected, False, False, 0)
-      self.stats_ifconnected.show()
-      
-      vbox.pack_start(hbox, False, False, 0)
-      hbox.pack_start(ihbox, True, True, 0)
-      hbox.show()
-      """
-      
       self.timer = ActionTimer(40, self.stats_commence, self.stats_collate)
 
 class TimeEntry(gtk.HBox):              # A 24-hour-time entry widget with a checkbutton
@@ -1502,7 +1471,7 @@ class StreamTab(Tab):
       
       self.connection_pane = ConnectionPane(set_tip, self)
       self.connection_pane.liststore.connect("row-deleted", self.update_sensitives)
-      self.connection_pane.liststore.connect("row-inserted", self.update_sensitives)
+      self.connection_pane.liststore.connect("row-changed", self.update_sensitives)
       label = gtk.Label(ln.connection)
       self.details_nb.append_page(self.connection_pane, label)
       label.show()
