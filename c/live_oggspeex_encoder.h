@@ -26,11 +26,13 @@
 #include <speex/speex_header.h>
 #include <speex/speex_stereo.h>
 #include <ogg/ogg.h>
+#include "live_ogg_encoder.h"
 
 enum speex_mode { SM_UWB, SM_WB, SM_NB };
 
 struct lose_data
    {
+   struct ogg_tag_data tag_data;
    void *enc_state;
    SpeexBits bits;
    int fsamples;              /* number of samples in a frame */
@@ -50,8 +52,6 @@ struct lose_data
    int quality;
    int complexity;
    int use_metadata;
-   char *artist;
-   char *title;
    char *metadata_vc;
    size_t metadata_vclen;
    enum packet_flags flags;

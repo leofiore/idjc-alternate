@@ -1299,6 +1299,7 @@ class MainWindow:
             if self.prefs_window.announce_enable.get_active() and self.server_window.is_streaming:
                raw = self.prefs_window.announcemessageentry.get_text().strip().encode("utf-8")
                table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((getattr(self, x) or "<Unknown>") for x in ("artist", "title", "album")))
+               table.append(("%s", self.songname.encode("utf-8")))
                xchat_text_packet = "".join((
                         xtp(self.prefs_window.nickentry.get_text().encode("utf-8")),
                         xtp(self.prefs_window.channelsentry.get_text().encode("utf-8")),

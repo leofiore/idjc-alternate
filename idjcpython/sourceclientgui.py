@@ -1319,6 +1319,7 @@ class StreamTab(Tab):
    
    def cb_metadata(self, widget):
       table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((getattr(self.scg.parent, x) or "<Unknown>") for x in ("artist", "title", "album")))
+      table.append(("%s", self.scg.parent.songname.encode("utf-8")))
       raw_cm = self.metadata.get_text().encode("utf-8", "replace").strip()
       cm = string_multireplace(raw_cm, table)
       

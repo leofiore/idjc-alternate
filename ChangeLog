@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+Streams and recordings now support album metadata. New custom metadata formatting tags exist to support this change.
+
 A new crossfader profile has been added which closely matches the inter track fade.
 
 In playlist modes that don't suppport playlist controls a null control is rendered in the playlist instead of a blank space as was done previously.

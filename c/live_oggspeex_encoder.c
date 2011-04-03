@@ -46,27 +46,49 @@
 #define speex_header_free(h) speex_free(h)
 #endif
 
+static char *prepend(char *before, char *after)
+   {
+   char *new;
+   
+   if (!(new = malloc(strlen(before) + strlen(after) + 1)))
+      {
+      fprintf(stderr, "malloc failure\n");
+      return NULL;
+      }
+      
+   strcpy(new, before);
+   strcat(new, after);
+   free(after);
+   return new;
+   }
+
+#define PREPEND(b, a) a = prepend(b, a); items++; s->metadata_vclen += (4 + strlen(a));
+#define CPREPEND(b, a) if (a && a[0]) { PREPEND(b, a); }
+#define APPEND(a) if (a && a[0]) { writeint(s->metadata_vc, base, (len = strlen(a))); memcpy(s->metadata_vc + base + 4, a, len); base += 4 + len; }
 
 static void live_oggspeex_build_metadata(struct encoder *encoder, struct lose_data *s)
    {
    int len;
    int items = 0;
    int base;
+   struct ogg_tag_data *t = &s->tag_data;
 
    /* build a vorbis comment block */
-
-   
    s->metadata_vclen = 8 + s->vs_len;
-   if (s->artist)
+   live_ogg_capture_metadata(encoder, t);
+
+   if (t->custom && t->custom[0])
       {
-      items++;
-      s->metadata_vclen += 4 + strlen(s->artist);
+      PREPEND("title=", t->custom)
+      CPREPEND("trk-author=", t->artist)
+      CPREPEND("trk-title=", t->title)
+      CPREPEND("trk-album=", t->album)
       }
-      
-   if (s->title)
+   else
       {
-      items++;
-      s->metadata_vclen += 4 + strlen(s->title);
+      CPREPEND("author=", t->artist)
+      CPREPEND("title=", t->title)
+      CPREPEND("album=", t->album)
       }
       
    if (!(s->metadata_vc = realloc(s->metadata_vc, s->metadata_vclen)))
@@ -81,22 +103,13 @@ static void live_oggspeex_build_metadata(struct encoder *encoder, struct lose_da
    writeint(s->metadata_vc, 4 + s->vs_len, items);
    base = 8 + s->vs_len;
    
-   if (s->artist)
-      {
-      writeint(s->metadata_vc, base, (len = strlen(s->artist)));
-      memcpy(s->metadata_vc + base + 4, s->artist, len);
-      base += 4 + len;
-      }
-   
-   if (s->title)
-      {
-      writeint(s->metadata_vc, base, (len = strlen(s->title)));
-      memcpy(s->metadata_vc + base + 4, s->title, len);
-      base += 4 + len;
-      }
+   APPEND(t->custom);
+   APPEND(t->artist);
+   APPEND(t->title);
+   APPEND(t->album);
    
    if (base != s->metadata_vclen)
-      fprintf(stderr, "live_oggspeex_build_metadata: incorrect size assumption }}}}}}\n");
+      fprintf(stderr, "live_oggspeex_build_metadata: incorrect size assumption %d, %d\n", base, s->metadata_vclen);
    else
       fprintf(stderr, "vorbis comment created successfully\n");
    }
@@ -349,10 +362,7 @@ static void live_oggspeex_encoder_main(struct encoder *encoder)
       free(s->inbuf);
    if (s->metadata_vc)
       free(s->metadata_vc);
-   if (s->artist)
-      free(s->artist);
-   if (s->title)
-      free(s->title);
+   live_ogg_free_metadata(&s->tag_data);
    free(s);
    fprintf(stderr, "live_oggspeex_encoder_main: finished cleanup\n");
    return;
