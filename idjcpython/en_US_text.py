@@ -24,9 +24,9 @@ announce_tip = "Enter the message you want to send here. To include the track cu
 
 ask_profile_tip = "Causes a profile selection dialog box to appear when IDJC is started which allows you to have an unlimited number of settings for DJing on multiple radio stations."
 
-licence_tab = "License"
+insert_attribute_or_colour_code = "Insert Attribute or Color Code"
 
-mirc_colour_menu = "mIRC Color Chart"
+licence_tab = "License"
 
 mixer_crash = "The mixer module crashed during initialization."
 
@@ -67,6 +67,8 @@ stream_tab_tip = "Each one of these tabs represents a separate radio streamer. T
 update_encoder_settings_tip = """Use this to change the encoder settings while streaming or recording.
  
 If this button is grayed out it means that the encoder is not running, or the bitrate/samplerate combination is not supported by the encoder, or you are trying to switch between Ogg and mp3, which is not permitted."""
+
+xchat_colours = "Colors"
 
 #   U n t r a n s l a t e d   i t e m s   - -   s a m e   a s   e n _ G B 
  

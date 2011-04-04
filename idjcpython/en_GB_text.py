@@ -603,6 +603,8 @@ initial_player_settings = "Player Settings At Startup"
 
 individual_controls = "Individual Controls"
 
+insert_attribute_or_colour_code = "Insert Attribute or Colour Code"
+
 interval = "Interval:"
 
 invert_left = "Invert left mic audio"
@@ -1518,6 +1520,14 @@ wet_voice_player_tip = "When you click this button the jingle or track selected 
 wet_voice_volume_tip = "This adjusts the volume level of the music that plays whenever the other media players are not active. It is only audible to the DJ when 'Monitor Mix' in the main application window is set to 'Stream'."
 
 window_close = "Close"
+
+xchat_bold = "<b>Bold</b>"
+
+xchat_underline = "<u>Underline</u>"
+
+xchat_normal = "Normal"
+
+xchat_colours = "Colours"
 
 xchat_install_tip = "Having problems? Launch XChat, close XChat, press this button, launch XChat again."
 

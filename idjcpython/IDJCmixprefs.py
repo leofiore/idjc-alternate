@@ -475,56 +475,6 @@ class AGCControl(gtk.Frame):
       indjmix.set_active(True)
       self.partner = None
 
-mIRC_colours = (                # Actually these are the XChat2 colours.
-   (0xCCCCCCFF, "00"),          # XChat2 calls them mIRC colours, but I doubt they match.
-   (0x000000FF, "01"),
-   (0x3636B2FF, "02"),
-   (0x2A8C2AFF, "03"),
-   (0xC33B3BFF, "04"),
-   (0xC73232FF, "05"),
-   (0x80267FFF, "06"),
-   (0x66361FFF, "07"),
-   (0xD9A641FF, "08"),
-   (0x3DCC3DFF, "09"),
-   (0x1A5555FF, "10"),
-   (0x2F8C74FF, "11"),
-   (0x4545E6FF, "12"),
-   (0xB037B0FF, "13"),
-   (0x4C4C4CFF, "14"),
-   (0x959595FF, "15"),
-   (0x00000000, "99"))          # used to restore default colours
-
-def cb_colour_box_expose(widget, event, data=None):
-   widget.set_state(gtk.STATE_NORMAL)   # Prevent pre-light from messing up the colour
-
-def make_colour_box(rgba, label_text, width, height):
-   pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, width, height)
-   pixbuf.fill(rgba)
-   image = gtk.Image()
-   image.connect_after("expose-event", cb_colour_box_expose)
-   image.set_from_pixbuf(pixbuf)
-   image.show()
-   label = gtk.Label(label_text)
-   label.show()
-   hbox = gtk.HBox()
-   hbox.set_spacing(15)
-   hbox.pack_start(label, False, False, 0)
-   hbox.pack_end(image, False, False, 0)
-   hbox.show()
-   return hbox
-
-def make_colour_box_menu(entry, callback):
-   menu = gtk.Menu()
-   for each in mIRC_colours:
-      menuitem = gtk.MenuItem()
-      menuitem.connect("activate", callback, entry, each[1])
-      colourbox = make_colour_box(each[0], each[1], 45, 28)
-      menuitem.add(colourbox)
-      menu.add(menuitem)
-      menuitem.show()
-   menu.show()
-   return menu
-
 def make_entry_line(parent, item, code, hastoggle, index=None):
    box = gtk.HBox(False, 0)
    box.set_border_width(4)
@@ -885,14 +835,6 @@ class mixprefs:
    def cb_mic_boost(self, widget):
       self.parent.send_new_mixer_stats()
                     
-   def cb_colourbox(self, menuitem, entry, colour):
-      cursor = entry.get_position()
-      if cursor < 3 or entry.get_text()[cursor - 3] !="\x03":
-         entry.insert_text("\x03" + colour, cursor)     # Foreground colour
-      else:
-         entry.insert_text("," + colour, cursor)        # Background
-      entry.set_position(cursor + 3)
-
    def cb_pbspeed(self, widget):
       if widget.get_active():
          self.parent.player_left.pbspeedbar.set_value(0)
@@ -934,26 +876,111 @@ class mixprefs:
       self.parent.str_r_rms_vu.set_line(level)
       self.parent.send_new_mixer_stats()
 
-   def colourmenupopulate(self, entry, menu):
-      menusep = gtk.SeparatorMenuItem()
-      menu.append(menusep)
-      menusep.show()
-      menuitem = gtk.MenuItem(ln.mirc_colour_menu)
+   def cb_xchat_insert_text(self, menuitem, entry, code):
+      cursor = entry.get_position()
+      entry.insert_text(code, cursor)
+      entry.set_position(cursor + 1)
+
+   def cb_xchat_insert_colour_code(self, menuitem, entry, code):
+      cursor = entry.get_position()
+      if cursor < 3 or entry.get_text()[cursor - 3] !="\x03":
+         entry.insert_text(u"\u0003" + unicode("%02d" % code), cursor)
+      else:
+         # The background colour.
+         entry.insert_text(unicode(",%02d" % code), cursor)
+      entry.set_position(cursor + 3)
+
+   IRC_colour = {
+      0:  0xCCCCCCFF,
+      1:  0x000000FF,
+      2:  0x3636B2FF,
+      3:  0x2A8C2AFF,
+      4:  0xC33B3BFF,
+      5:  0xC73232FF,
+      6:  0x80267FFF,
+      7:  0x66361FFF,
+      8:  0xD9A641FF,
+      9:  0x3DCC3DFF,
+      10: 0x1A5555FF,
+      11: 0x2F8C74FF,
+      12: 0x4545E6FF,
+      13: 0xB037B0FF,
+      14: 0x4C4C4CFF,
+      15: 0x959595FF }
+
+   def xchat_menu_populate(self, entry, menu):
+      menuitem = gtk.MenuItem(ln.insert_attribute_or_colour_code)
       menu.append(menuitem)
-      submenu = make_colour_box_menu(entry, self.cb_colourbox)
+      submenu = gtk.Menu()
       menuitem.set_submenu(submenu)
       menuitem.show()
       
-   def cb_handle_colour_char(self, entry, event, data=None):
-      if event.state & gtk.gdk.LOCK_MASK:
-         target = 75
-      else:
-         target = 107
-      if event.state & (~gtk.gdk.LOCK_MASK) == gtk.gdk.CONTROL_MASK and event.keyval == target:
-         cursor = entry.get_position()
-         entry.insert_text("\x03", cursor)
-         entry.set_position(cursor + 1)
+      for menutext, code in ((ln.xchat_bold, u"\u0002"), (ln.xchat_underline, u"\u001F"),
+                                                    (ln.xchat_normal, u"\u000F")):
+         mi = gtk.MenuItem()
+         l = gtk.Label()
+         l.set_alignment(0.0, 0.5)
+         l.set_markup(menutext)
+         mi.add(l)
+         l.show()
+         mi.connect("activate", self.cb_xchat_insert_text, entry, code)
+         submenu.append(mi)
+         mi.show()
+      
+      for each in ("0-7", "8-15"):
+         mi = gtk.MenuItem(" ".join(("Colours", each)))
+         submenu.append(mi)
+         cmenu = gtk.Menu()
+         mi.set_submenu(cmenu)
+         cmenu.show()
+         lower, upper = [int(x) for x in each.split("-")]
+         for i in xrange(lower, upper + 1):
+            try:
+               rgba = self.IRC_colour[i]
+            except:
+               continue
 
+            cmi = gtk.MenuItem()
+            cmi.connect("activate", self.cb_xchat_insert_colour_code, entry, i)
+            hbox = gtk.HBox()
+            
+            l = gtk.Label()
+            l.set_alignment(0, 0.5)
+            l.set_markup("<span font_family='monospace'>%02d</span>" % i)
+            hbox.pack_start(l)
+            l.show()
+
+            pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, 20, 20)
+            pixbuf.fill(rgba)
+            image = gtk.image_new_from_pixbuf(pixbuf)
+            image.connect_after("expose-event", self.cb_colour_box_expose)
+            hbox.pack_start(image)
+            image.show()
+
+            cmi.add(hbox)
+            hbox.show()
+            cmenu.append(cmi)
+            cmi.show()
+         mi.show()
+
+   def cb_colour_box_expose(self, widget, event, data=None):
+      widget.set_state(gtk.STATE_NORMAL)   # Prevent pre-light from messing up the colour
+      
+   xchat_keytable = {107:u"\u0003", 98:u"\u0002", 117:u"\u001F", 111:u"\u000F"}
+   def cb_handle_xchat_special_characters(self, entry, event, data=None):
+      # Check for CTRL key modifier.
+      if event.state & (~gtk.gdk.LOCK_MASK) == gtk.gdk.CONTROL_MASK:
+         # Remove the effect of CAPS lock - works for letter keys only.
+         keyval = event.keyval + (32 if event.state & gtk.gdk.LOCK_MASK else 0)
+         try:
+            replacement = self.xchat_keytable[keyval]
+         except KeyError:
+            pass
+         else:
+            cursor = entry.get_position()
+            entry.insert_text(replacement, cursor)
+            entry.set_position(cursor + 1)
+      
    def bind_jack_ports(self):
       for port in self.jack_ports:
          getattr(self, port+"update").clicked()
@@ -1798,8 +1825,8 @@ class mixprefs:
       announcemessagebox.pack_start(self.announcemessageentry, True, True, 0)
       self.announcemessageentry.show()
       rightvbox.pack_start(announcemessagebox, False, False, 1)
-      self.announcemessageentry.connect("populate-popup", self.colourmenupopulate)
-      self.announcemessageentry.connect("key-press-event", self.cb_handle_colour_char)
+      self.announcemessageentry.connect("populate-popup", self.xchat_menu_populate)
+      self.announcemessageentry.connect("key-press-event", self.cb_handle_xchat_special_characters)
       announcemessagebox.show()
       parent.tooltips.set_tip(self.announcemessageentry, ln.announce_tip)
       
@@ -1899,8 +1926,8 @@ class mixprefs:
       timemessagebox.pack_start(self.timermessageentry, True, True, 0)
       self.timermessageentry.show()
       rightvbox.pack_start(timemessagebox, True, True, 1)
-      self.timermessageentry.connect("populate-popup", self.colourmenupopulate)
-      self.timermessageentry.connect("key-press-event", self.cb_handle_colour_char)
+      self.timermessageentry.connect("populate-popup", self.xchat_menu_populate)
+      self.timermessageentry.connect("key-press-event", self.cb_handle_xchat_special_characters)
       timemessagebox.show()
       parent.tooltips.set_tip(self.timermessageentry, ln.announce_tip)
       
