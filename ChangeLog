@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+Deleted cue sheets no longer hang around in the playlist - not that there is any proper support for these....
+
 Changed the XChat message context menu to imitate that of the current XChat.
 
 Fixed a metadata bug that would occur when the playing track was retagged using the integrated tagger.

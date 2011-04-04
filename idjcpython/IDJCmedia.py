@@ -2679,16 +2679,15 @@ class IDJC_Media_Player:
          self.play.clicked()
                            
    def cb_selection_changed(self, treeselection):
-      (model, iter) = treeselection.get_selected()
+      self.cuesheet_playlist.hide()
+      self.cuesheet_playlist.treeview.set_model(None)
+      model, iter = treeselection.get_selected()
       if iter:
          row = PlayerRow._make(self.liststore[model.get_path(iter)[0]])
          if row.cuesheet:
             self.cuesheet_playlist.treeview.set_model(row.cuesheet)
             self.cuesheet_playlist.show()
-         else:
-            self.cuesheet_playlist.hide()
-            self.cuesheet_playlist.treeview.set_model(None)
-         self.update_time_stats()
+      self.update_time_stats()
          
    def cb_playlist_changed(self, treemodel, path, iter = None):
       self.playlist_changed = True      # used by the request system
