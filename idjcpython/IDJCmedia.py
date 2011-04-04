@@ -1912,7 +1912,7 @@ class IDJC_Media_Player:
       while 1:
          i = m.iter_next(i)
          if i is None:
-            return True
+            return False
          v = m.get_value(i, 0)
          if v and v[0] != ">":
             return False
