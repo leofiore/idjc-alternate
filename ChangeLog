@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+Fixed a metadata bug that would occur when the playing track was retagged using the integrated tagger.
+
 Fixed a bug that was preventing key bindings from functioning properly upon keyboard focus loss. This was affecting the track metadata tagger.
 
 Fixed a bug that was causing incorrect text on the server connection button.

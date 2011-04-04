@@ -1058,21 +1058,21 @@ class IDJC_Media_Player:
 
    # Update playlist entries for a given filename e.g. when tag has been edited
    def update_playlist(self, newdata):
-      update = False
+      active = None
       for item in self.liststore:
          if item[1] == newdata[1]:
             if item[0].startswith("<b>"):
                item[0] = u"<b>" + newdata[0] + u"</b>"
-               update = True
+               active = item
             else:
                item[0] = newdata[0]
             for i in range(2, len(item)):
                item[i] = newdata[i]
-      if update:
-         self.songname = item[3]        # update metadata on server
-         self.title = item[5].encode("utf-8")
-         self.artist = item[6].encode("utf-8")
-         self.album = item[9].encode("utf-8")
+      if active is not None:
+         self.songname = active[3]        # update metadata on server
+         self.title = active[5].encode("utf-8")
+         self.artist = active[6].encode("utf-8")
+         self.album = active[9].encode("utf-8")
          self.player_restart()
          self.parent.send_new_mixer_stats()
       
