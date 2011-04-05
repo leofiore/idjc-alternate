@@ -754,7 +754,7 @@ metadata = "Metadata: "
 
 metadata_checkbox_tip = "Choose the streams upon which you wish to reformat the metadata."
 
-metadata_entry_tip = "You can enter text to accompany the stream here and can specify placemarkers %r %t %l for artist title and album, or leave this text field blank to use default metadata."
+metadata_entry_tip = "You can enter text to accompany the stream here and can specify placemarkers %r %t %l %s for the artist, title, album, and songname respectively, or leave this text field blank to use the default metadata.\n\nSongname (%s) is derived from the filename in the absence of sufficient metadata, while the others will use the text to the right.\n\nWhen blank, Ogg streams will use the standard Vorbis tags and mp3 will use %s."
 
 metadata_source_crossfader = "Crossfader"
 

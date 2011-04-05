@@ -45,6 +45,45 @@ LISTFORMAT = (("check_stats", bool), ("server_type", int), ("host", str), ("port
 ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
 BLANK_LISTLINE = ListLine(1, 0, "", 8000, "", -1, "", "")
 
+class HistoryEntry(gtk.ComboBoxEntry):
+   def __init__(self, max_size=6, initial_text=("",), store_blank=True):
+      self.max_size = max_size
+      self.store_blank = store_blank
+      self.ls = gtk.ListStore(str)
+      gtk.ComboBoxEntry.__init__(self, self.ls, 0)
+      self.connect("notify::popup-shown", self.update_history)
+      self.child.connect("activate", self.update_history)
+      self.set_history("\x00".join(initial_text))
+
+   def update_history(self, *args):
+      text = self.child.get_text().strip()
+      if self.store_blank or text:
+         # Remove duplicate stored text.
+         for i, row in enumerate(self.ls):
+            if row[0] == text:
+               del self.ls[i]
+         # Newly entered text goes at top of history.
+         self.ls.prepend((text,))
+         # History size is kept trimmed.
+         if len(self.ls) > self.max_size:
+            del self.ls[-1]
+   
+   def get_text(self):
+      return self.child.get_text()
+
+   def set_text(self, text):
+      self.update_history()
+      self.child.set_text(text)
+      
+   def get_history(self):
+      self.update_history()
+      return "\x00".join([row[0] for row in self.ls])
+      
+   def set_history(self, hist):
+      self.ls.clear()
+      for text in reversed(hist.split("\x00")):
+         self.set_text(text)
+
 class ModuleFrame(gtk.Frame):
    def __init__(self, frametext = None):
       gtk.Frame.__init__(self, frametext)
@@ -1446,7 +1485,7 @@ class StreamTab(Tab):
       label = gtk.Label(ln.metadata)
       hbox.pack_start(label, False)
       label.show()
-      self.metadata = gtk.Entry()
+      self.metadata = HistoryEntry(initial_text=("", "%s", "%r - %t"))
       set_tip(self.metadata, ln.metadata_entry_tip)
       hbox.pack_start(self.metadata)
       self.metadata.show()
@@ -1777,7 +1816,7 @@ class StreamTab(Tab):
       vbox.show()
       
       self.stream_resample_frame.resample_no_resample.emit("clicked")   # bogus signal to update mp3 pane
-      self.objects = {  "metadata"    : (self.metadata, "text"),
+      self.objects = {  "metadata"    : (self.metadata, "history"),
                         "prekick"     : (self.kick_before_start, "active"),
                         "connections" : (self.connection_pane, ("loader", "saver")),
                         "stats_never" : (self.connection_pane.stats_never, "active"),
@@ -2108,8 +2147,7 @@ class StreamTabFrame(TabFrame):
       label = gtk.Label(ln.metadata)
       hbox.pack_start(label, False)
       label.show()
-      self.metadata_group = gtk.Entry()
-      self.metadata_group.set_text("%s")
+      self.metadata_group = HistoryEntry(initial_text=("", "%s", "%r - %t"))
       hbox.pack_start(self.metadata_group)
       self.metadata_group.show()
       self.metadata_group_update = gtk.Button(ln.update)
@@ -2121,7 +2159,7 @@ class StreamTabFrame(TabFrame):
       self.vbox.pack_start(outerframe, False)   
       outerframe.show()  
       self.vbox.reorder_child(outerframe, 0)
-      self.objects = { "group_metadata": (self.metadata_group, "text") }
+      self.objects = { "group_metadata": (self.metadata_group, "history") }
       self.togglelist = [gtk.CheckButton(str(x + 1)) for x in range(q_tabs)]
       hbox = gtk.HBox()
       label = gtk.Label(ln.group_action)
@@ -2423,6 +2461,8 @@ class SourceClientGui:
                      rvalue = str(widget.get_current_page())
                   elif method == "password":
                      rvalue = widget.get_text()
+                  elif method == "history":
+                     rvalue = widget.get_history()
                   elif method == "radioindex":
                      rvalue = str(widget.get_radio_index())
                   elif method == "directory":
@@ -2517,6 +2557,8 @@ class SourceClientGui:
                               widget.set_text(rvalue)
                            elif method == "password":
                               widget.set_text(rvalue)
+                           elif method == "history":
+                              widget.set_history(rvalue)
                            elif method == "directory":
                               if rvalue:
                                  widget.set_current_folder(rvalue)
