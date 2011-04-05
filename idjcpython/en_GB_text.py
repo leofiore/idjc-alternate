@@ -754,7 +754,15 @@ metadata = "Metadata: "
 
 metadata_checkbox_tip = "Choose the streams upon which you wish to reformat the metadata."
 
-metadata_entry_tip = "You can enter text to accompany the stream here and can specify placemarkers %r %t %l %s for the artist, title, album, and songname respectively, or leave this text field blank to use the default metadata.\n\nSongname (%s) is derived from the filename in the absence of sufficient metadata, while the others will use the text to the right.\n\nWhen blank, Ogg streams will use the standard Vorbis tags and mp3 will use %s."
+metadata_entry_tip = "You can enter text to accompany the stream here and can specify placemarkers %r %t %l %s for the artist, title, album, and songname respectively, or leave this text field blank to use the default metadata.\n\nSongname (%s) is derived from the filename in the absence of sufficient metadata, while the other placemarkers will use the fallback text to the right.\n\nWhen blank, Ogg streams will use the standard Vorbis tags and mp3 will use %s."
+
+metadata_format = "Format String"
+
+metadata_frame = " Metadata "
+
+metadata_fallback = "Fallback"
+
+metadata_fallback_tip = "The fallback text to use when %r %t %l metadata is unavailable. See the format string to the left."
 
 metadata_source_crossfader = "Crossfader"
 
@@ -770,7 +778,7 @@ metadata_source_right_deck = "Right Player"
 
 metadata_source_tip = "Select which Deck is responsible for the metadata on the stream."
 
-metadata_update_tip = "Update the metadata."
+metadata_update_tip = "Metadata normally updates only on song title changes but you can force an immediate update here."
 
 mic_agc = "Use AGC for mic audio processing (experimental)"
 
@@ -1279,7 +1287,7 @@ shell_commands_tip = "Enter bash shell commands to run, separated by a semicolon
 
 show_microphone_meters = "Microphone Meters"
 
-song_placemarker = "Use %r %t %l for artist, title, album."
+song_placemarker = "Use %r %t %l %s for artist, title, album, songname."
 
 speed_variance = "Enable the main-player speed/pitch controls"
 

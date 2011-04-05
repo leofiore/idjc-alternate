@@ -23,7 +23,7 @@ pygtk.require('2.0')
 import gtk
 import gobject
 
-import os, time, fcntl, subprocess, urllib, urllib2, base64
+import os, time, fcntl, subprocess, urllib, urllib2, base64, pango
 import xml.dom.minidom as mdom
 import xml.etree.ElementTree
 
@@ -44,6 +44,15 @@ ENCODER_START=1; ENCODER_STOP=0                                 # start_stop_enc
 LISTFORMAT = (("check_stats", bool), ("server_type", int), ("host", str), ("port", int), ("mount", str), ("listeners", int), ("login", str), ("password", str))
 ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
 BLANK_LISTLINE = ListLine(1, 0, "", 8000, "", -1, "", "")
+
+
+class SmallLabel(gtk.Label):
+   def __init__(self, text=None):
+      gtk.Label.__init__(self, text)
+      attrlist = pango.AttrList()
+      attrlist.insert(pango.AttrSize(8000, 0, 1000000))
+      self.set_attributes(attrlist)
+      
 
 class HistoryEntry(gtk.ComboBoxEntry):
    def __init__(self, max_size=6, initial_text=("",), store_blank=True):
@@ -1326,7 +1335,8 @@ class StreamTab(Tab):
          cell.set_property("sensitive", True)
    
    def cb_metadata(self, widget):
-      table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((getattr(self.scg.parent, x) or "<Unknown>") for x in ("artist", "title", "album")))
+      fallback = self.metadata_fallback.get_text()
+      table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((getattr(self.scg.parent, x) or fallback) for x in ("artist", "title", "album")))
       table.append(("%s", self.scg.parent.songname.encode("utf-8")))
       raw_cm = self.metadata.get_text().encode("utf-8", "replace").strip()
       cm = string_multireplace(raw_cm, table)
@@ -1480,24 +1490,43 @@ class StreamTab(Tab):
       ic_vbox.pack_start(hbox, False, False, 0)
       hbox.show()
 
-      hbox = gtk.HBox()
-      hbox.set_spacing(6)
-      label = gtk.Label(ln.metadata)
-      hbox.pack_start(label, False)
-      label.show()
+      frame = gtk.Frame(ln.metadata_frame)
+      table = gtk.Table(2, 3)
+      table.set_border_width(6)
+      table.set_row_spacings(1)
+      table.set_col_spacings(4)
+      frame.add(table)
+      table.show()
+      ic_vbox.pack_start(frame, False)
+      frame.show()
+      
+      format_label = SmallLabel(ln.metadata_format)
+      fallback_label = SmallLabel(ln.metadata_fallback)
       self.metadata = HistoryEntry(initial_text=("", "%s", "%r - %t"))
-      set_tip(self.metadata, ln.metadata_entry_tip)
-      hbox.pack_start(self.metadata)
-      self.metadata.show()
-      self.metadata_update = gtk.Button(ln.update)
+      self.metadata_fallback = gtk.Entry()
+      self.metadata_fallback.set_width_chars(10)
+      self.metadata_fallback.set_text("<Unknown>")
+      self.metadata_update = gtk.Button()
+      image = gtk.image_new_from_stock(gtk.STOCK_EXECUTE, gtk.ICON_SIZE_MENU)
+      self.metadata_update.set_image(image)
+      image.show()
       self.metadata_update.connect("clicked", self.cb_metadata)
+
+      set_tip(self.metadata, ln.metadata_entry_tip)
+      set_tip(self.metadata_fallback, ln.metadata_fallback_tip)
       set_tip(self.metadata_update, ln.metadata_update_tip)
-      hbox.pack_start(self.metadata_update, False)
-      self.metadata_update.show()
       
-      ic_vbox.pack_start(hbox, False)
-      hbox.show()
+      x = gtk.EXPAND
+      f = gtk.FILL
+      s = gtk.SHRINK
+      arrangement = (((format_label, x|f), (fallback_label, s|f)),
+                     ((self.metadata, x|f), (self.metadata_fallback, s), (self.metadata_update, s)))
       
+      for r, row in enumerate(arrangement):
+         for c, (child, xopt) in enumerate(row):
+            table.attach(child, c, c + 1, r, r + 1, xopt, s|f)
+            child.show()
+
       self.pack_start(self.ic_frame, False)
       
       self.details = gtk.Expander(ln.stream_details)
@@ -1817,6 +1846,7 @@ class StreamTab(Tab):
       
       self.stream_resample_frame.resample_no_resample.emit("clicked")   # bogus signal to update mp3 pane
       self.objects = {  "metadata"    : (self.metadata, "history"),
+                        "metadata_fb" : (self.metadata_fallback, "text"),
                         "prekick"     : (self.kick_before_start, "active"),
                         "connections" : (self.connection_pane, ("loader", "saver")),
                         "stats_never" : (self.connection_pane.stats_never, "active"),
@@ -2082,8 +2112,11 @@ class StreamTabFrame(TabFrame):
          if cb.get_active():
             f(tab, *args)
 
-   def cb_metadata_group(self, tab):
+   def cb_metadata_group_set(self, tab):
       tab.metadata.set_text(self.metadata_group.get_text())
+            
+   def cb_metadata_group_update(self, tab):
+      self.cb_metadata_group_set(tab)
       tab.metadata_update.clicked()
             
    def cb_connect_toggle(self, tab, val):
@@ -2150,8 +2183,18 @@ class StreamTabFrame(TabFrame):
       self.metadata_group = HistoryEntry(initial_text=("", "%s", "%r - %t"))
       hbox.pack_start(self.metadata_group)
       self.metadata_group.show()
-      self.metadata_group_update = gtk.Button(ln.update)
-      self.metadata_group_update.connect("clicked", self.forall, self.cb_metadata_group)
+      self.metadata_group_set = gtk.Button()
+      image = gtk.image_new_from_stock(gtk.STOCK_ADD, gtk.ICON_SIZE_MENU)
+      self.metadata_group_set.set_image(image)
+      image.show()
+      self.metadata_group_set.connect("clicked", self.forall, self.cb_metadata_group_set)
+      hbox.pack_start(self.metadata_group_set, False)
+      self.metadata_group_set.show()
+      self.metadata_group_update = gtk.Button()
+      image = gtk.image_new_from_stock(gtk.STOCK_EXECUTE, gtk.ICON_SIZE_MENU)
+      self.metadata_group_update.set_image(image)
+      image.show()
+      self.metadata_group_update.connect("clicked", self.forall, self.cb_metadata_group_update)
       hbox.pack_start(self.metadata_group_update, False)
       self.metadata_group_update.show()
       gvbox.pack_start(hbox, False)

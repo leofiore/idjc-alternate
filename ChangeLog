@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.5 *
 
+GUI for metadata in the Output window updated. Now has history on the custom metadata. The fallback tag text can be set. 
+
 Deleted cue sheets no longer hang around in the playlist - not that there is any proper support for these....
 
 Changed the XChat message context menu to imitate that of the current XChat.
