@@ -200,6 +200,7 @@ int live_mp3_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
    s->lame_quality = atoi(ev->encode_quality);
    s->lame_freeformat = ev->freeformat_mp3[0] == '1';
    encoder->encoder_private = s;
+   encoder->new_metadata = TRUE;
    encoder->run_encoder = live_mp3_encoder_main;
    return SUCCEEDED;
    }
