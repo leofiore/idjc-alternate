@@ -1,5 +1,9 @@
 	***   Changelog for Internet DJ Console.  Most recent changes first.   ***
 
+* Changes in version 0.8.6 *
+
+Visible state for per-server metadata.
+
 * Changes in version 0.8.5 *
 
 GUI for metadata in the Output window updated. Now has history on the custom metadata. The fallback tag text can be set. 

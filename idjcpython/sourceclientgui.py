@@ -1261,6 +1261,7 @@ class StreamTab(Tab):
             self.stop_encoder()
       self.update_sensitives()
    def start_encoder(self, command = "encoder_start"):
+      self.metadata_update.clicked()
       if self.format_page == 0:
          self.encoder = "mp3"
          self.send("format=mp3\nencode_source=jack\nsample_rate=%d\nresample_quality=%s\nbit_rate=%d\nstereo=%s\nencode_quality=%s\nfreeformat_mp3=%s\ncommand=%s\n" %   (self.stream_resample_frame.resample_rate,
@@ -1336,8 +1337,9 @@ class StreamTab(Tab):
    
    def cb_metadata(self, widget):
       fallback = self.metadata_fallback.get_text()
+      songname = self.scg.parent.songname.encode("utf-8") or fallback
       table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((getattr(self.scg.parent, x) or fallback) for x in ("artist", "title", "album")))
-      table.append(("%s", self.scg.parent.songname.encode("utf-8")))
+      table.append(("%s", songname))
       raw_cm = self.metadata.get_text().encode("utf-8", "replace").strip()
       cm = string_multireplace(raw_cm, table)
       
@@ -1346,8 +1348,24 @@ class StreamTab(Tab):
       else:
          cm_lat1 = cm.decode("utf-8").encode("iso8859-1", "replace").strip()
 
+      if cm:
+         disp = cm
+      else:
+         tab = ("mp3", "ogg")[self.format_page] if self.encoder == "off" else self.encoder
+         if tab == "mp3":
+            disp = songname
+         elif tab == "ogg":
+            disp = "[{0[%r]}], [{0[%t]}], [{0[%l]}]".format(dict(table))
+         else:
+            disp = "no metadata string defined for this stream format"
+
+            
+      self.metadata_display.push(0, disp)
+      self.metadata_update.set_relief(gtk.RELIEF_HALF)
       self.scg.send("tab_id=%d\ndev_type=encoder\ncustom_meta=%s\ncustom_meta_lat1=%s\ncommand=new_custom_metadata\n" % (self.numeric_id, cm, cm_lat1))
-  
+
+   def cb_new_metadata_format(self, widget):
+      self.metadata_update.set_relief(gtk.RELIEF_NORMAL)  
    
    @threadslock
    def deferred_connect(self):
@@ -1491,7 +1509,7 @@ class StreamTab(Tab):
       hbox.show()
 
       frame = gtk.Frame(ln.metadata_frame)
-      table = gtk.Table(2, 3)
+      table = gtk.Table(3, 3)
       table.set_border_width(6)
       table.set_row_spacings(1)
       table.set_col_spacings(4)
@@ -1503,6 +1521,7 @@ class StreamTab(Tab):
       format_label = SmallLabel(ln.metadata_format)
       fallback_label = SmallLabel(ln.metadata_fallback)
       self.metadata = HistoryEntry(initial_text=("", "%s", "%r - %t"))
+      self.metadata.child.connect("changed", self.cb_new_metadata_format)
       self.metadata_fallback = gtk.Entry()
       self.metadata_fallback.set_width_chars(10)
       self.metadata_fallback.set_text("<Unknown>")
@@ -1511,6 +1530,8 @@ class StreamTab(Tab):
       self.metadata_update.set_image(image)
       image.show()
       self.metadata_update.connect("clicked", self.cb_metadata)
+      self.metadata_display = gtk.Statusbar()
+      self.metadata_display.set_has_resize_grip(False)
 
       set_tip(self.metadata, ln.metadata_entry_tip)
       set_tip(self.metadata_fallback, ln.metadata_fallback_tip)
@@ -1526,6 +1547,8 @@ class StreamTab(Tab):
          for c, (child, xopt) in enumerate(row):
             table.attach(child, c, c + 1, r, r + 1, xopt, s|f)
             child.show()
+      table.attach(self.metadata_display, 0, 3, 2, 3, x|f, s|f)
+      self.metadata_display.show()
 
       self.pack_start(self.ic_frame, False)
       
