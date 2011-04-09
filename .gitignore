@@ -32,9 +32,9 @@ libshout/config.guess
 libshout/config.sub
 libshout/include/shout/shout.h
 libshout/libtool
-libshout/shout-config
 libshout/shout-config.in
-libshout/shout.pc
+libshout/m4/libtool.m4
+libshout/m4/lt*
 libshout/src/.deps/*
 libshout/src/.libs/*
 libshout/src/avl/.deps/*

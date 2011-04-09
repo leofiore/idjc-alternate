@@ -3,7 +3,7 @@
 AUTOMAKE_OPTIONS = 1.6 foreign
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = include src doc win32
+SUBDIRS = include src
 
 EXTRA_DIST = m4/shout.m4 m4/ac_config_libconfig_in.m4 m4/acx_pthread.m4 \
 	m4/ogg.m4 m4/vorbis.m4 m4/xiph_compiler.m4 m4/xiph_net.m4 \
@@ -17,12 +17,7 @@ doc_DATA = COPYING NEWS README
 m4datadir = $(datadir)/aclocal
 m4data_DATA = m4/shout.m4
 
-if HAVE_PKGCONFIG
-  pkgconfigdir = $(libdir)/pkgconfig
-  pkgconfig_DATA = shout.pc
-else
-  bin_SCRIPTS = shout-config
-endif
+#bin_SCRIPTS = shout-config
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@"
