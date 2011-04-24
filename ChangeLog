@@ -2,6 +2,12 @@
 
 * Changes in version 0.8.6 *
 
+Removed deprecated 'Application' category from the desktop file. 
+
+Fixed libavcodecdecode.c to work with libavcodec 0.7 (Obsolete macro updated) Patch: Jonathan Nieder <jrnieder@gmail.com>
+
+Fixed a bashism in configure.ac which would prevent building with dash as the shell. Patch: Jonathan Nieder <jrnieder@gmail.com>
+
 Visible state for per-server metadata.
 
 * Changes in version 0.8.5 *

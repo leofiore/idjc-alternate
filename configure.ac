@@ -50,7 +50,7 @@ if test $makeffmpeg != "no" ; then
             AC_SUBST(HAVE_AVCODEC, 1)
             
             AC_MSG_CHECKING([for avcodec.h in legacy ffmpeg directory])
-            gcc `pkg-config --cflags libavcodec` ffmpeg_avcodec.c -o /dev/null &> /dev/null
+            gcc `pkg-config --cflags libavcodec` ffmpeg_avcodec.c -o /dev/null >/dev/null 2>&1
             if test $? -eq 0 ; then
                 AC_MSG_RESULT([yes])
                 AC_DEFINE(FFMPEG_AVCODEC, 1, [if set use legacy include file location])
@@ -108,7 +108,7 @@ fi
 PKG_CHECK_MODULES([PYGTK], [pygtk-2.0 >= 2.6.0])
 
 AC_MSG_CHECKING([for mutagen])
-python -c "import mutagen" &>/dev/null
+python -c "import mutagen" >/dev/null 2>&1
 if test $? -ne 0 ; then
     AC_MSG_RESULT([no])
     AC_MSG_ERROR([required dependency (mutagen / python-mutagen) is missing])

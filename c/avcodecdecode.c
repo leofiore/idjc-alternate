@@ -232,7 +232,7 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
    for(self->stream = 0; self->stream < self->ic->nb_streams; self->stream++)
       {
       self->c = self->ic->streams[self->stream]->codec;
-      if(self->c->codec_type == CODEC_TYPE_AUDIO)
+      if(self->c->codec_type == AVMEDIA_TYPE_AUDIO)
          break;
       }
 
