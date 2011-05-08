@@ -60,4 +60,4 @@ sfpublish:
 	make dist
 	curl --retry 3 --connect-timeout 10 -T ${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz -n sftp://frs.sourceforge.net/home/frs/project/i/id/idjc/idjc/0.8/
 
-.PHONY: idjc dtdist ebuild local 
+.PHONY: idjc dtdist local idjc.desktop
