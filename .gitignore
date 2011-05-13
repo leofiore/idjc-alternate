@@ -33,6 +33,8 @@ libshout/config.sub
 libshout/include/shout/shout.h
 libshout/libtool
 libshout/shout-config.in
+libshout/shout-config
+libshout/shout.pc
 libshout/m4/libtool.m4
 libshout/m4/lt*
 libshout/src/.deps/*
