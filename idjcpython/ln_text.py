@@ -36,7 +36,7 @@ class xx_XX(object):
       """The regular __import__ function will not dump multiple references from a module into a class necessitating the following code."""
       modulename = _get_modulename(cls)
       #print "loading attributes from %s for %s" % (modulename, cls.__name__)
-      mod = __import__(modulename)
+      mod = __import__(modulename, globals=globals(), level=-1)
       for item in dir(mod):
          if item[0] != "_":
             setattr(cls, item, getattr(mod, item))

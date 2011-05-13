@@ -1,5 +1,4 @@
-python_PYTHON=idjcgui.py
-pkgpython_PYTHON=IDJCcontrols.py IDJCfree.py IDJCjingles.py IDJCmedia.py IDJCmixprefs.py mutagentagger.py sourceclientgui.py IDJCservdialog.py idjc_config.py popupwindow.py tooltips.py licence_window.py p3db.py ln_text.py en_GB_text.py en_US_text.py de_DE_text.py nt.py idjc-announce.py
+pkgpython_PYTHON=__init__.py idjcgui.py IDJCcontrols.py IDJCfree.py IDJCjingles.py IDJCmedia.py IDJCmixprefs.py mutagentagger.py sourceclientgui.py IDJCservdialog.py idjc_config.py popupwindow.py tooltips.py licence_window.py p3db.py ln_text.py en_GB_text.py en_US_text.py de_DE_text.py nt.py idjc-announce.py
 
 all: idjc_config.py
 

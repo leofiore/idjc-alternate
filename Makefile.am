@@ -2,23 +2,23 @@ SUBDIRS = ${MAYBE_LIBSHOUT} c idjcpython artwork Man doc
 DISTDIRS = libshout
 
 nodist_bin_SCRIPTS=idjc idjcctrl
-dist_noinst_SCRIPTS=idjc_ idjcctrl_.py env-up ffmpeg_avcodec.c
+dist_noinst_SCRIPTS=idjc.in idjcctrl_.py env-up ffmpeg_avcodec.c
 nodist_doc_DATA=AUTHORS.gz NEWS.gz README.gz ChangeLog.gz
 docdir=${prefix}/share/doc/${PACKAGE_NAME}-${PACKAGE_VERSION}
-dist_noinst_DATA=idjc.desktop_
+dist_noinst_DATA=idjc.desktop.in
 nodist_appmenu_DATA=idjc.desktop
 appmenudir=${prefix}/share/applications
 
-idjc: idjc_
-	@sed -e 's|^pyexecdir=|&${pyexecdir}|' -e 's|^export pkgpyexecdir=|&${pkgpyexecdir}|' -e 's|^python=|&${PYTHON}|' $? >$@
-	@chmod u+x $@
+
+idjc: idjc.in
+	@sed -e 's|$${PYTHON}|${PYTHON}|' -e 's|$${PYTHON_VERSION}|${PYTHON_VERSION}|' -e 's|$${pythondir}|${pythondir}|' $? >$@
 
 idjcctrl: idjcctrl_.py
 	@sed -e 's|/path/to/python|${PYTHON}|' $? >$@
 	@chmod u+x $@
 
-idjc.desktop: idjc.desktop_
-	@sed -e 's|EXECPATHNAME|${prefix}/bin/${PACKAGE_NAME}|' -e 's|___||' -e 's|ICONPATHNAME|${prefix}/share/pixmaps/idjc.png|' $? >$@
+idjc.desktop: idjc.desktop.in
+	@sed -e 's|$${prefix}|${prefix}|' $? >$@
 
 AUTHORS.gz: AUTHORS
 	@ gzip -c $? >$@
@@ -60,4 +60,4 @@ sfpublish:
 	make dist
 	curl --retry 3 --connect-timeout 10 -T ${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz -n sftp://frs.sourceforge.net/home/frs/project/i/id/idjc/idjc/0.8/
 
-.PHONY: idjc dtdist local idjc.desktop
+.PHONY: dtdist local idjc.desktop

@@ -8,7 +8,7 @@ AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
 
 # Generate python installation stuff
-AM_PATH_PYTHON(2.6)
+AM_PATH_PYTHON([2.7])
 
 # Checks for programs.
 AM_PROG_CC_C_O
@@ -108,10 +108,10 @@ fi
 PKG_CHECK_MODULES([PYGTK], [pygtk-2.0 >= 2.6.0])
 
 AC_MSG_CHECKING([for mutagen])
-python -c "import mutagen" >/dev/null 2>&1
+${PYTHON}${PYTHON_VERSION} -c "import mutagen" >/dev/null 2>&1
 if test $? -ne 0 ; then
     AC_MSG_RESULT([no])
-    AC_MSG_ERROR([required dependency (mutagen / python-mutagen) is missing])
+    AC_MSG_WARN([runtime dependency (mutagen / python-mutagen) is missing])
 else
     AC_MSG_RESULT([yes])
 fi

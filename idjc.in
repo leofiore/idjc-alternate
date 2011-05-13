@@ -1,0 +1,7 @@
+#! ${PYTHON}${PYTHON_VERSION}
+
+import sys
+sys.path.insert(0, """${pythondir}""")
+
+import idjc
+
