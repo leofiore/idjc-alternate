@@ -209,9 +209,10 @@ fi
 
 AC_CONFIG_FILES([Makefile
                   c/Makefile
-                  idjcpython/Makefile
+                  python/Makefile
                   artwork/Makefile
                   Man/Makefile
-                  doc/Makefile])
+                  doc/Makefile
+		  python/config.py.in])
 
 AC_OUTPUT

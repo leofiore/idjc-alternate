@@ -24,8 +24,9 @@ depcomp
 idjc
 idjc.desktop
 idjcctrl
-idjcpython/*.pyc
-idjcpython/idjc_config.py
+python/*.pyc
+python/config.py
+python/config.py.in
 install-sh
 libshout/autom4te.cache/*
 libshout/config.guess

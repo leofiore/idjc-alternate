@@ -1,0 +1,11 @@
+libexecdir = """@libexecdir@"""
+pkgdatadir = """${pkgdatadir}"""
+plugindir = """${plugindir}"""
+avformat = @HAVE_AVFORMAT@
+avcodec = @HAVE_AVCODEC@
+flacenabled = @HAVE_FLAC@
+oggflacenabled = @HAVE_OGGFLAC@
+speexenabled = @HAVE_SPEEX@
+version = """@PACKAGE_VERSION@"""
+enh_libshout = @ENH_SHOUT@
+
