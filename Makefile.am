@@ -2,7 +2,7 @@ SUBDIRS = ${MAYBE_LIBSHOUT} c python artwork Man doc
 DISTDIRS = libshout
 
 nodist_bin_SCRIPTS=idjc idjcctrl
-dist_noinst_SCRIPTS=idjc.in idjcctrl_.py env-up ffmpeg_avcodec.c
+dist_noinst_SCRIPTS=idjc.in.in idjcctrl_.py env-up ffmpeg_avcodec.c
 nodist_doc_DATA=AUTHORS.gz NEWS.gz README.gz ChangeLog.gz
 docdir=${prefix}/share/doc/${PACKAGE_NAME}-${PACKAGE_VERSION}
 dist_noinst_DATA=idjc.desktop.in
@@ -11,7 +11,7 @@ appmenudir=${prefix}/share/applications
 
 
 idjc: idjc.in
-	@sed -e 's|$${PYTHON}|${PYTHON}|' -e 's|$${PYTHON_VERSION}|${PYTHON_VERSION}|' -e 's|$${pythondir}|${pythondir}|' $? >$@
+	@sed -e 's|$${prefix}|${prefix}|' $? >$@
 
 idjcctrl: idjcctrl_.py
 	@sed -e 's|/path/to/python|${PYTHON}|' $? >$@

@@ -1,2 +1,10 @@
-from . import idjcgui
+
+import argparse
+
+
+import pygtk
+pygtk.require("2.0")
+
+
+
 
