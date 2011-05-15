@@ -212,6 +212,7 @@ fi
 AC_CONFIG_FILES([Makefile
                   c/Makefile
                   python/Makefile
+                  python/prelims/Makefile
                   artwork/Makefile
                   Man/Makefile
                   doc/Makefile

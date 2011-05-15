@@ -22,6 +22,7 @@ config.status
 configure
 depcomp
 idjc
+idjc.in
 idjc.desktop
 idjcctrl
 python/*.pyc

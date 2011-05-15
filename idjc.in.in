@@ -21,56 +21,24 @@
 import locale
 locale.setlocale(locale.LC_ALL, "")
 
+import os
 import sys
 sys.path.insert(0, """@pythondir@""")
 
-import os
-import argparse
+import pygtk
+pygtk.require("2.0")
+import glib
 
-desc = "Internet DJ Console -- be a DJ on the internet"
+import idjc
+import idjc.prelims
 
-parser = argparse.ArgumentParser(description=desc)
+# Problems occur when using a bash alias to compile IDJC.
+# -bash is not a valid command line switch for this application.
+not_compiling = len(sys.argv) != 2 or sys.argv[1] != "-bash"
 
-parser.add_argument("-v", "--version", action='version', version=
-                                 """@PACKAGE_NAME@ @PACKAGE_VERSION@""")
 
-parser.add_argument("-p", action="store", nargs=1,
-      metavar="profile_name", help="the configuration profile to use")
-
-parser.add_argument("-c", nargs="?",
-      metavar="clone=existing:icon=pathname:comment=comment", action="store",
-      help="""the profile specified with the '-p' option is to be
-      created, cloning from existing_profile if specified""")
-
-parser.add_argument("-d", action="store", nargs=1,
-      choices=["true", "false"], help=
-      """override the config file setting for showing the profile
-      chooser dialog -- normally selecting or creating a profile would
-      cause the dialog to be skipped""")
-      
-parser.add_argument("-j", action="store", nargs=1,
-      metavar="jack_server",
-      help="""the named JACK sound server to connect with""")
-      
-parser.add_argument("-V", action="store", choices=range(3), type=int,
-      help="""the initial VoIP mode""")
-      
-parser.add_argument("-m", action="store", nargs="+", choices=range(1, 13),
-      type=int, help="""the microphones to be switched on""")
-      
-parser.add_argument("-a", action="store", nargs=1, choices=[1],
-      type=int, help="""the aux ports to be switched on""")
-      
-parser.add_argument("-P", action="store", nargs=1, choices=[1, 2],
-      type=int, help="""the media players to be started""")
-      
-parser.add_argument("-C", action="store", nargs=1, choices=[1, 2],
-      type=int, help="""the crossfader position""")
-      
-parser.add_argument("-X", action="store_true",
-      help="""useful for making multiple profiles from
-      the command line without actually running""")
-
-print parser.parse_args(sys.argv[1:])
-print "here"
-#import idjc
+if not_compiling:
+   idjc.prelims.ArgumentParser(sys.argv[1:])
+   idjc.prelims.set_config_dir(os.path.join(
+                                 glib.get_user_config_dir(), "idjc"))
+   #idjc.prelims.ProfileSelector(allow_gui=True)
