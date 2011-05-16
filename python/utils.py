@@ -21,8 +21,10 @@
 import os
 
 
+
 class Singleton(type):
    """Enforce the singleton pattern upon the user class."""
+
    
    def __call__(cls, *args, **kwds):
       try:
@@ -34,9 +36,42 @@ class Singleton(type):
          return cls._instance
 
 
+
+class PolicedAttributes(type):
+   """Polices data access to a namespace class.
+   
+   Prevents write access to attributes after they have been read.
+   Envisioned useful for the implementation of "safe" global variables.
+   """
+
+
+   def __new__(meta, name, bases, _dict):
+      _dict["_banned"] = set()
+      return super(PolicedAttributes, meta).__new__(meta, name, bases, _dict)
+
+
+   def __getattribute__(cls, name):
+      bcd = super(PolicedAttributes, cls)
+      
+      bcd.__getattribute__("_banned").add(name)
+      return bcd.__getattribute__(name)
+
+      
+   def __setattr__(cls, name, value):
+      if name in cls._banned:
+         raise AttributeError("value has already been read")
+      super(PolicedAttributes, cls).__setattr__(name, value)
+
+         
+   def __call__(cls, *args, **kwds):
+      raise RuntimeError("this class cannot be instantiated") 
+
+
+
 def mkdir_p(path):
    """Equivalent to the shell command: mkdir -p path."""
-    
+
+   
    def inner(path):
       if path == os.path.sep:
           return

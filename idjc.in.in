@@ -32,13 +32,17 @@ import glib
 import idjc
 import idjc.prelims
 
-# Problems occur when using a bash alias to compile IDJC.
-# -bash is not a valid command line switch for this application.
-not_compiling = len(sys.argv) != 2 or sys.argv[1] != "-bash"
 
+g = idjc.prelims.Globs
 
-if not_compiling:
-   idjc.prelims.ArgumentParser(sys.argv[1:])
-   idjc.prelims.set_config_dir(os.path.join(
-                                 glib.get_user_config_dir(), "idjc"))
-   #idjc.prelims.ProfileSelector(allow_gui=True)
+g.config_dir = os.path.join(glib.get_user_config_dir(), "idjc")
+g.dbus_bus_basename = "net.sf.idjc"
+g.dbus_objects_basename = "/net/sf/idjc"
+g.app_shortform = "IDJC"
+g.app_longform = "Internet DJ Console"
+g.default_icon = """@pkgdatadir@/icon.png"""
+
+idjc.prelims.ArgumentParser(description=
+                     "Internet DJ Console -- be a DJ on the internet")
+idjc.prelims.ProfileSelector(gui_title=g.app_shortform +
+                     "Profile Selector")

@@ -1,4 +1,7 @@
-"""Preliminary initialisation stuff."""
+"""Preliminary initialisation stuff.
+
+Intended to be called from outside in order to configure capabilities.
+"""
 
 #   Copyright (C) 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #   This program is free software: you can redistribute it and/or modify
@@ -16,83 +19,80 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 
 
-__all__ = ["ArgumentParser", "set_config_dir", "get_config_dir"]
+__all__ = ["ArgumentParser", "ProfileSelector"]
 
 
 import argparse
 
 from ..utils  import Singleton
+from ..utils  import PolicedAttributes
 from ..utils  import mkdir_p
 from ..config import package_name
 from ..config import package_version
 
 
-_config_dir = None
-
-
-def set_config_dir(d):
-   # Call this before set_profile_dir if you require working.
-   global _config_dir
+      
+class Globs(object):
+   __metaclass__ = PolicedAttributes
    
-   _config_dir = d
-   
-   
-def get_config_dir():
-   # The first call here locks this value in.
-   c = ConfigDirConfigure()
-   assert c.get_config_dir() == _config_dir, "config directory changed"
-   return _config_dir
-
-
-class ConfigDirConfigure(object):
-   __metaclass__ = Singleton
-   
-   def __init__(self):
-      # Make the directory.
-      if _config_dir is not None:
-         mkdir_p(_config_dir)
-      self._config_dir = _config_dir
-   
-
-   def get_config_dir(self):
-      return self._config_dir   
+   # You probably don't want these settings. They were deliberately
+   # chosen to require overriding so the code could self document
+   # and also be reused.
+   config_dir = None
+   dbus_bus_basename = "com.example"
+   dbus_objects_basename = "/com/example"
+   app_shortform = "unnamed application"
+   app_longform = "unnamed application"
+   default_icon = None
+   dbus_busname = None
+   argument_parser = None
 
 
 class ArgumentParser(argparse.ArgumentParser):
-   # We only ever want our command line arguments parsed once.
+   """To parse the command line arguments, if any."""
+
    __metaclass__ = Singleton
    
 
-   def __init__(self, *args):
-      desc = "Internet DJ Console -- be a DJ on the internet"
-      argparse.ArgumentParser.__init__(self, description=desc)
-      
+   def __init__(self, args=None, description=None):
+      if description is None:
+         description = Globs.app_longform
+
+      argparse.ArgumentParser.__init__(self, description=description)
+   
       self.add_argument("-v", "--version", action='version', version=
                                  package_name + " " + package_version)
 
       self.add_argument("-p", action="store", nargs=1,
-      metavar="profile_name", help="the configuration profile to use")
+         metavar="profile_name", help="""the configuration profile to use 
+         -- """ + ("""if the profile dialog is suppressed 'default' will
+         be assumed"""
+         if Globs.config_dir is not None else """if no '-p' option is
+         specified the process ID will be used"""))
 
-      self.add_argument("-c", nargs="+",
-         metavar="name +[comment] +[clone] +[icon]", action="store",
-         help="""create the profile 'name' with optionals preceeded by '+'
-         -- an existing profile may be cloned hence the 'clone' option
-         -- the icon will be used to mark windows belonging to a particular
-         profile and can be can be png, jpeg -- idjc will exit afterwards
-         if no '-p' or '-d' option is specified""")
+      if Globs.config_dir is not None:
+         self.add_argument("-c", nargs="+",
+            metavar="name +[comment] +[clone] +[icon]", action="store",
+            help="""create the profile 'name' with optionals preceeded by '+'
+            -- an existing profile may be cloned hence the 'clone' option
+            -- the icon will be used to mark windows belonging to a particular
+            profile and can be can be png, jpeg -- idjc will exit afterwards
+            if no '-p' or '-d' option is specified""")
 
-      self.add_argument("-d", action="store", nargs=1,
-         choices=["true", "false"], help=
-         """override the config file setting for showing the profile
-         chooser dialog -- normally selecting a profile would
-         cause the dialog to be skipped""")
+      if Globs.config_dir is not None:
+         self.add_argument("-d", action="store", nargs=1,
+            choices=["true", "false"], help=
+            """override the config file setting for showing the profile
+            chooser dialog -- normally selecting a profile would
+            cause the dialog to be skipped""")
       
       self.add_argument("-j", action="store", nargs=1,
          metavar="jack_server",
          help="""the named JACK sound server to connect with""")
       
-      self.add_argument("-V", action="store", choices=range(3), type=int,
-         help="""the initial VoIP mode - off, private, public respectively""")
+      self.add_argument("-V", action="store", choices=(
+         "off", "private", "public"),
+         help="""the initial VoIP mode""")
       
       self.add_argument("-m", action="store", nargs="+", choices=range(1, 13),
          type=int, help="""the microphones to be switched on --
@@ -108,6 +108,49 @@ class ArgumentParser(argparse.ArgumentParser):
       self.add_argument("-C", action="store", nargs=1, choices=[1, 2],
          type=int, help="""the crossfader position""")
       
-      self.parse_args(*args)
+      self._args = args
 
+
+   def parse_args(self):
+      return super(ArgumentParser, self).parse_args(self._args)
+
+
+
+class ProfileSelector(object):
+   """The profile gives each application instance a unique identity.
+   
+   This identity extends to the config file directory if present, 
+   to the JACK application ID, to the DBus bus name.
+   
+   In addition to a name an icon can be associated.
+   """
+   
+   __metaclass__ = Singleton
+   
+   
+   def __init__(self, allow_gui=True, gui_title="Profile Selector"):
+      ap = Globs.argument_parser = ArgumentParser()
+      args = ap.parse_args()
+
+      # Make profiles that are requested.
+      if Globs.config_dir is not None:
+         mkdir_p(Globs.config_dir)
+
+         if args.c is not None:
+            create_list = []
+            for a in args.c:
+               if a.startswith("+"):
+                  create_list[-1].append(a[1:] if len(a) > 1 else None)
+               else:
+                  create_list.append([])
+                  create_list[-1].append(a)
+
+            for l in create_list:
+               while len(l) < 4:
+                  l.append(None)
+            
+            print create_list
+      
+      print args
+      ap.error("trying this out for size")
 
