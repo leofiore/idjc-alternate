@@ -25,24 +25,8 @@ import os
 import sys
 sys.path.insert(0, """@pythondir@""")
 
-import pygtk
-pygtk.require("2.0")
-import glib
-
 import idjc
 import idjc.prelims
 
 
-g = idjc.prelims.Globs
-
-g.config_dir = os.path.join(glib.get_user_config_dir(), "idjc")
-g.dbus_bus_basename = "net.sf.idjc"
-g.dbus_objects_basename = "/net/sf/idjc"
-g.app_shortform = "IDJC"
-g.app_longform = "Internet DJ Console"
-g.default_icon = """@pkgdatadir@/icon.png"""
-
-idjc.prelims.ArgumentParser(description=
-                     "Internet DJ Console -- be a DJ on the internet")
-idjc.prelims.ProfileSelector(gui_title=g.app_shortform +
-                     "Profile Selector")
+idjc.prelims.ProfileSelector()

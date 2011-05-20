@@ -216,7 +216,7 @@ AC_CONFIG_FILES([Makefile
                   artwork/Makefile
                   Man/Makefile
                   doc/Makefile
-                  python/config.py.in
+                  python/__init__.py.in
                   idjc.in])
 
 AC_OUTPUT

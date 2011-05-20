@@ -1,0 +1,68 @@
+"""Main IDJC python package initialiser."""
+
+#   Copyright (C) 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 2 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program in the file entitled COPYING.
+#   If not, see <http://www.gnu.org/licenses/>.
+
+
+
+import os
+
+import pygtk
+pygtk.require("2.0")
+import glib
+
+from .utils import FixedAttributes
+from .utils import PolicedAttributes
+
+
+
+class FGlobs(object):
+   """Namespace class of variables which cannot be altered.
+   
+
+   These are set by the build process.
+   """
+
+   __metaclass__ = FixedAttributes
+
+    
+   libexecdir = """@libexecdir@"""
+   pkgdatadir = """${pkgdatadir}"""
+   plugindir = """${plugindir}"""
+   avformat = @HAVE_AVFORMAT@
+   avcodec = @HAVE_AVCODEC@
+   flacenabled = @HAVE_FLAC@
+   oggflacenabled = @HAVE_OGGFLAC@
+   speexenabled = @HAVE_SPEEX@
+   package_name = """@PACKAGE_NAME@"""
+   package_version = """@PACKAGE_VERSION@"""
+   enh_libshout = @ENH_SHOUT@
+
+
+
+class PGlobs(object):
+   """Values which cannot be changed once they have been read."""
+      
+   
+   __metaclass__ = PolicedAttributes
+
+   
+   config_dir = os.path.join(glib.get_user_config_dir(), FGlobs.package_name)
+   dbus_bus_basename = "net.sf." + FGlobs.package_name
+   dbus_objects_basename = "/net/sf/" + FGlobs.package_name
+   app_shortform = "IDJC"
+   app_longform = "Internet DJ Console"
+   default_icon = FGlobs.pkgdatadir + "/icon.png"
+   dbus_busname = None

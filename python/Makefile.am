@@ -1,15 +1,15 @@
 SUBDIRS = prelims
 
-pkgpython_PYTHON=__init__.py utils.py maingui.py midicontrols.py freefunctions.py jingles.py playergui.py preferences.py mutagentagger.py sourceclientgui.py dialogs.py popupwindow.py tooltips.py licence_window.py p3db.py ln_text.py en_GB_text.py en_US_text.py de_DE_text.py nt.py idjc-announce.py
+pkgpython_PYTHON=utils.py maingui.py midicontrols.py freefunctions.py jingles.py playergui.py preferences.py mutagentagger.py sourceclientgui.py dialogs.py popupwindow.py tooltips.py licence_window.py p3db.py ln_text.py en_GB_text.py en_US_text.py de_DE_text.py nt.py idjc-announce.py
 
-nodist_pkgpython_PYTHON=config.py
+nodist_pkgpython_PYTHON=__init__.py
 
-dist_noinst_PYTHON=config.py.in.in
+dist_noinst_PYTHON=__init__.py.in.in
 
-all: config.py
+all: __init__.py
 
-config.py: config.py.in
+__init__.py: __init__.py.in
 	sed -e 's|$${pkgdatadir}|${pkgdatadir}|' -e 's|$${plugindir}|${plugindir}|' -e 's|$${exec_prefix}|${exec_prefix}|' $? >$@
 
-.PHONY: idjc_config.py
+.PHONY: __init__.py $pkgpython_PYTHON
 

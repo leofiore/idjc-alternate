@@ -1,7 +1,4 @@
-"""Preliminary initialisation stuff.
-
-Intended to be called from outside in order to configure capabilities.
-"""
+"""Preliminary initialisation stuff."""
 
 #   Copyright (C) 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #   This program is free software: you can redistribute it and/or modify
@@ -22,97 +19,105 @@ Intended to be called from outside in order to configure capabilities.
 __all__ = ["ArgumentParser", "ProfileSelector"]
 
 
+import os
+import sys
 import argparse
+import shutil
+import tempfile
 
-from ..utils  import Singleton
-from ..utils  import PolicedAttributes
-from ..utils  import mkdir_p
-from ..config import package_name
-from ..config import package_version
+import glib
 
-
-      
-class Globs(object):
-   __metaclass__ = PolicedAttributes
-   
-   # You probably don't want these settings. They were deliberately
-   # chosen to require overriding so the code could self document
-   # and also be reused.
-   config_dir = None
-   dbus_bus_basename = "com.example"
-   dbus_objects_basename = "/com/example"
-   app_shortform = "unnamed application"
-   app_longform = "unnamed application"
-   default_icon = None
-   dbus_busname = None
-   argument_parser = None
+from idjc import FGlobs
+from idjc import PGlobs
+from ..utils import Singleton
+from ..utils import mkdir_p
 
 
-class ArgumentParser(argparse.ArgumentParser):
+
+class ArgumentParser(object):
    """To parse the command line arguments, if any."""
 
    __metaclass__ = Singleton
-   
 
-   def __init__(self, args=None, description=None):
+   
+   class APError(Exception):
+      pass
+
+
+   def __init__(self, args=None, description=None, epilog=None):
+      if args is None:
+         args = sys.argv[1:]
+
+      self._args = list(args)
+
       if description is None:
-         description = Globs.app_longform
+         description = PGlobs.app_longform
 
-      argparse.ArgumentParser.__init__(self, description=description)
-   
-      self.add_argument("-v", "--version", action='version', version=
-                                 package_name + " " + package_version)
+     
+      class AP(argparse.ArgumentParser):
+         APError = self.APError
+         
+         def error(self, text):
+            raise self.APError(text)
 
-      self.add_argument("-p", action="store", nargs=1,
-         metavar="profile_name", help="""the configuration profile to use 
-         -- """ + ("""if the profile dialog is suppressed 'default' will
-         be assumed"""
-         if Globs.config_dir is not None else """if no '-p' option is
-         specified the process ID will be used"""))
 
-      if Globs.config_dir is not None:
-         self.add_argument("-c", nargs="+",
-            metavar="name +[comment] +[clone] +[icon]", action="store",
-            help="""create the profile 'name' with optionals preceeded by '+'
-            -- an existing profile may be cloned hence the 'clone' option
-            -- the icon will be used to mark windows belonging to a particular
-            profile and can be can be png, jpeg -- idjc will exit afterwards
-            if no '-p' or '-d' option is specified""")
-
-      if Globs.config_dir is not None:
-         self.add_argument("-d", action="store", nargs=1,
-            choices=["true", "false"], help=
-            """override the config file setting for showing the profile
-            chooser dialog -- normally selecting a profile would
-            cause the dialog to be skipped""")
-      
-      self.add_argument("-j", action="store", nargs=1,
-         metavar="jack_server",
-         help="""the named JACK sound server to connect with""")
-      
-      self.add_argument("-V", action="store", choices=(
-         "off", "private", "public"),
-         help="""the initial VoIP mode""")
-      
-      self.add_argument("-m", action="store", nargs="+", choices=range(1, 13),
-         type=int, help="""the microphones to be switched on --
-         note that additional microphones will be switched on if they
-         share a microphone group""")
-      
-      self.add_argument("-a", action="store", nargs=1, choices=[1],
-         type=int, help="""the aux ports to be switched on""")
-      
-      self.add_argument("-P", action="store", nargs=1, choices=[1, 2],
-         type=int, help="""the media players to be started""")
-      
-      self.add_argument("-C", action="store", nargs=1, choices=[1, 2],
-         type=int, help="""the crossfader position""")
-      
-      self._args = args
+      ap = self._ap = AP(description=description, epilog=epilog)
+      ap.add_argument("-v", "--version", action='version', version=
+                     FGlobs.package_name + " " + FGlobs.package_version)
+      sp = ap.add_subparsers(
+                     help="sub-option -h for more info")
+      sp_run = sp.add_parser("run", help="the default command",
+         description=description + " -- sub-command: run", epilog=epilog)
+      sp_mp = sp.add_parser("generateprofile", help="make a new profile",
+         description=description + " -- sub-command: generateprofile", epilog=epilog)
+     
+      sp_run.add_argument("-d, --dialog", nargs=1, 
+            choices=("true", "false"), 
+            help="""force the appearance or non-appearance of the
+            profile chooser dialog -- when used with the -p option
+            the chosen profile is preselected""")
+      sp_run.add_argument("-p, --profile", nargs=1, metavar="P", 
+            help="""the profile to use -- overrides the user interface
+            preferences "show profile dialog" option""")
+      sp_run.add_argument("-j, --jackserver", nargs=1, metavar="server_name",
+            help="the named jack server to connect with")
+      group = sp_run.add_argument_group("user interface settings")
+      group.add_argument("-m, --mics", nargs="+", metavar="m",
+            help="microphones open at startup")
+      group.add_argument("-a, --aux", nargs="+", metavar="a",
+            help="aux ports open at startup")
+      group.add_argument("-V, --voip", nargs=1, choices=
+            ("off", "private", "public"),
+            help="the voip mode at startup")
+      group.add_argument("-p, --players", nargs="+", metavar="p",
+            help="the players to start among values {1,2}")
+      group.add_argument("-s, --servers", nargs="+", metavar="s",
+            help="attempt connection with the specified servers")
+      group.add_argument("-r, --recorders", nargs="+", metavar="r",
+            help="the recorders to start")
+      group.add_argument("-f, --crossfader", choices=("1", "2"), 
+            help="position the crossfader for the specified player")
+      sp_mp.add_argument("newprofile", metavar="p", help="new profile name")
+      sp_mp.add_argument("-t, --template", metavar="t",
+            help="an existing profile to use as a template")
+      sp_mp.add_argument("-i, --icon", metavar="i",
+            help="defaults to idjc logo")
+      sp_mp.add_argument("-d, --description", metavar="d",
+            help="description of the profile")
 
 
    def parse_args(self):
-      return super(ArgumentParser, self).parse_args(self._args)
+      try:
+         return self._ap.parse_args(self._args)
+      except self.APError as e:
+         try:
+            if "run" not in self._args and "generateprofile" not in self._args:
+               return self._ap.parse_args(self._args + ["run"])
+            else:
+               raise
+         except self.APError:
+            super(type(self._ap), self._ap).error(str(e))
+
 
 
 
@@ -121,36 +126,68 @@ class ProfileSelector(object):
    
    This identity extends to the config file directory if present, 
    to the JACK application ID, to the DBus bus name.
-   
-   In addition to a name an icon can be associated.
    """
    
-   __metaclass__ = Singleton
+   #__metaclass__ = Singleton
    
+
+   class ProfileError(Exception):
+      pass
+
    
    def __init__(self, allow_gui=True, gui_title="Profile Selector"):
-      ap = Globs.argument_parser = ArgumentParser()
+      ap = ArgumentParser()
       args = ap.parse_args()
 
-      # Make profiles that are requested.
-      if Globs.config_dir is not None:
-         mkdir_p(Globs.config_dir)
+      try:
+         if PGlobs.config_dir is not None:
+            if not os.path.isdir(os.path.join(PGlobs.config_dir, "default")):
+               self.generate_profile("default", description="The default profile")
 
-         if args.c is not None:
-            create_list = []
-            for a in args.c:
-               if a.startswith("+"):
-                  create_list[-1].append(a[1:] if len(a) > 1 else None)
-               else:
-                  create_list.append([])
-                  create_list[-1].append(a)
-
-            for l in create_list:
-               while len(l) < 4:
-                  l.append(None)
-            
-            print create_list
+            if "newprofile" in args:
+               self.generate_profile(**args)
+               ap.exit(0, "profile created successfully")
       
-      print args
-      ap.error("trying this out for size")
+      except self.ProfileError as p:
+         ap.error("problem generating profile: " + str(p))
 
+      
+   def generate_profile(self, newprofile, description=None, template=None, icon=None, **kwds):
+      if PGlobs.config_dir is not None:
+         try:
+            tmp = tempfile.mkdtemp()
+         except IOError:
+            raise self.ProfileError("temporary directory creation failed")
+            
+         try:
+            if template is not None:
+               template = os.path.join(PGlobs.config_dir, template)
+               if os.path.isdir(template):
+                  for x in ("icon", "description", "config"):
+                     try:
+                        shutil.copyfile(os.path.join(template, x),
+                                        os.path.join(tmp, x))
+                     except IOError:
+                        pass
+               else:
+                  raise self.ProfileError("template profile does not exist")
+                  
+            if description is not None:
+               try:
+                  with open(os.path.join(tmp, "description"), "w") as f:
+                     f.write(description)
+               except IOError:
+                  raise self.ProfileError("could not write description")
+                  
+            if icon is not None:
+               try:
+                  shutil.copyfile(icon, os.path.join(tmp, "icon"))
+               except IOError:
+                  raise self.ProfileError("could not transfer icon")
+            
+            try:
+               shutil.copytree(tmp, os.path.join(PGlobs.config_dir, newprofile))
+            except IOError:
+               raise self.ProfileError("could not create profile directory")
+         finally:
+            shutil.rmtree(tmp)      

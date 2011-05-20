@@ -1,6 +1,8 @@
-"""Generally useful Python code."""
+"""Generally useful Python code.
 
-#   utils.py: Free functions used by IDJC
+But strictly no third party module dependencies.
+"""
+
 #   Copyright (C) 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
@@ -19,7 +21,9 @@
 
 
 import os
+import threading
 
+from functools import wraps
 
 
 class Singleton(type):
@@ -37,6 +41,24 @@ class Singleton(type):
 
 
 
+def _PA_rlock(f):
+   """Policed Attributes helper for thread locking."""
+   
+   @wraps(f)
+   def _wrapper(cls, *args, **kwds):
+      bc = f.func_globals["bc"] = super(type(cls), cls)
+      rlock = bc.__getattribute__("_rlock")
+      
+      try:
+         rlock.acquire()
+         return f(cls, *args, **kwds)
+      finally:
+         rlock.release()
+
+   return _wrapper
+
+
+
 class PolicedAttributes(type):
    """Polices data access to a namespace class.
    
@@ -44,28 +66,59 @@ class PolicedAttributes(type):
    Envisioned useful for the implementation of "safe" global variables.
    """
 
-
    def __new__(meta, name, bases, _dict):
+      @classmethod
+      @_PA_rlock
+      def peek(cls, attr, cb, *args, **kwds):
+         """Allow read + write within a callback.
+
+         Typical use might be to append to an existing string.
+         No modification ban is placed or bypassed.
+         """
+         
+         if attr not in bc.__getattribute__("_banned"):
+            new = cb(
+                  super(PolicedAttributes, cls).__getattribute__(attr),
+                  *args, **kwds)
+            bc.__setattr__(attr, new)
+         else:
+            raise NotImplementedError("variable is locked")
+      
+      _dict["peek"] = peek
       _dict["_banned"] = set()
+      _dict["_rlock"] = threading.RLock()
       return super(PolicedAttributes, meta).__new__(meta, name, bases, _dict)
 
 
+   @_PA_rlock
    def __getattribute__(cls, name):
-      bcd = super(PolicedAttributes, cls)
-      
-      bcd.__getattribute__("_banned").add(name)
-      return bcd.__getattribute__(name)
+      bc.__getattribute__("_banned").add(name)
+      return bc.__getattribute__(name)
 
-      
+     
+   @_PA_rlock
    def __setattr__(cls, name, value):
-      if name in cls._banned:
-         raise AttributeError("value has already been read")
-      super(PolicedAttributes, cls).__setattr__(name, value)
+      if name in bc.__getattribute__("_banned"):
+         raise NotImplementedError("value has already been read")
+      bc.__setattr__(name, value)
 
          
    def __call__(cls, *args, **kwds):
-      raise RuntimeError("this class cannot be instantiated") 
+      raise NotImplementedError("this class cannot be instantiated")
 
+
+
+class FixedAttributes(type):
+   """Implements a namespace class of constants."""
+   
+
+   def __setattr__(cls, name, value):
+      raise NotImplementedError("value cannot be changed")
+      
+   
+   def __call__(cls, *args, **kwds):
+      raise NotImplementedError("this class cannot be instantiated")
+      
 
 
 def mkdir_p(path):
