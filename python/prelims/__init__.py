@@ -44,6 +44,22 @@ class ArgumentParser(object):
       pass
 
 
+
+   class Namespace(argparse.Namespace):
+      """Argument parser namespaces can contain conjoined attributes.
+      
+      e.g. "i, __icon" which will be split apart here. This makes two
+      identical variables i and __icon and keeps 'icon'.
+      """
+
+
+      def __init__(self, ns):
+         for key, val in ns.__dict__.iteritems():
+             keys = key.split(", ")
+             setattr(self, keys[-1].lstrip("_"), val)
+
+      
+
    def __init__(self, args=None, description=None, epilog=None):
       if args is None:
          args = sys.argv[1:]
@@ -59,18 +75,21 @@ class ArgumentParser(object):
          
          def error(self, text):
             raise self.APError(text)
+            
+         def bc_error(self, text):
+            super(AP, self).error(text)
 
 
       ap = self._ap = AP(description=description, epilog=epilog)
       ap.add_argument("-v", "--version", action='version', version=
                      FGlobs.package_name + " " + FGlobs.package_version)
-      sp = ap.add_subparsers(
+      sp = self._sp = ap.add_subparsers(
                      help="sub-option -h for more info")
       sp_run = sp.add_parser("run", help="the default command",
          description=description + " -- sub-command: run", epilog=epilog)
       sp_mp = sp.add_parser("generateprofile", help="make a new profile",
          description=description + " -- sub-command: generateprofile", epilog=epilog)
-     
+
       sp_run.add_argument("-d, --dialog", nargs=1, 
             choices=("true", "false"), 
             help="""force the appearance or non-appearance of the
@@ -108,16 +127,15 @@ class ArgumentParser(object):
 
    def parse_args(self):
       try:
-         return self._ap.parse_args(self._args)
+         return self.Namespace(self._ap.parse_args(self._args))
       except self.APError as e:
          try:
-            if "run" not in self._args and "generateprofile" not in self._args:
-               return self._ap.parse_args(self._args + ["run"])
-            else:
-               raise
+            for cmd in self._sp.iterkeys():
+               if cmd in self._args:
+                  raise
+            return self.Namespace(self._ap.parse_args(self._args + ["run"]))
          except self.APError:
-            super(type(self._ap), self._ap).error(str(e))
-
+            self._ap.bc_error(str(e))
 
 
 
@@ -128,7 +146,7 @@ class ProfileSelector(object):
    to the JACK application ID, to the DBus bus name.
    """
    
-   #__metaclass__ = Singleton
+   __metaclass__ = Singleton
    
 
    class ProfileError(Exception):
@@ -145,27 +163,31 @@ class ProfileSelector(object):
                self.generate_profile("default", description="The default profile")
 
             if "newprofile" in args:
-               self.generate_profile(**args)
-               ap.exit(0, "profile created successfully")
+               try:
+                  self.generate_profile(**vars(args))
+               except self.ProfileError as e:
+                  ap._ap.bc_error("profile creation failed: " + str(e))
+               else:
+                  ap._ap.exit(0)
       
       except self.ProfileError as p:
          ap.error("problem generating profile: " + str(p))
 
       
-   def generate_profile(self, newprofile, description=None, template=None, icon=None, **kwds):
+   def generate_profile(self, newprofile, description, icon, template):
       if PGlobs.config_dir is not None:
          try:
             tmp = tempfile.mkdtemp()
-         except IOError:
+         except OSError:
             raise self.ProfileError("temporary directory creation failed")
             
          try:
             if template is not None:
-               template = os.path.join(PGlobs.config_dir, template)
-               if os.path.isdir(template):
+               tdir = os.path.join(PGlobs.config_dir, template)
+               if os.path.isdir(tdir):
                   for x in ("icon", "description", "config"):
                      try:
-                        shutil.copyfile(os.path.join(template, x),
+                        shutil.copyfile(os.path.join(tdir, x),
                                         os.path.join(tmp, x))
                      except IOError:
                         pass
@@ -186,8 +208,17 @@ class ProfileSelector(object):
                   raise self.ProfileError("could not transfer icon")
             
             try:
-               shutil.copytree(tmp, os.path.join(PGlobs.config_dir, newprofile))
-            except IOError:
-               raise self.ProfileError("could not create profile directory")
+               dest = os.path.join(PGlobs.config_dir, newprofile)
+               shutil.copytree(tmp, dest)
+            except IOError as e:
+               if e.errno == 17 and os.path.isdir(dest):
+                  msg = "profile directory exists"
+               else:
+                  msg = "could not create profile directory"
+               raise self.ProfileError(msg)
          finally:
-            shutil.rmtree(tmp)      
+            # Failure to clean up is not a failure worth declaring.
+            try:
+               shutil.rmtree(tmp)
+            except Exception:
+               pass
