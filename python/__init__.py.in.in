@@ -66,3 +66,4 @@ class PGlobs(object):
    app_longform = "Internet DJ Console"
    default_icon = FGlobs.pkgdatadir + "/icon.png"
    dbus_busname = None
+   profile_dialog_refusal_file = "profile_dialog_refusal"

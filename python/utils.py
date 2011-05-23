@@ -118,26 +118,3 @@ class FixedAttributes(type):
    
    def __call__(cls, *args, **kwds):
       raise NotImplementedError("this class cannot be instantiated")
-      
-
-
-def mkdir_p(path):
-   """Equivalent to the shell command: mkdir -p path."""
-
-   
-   def inner(path):
-      if path == os.path.sep:
-          return
-
-      head, tail = os.path.split(path)
-      inner(head)
-
-      try:
-          os.mkdir(head)
-      except OSError, e:
-          if e.errno != 17:
-              raise
-
-   if not os.path.isdir(path):
-      inner(path.rstrip(os.path.sep))  # Make the parents.
-      os.mkdir(path)
