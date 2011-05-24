@@ -60,10 +60,11 @@ class PGlobs(object):
 
    
    config_dir = os.path.join(glib.get_user_config_dir(), FGlobs.package_name)
+   profile_dir = os.path.join(config_dir, "profiles")
    dbus_bus_basename = "net.sf." + FGlobs.package_name
    dbus_objects_basename = "/net/sf/" + FGlobs.package_name
    app_shortform = "IDJC"
    app_longform = "Internet DJ Console"
    default_icon = FGlobs.pkgdatadir + "/icon.png"
    dbus_busname = None
-   profile_dialog_refusal_file = "profile_dialog_refusal"
+   profile_dialog_refusal_pathname = os.path.join(config_dir, "profile_dialog_refusal")

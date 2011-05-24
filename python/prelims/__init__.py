@@ -154,15 +154,15 @@ class ProfileSelector(object):
       choose_profile = partial(self._choose_profile, ap, args,
                                        enable_profile_dialog, title)
 
-      if PGlobs.config_dir is not None:
+      if PGlobs.profile_dir is not None:
          try:
-            if not os.path.isdir(os.path.join(PGlobs.config_dir, "default")):
-               self.generate_profile("default", description="The default profile")
+            if not os.path.isdir(os.path.join(PGlobs.profile_dir, "default")):
+               self._generate_profile("default", description="The default profile")
 
             if "newprofile" in args:
-               self.generate_profile(**vars(args))
+               self._generate_profile(**vars(args))
                ap.exit(0)
-         except ProfileError as e:
+         except self.ProfileError as e:
             ap.error("failed to create profile: " + str(e))
 
          choose_profile()
@@ -175,8 +175,7 @@ class ProfileSelector(object):
 
    def _choose_profile(self, ap, args, profile_dialog, title):
       self._profile = "default"
-      show_pd = not os.path.exists(os.path.join(PGlobs.config_dir,
-                           PGlobs.profile_dialog_refusal_file))
+      show_pd = not os.path.exists(PGlobs.profile_dialog_refusal_pathname)
       if args.profile is not None:
          self._profile = args.profile[0]
          show_pd = False
@@ -193,7 +192,7 @@ class ProfileSelector(object):
       
       
    def _generate_profile(self, newprofile, template=None, **kwds):
-      if PGlobs.config_dir is not None:
+      if PGlobs.profile_dir is not None:
          if not self._profile_name_valid(newprofile):
             raise self.ProfileError("new profile is not valid")
             
@@ -207,7 +206,7 @@ class ProfileSelector(object):
                if not self._profile_name_valid(template):
                   raise self.ProfileError("specified template not valid (%s)" % template)
                
-               tdir = os.path.join(PGlobs.config_dir, template)
+               tdir = os.path.join(PGlobs.profile_dir, template)
                if os.path.isdir(tdir):
                   for x in ("icon", "description", "config"):
                      try:
@@ -219,7 +218,7 @@ class ProfileSelector(object):
                   raise self.ProfileError("template profile (%s) does not exist" % template)
                   
             for fname in ("icon", "description"):
-               if kwds[fname]:
+               if kwds.get(fname):
                   try:
                      with open(os.path.join(tmp, fname), "w") as f:
                         f.write(kwds[fname])
@@ -227,7 +226,7 @@ class ProfileSelector(object):
                      raise self.ProfileError("could not write " + fname)
             
             try:
-               dest = os.path.join(PGlobs.config_dir, newprofile)
+               dest = os.path.join(PGlobs.profile_dir, newprofile)
                shutil.copytree(tmp, dest)
             except EnvironmentError as e:
                if e.errno == 17 and os.path.isdir(dest):
@@ -252,6 +251,25 @@ class ProfileSelector(object):
          return False
       return True
 
+
+   def _profile_directory_data(self, want=("icon", "description")):
+      base = PGlobs.profile_dir
+      try:
+         profdirs = os.walk(base).next()[1]
+      except EnvironmentError:
+         return
+      for profname in profdirs:
+         if self._profile_name_valid(profname):
+            files = os.walk(os.path.join(base, profname)).next()[2]
+            rslt = {"profile": profname}
+            for each in want:
+               try:
+                  with open(os.path.join(base, profname, each)) as f:
+                     rslt[each] = f.read()
+               except EnvironmentError:
+                  rslt[each] = None
+            yield rslt
+         
 
    def _profile_choice_by_dialog(self, title, highlight):
       import gtk
