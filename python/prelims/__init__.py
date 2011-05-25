@@ -269,12 +269,82 @@ class ProfileSelector(object):
                except EnvironmentError:
                   rslt[each] = None
             yield rslt
-         
+
 
    def _profile_choice_by_dialog(self, title, highlight):
       import gtk
+
+
+      _data_source = ()
       
       class Dialog(gtk.Dialog):
-         pass
-         
+         def __init__(self):
+            gtk.Dialog.__init__(self, title)
+            self.set_icon_from_file(PGlobs.default_icon)
+            self.set_size_request(200, 200)
+            w = gtk.ScrolledWindow()
+            w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+            self.get_content_area().add(w)
+            self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str)
+            self.sorted = gtk.TreeModelSort(self.store)
+            self.sorted.set_sort_func(1, self._sort_func)
+            self.sorted.set_sort_column_id(1, gtk.SORT_ASCENDING)
+            t = gtk.TreeView(self.sorted)
+            t.set_headers_visible(True)
+            w.add(t)
+            pbrend = gtk.CellRendererPixbuf()
+            strrend = gtk.CellRendererText()
+            c0 = gtk.TreeViewColumn("Profile")
+            c0.pack_start(pbrend, expand=False)
+            c0.pack_start(strrend)
+            c0.add_attribute(pbrend, "pixbuf", 0)
+            c0.add_attribute(strrend, "text", 1)
+            t.append_column(c0)
+            c1 = gtk.TreeViewColumn("Description")
+            c1.pack_start(strrend)
+            c1.add_attribute(strrend, "text", 2)
+            t.append_column(c1)
+            
+
+         def _sort_func(self, model, *iters):
+            vals = tuple(model.get_value(x, 1) for x in iters)
+            
+            try:
+               return vals.index("default")
+            except ValueError:
+               return cmp(*vals)
+            
+
+         def set_data_source(self, src):
+            self._data_source = src
+            self._update_data()
+            
+            
+         def _update_data(self):
+            self.store.clear()
+            for data in self._data_source:
+               if data["icon"] is not None:
+                  iconpath = data["icon"]
+               else:
+                  if data["profile"] == "default":
+                     iconpath = PGlobs.default_icon
+                  else:
+                     iconpath = None
+               if iconpath:
+                  pb = gtk.gdk.pixbuf_new_from_file_at_size(iconpath, 16, 16)
+               else:
+                  pb = None
+               desc = data["description"] or ""
+               self.store.append((pb, data["profile"], desc))
+
+            
+         def run(self):
+            self.show_all()
+            gtk.Dialog.run(self)
+
+
+      d = Dialog()
+      d.set_data_source(self._profile_directory_data())
+      d.run()
+
       return highlight
