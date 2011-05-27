@@ -29,4 +29,5 @@ import idjc
 import idjc.prelims
 
 
-idjc.prelims.ProfileSelector()
+p = idjc.prelims.ProfileSelector()
+print "running", p.profile

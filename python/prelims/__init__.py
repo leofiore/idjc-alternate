@@ -27,6 +27,7 @@ import tempfile
 from functools import partial
 
 import dbus
+import dbus.service
 import glib
 
 from idjc import FGlobs
@@ -144,15 +145,16 @@ class ProfileSelector(object):
    __metaclass__ = Singleton
    
 
+   _profile = _dbus_bus_name = _profile_dialog = None
+   
+
    class ProfileError(Exception):
       pass
 
 
-   def __init__(self, enable_profile_dialog=True, title="Profile Selector"):
+   def __init__(self):
       ap = ArgumentParserImplementation()
       args = ap.parse_args()
-      choose_profile = partial(self._choose_profile, ap, args,
-                                       enable_profile_dialog, title)
 
       if PGlobs.profile_dir is not None:
          try:
@@ -165,7 +167,11 @@ class ProfileSelector(object):
          except self.ProfileError as e:
             ap.error("failed to create profile: " + str(e))
 
-         choose_profile()
+         self._obtain_profile(ap, args)
+         if self.profile is None:
+            ap.error("no profile set")
+
+         assert all((self.dbus_bus_name, self.profile_dialog))
 
 
    @property
@@ -173,28 +179,67 @@ class ProfileSelector(object):
       return self._profile
 
 
-   def _choose_profile(self, ap, args, profile_dialog, title):
-      self._profile = "default"
-      show_pd = not os.path.exists(PGlobs.profile_dialog_refusal_pathname)
+   @property
+   def profile_dialog(self):
+      return self._profile_dialog
+      
+      
+   @property
+   def dbus_bus_name(self):
+      return self._dbus_bus_name
+
+
+   def _obtain_profile(self, ap, args):
+      profile = "default"
+      dialog_selects = not os.path.exists(PGlobs.profile_dialog_refusal_pathname)
       if args.profile is not None:
-         self._profile = args.profile[0]
-         show_pd = False
-         if not self._profile_name_valid(self._profile):
+         profile = args.profile[0]
+         dialog_selects = False
+         if not self._profile_name_valid(profile):
             ap.error("specified profile name is not valid")
 
       if args.dialog is not None:
-         show_pd = args.dialog[0] == "true"
+         dialog_selects = args.dialog[0] == "true"
       
-      if show_pd and profile_dialog:
-         self._profile = self._profile_choice_by_dialog(title, self._profile)
+      self._profile_dialog = self._get_profile_dialog(dialog_selects, profile)
+      self._profile_dialog.connect("delete", self._cb_delete_profile)
+      self._profile_dialog.connect("choose", self._choose_profile)
+      if dialog_selects:
+         self._profile_dialog.run()
+         self._profile_dialog.hide()
+      else:
+         self._choose_profile(self._profile_dialog, profile, verbose=True)
+      
+      
+   def _cb_delete_profile(self, dialog, profile):
+      if profile is not dialog.profile:
+         try:
+            busname = self._grab_bus_name_for_profile(profile)
+            shutil.rmtree(os.path.join(PGlobs.profile_dir, profile))
+         except dbus.DBusException:
+            pass
+      
+   
+   def _choose_profile(self, dialog, profile, verbose=False):
+      if dialog._profile is None:
+         try:
+            busname = self._grab_bus_name_for_profile(profile)
+         except dbus.DBusException:
+            if verbose:
+               print "profile '%s' is in use" % profile
+         else:
+            dialog.set_profile(profile)
+            self._dbus_bus_name = busname
+            self._profile = profile
 
-      return self._profile
-      
-      
+
    def _generate_profile(self, newprofile, template=None, **kwds):
       if PGlobs.profile_dir is not None:
          if not self._profile_name_valid(newprofile):
             raise self.ProfileError("new profile is not valid")
+           
+         if self._profile_has_owner(newprofile):
+            raise self.ProfileError("profile is currently running")
             
          try:
             tmp = tempfile.mkdtemp()
@@ -252,59 +297,193 @@ class ProfileSelector(object):
       return True
 
 
-   def _profile_directory_data(self, want=("icon", "description")):
-      base = PGlobs.profile_dir
+   def _profile_data(self, want=("icon", "description")):
+      d = PGlobs.profile_dir
       try:
-         profdirs = os.walk(base).next()[1]
+         profdirs = os.walk(d).next()[1]
       except EnvironmentError:
          return
       for profname in profdirs:
          if self._profile_name_valid(profname):
-            files = os.walk(os.path.join(base, profname)).next()[2]
+            files = os.walk(os.path.join(d, profname)).next()[2]
             rslt = {"profile": profname}
             for each in want:
                try:
-                  with open(os.path.join(base, profname, each)) as f:
+                  with open(os.path.join(d, profname, each)) as f:
                      rslt[each] = f.read()
                except EnvironmentError:
                   rslt[each] = None
+               
+            rslt["active"] = self._profile_has_owner(profname)
             yield rslt
 
 
-   def _profile_choice_by_dialog(self, title, highlight):
+   def closure(cmd, name):
+      busbase = PGlobs.dbus_bus_basename
+      def inner(profname):
+         return cmd(".".join((busbase, profname)))
+      inner.__name__ = name
+      return staticmethod(inner)
+
+   _profile_has_owner = closure(dbus.SessionBus().name_has_owner,
+                     "_profile_has_owner")
+      
+   _grab_bus_name_for_profile = closure(partial(dbus.service.BusName, do_not_queue=True),
+                     "_grab_bus_name_for_profile")
+                     
+   del closure
+
+
+   def _get_profile_dialog(self, can_select, highlight="default"):
+      import gobject
       import gtk
 
 
-      _data_source = ()
+      class CellRendererGreenLED(gtk.CellRendererPixbuf):
+         __gproperties__ = {
+               "active" : (gobject.TYPE_INT,
+                           "active", "active",
+                           0, 1, 0, gobject.PARAM_READWRITE),}
+
+                           
+         def __init__(self):
+            gtk.CellRendererPixbuf.__init__(self)
+            self._led = [gtk.gdk.pixbuf_new_from_file_at_size(
+                         os.path.join(FGlobs.pkgdatadir, x + ".png"), 10, 10)
+                         for x in ("led_unlit_clear_border_64x64",
+                                   "led_lit_green_black_border_64x64")]
+            self._active = 0
+
+                     
+         def do_get_property(self, prop):
+            if prop.name == "active":
+               return self._active
+            else:
+               raise AttributeError("unknown property %s" % prop.name)
+
+               
+         def do_set_property(self, prop, value):
+            if prop.name == "active":
+               self._active = value
+               gtk.CellRendererPixbuf.set_property(self, "pixbuf", 
+                                                      self._led[value])
+            else:
+               raise AttributeError("unknown property %s" % prop.name)
+      
       
       class Dialog(gtk.Dialog):
-         def __init__(self):
-            gtk.Dialog.__init__(self, title)
+         __gproperties__ = {  "selection-active" : (gobject.TYPE_BOOLEAN, 
+                              "selection active", 
+                              "selected profile is active",
+                              0, gobject.PARAM_READABLE),}
+
+         signal_names = "clone", "delete", "choose"
+
+         __gsignals__ = { "selection-active-changed" : (
+                              gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
+                              (gobject.TYPE_BOOLEAN,)) }
+         __gsignals__.update(dict(
+                  (x, (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
+                  (gobject.TYPE_STRING,))) for x in signal_names))
+
+
+         def __init__(self, data_function=None):
+            self._profile = self._highlighted = None
+            self._selection_active = False
+            self._olddata = ()
+
+            gtk.Dialog.__init__(self, "Profile Manager")
             self.set_icon_from_file(PGlobs.default_icon)
-            self.set_size_request(200, 200)
+            self.set_size_request(400, 200)
             w = gtk.ScrolledWindow()
             w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
             self.get_content_area().add(w)
-            self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str)
+            self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int)
             self.sorted = gtk.TreeModelSort(self.store)
             self.sorted.set_sort_func(1, self._sort_func)
             self.sorted.set_sort_column_id(1, gtk.SORT_ASCENDING)
-            t = gtk.TreeView(self.sorted)
-            t.set_headers_visible(True)
-            w.add(t)
+            self.treeview = gtk.TreeView(self.sorted)
+            self.treeview.set_headers_visible(True)
+            w.add(self.treeview)
             pbrend = gtk.CellRendererPixbuf()
             strrend = gtk.CellRendererText()
-            c0 = gtk.TreeViewColumn("Profile")
-            c0.pack_start(pbrend, expand=False)
-            c0.pack_start(strrend)
-            c0.add_attribute(pbrend, "pixbuf", 0)
-            c0.add_attribute(strrend, "text", 1)
-            t.append_column(c0)
-            c1 = gtk.TreeViewColumn("Description")
+            ledrend = CellRendererGreenLED()
+            c1 = gtk.TreeViewColumn("Profile")
+            c1.pack_start(pbrend, expand=False)
             c1.pack_start(strrend)
-            c1.add_attribute(strrend, "text", 2)
-            t.append_column(c1)
+            c1.add_attribute(pbrend, "pixbuf", 0)
+            c1.add_attribute(strrend, "text", 1)
+            self.treeview.append_column(c1)
+            c2 = gtk.TreeViewColumn("Description")
+            c2.pack_start(strrend)
+            c2.add_attribute(strrend, "text", 2)
+            c2.set_expand(True)
+            self.treeview.append_column(c2)
+            c3 = gtk.TreeViewColumn()
+            c3.pack_start(ledrend)
+            c3.add_attribute(ledrend, "active", 3)
+            self.treeview.append_column(c3)
+            self.selection = self.treeview.get_selection()
+            self.selection.connect("changed", self._cb_selection)
+            box = gtk.HButtonBox()
+            self.get_action_area().add(box)
+            self.new = gtk.Button("New")
+            box.pack_start(self.new)
+            self.clone = gtk.Button("Clone")
+            box.pack_start(self.clone)
+            self.delete = gtk.Button("Delete")
+            box.pack_start(self.delete)
+            self.choose = gtk.Button("Choose")
+            box.pack_start(self.choose)
+            self.set_data_function(data_function)
+            self.connect("notify::visible", self._cb_visible)
+            for each in self.signal_names:
+               getattr(self, each).connect("clicked", self._cb_click, each)
+          
+         
+         def do_get_property(self, prop):
+            if prop.name == "selection-active":
+               return self._selection_active
+            else:
+               raise AttributeError("unknown property: %s" % prop.name)
+         
+
+         def do_selection_active_changed(self, state):
+            state = not state
+            self.choose.set_sensitive(state and self._profile is None)
+            self.delete.set_sensitive(state)
+
+         
+         def _cb_click(self, widget, signal):
+            if self._highlighted is not None:
+               self.emit(signal, self._highlighted)
+               self._update_data()
+         
+         
+         def _cb_visible(self, *args):
+            if self.props.visible:
+               gobject.timeout_add(200, self._update_data)
             
+            
+         def _cb_selection(self, ts):
+            model, iter = ts.get_selected()
+            if iter is not None:
+               self._highlighted = model.get_value(iter, 1)
+               active = model.get_value(iter, 3)
+            else:
+               self._highlighted = None
+               active = True
+            if active != self._selection_active:
+               self._selection_active = active
+               self.emit("selection-active-changed", active)
+                  
+            
+         def _highlight_profile(self, target):
+            for i, data in enumerate(self.sorted):
+               if data[1] == target:
+                  self.selection.select_path(i)
+                  self.selection.get_tree_view().scroll_to_cell(i)
+
 
          def _sort_func(self, model, *iters):
             vals = tuple(model.get_value(x, 1) for x in iters)
@@ -315,36 +494,57 @@ class ProfileSelector(object):
                return cmp(*vals)
             
 
-         def set_data_source(self, src):
-            self._data_source = src
+         def set_data_function(self, f):
+            self._data_function = f
             self._update_data()
-            
-            
+            if f is not None:
+               self._highlight_profile(highlight)
+               
+               
          def _update_data(self):
-            self.store.clear()
-            for data in self._data_source:
-               if data["icon"] is not None:
-                  iconpath = data["icon"]
-               else:
-                  if data["profile"] == "default":
-                     iconpath = PGlobs.default_icon
-                  else:
-                     iconpath = None
-               if iconpath:
-                  pb = gtk.gdk.pixbuf_new_from_file_at_size(iconpath, 16, 16)
-               else:
-                  pb = None
-               desc = data["description"] or ""
-               self.store.append((pb, data["profile"], desc))
+            if self._data_function is not None:
+               data = tuple(self._data_function())
+               if self._olddata != data:
+                  self._olddata = data
 
+                  h = self._highlighted
+                  self.store.clear()
+                  for d in data:
+                     if d["icon"] is not None:
+                        i = d["icon"]
+                     else:
+                        if d["profile"] == "default":
+                           i = PGlobs.default_icon
+                        else:
+                           i = None
+                     if i is not None:
+                        pb = gtk.gdk.pixbuf_new_from_file_at_size(i, 16, 16)                     
+                     else:
+                        pb = None
+                     desc = d["description"] or ""
+                     active = d["active"]
+                     self.store.append((pb, d["profile"], desc, active))
+                  self._highlight_profile(h)
+            return self.props.visible
+            
+            
+         @property
+         def profile(self):
+            return self._profile
+            
+            
+         def set_profile(self, newprofile):
+            assert self._profile is None
+            self._profile = newprofile
+            self.set_title(self.get_title() + "  (%s)" % newprofile)
+            self.choose.set_label("Chosen")
+            self.response(0)
+            
             
          def run(self):
             self.show_all()
             gtk.Dialog.run(self)
 
 
-      d = Dialog()
-      d.set_data_source(self._profile_directory_data())
-      d.run()
-
-      return highlight
+      d = Dialog(data_function=self._profile_data)
+      return d
