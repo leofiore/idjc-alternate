@@ -204,6 +204,15 @@ class ProfileSelector(object):
       self._profile_dialog = self._get_profile_dialog(dialog_selects, profile)
       self._profile_dialog.connect("delete", self._cb_delete_profile)
       self._profile_dialog.connect("choose", self._choose_profile)
+      def new_profile(dialog, profile, template, icon, description):
+         try:
+            self._generate_profile(profile, template, icon=icon, description=description)
+            dialog.destroy_new_profile_dialog()
+         except self.ProfileError as e:
+            dialog.display_error("Error while creating new profile", str(e))
+
+      self._profile_dialog.connect("new", new_profile)
+      self._profile_dialog.connect("clone", new_profile)
       if dialog_selects:
          self._profile_dialog.run()
          self._profile_dialog.hide()
@@ -236,11 +245,13 @@ class ProfileSelector(object):
    def _generate_profile(self, newprofile, template=None, **kwds):
       if PGlobs.profile_dir is not None:
          if not self._profile_name_valid(newprofile):
-            raise self.ProfileError("new profile is not valid")
+            raise self.ProfileError("the new profile name is not valid")
            
-         if self._profile_has_owner(newprofile):
-            raise self.ProfileError("profile is currently running")
-            
+         try:
+            busname = self._grab_bus_name_for_profile(newprofile)
+         except dbus.DBusException:
+            raise self.ProfileError("the profile is currently running")
+
          try:
             tmp = tempfile.mkdtemp()
          except EnvironmentError:
@@ -260,7 +271,7 @@ class ProfileSelector(object):
                      except EnvironmentError:
                         pass
                else:
-                  raise self.ProfileError("template profile (%s) does not exist" % template)
+                  raise self.ProfileError("template profile '%s' does not exist" % template)
                   
             for fname in ("icon", "description"):
                if kwds.get(fname):
@@ -275,7 +286,7 @@ class ProfileSelector(object):
                shutil.copytree(tmp, dest)
             except EnvironmentError as e:
                if e.errno == 17 and os.path.isdir(dest):
-                  msg = "profile directory exists"
+                  msg = "the profile directory exists"
                else:
                   msg = "could not create profile directory: path exists"
                raise self.ProfileError(msg)
@@ -340,6 +351,8 @@ class ProfileSelector(object):
 
 
       class CellRendererGreenLED(gtk.CellRendererPixbuf):
+         """Needs to be pulled out and made generic."""
+         
          __gproperties__ = {
                "active" : (gobject.TYPE_INT,
                            "active", "active",
@@ -371,20 +384,92 @@ class ProfileSelector(object):
                raise AttributeError("unknown property %s" % prop.name)
       
       
+      class ProblemErrorMessageDialog(gtk.Dialog):
+         """This needs to be pulled out since it's generic."""
+         
+         def __init__(self, title, message):
+            gtk.Dialog.__init__(self)
+            self.set_modal(True)
+            self.set_destroy_with_parent(True)
+            self.set_title(title)
+            
+            hbox = gtk.HBox()
+            image = gtk.image_new_from_stock(gtk.STOCK_DIALOG_ERROR,
+                                                gtk.ICON_SIZE_DIALOG)
+            hbox.pack_start(image, False, padding=30)
+            hbox.set_border_width(10)
+            label = gtk.Label(message)
+            label.set_size_request(300, -1)
+            label.set_line_wrap(True)
+            hbox.pack_start(label)
+            self.get_content_area().add(hbox)
+            
+            b = gtk.Button("Ok")
+            b.connect("clicked", lambda w: self.destroy())
+            self.get_action_area().add(b)
+
+ 
+      class NewProfileDialog(gtk.Dialog):
+         def __init__(self, row, filter_function=None):
+            gtk.Dialog.__init__(self)
+            self.set_modal(True)
+            self.set_destroy_with_parent(True)
+            self.set_size_request(330, -1)
+            
+            if row is not None:
+               self.set_title("New profile based upon %s" % row[1])
+            else:
+               self.set_title("New profile details")
+
+            vbox = gtk.VBox()
+            l = gtk.Label("Profile name:")
+            l.set_alignment(0, 0.5)
+            vbox.add(l)
+            self.profile_entry = gtk.Entry()
+            vbox.add(self.profile_entry)
+            l = gtk.Label("Icon:")
+            l.set_alignment(0, 0.5)
+            vbox.add(l)
+            self.icon_entry = gtk.Entry()
+            if row is not None:
+               self.icon_entry.set_text(row[4])
+            vbox.add(self.icon_entry)
+            l = gtk.Label("Description:")
+            l.set_alignment(0, 0.5)
+            vbox.add(l)
+            self.description_entry = gtk.Entry()
+            if row is not None:
+               self.description_entry.set_text(row[2])
+            vbox.add(self.description_entry)
+            self.get_content_area().add(vbox)
+               
+            box = gtk.HButtonBox()
+            cancel = gtk.Button("Cancel")
+            cancel.connect("clicked", lambda w: self.destroy())
+            box.add(cancel)
+            self.ok = gtk.Button("Ok")
+            box.add(self.ok)
+            self.get_action_area().add(box)
+
+      
       class Dialog(gtk.Dialog):
          __gproperties__ = {  "selection-active" : (gobject.TYPE_BOOLEAN, 
                               "selection active", 
                               "selected profile is active",
                               0, gobject.PARAM_READABLE),}
 
-         signal_names = "clone", "delete", "choose"
+         _signal_names = "delete", "choose"
+         _new_profile_dialog_signal_names = "new", "clone"
 
          __gsignals__ = { "selection-active-changed" : (
                               gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
                               (gobject.TYPE_BOOLEAN,)) }
          __gsignals__.update(dict(
-                  (x, (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                  (gobject.TYPE_STRING,))) for x in signal_names))
+               (x, (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
+               (gobject.TYPE_STRING,))) for x in (_signal_names)))
+         __gsignals__.update(dict(
+               (x, (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
+               (gobject.TYPE_STRING,) * 4)) for x in (_new_profile_dialog_signal_names)))
 
 
          def __init__(self, data_function=None):
@@ -394,11 +479,11 @@ class ProfileSelector(object):
 
             gtk.Dialog.__init__(self, "Profile Manager")
             self.set_icon_from_file(PGlobs.default_icon)
-            self.set_size_request(400, 200)
+            self.set_size_request(500, 300)
             w = gtk.ScrolledWindow()
             w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
             self.get_content_area().add(w)
-            self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int)
+            self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int, str)
             self.sorted = gtk.TreeModelSort(self.store)
             self.sorted.set_sort_func(1, self._sort_func)
             self.sorted.set_sort_column_id(1, gtk.SORT_ASCENDING)
@@ -426,6 +511,7 @@ class ProfileSelector(object):
             self.selection = self.treeview.get_selection()
             self.selection.connect("changed", self._cb_selection)
             box = gtk.HButtonBox()
+            box.set_layout(gtk.BUTTONBOX_START)
             self.get_action_area().add(box)
             self.new = gtk.Button("New")
             box.pack_start(self.new)
@@ -433,13 +519,31 @@ class ProfileSelector(object):
             box.pack_start(self.clone)
             self.delete = gtk.Button("Delete")
             box.pack_start(self.delete)
+            self.cancel = gtk.Button("Cancel")
+            self.cancel.connect("clicked", self._cb_cancel)
+            box.pack_start(self.cancel)
+            box.set_child_secondary(self.cancel, True)
             self.choose = gtk.Button("Choose")
             box.pack_start(self.choose)
+            box.set_child_secondary(self.choose, True)
             self.set_data_function(data_function)
             self.connect("notify::visible", self._cb_visible)
-            for each in self.signal_names:
+            for each in self._signal_names:
                getattr(self, each).connect("clicked", self._cb_click, each)
+            for each in self._new_profile_dialog_signal_names:
+               getattr(self, each).connect("clicked", self._cb_new_profile_dialog, each)
           
+         
+         def display_error(self, title, message):
+            error_dialog = ProblemErrorMessageDialog(title, message)
+            error_dialog.set_transient_for(self)
+            error_dialog.show_all()
+
+         
+         def destroy_new_profile_dialog(self):
+            self._new_profile_dialog.destroy()
+            del self._new_profile_dialog
+         
          
          def do_get_property(self, prop):
             if prop.name == "selection-active":
@@ -452,6 +556,7 @@ class ProfileSelector(object):
             state = not state
             self.choose.set_sensitive(state and self._profile is None)
             self.delete.set_sensitive(state)
+            self.clone.set_sensitive(state)
 
          
          def _cb_click(self, widget, signal):
@@ -459,6 +564,42 @@ class ProfileSelector(object):
                self.emit(signal, self._highlighted)
                self._update_data()
          
+         
+         def _cb_new_profile_dialog(self, widget, action):
+            if action == "clone":
+               if self._highlighted is None:
+                  return
+               row = self._get_row_for_profile(self._highlighted)
+               template = row[1]
+            else:
+               row = None
+               template = None
+               
+            np_dialog = self._new_profile_dialog = NewProfileDialog(row)
+            
+            def sub_ok(widget):
+               profile = np_dialog.profile_entry.get_text()
+               icon = np_dialog.icon_entry.get_text().strip()
+               description = np_dialog.description_entry.get_text().strip()
+               self.emit(action, profile, template, icon, description)
+               self._update_data()
+               
+            np_dialog.set_transient_for(self)
+            np_dialog.ok.connect("clicked", sub_ok)
+            np_dialog.show_all()
+
+
+         def _cb_cancel(self, widget):
+            if self._profile is None:
+               self.response(0)
+            else:
+               self.hide()
+
+
+         def _cb_delete_event(self, widget, event):
+            self.hide()
+            return True
+
          
          def _cb_visible(self, *args):
             if self.props.visible:
@@ -479,10 +620,21 @@ class ProfileSelector(object):
                   
             
          def _highlight_profile(self, target):
+            i = self._get_index_for_profile(target)
+            if i is not None:
+               self.selection.select_path(i)
+               self.selection.get_tree_view().scroll_to_cell(i)
+
+
+         def _get_index_for_profile(self, target):
             for i, data in enumerate(self.sorted):
                if data[1] == target:
-                  self.selection.select_path(i)
-                  self.selection.get_tree_view().scroll_to_cell(i)
+                  return i
+            return None
+
+
+         def _get_row_for_profile(self, target):
+            return list(self.sorted[self._get_index_for_profile(target)])
 
 
          def _sort_func(self, model, *iters):
@@ -518,12 +670,15 @@ class ProfileSelector(object):
                         else:
                            i = None
                      if i is not None:
-                        pb = gtk.gdk.pixbuf_new_from_file_at_size(i, 16, 16)                     
+                        try:
+                           pb = gtk.gdk.pixbuf_new_from_file_at_size(i, 16, 16)
+                        except glib.GError:
+                           pb = i = None
                      else:
                         pb = None
                      desc = d["description"] or ""
                      active = d["active"]
-                     self.store.append((pb, d["profile"], desc, active))
+                     self.store.append((pb, d["profile"], desc, active, i or ""))
                   self._highlight_profile(h)
             return self.props.visible
             
@@ -538,6 +693,7 @@ class ProfileSelector(object):
             self._profile = newprofile
             self.set_title(self.get_title() + "  (%s)" % newprofile)
             self.choose.set_label("Chosen")
+            self.connect("delete-event", self._cb_delete_event)
             self.response(0)
             
             
