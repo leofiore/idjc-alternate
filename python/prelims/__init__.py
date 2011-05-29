@@ -159,7 +159,7 @@ class ProfileSelector(object):
       if PGlobs.profile_dir is not None:
          try:
             if not os.path.isdir(os.path.join(PGlobs.profile_dir, "default")):
-               self._generate_profile("default", description="The default profile")
+               self._generate_default_profile()
 
             if "newprofile" in args:
                self._generate_profile(**vars(args))
@@ -167,11 +167,36 @@ class ProfileSelector(object):
          except self.ProfileError as e:
             ap.error("failed to create profile: " + str(e))
 
-         self._obtain_profile(ap, args)
-         if self.profile is None:
-            ap.error("no profile set")
+         profile = "default"
+         dialog_selects = not os.path.exists(PGlobs.profile_dialog_refusal_pathname)
+         if args.profile is not None:
+            profile = args.profile[0]
+            dialog_selects = False
+            if not self._profile_name_valid(profile):
+               ap.error("specified profile name is not valid")
 
-         assert all((self.dbus_bus_name, self.profile_dialog))
+         if args.dialog is not None:
+            dialog_selects = args.dialog[0] == "true"
+         
+         self._profile_dialog = self._get_profile_dialog(dialog_selects, profile)
+         self._profile_dialog.connect("delete", self._cb_delete_profile)
+         self._profile_dialog.connect("choose", self._choose_profile)
+         def new_profile(dialog, profile, template, icon, description):
+            try:
+               self._generate_profile(profile, template, icon=icon, description=description)
+               dialog.destroy_new_profile_dialog()
+            except self.ProfileError as e:
+               dialog.display_error("Error while creating new profile", str(e))
+
+         self._profile_dialog.connect("new", new_profile)
+         self._profile_dialog.connect("clone", new_profile)
+         if dialog_selects:
+            self._profile_dialog.run()
+            self._profile_dialog.hide()
+         else:
+            self._choose_profile(self._profile_dialog, profile, verbose=True)
+         if self._profile is None:
+            ap.error("no profile set")
 
 
    @property
@@ -180,44 +205,12 @@ class ProfileSelector(object):
 
 
    @property
-   def profile_dialog(self):
-      return self._profile_dialog
-      
-      
-   @property
    def dbus_bus_name(self):
       return self._dbus_bus_name
 
-
-   def _obtain_profile(self, ap, args):
-      profile = "default"
-      dialog_selects = not os.path.exists(PGlobs.profile_dialog_refusal_pathname)
-      if args.profile is not None:
-         profile = args.profile[0]
-         dialog_selects = False
-         if not self._profile_name_valid(profile):
-            ap.error("specified profile name is not valid")
-
-      if args.dialog is not None:
-         dialog_selects = args.dialog[0] == "true"
       
-      self._profile_dialog = self._get_profile_dialog(dialog_selects, profile)
-      self._profile_dialog.connect("delete", self._cb_delete_profile)
-      self._profile_dialog.connect("choose", self._choose_profile)
-      def new_profile(dialog, profile, template, icon, description):
-         try:
-            self._generate_profile(profile, template, icon=icon, description=description)
-            dialog.destroy_new_profile_dialog()
-         except self.ProfileError as e:
-            dialog.display_error("Error while creating new profile", str(e))
-
-      self._profile_dialog.connect("new", new_profile)
-      self._profile_dialog.connect("clone", new_profile)
-      if dialog_selects:
-         self._profile_dialog.run()
-         self._profile_dialog.hide()
-      else:
-         self._choose_profile(self._profile_dialog, profile, verbose=True)
+   def show_profile_dialog(self):
+      self._profile_dialog.show_all()
       
       
    def _cb_delete_profile(self, dialog, profile):
@@ -227,6 +220,8 @@ class ProfileSelector(object):
             shutil.rmtree(os.path.join(PGlobs.profile_dir, profile))
          except dbus.DBusException:
             pass
+         if profile == "default":
+            self._generate_default_profile()
       
    
    def _choose_profile(self, dialog, profile, verbose=False):
@@ -238,8 +233,8 @@ class ProfileSelector(object):
                print "profile '%s' is in use" % profile
          else:
             dialog.set_profile(profile)
-            self._dbus_bus_name = busname
             self._profile = profile
+            self._dbus_bus_name = busname
 
 
    def _generate_profile(self, newprofile, template=None, **kwds):
@@ -296,6 +291,10 @@ class ProfileSelector(object):
                shutil.rmtree(tmp)
             except EnvironmentError:
                pass
+
+
+   def _generate_default_profile(self):
+      self._generate_profile("default", description="The default profile")
 
 
    @staticmethod
@@ -384,26 +383,53 @@ class ProfileSelector(object):
                raise AttributeError("unknown property %s" % prop.name)
       
       
-      class ProblemErrorMessageDialog(gtk.Dialog):
+      class StandardDialog(gtk.Dialog):
          """This needs to be pulled out since it's generic."""
          
-         def __init__(self, title, message):
+         def __init__(self, title, message, stock_item, label_width):
             gtk.Dialog.__init__(self)
             self.set_modal(True)
             self.set_destroy_with_parent(True)
             self.set_title(title)
             
             hbox = gtk.HBox()
-            image = gtk.image_new_from_stock(gtk.STOCK_DIALOG_ERROR,
+            hbox.set_border_width(10)
+            image = gtk.image_new_from_stock(stock_item,
                                                 gtk.ICON_SIZE_DIALOG)
             hbox.pack_start(image, False, padding=30)
-            hbox.set_border_width(10)
-            label = gtk.Label(message)
-            label.set_size_request(300, -1)
-            label.set_line_wrap(True)
-            hbox.pack_start(label)
+            vbox = gtk.VBox()
+            hbox.pack_start(vbox)
+            for each in message.split("\n"):
+               label = gtk.Label(each)
+               label.set_alignment(0, 0.5)
+               label.set_size_request(label_width, -1)
+               label.set_line_wrap(True)
+               vbox.pack_start(label)
             self.get_content_area().add(hbox)
-            
+
+
+      class ConfirmationDialog(StandardDialog):
+         """This needs to be pulled out since it's generic."""
+         
+         def __init__(self, title, message, label_width=300):
+            StandardDialog.__init__(self, title, message,
+                           gtk.STOCK_DIALOG_QUESTION, label_width)
+            box = gtk.HButtonBox()
+            cancel = gtk.Button("Cancel")
+            cancel.connect("clicked", lambda w: self.destroy())
+            box.pack_start(cancel)
+            self.ok = gtk.Button("Ok")
+            self.ok.connect_after("clicked", lambda w: self.destroy())
+            box.pack_start(self.ok)
+            self.get_action_area().add(box)
+      
+      
+      class ProblemErrorMessageDialog(StandardDialog):
+         """This needs to be pulled out since it's generic."""
+         
+         def __init__(self, title, message, label_width=300):
+            StandardDialog.__init__(self, title, message,
+                           gtk.STOCK_DIALOG_ERROR, label_width)
             b = gtk.Button("Ok")
             b.connect("clicked", lambda w: self.destroy())
             self.get_action_area().add(b)
@@ -561,9 +587,22 @@ class ProfileSelector(object):
          
          def _cb_click(self, widget, signal):
             if self._highlighted is not None:
-               self.emit(signal, self._highlighted)
-               self._update_data()
-         
+               def commands():
+                  self.emit(signal, self._highlighted)
+                  self._update_data()
+
+               if signal == "delete":
+                  message = "Really delete profile: %s?" % self._highlighted
+                  if self._highlighted == "default":
+                     message += "\n\nThis profile will be recreated" \
+                     " immediately afterwards with initial settings."
+                  conf = ConfirmationDialog("Confirmation", message)
+                  conf.set_transient_for(self)
+                  conf.ok.connect("clicked", lambda w: commands())
+                  conf.show_all()
+               else:
+                  commands()
+
          
          def _cb_new_profile_dialog(self, widget, action):
             if action == "clone":
