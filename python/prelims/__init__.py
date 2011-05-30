@@ -415,25 +415,58 @@ class ProfileSelector(object):
             StandardDialog.__init__(self, title, message,
                            gtk.STOCK_DIALOG_QUESTION, label_width)
             box = gtk.HButtonBox()
-            cancel = gtk.Button("Cancel")
+            cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
             cancel.connect("clicked", lambda w: self.destroy())
             box.pack_start(cancel)
-            self.ok = gtk.Button("Ok")
+            self.ok = gtk.Button(stock=gtk.STOCK_OK)
             self.ok.connect_after("clicked", lambda w: self.destroy())
             box.pack_start(self.ok)
             self.get_action_area().add(box)
+
       
       
-      class ProblemErrorMessageDialog(StandardDialog):
+      class ErrorMessageDialog(StandardDialog):
          """This needs to be pulled out since it's generic."""
          
          def __init__(self, title, message, label_width=300):
             StandardDialog.__init__(self, title, message,
                            gtk.STOCK_DIALOG_ERROR, label_width)
-            b = gtk.Button("Ok")
+            b = gtk.Button(stock=gtk.STOCK_CLOSE)
             b.connect("clicked", lambda w: self.destroy())
             self.get_action_area().add(b)
 
+ 
+      class IconChooserButton(gtk.FileChooserButton):
+         def __init__(self):
+            icon_dialog = gtk.FileChooserDialog("Choose An Icon", 
+                        buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                   gtk.STOCK_OK, gtk.RESPONSE_OK))
+            gtk.FileChooserButton.__init__(self, icon_dialog)
+            vbox = gtk.VBox()
+            frame = gtk.Frame()
+            vbox.pack_start(frame, expand=True, fill=False)
+            frame.show()
+            image = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE,
+                                                   gtk.ICON_SIZE_MENU)
+            frame.add(image)
+            image.show()
+            self.set_use_preview_label(False)
+            self.set_preview_widget(vbox)
+            self.set_preview_widget_active(True)
+            self.connect("update-preview", self.cb_selection, image)
+           
+           
+         def cb_selection(self, btn, image):
+            f = self.get_preview_filename()
+            if f is not None:
+               try:
+                  pb = gtk.gdk.pixbuf_new_from_file_at_size(f, 16, 16)
+               except glib.GError:
+                  image.set_from_stock(gtk.STOCK_MISSING_IMAGE,
+                                                   gtk.ICON_SIZE_MENU)
+               else:
+                  image.set_from_pixbuf(pb)
+            
  
       class NewProfileDialog(gtk.Dialog):
          def __init__(self, row, filter_function=None):
@@ -456,10 +489,10 @@ class ProfileSelector(object):
             l = gtk.Label("Icon:")
             l.set_alignment(0, 0.5)
             vbox.add(l)
-            self.icon_entry = gtk.Entry()
+            self.icon_button = IconChooserButton()
             if row is not None:
-               self.icon_entry.set_text(row[4])
-            vbox.add(self.icon_entry)
+               self.icon_button.set_filename(row[4])
+            vbox.add(self.icon_button)
             l = gtk.Label("Description:")
             l.set_alignment(0, 0.5)
             vbox.add(l)
@@ -470,15 +503,15 @@ class ProfileSelector(object):
             self.get_content_area().add(vbox)
                
             box = gtk.HButtonBox()
-            cancel = gtk.Button("Cancel")
+            cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
             cancel.connect("clicked", lambda w: self.destroy())
             box.add(cancel)
-            self.ok = gtk.Button("Ok")
+            self.ok = gtk.Button(stock=gtk.STOCK_OK)
             box.add(self.ok)
             self.get_action_area().add(box)
 
       
-      class Dialog(gtk.Dialog):
+      class ProfileDialog(gtk.Dialog):
          __gproperties__ = {  "selection-active" : (gobject.TYPE_BOOLEAN, 
                               "selection active", 
                               "selected profile is active",
@@ -539,17 +572,17 @@ class ProfileSelector(object):
             box = gtk.HButtonBox()
             box.set_layout(gtk.BUTTONBOX_START)
             self.get_action_area().add(box)
-            self.new = gtk.Button("New")
+            self.new = gtk.Button(stock=gtk.STOCK_NEW)
             box.pack_start(self.new)
-            self.clone = gtk.Button("Clone")
+            self.clone = gtk.Button(stock=gtk.STOCK_COPY)
             box.pack_start(self.clone)
-            self.delete = gtk.Button("Delete")
+            self.delete = gtk.Button(stock=gtk.STOCK_DELETE)
             box.pack_start(self.delete)
-            self.cancel = gtk.Button("Cancel")
+            self.cancel = gtk.Button(stock=gtk.STOCK_QUIT)
             self.cancel.connect("clicked", self._cb_cancel)
             box.pack_start(self.cancel)
             box.set_child_secondary(self.cancel, True)
-            self.choose = gtk.Button("Choose")
+            self.choose = gtk.Button(stock=gtk.STOCK_OPEN)
             box.pack_start(self.choose)
             box.set_child_secondary(self.choose, True)
             self.set_data_function(data_function)
@@ -561,7 +594,7 @@ class ProfileSelector(object):
           
          
          def display_error(self, title, message):
-            error_dialog = ProblemErrorMessageDialog(title, message)
+            error_dialog = ErrorMessageDialog(title, message)
             error_dialog.set_transient_for(self)
             error_dialog.show_all()
 
@@ -618,7 +651,7 @@ class ProfileSelector(object):
             
             def sub_ok(widget):
                profile = np_dialog.profile_entry.get_text()
-               icon = np_dialog.icon_entry.get_text().strip()
+               icon = np_dialog.icon_button.get_filename()
                description = np_dialog.description_entry.get_text().strip()
                self.emit(action, profile, template, icon, description)
                self._update_data()
@@ -731,7 +764,7 @@ class ProfileSelector(object):
             assert self._profile is None
             self._profile = newprofile
             self.set_title(self.get_title() + "  (%s)" % newprofile)
-            self.choose.set_label("Chosen")
+            self.cancel.set_label(gtk.STOCK_CLOSE)
             self.connect("delete-event", self._cb_delete_event)
             self.response(0)
             
@@ -741,5 +774,5 @@ class ProfileSelector(object):
             gtk.Dialog.run(self)
 
 
-      d = Dialog(data_function=self._profile_data)
+      d = ProfileDialog(data_function=self._profile_data)
       return d
