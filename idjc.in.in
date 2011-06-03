@@ -29,5 +29,5 @@ import idjc
 import idjc.prelims
 
 
-p = idjc.prelims.ProfileSelector()
-print "running", p.profile
+p = idjc.prelims.ProfileManager()
+print "running", p.profile, p.nickname

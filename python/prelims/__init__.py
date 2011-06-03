@@ -104,11 +104,17 @@ class ArgumentParserImplementation(object):
             help="the recorders to start")
       group.add_argument("-c", "--crossfader", dest="crossfader", choices=("1", "2"), 
             help="position the crossfader for the specified player")
-      sp_mp.add_argument("newprofile", metavar="profile_name", help="new profile name")
+      sp_mp.add_argument("newprofile", metavar="profile_name",
+            help="""new profile name -- will form part of the dbus
+            bus/object/interface name and the jack client ID --
+            restrictions therefore apply""")
       sp_mp.add_argument("-t", "--template", dest="template", metavar="template_profile",
             help="an existing profile to use as a template")
       sp_mp.add_argument("-i", "--icon", dest="icon", metavar="icon_pathname",
             help="pathname to an icon -- defaults to idjc logo")
+      sp_mp.add_argument("-n", "--nickname", dest="nickname", metavar="n",
+            help="""alternate name to appear in window title bars -- 
+            the form of this text is not subject to restrictions""")
       sp_mp.add_argument("-d", "--description", dest="description", metavar="description_text",
             help="description of the profile")
 
@@ -135,7 +141,20 @@ class ArgumentParserImplementation(object):
      
 
 
-class ProfileSelector(object):
+MAX_PROFILE_LENGTH = 12
+
+
+def profile_name_valid(p):
+   try:
+      dbus.validate_bus_name("com." + p)
+      dbus.validate_object_path("/" + p)
+   except (TypeError, ValueError):
+      return False
+   return len(p) <= MAX_PROFILE_LENGTH
+
+
+
+class ProfileManager(object):
    """The profile gives each application instance a unique identity.
    
    This identity extends to the config file directory if present, 
@@ -146,7 +165,8 @@ class ProfileSelector(object):
    
 
    _profile = _dbus_bus_name = _profile_dialog = None
-   
+
+   _optionals = ("icon", "nickname", "description")
 
    class ProfileError(Exception):
       pass
@@ -172,7 +192,7 @@ class ProfileSelector(object):
          if args.profile is not None:
             profile = args.profile[0]
             dialog_selects = False
-            if not self._profile_name_valid(profile):
+            if not profile_name_valid(profile):
                ap.error("specified profile name is not valid")
 
          if args.dialog is not None:
@@ -181,12 +201,14 @@ class ProfileSelector(object):
          self._profile_dialog = self._get_profile_dialog(dialog_selects, profile)
          self._profile_dialog.connect("delete", self._cb_delete_profile)
          self._profile_dialog.connect("choose", self._choose_profile)
-         def new_profile(dialog, profile, template, icon, description):
+         def new_profile(dialog, profile, template, icon, nickname, description):
             try:
-               self._generate_profile(profile, template, icon=icon, description=description)
+               self._generate_profile(profile, template, icon=icon,
+                           nickname=nickname, description=description)
                dialog.destroy_new_profile_dialog()
             except self.ProfileError as e:
-               dialog.display_error("Error while creating new profile", str(e))
+               dialog.display_error("Error while creating new profile",
+               str(e), transient_parent=dialog.get_new_profile_dialog())
 
          self._profile_dialog.connect("new", new_profile)
          self._profile_dialog.connect("clone", new_profile)
@@ -202,6 +224,11 @@ class ProfileSelector(object):
    @property
    def profile(self):
       return self._profile
+
+
+   @property
+   def nickname(self):
+      return self._nickname
 
 
    @property
@@ -232,14 +259,21 @@ class ProfileSelector(object):
             if verbose:
                print "profile '%s' is in use" % profile
          else:
-            dialog.set_profile(profile)
+            nickname = self._grab_nickname_for_profile(profile)
+            nickname = nickname or profile
+            dialog.set_profile(profile, nickname)
             self._profile = profile
+            self._nickname = nickname
             self._dbus_bus_name = busname
 
 
    def _generate_profile(self, newprofile, template=None, **kwds):
       if PGlobs.profile_dir is not None:
-         if not self._profile_name_valid(newprofile):
+         if len(newprofile) > MAX_PROFILE_LENGTH:
+            raise self.ProfileError("the profile length is too long " \
+                           "(max %d characters)" % MAX_PROFILE_LENGTH)
+
+         if not profile_name_valid(newprofile):
             raise self.ProfileError("the new profile name is not valid")
            
          try:
@@ -254,12 +288,12 @@ class ProfileSelector(object):
             
          try:
             if template is not None:
-               if not self._profile_name_valid(template):
+               if not profile_name_valid(template):
                   raise self.ProfileError("specified template not valid (%s)" % template)
                
                tdir = os.path.join(PGlobs.profile_dir, template)
                if os.path.isdir(tdir):
-                  for x in ("icon", "description", "config"):
+                  for x in self._optionals + ("config", ):
                      try:
                         shutil.copyfile(os.path.join(tdir, x),
                                         os.path.join(tmp, x))
@@ -268,7 +302,7 @@ class ProfileSelector(object):
                else:
                   raise self.ProfileError("template profile '%s' does not exist" % template)
                   
-            for fname in ("icon", "description"):
+            for fname in self._optionals:
                if kwds.get(fname):
                   try:
                      with open(os.path.join(tmp, fname), "w") as f:
@@ -297,27 +331,17 @@ class ProfileSelector(object):
       self._generate_profile("default", description="The default profile")
 
 
-   @staticmethod
-   def _profile_name_valid(p):
-      try:
-         dbus.validate_bus_name("com." + p)
-         dbus.validate_object_path("/" + p)
-      except (TypeError, ValueError):
-         return False
-      return True
-
-
-   def _profile_data(self, want=("icon", "description")):
+   def _profile_data(self):
       d = PGlobs.profile_dir
       try:
          profdirs = os.walk(d).next()[1]
       except EnvironmentError:
          return
       for profname in profdirs:
-         if self._profile_name_valid(profname):
+         if profile_name_valid(profname):
             files = os.walk(os.path.join(d, profname)).next()[2]
             rslt = {"profile": profname}
-            for each in want:
+            for each in self._optionals:
                try:
                   with open(os.path.join(d, profname, each)) as f:
                      rslt[each] = f.read()
@@ -342,6 +366,16 @@ class ProfileSelector(object):
                      "_grab_bus_name_for_profile")
                      
    del closure
+
+
+   @staticmethod
+   def _grab_nickname_for_profile(profile):
+      d = PGlobs.profile_dir
+      try:
+         with open(os.path.join(d, profile, "nickname")) as f:
+            return f.read()
+      except EnvironmentError:
+         return None
 
 
    def _get_profile_dialog(self, can_select, highlight="default"):
@@ -535,6 +569,29 @@ class ProfileSelector(object):
                image.set_from_pixbuf(pb)
             self.set_preview_widget_active(active)
  
+
+ 
+      class ProfileEntry(gtk.Entry):
+         _allowed = (65361, 65363, 65365, 65288, 65535)
+         
+         def __init__(self):
+            gtk.Entry.__init__(self)
+            self.set_max_length(MAX_PROFILE_LENGTH)
+            self.connect("key-press-event", self._cb_kp)
+            self.connect("button-press-event", self._cb_button)
+         
+         
+         def _cb_kp(self, widget, event):
+            if not event.keyval in self._allowed and not \
+                                 profile_name_valid(event.string):
+               return True
+               
+               
+         def _cb_button(self, widget, event):
+            if event.button != 1:
+               return True
+
+ 
  
       class NewProfileDialog(gtk.Dialog):
          _icon_dialog = IconPreviewFileChooserDialog("Choose An Icon",
@@ -554,26 +611,32 @@ class ProfileSelector(object):
                self.set_title("New profile details")
 
             vbox = gtk.VBox()
-            l = gtk.Label("Profile name:")
-            l.set_alignment(0, 0.5)
-            vbox.add(l)
-            self.profile_entry = gtk.Entry()
-            vbox.add(self.profile_entry)
-            l = gtk.Label("Icon:")
-            l.set_alignment(0, 0.5)
-            vbox.add(l)
+            vbox.set_border_width(5)
+            vbox.set_spacing(5)
+
+            labels = (gtk.Label(x) for x in ("Profile name:",
+                              "Icon:", "Nickname:", "Description:"))
+            names = ("profile_entry", "icon_button", "nickname_entry",
+                                                "description_entry")
+            widgets = (ProfileEntry(), IconChooserButton(self._icon_dialog),
+                       gtk.Entry(), gtk.Entry())
+            for label, name, widget in zip(labels, names, widgets):
+               item_vbox = gtk.VBox()
+               item_vbox.add(label)
+               label.set_alignment(0, 0.5)
+               item_vbox.add(widget)
+               setattr(self, name, widget)
+               vbox.add(item_vbox)
+                                                
             self._icon_dialog.set_transient_for(self)
-            self.icon_button = IconChooserButton(self._icon_dialog)
+
             if row is not None:
                self.icon_button.set_filename(row[4])
-            vbox.add(self.icon_button)
-            l = gtk.Label("Description:")
-            l.set_alignment(0, 0.5)
-            vbox.add(l)
-            self.description_entry = gtk.Entry()
-            if row is not None:
+               self.nickname_entry.set_text(row[5])
                self.description_entry.set_text(row[2])
-            vbox.add(self.description_entry)
+            else:
+               self.icon_button.set_filename(None)
+               
             self.get_content_area().add(vbox)
                
             box = gtk.HButtonBox()
@@ -602,7 +665,7 @@ class ProfileSelector(object):
                (gobject.TYPE_STRING,))) for x in (_signal_names)))
          __gsignals__.update(dict(
                (x, (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-               (gobject.TYPE_STRING,) * 4)) for x in (_new_profile_dialog_signal_names)))
+               (gobject.TYPE_STRING,) * 5)) for x in (_new_profile_dialog_signal_names)))
 
 
          def __init__(self, data_function=None):
@@ -616,12 +679,13 @@ class ProfileSelector(object):
             w = gtk.ScrolledWindow()
             w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
             self.get_content_area().add(w)
-            self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int, str)
+            self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int, str, str)
             self.sorted = gtk.TreeModelSort(self.store)
             self.sorted.set_sort_func(1, self._sort_func)
             self.sorted.set_sort_column_id(1, gtk.SORT_ASCENDING)
             self.treeview = gtk.TreeView(self.sorted)
             self.treeview.set_headers_visible(True)
+            self.treeview.set_rules_hint(True)
             w.add(self.treeview)
             pbrend = gtk.CellRendererPixbuf()
             strrend = gtk.CellRendererText()
@@ -631,16 +695,21 @@ class ProfileSelector(object):
             c1.pack_start(strrend)
             c1.add_attribute(pbrend, "pixbuf", 0)
             c1.add_attribute(strrend, "text", 1)
+            c1.set_spacing(3)
             self.treeview.append_column(c1)
-            c2 = gtk.TreeViewColumn("Description")
+            c2 = gtk.TreeViewColumn("Nickname")
             c2.pack_start(strrend)
-            c2.add_attribute(strrend, "text", 2)
-            c2.set_expand(True)
+            c2.add_attribute(strrend, "text", 5)
             self.treeview.append_column(c2)
-            c3 = gtk.TreeViewColumn()
-            c3.pack_start(ledrend)
-            c3.add_attribute(ledrend, "active", 3)
+            c3 = gtk.TreeViewColumn("Description")
+            c3.pack_start(strrend)
+            c3.add_attribute(strrend, "text", 2)
+            c3.set_expand(True)
             self.treeview.append_column(c3)
+            c4 = gtk.TreeViewColumn()
+            c4.pack_start(ledrend)
+            c4.add_attribute(ledrend, "active", 3)
+            self.treeview.append_column(c4)
             self.selection = self.treeview.get_selection()
             self.selection.connect("changed", self._cb_selection)
             box = gtk.HButtonBox()
@@ -667,15 +736,20 @@ class ProfileSelector(object):
                getattr(self, each).connect("clicked", self._cb_new_profile_dialog, each)
           
          
-         def display_error(self, title, message):
+         def display_error(self, title, message, transient_parent=None):
             error_dialog = ErrorMessageDialog(title, message)
-            error_dialog.set_transient_for(self)
+            error_dialog.set_transient_for(transient_parent or self)
+            error_dialog.set_icon_from_file(PGlobs.default_icon)
             error_dialog.show_all()
 
          
          def destroy_new_profile_dialog(self):
             self._new_profile_dialog.destroy()
             del self._new_profile_dialog
+
+
+         def get_new_profile_dialog(self):
+            return self._new_profile_dialog
          
          
          def do_get_property(self, prop):
@@ -699,10 +773,10 @@ class ProfileSelector(object):
                   self._update_data()
 
                if signal == "delete":
-                  message = "Really delete profile: %s?" % self._highlighted
+                  message = "Delete profile: %s?" % self._highlighted
                   if self._highlighted == "default":
-                     message += "\n\nThis profile will be recreated" \
-                     " immediately afterwards with initial settings."
+                     message += "\n\nThis profile is protected and will"
+                     " be recreated with initial settings."
                   conf = ConfirmationDialog("Confirmation", message)
                   conf.set_transient_for(self)
                   conf.ok.connect("clicked", lambda w: commands())
@@ -727,7 +801,8 @@ class ProfileSelector(object):
                profile = np_dialog.profile_entry.get_text()
                icon = np_dialog.icon_button.get_filename()
                description = np_dialog.description_entry.get_text().strip()
-               self.emit(action, profile, template, icon, description)
+               nickname = np_dialog.nickname_entry.get_text().strip()
+               self.emit(action, profile, template, icon, nickname, description)
                self._update_data()
                
             np_dialog.set_transient_for(self)
@@ -824,7 +899,8 @@ class ProfileSelector(object):
                         pb = None
                      desc = d["description"] or ""
                      active = d["active"]
-                     self.store.append((pb, d["profile"], desc, active, i or ""))
+                     nick = d["nickname"] or ""
+                     self.store.append((pb, d["profile"], desc, active, i or "", nick))
                   self._highlight_profile(h)
             return self.props.visible
             
@@ -834,10 +910,10 @@ class ProfileSelector(object):
             return self._profile
             
             
-         def set_profile(self, newprofile):
+         def set_profile(self, newprofile, newnickname):
             assert self._profile is None
             self._profile = newprofile
-            self.set_title(self.get_title() + "  (%s)" % newprofile)
+            self.set_title(self.get_title() + "  (%s)" % newnickname)
             self.cancel.set_label(gtk.STOCK_CLOSE)
             self.connect("delete-event", self._cb_delete_event)
             self.response(0)
