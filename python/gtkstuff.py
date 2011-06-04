@@ -1,0 +1,122 @@
+"""Generally useful gtk based widgets."""
+
+#   Copyright (C) 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 2 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program in the file entitled COPYING.
+#   If not, see <http://www.gnu.org/licenses/>.
+
+
+import os
+
+import gobject
+import gtk
+
+from idjc import FGlobs, PGlobs
+
+
+class LEDDict(dict):
+   """Dictionary of pixbufs of LEDs."""
+   
+   
+   def __init__(self, size=10):
+      names = "clear", "red", "green", "yellow"
+      filenames = ("led_unlit_clear_border_64x64.png",
+                   "led_lit_red_black_border_64x64.png",
+                   "led_lit_green_black_border_64x64.png",
+                   "led_lit_amber_black_border_64x64.png")
+      for name, filename in zip(names, filenames):
+         self[name] = gtk.gdk.pixbuf_new_from_file_at_size(
+            os.path.join(FGlobs.pkgdatadir, filename), size, size)
+
+
+
+class CellRendererLED(gtk.CellRendererPixbuf):
+   """A cell renderer that displays LEDs."""
+   
+   
+   __gproperties__ = {
+         "active" : (gobject.TYPE_INT, "active", "active",
+                     0, 1, 0, gobject.PARAM_WRITABLE),
+         "color" :  (gobject.TYPE_STRING, "color", "color",
+                     "clear", gobject.PARAM_WRITABLE)
+   }
+
+                     
+   def __init__(self, size=10, actives=("clear", "green")):
+      gtk.CellRendererPixbuf.__init__(self)
+      self._led = LEDDict(size)
+      self._index = [self._led[key] for key in actives] 
+
+        
+   def do_set_property(self, prop, value):
+      if prop.name == "active":
+         item = self._index[value]
+      elif prop.name == "color":
+         item = self._led[value]
+      else:
+         raise AttributeError("unknown property %s" % prop.name)
+      gtk.CellRendererPixbuf.set_property(self, "pixbuf", item)
+
+
+
+class StandardDialog(gtk.Dialog):
+   def __init__(self, title, message, stock_item, label_width, modal):
+      gtk.Dialog.__init__(self)
+      self.set_modal(modal)
+      self.set_destroy_with_parent(True)
+      self.set_title(title)
+      self.set_icon_from_file(PGlobs.default_icon)
+      
+      hbox = gtk.HBox()
+      hbox.set_border_width(10)
+      image = gtk.image_new_from_stock(stock_item,
+                                          gtk.ICON_SIZE_DIALOG)
+      hbox.pack_start(image, False, padding=30)
+      vbox = gtk.VBox()
+      hbox.pack_start(vbox)
+      for each in message.split("\n"):
+         label = gtk.Label(each)
+         label.set_alignment(0, 0.5)
+         label.set_size_request(label_width, -1)
+         label.set_line_wrap(True)
+         vbox.pack_start(label)
+      self.get_content_area().add(hbox)
+
+
+
+class ConfirmationDialog(StandardDialog):
+   """This needs to be pulled out since it's generic."""
+   
+   def __init__(self, title, message, label_width=300, modal=True):
+      StandardDialog.__init__(self, title, message,
+                     gtk.STOCK_DIALOG_QUESTION, label_width, modal)
+      box = gtk.HButtonBox()
+      cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
+      cancel.connect("clicked", lambda w: self.destroy())
+      box.pack_start(cancel)
+      self.ok = gtk.Button(stock=gtk.STOCK_OK)
+      self.ok.connect_after("clicked", lambda w: self.destroy())
+      box.pack_start(self.ok)
+      self.get_action_area().add(box)
+
+
+
+class ErrorMessageDialog(StandardDialog):
+   """This needs to be pulled out since it's generic."""
+   
+   def __init__(self, title, message, label_width=300, modal=True):
+      StandardDialog.__init__(self, title, message,
+                     gtk.STOCK_DIALOG_ERROR, label_width, modal)
+      b = gtk.Button(stock=gtk.STOCK_CLOSE)
+      b.connect("clicked", lambda w: self.destroy())
+      self.get_action_area().add(b)

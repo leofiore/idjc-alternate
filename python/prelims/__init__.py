@@ -112,9 +112,8 @@ class ArgumentParserImplementation(object):
             help="an existing profile to use as a template")
       sp_mp.add_argument("-i", "--icon", dest="icon", metavar="icon_pathname",
             help="pathname to an icon -- defaults to idjc logo")
-      sp_mp.add_argument("-n", "--nickname", dest="nickname", metavar="n",
-            help="""alternate name to appear in window title bars -- 
-            the form of this text is not subject to restrictions""")
+      sp_mp.add_argument("-n", "--nickname", dest="nickname", metavar="nickname",
+            help="""the alternate name to appear in window title bars""")
       sp_mp.add_argument("-d", "--description", dest="description", metavar="description_text",
             help="description of the profile")
 
@@ -138,10 +137,13 @@ class ArgumentParserImplementation(object):
       
    def exit(self, status=0, message=None):
       self._ap.exit(status, message)
+
      
 
-
+# Profile length limited for practical reasons. For more descriptive
+# purposes the nickname parameter was created.
 MAX_PROFILE_LENGTH = 12
+
 
 
 def profile_name_valid(p):
@@ -151,6 +153,18 @@ def profile_name_valid(p):
    except (TypeError, ValueError):
       return False
    return len(p) <= MAX_PROFILE_LENGTH
+
+
+
+class ProfileError(Exception):
+   """General purpose exception used within the ProfileManager class.
+   
+   Takes two strings so that one can be used for command line messages
+   and the other for displaying in dialog boxes."""
+   
+   def __init__(self, str1, str2=None):
+      Exception.__init__(self, str1)
+      self.gui_text = str2
 
 
 
@@ -168,8 +182,7 @@ class ProfileManager(object):
 
    _optionals = ("icon", "nickname", "description")
 
-   class ProfileError(Exception):
-      pass
+
 
 
    def __init__(self):
@@ -184,7 +197,7 @@ class ProfileManager(object):
             if "newprofile" in args:
                self._generate_profile(**vars(args))
                ap.exit(0)
-         except self.ProfileError as e:
+         except ProfileError as e:
             ap.error("failed to create profile: " + str(e))
 
          profile = "default"
@@ -206,9 +219,9 @@ class ProfileManager(object):
                self._generate_profile(profile, template, icon=icon,
                            nickname=nickname, description=description)
                dialog.destroy_new_profile_dialog()
-            except self.ProfileError as e:
+            except ProfileError as e:
                dialog.display_error("Error while creating new profile",
-               str(e), transient_parent=dialog.get_new_profile_dialog())
+               e.gui_text, transient_parent=dialog.get_new_profile_dialog())
 
          self._profile_dialog.connect("new", new_profile)
          self._profile_dialog.connect("clone", new_profile)
@@ -270,26 +283,33 @@ class ProfileManager(object):
    def _generate_profile(self, newprofile, template=None, **kwds):
       if PGlobs.profile_dir is not None:
          if len(newprofile) > MAX_PROFILE_LENGTH:
-            raise self.ProfileError("the profile length is too long " \
-                           "(max %d characters)" % MAX_PROFILE_LENGTH)
+            raise ProfileError("the profile length is too long " 
+                           "(max %d characters)" % MAX_PROFILE_LENGTH,
+               "The profile length is too long (max %d characters)."
+                                                 % MAX_PROFILE_LENGTH)
 
          if not profile_name_valid(newprofile):
-            raise self.ProfileError("the new profile name is not valid")
+            raise ProfileError("the new profile name is not valid",
+                                 "The new profile name is not valid.")
            
          try:
             busname = self._grab_bus_name_for_profile(newprofile)
          except dbus.DBusException:
-            raise self.ProfileError("the profile is currently running")
+            raise ProfileError("the profile is currently running",
+                                 "The profile is currently running.")
 
          try:
             tmp = tempfile.mkdtemp()
          except EnvironmentError:
-            raise self.ProfileError("temporary directory creation failed")
+            raise ProfileError("temporary directory creation failed",
+                                 "Temporary directory creation failed.")
             
          try:
             if template is not None:
                if not profile_name_valid(template):
-                  raise self.ProfileError("specified template not valid (%s)" % template)
+                  raise ProfileError(
+                        "specified template not valid (%s)" % template,
+                        "Specified template not valid (%s)" % template)
                
                tdir = os.path.join(PGlobs.profile_dir, template)
                if os.path.isdir(tdir):
@@ -300,7 +320,9 @@ class ProfileManager(object):
                      except EnvironmentError:
                         pass
                else:
-                  raise self.ProfileError("template profile '%s' does not exist" % template)
+                  raise ProfileError(
+                     "template profile '%s' does not exist" % template,
+                     "Template profile '%s' does not exist." % template)
                   
             for fname in self._optionals:
                if kwds.get(fname):
@@ -308,17 +330,21 @@ class ProfileManager(object):
                      with open(os.path.join(tmp, fname), "w") as f:
                         f.write(kwds[fname])
                   except EnvironmentError:
-                     raise self.ProfileError("could not write " + fname)
+                     raise ProfileError("could not write " + fname,
+                                        "Could not write %s" % fname)
             
+
+            dest = os.path.join(PGlobs.profile_dir, newprofile)
             try:
-               dest = os.path.join(PGlobs.profile_dir, newprofile)
                shutil.copytree(tmp, dest)
             except EnvironmentError as e:
                if e.errno == 17 and os.path.isdir(dest):
-                  msg = "the profile directory exists"
+                  msg1 = "the profile directory '%s' exists" % dest
+                  msg2 = "The profile directory '%s' exists." % dest
                else:
-                  msg = "could not create profile directory: path exists"
-               raise self.ProfileError(msg)
+                  msg1 = "non directory path exists: '%s'" % dest
+                  msg2 = "Non directory path exists: '%s'." % dest
+               raise ProfileError(msg1, msg2)
          finally:
             # Failure to clean up is not a critical error.
             try:
@@ -383,92 +409,9 @@ class ProfileManager(object):
       import gtk
       import pango
 
-
-      class CellRendererGreenLED(gtk.CellRendererPixbuf):
-         """Needs to be pulled out and made generic."""
-         
-         __gproperties__ = {
-               "active" : (gobject.TYPE_INT,
-                           "active", "active",
-                           0, 1, 0, gobject.PARAM_READWRITE),}
-
-                           
-         def __init__(self):
-            gtk.CellRendererPixbuf.__init__(self)
-            self._led = [gtk.gdk.pixbuf_new_from_file_at_size(
-                         os.path.join(FGlobs.pkgdatadir, x + ".png"), 10, 10)
-                         for x in ("led_unlit_clear_border_64x64",
-                                   "led_lit_green_black_border_64x64")]
-            self._active = 0
-
-                     
-         def do_get_property(self, prop):
-            if prop.name == "active":
-               return self._active
-            else:
-               raise AttributeError("unknown property %s" % prop.name)
-
-               
-         def do_set_property(self, prop, value):
-            if prop.name == "active":
-               self._active = value
-               gtk.CellRendererPixbuf.set_property(self, "pixbuf", 
-                                                      self._led[value])
-            else:
-               raise AttributeError("unknown property %s" % prop.name)
-      
-      
-      class StandardDialog(gtk.Dialog):
-         """This needs to be pulled out since it's generic."""
-         
-         def __init__(self, title, message, stock_item, label_width):
-            gtk.Dialog.__init__(self)
-            self.set_modal(True)
-            self.set_destroy_with_parent(True)
-            self.set_title(title)
-            
-            hbox = gtk.HBox()
-            hbox.set_border_width(10)
-            image = gtk.image_new_from_stock(stock_item,
-                                                gtk.ICON_SIZE_DIALOG)
-            hbox.pack_start(image, False, padding=30)
-            vbox = gtk.VBox()
-            hbox.pack_start(vbox)
-            for each in message.split("\n"):
-               label = gtk.Label(each)
-               label.set_alignment(0, 0.5)
-               label.set_size_request(label_width, -1)
-               label.set_line_wrap(True)
-               vbox.pack_start(label)
-            self.get_content_area().add(hbox)
-
-
-      class ConfirmationDialog(StandardDialog):
-         """This needs to be pulled out since it's generic."""
-         
-         def __init__(self, title, message, label_width=300):
-            StandardDialog.__init__(self, title, message,
-                           gtk.STOCK_DIALOG_QUESTION, label_width)
-            box = gtk.HButtonBox()
-            cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
-            cancel.connect("clicked", lambda w: self.destroy())
-            box.pack_start(cancel)
-            self.ok = gtk.Button(stock=gtk.STOCK_OK)
-            self.ok.connect_after("clicked", lambda w: self.destroy())
-            box.pack_start(self.ok)
-            self.get_action_area().add(box)
-
-      
-      
-      class ErrorMessageDialog(StandardDialog):
-         """This needs to be pulled out since it's generic."""
-         
-         def __init__(self, title, message, label_width=300):
-            StandardDialog.__init__(self, title, message,
-                           gtk.STOCK_DIALOG_ERROR, label_width)
-            b = gtk.Button(stock=gtk.STOCK_CLOSE)
-            b.connect("clicked", lambda w: self.destroy())
-            self.get_action_area().add(b)
+      from ..gtkstuff import ConfirmationDialog
+      from ..gtkstuff import ErrorMessageDialog
+      from ..gtkstuff import CellRendererLED
 
  
       class IconChooserButton(gtk.Button):
@@ -572,7 +515,7 @@ class ProfileManager(object):
 
  
       class ProfileEntry(gtk.Entry):
-         _allowed = (65361, 65363, 65365, 65288, 65535)
+         _allowed = (65056, 65361, 65363, 65365, 65288, 65289, 65535)
          
          def __init__(self):
             gtk.Entry.__init__(self)
@@ -689,7 +632,7 @@ class ProfileManager(object):
             w.add(self.treeview)
             pbrend = gtk.CellRendererPixbuf()
             strrend = gtk.CellRendererText()
-            ledrend = CellRendererGreenLED()
+            ledrend = CellRendererLED()
             c1 = gtk.TreeViewColumn("Profile")
             c1.pack_start(pbrend, expand=False)
             c1.pack_start(strrend)
@@ -775,7 +718,7 @@ class ProfileManager(object):
                if signal == "delete":
                   message = "Delete profile: %s?" % self._highlighted
                   if self._highlighted == "default":
-                     message += "\n\nThis profile is protected and will"
+                     message += "\n\nThis profile is protected and will" \
                      " be recreated with initial settings."
                   conf = ConfirmationDialog("Confirmation", message)
                   conf.set_transient_for(self)
