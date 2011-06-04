@@ -26,8 +26,6 @@ import sys
 sys.path.insert(0, """@pythondir@""")
 
 import idjc
-import idjc.prelims
 
 
-p = idjc.prelims.ProfileManager()
-print "running", p.profile, p.nickname
+idjc.main()

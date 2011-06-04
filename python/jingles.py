@@ -1,5 +1,5 @@
 #   IDJCjingles.py: The jingles player GUI code for IDJC
-#   Copyright (C) 2005 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2005, 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -15,16 +15,23 @@
 #   along with this program in the file entitled COPYING.
 #   If not, see <http://www.gnu.org/licenses/>.
 
-__all__ = ['jingles']
 
-import pygtk
-pygtk.require('2.0')
-import gtk, os, gobject
-from IDJCfree import *
-from idjc_config import *
-from ln_text import ln
 
-class jingles:
+__all__ = ['Jingles']
+
+
+
+import os
+
+import gobject
+import gtk
+
+from .freefunctions import *
+from .ln_text import ln
+
+
+
+class Jingles(object):
    NORMAL = 70  # Target level for hightest main player fader.
 
    def cleanup(self):

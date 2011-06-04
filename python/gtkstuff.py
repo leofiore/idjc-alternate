@@ -120,3 +120,74 @@ class ErrorMessageDialog(StandardDialog):
       b = gtk.Button(stock=gtk.STOCK_CLOSE)
       b.connect("clicked", lambda w: self.destroy())
       self.get_action_area().add(b)
+
+
+
+def threadslock(f):
+   """Function decorator for thread locking timeout callbacks."""
+   
+   
+   def newf(*args, **kwargs):
+      gtk.gdk.threads_enter()
+      try:
+         r = f(*args, **kwargs)
+      finally:
+         gtk.gdk.threads_leave()
+      return r
+   return newf
+
+
+
+class DefaultEntry(gtk.Entry):
+   def __init__(self, default_text, sensitive_override=False):
+      gtk.Entry.__init__(self)
+      self.connect("focus-in-event", self.on_focus_in)
+      self.connect("focus-out-event", self.on_focus_out)
+      self.props.primary_icon_activatable = True
+      self.connect("icon-press", self.on_icon_press)
+      self.connect("realize", self.on_realize)
+      self.default_text = default_text
+      self.sensitive_override = sensitive_override
+
+   def on_realize(self, entry):
+      layout = self.get_layout().copy()
+      layout.set_markup("<span foreground='dark gray'>%s</span>" % self.default_text)
+      extents = layout.get_pixel_extents()[1]
+      drawable = gtk.gdk.Pixmap(self.get_parent_window(), extents[2], extents[3])
+      gc = gtk.gdk.GC(drawable)
+      gc2 = entry.props.style.base_gc[0]
+      drawable.draw_rectangle(gc2, True, *extents)
+      drawable.draw_layout(gc, 0, 0, layout)
+      pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, extents[2], extents[3])
+      pixbuf.get_from_drawable(drawable, drawable.get_colormap(), 0, 0, *extents)
+      self.empty_pixbuf = pixbuf
+      if not gtk.Entry.get_text(self):
+         self.props.primary_icon_pixbuf = pixbuf
+
+   def on_icon_press(self, entry, icon_pos, event):
+      self.grab_focus()
+      
+   def on_focus_in(self, entry, event):
+      self.props.primary_icon_pixbuf = None
+      
+   def on_focus_out(self, entry, event):
+      text = gtk.Entry.get_text(self).strip()
+      if not text:
+         self.props.primary_icon_pixbuf = self.empty_pixbuf
+      
+   def get_text(self):
+      if (self.flags() & gtk.SENSITIVE) or self.sensitive_override:
+         return gtk.Entry.get_text(self).strip() or self.default_text
+      else:
+         return ""
+      
+   def set_text(self, newtext):
+      newtext = newtext.strip()
+      gtk.Entry.set_text(self, newtext)
+      if newtext:
+         self.props.primary_icon_pixbuf = None
+      else:
+         try:
+            self.props.primary_icon_pixbuf = self.empty_pixbuf
+         except AttributeError:
+            pass

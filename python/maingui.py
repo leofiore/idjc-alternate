@@ -1,4 +1,4 @@
-#   idjcgui.py: Main python code of IDJC
+#   maingui.py: Main python code of IDJC
 #   Copyright (C) 2005-2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
@@ -15,97 +15,49 @@
 #   along with this program in the file entitled COPYING.
 #   If not, see <http://www.gnu.org/licenses/>.
 
-appname= "Internet DJ Console"
-copyright = "Copyright 2005-2011 Stephen Fairchild"
-copyright2 = u"\xA9 2005-2011 Stephen Fairchild"        # As above but uses copyright character (c)
-license = "Released under the GNU General Public License V2.0"
-# version is set in the configure.in files
+
+
+from .prelims import ProfileManager
+pm = ProfileManager()
+
+
+
+import os
+import sys
+import fcntl
+import subprocess
+import ConfigParser
+import operator
+import socket
+import pickle
+import stat
+import signal
+import time
+
+import glib
+import gobject
+import gtk
+import cairo
+import pango
+
+from .ln_text import ln
+from .playergui import *
+from .sourceclientgui import *
+from .preferences import *
+from .jingles import *
+from .freefunctions import int_object
+from .freefunctions import rich_safe
+from .freefunctions import string_multireplace
+from .gtkstuff import threadslock
+from . import midicontrols
+from . import tooltips
+from . import p3db
+
+
+
 METER_TEXT_SIZE = 8000
 
-console_help_message="""Usage:  idjc [-vhe] [-p profile] [-j jackserver] [-m microphone] [-a auxiliary] [-t voipmode] [-s serverstart]
-            -v    display the version number and exit
-            -h    show this help
-            -e    allow the launching of extra instances
-            -p    select a new or existing application profile
-            -j    which JACK server to use
-            -m    which microphone inputs to open e.g. 12 for mics 1 and 2
-            -a    open the auxiliary input - 1 is the only parameter allowed
-            -t    the VOIP mode 0=Off, 1=Green phone, 2=Red phone
-            -s    servers to connect to e.g. 13 for servers 1 and 3"""
-            
 
-import locale, os, sys, fcntl, subprocess, ConfigParser, operator
-
-def locale_encoding():
-   read = subprocess.Popen(["locale", "-a"], stdout=subprocess.PIPE).stdout# I have to do all this because an exception 
-   validlocales = read.read()           # refuses to be trapped for some reason
-   read.close()                         # therefore I need to prevent it from occurring
-   validlocales = validlocales.splitlines()
-   lang = os.environ.get("LANG")
-   if lang is not None and lang is not "":
-      # I wouldn't need to do this if I could use try/except but for some reason I can't trap any locale exceptions hence this code here.
-      lang = lang[:5] + lang[5:].replace("-", "").lower().replace("\x00", "").strip()   
-      for each in validlocales:
-         each = each[:5] + each[5:].replace("-", "").lower().replace("\x00", "").strip()
-         if each == lang:               # almost tempted to add a strip on this line too
-            break
-      else:
-         print "The LANG environment variable points to an invalid locale:", lang
-         print "Type 'locale -a' at a console for a list of valid settings"
-         del os.environ["LANG"]
-   os.environ["LANG"] = locale.setlocale(locale.LC_ALL, "")
-   try:
-      locale.getpreferredencoding()
-   except (locale.Error, Exception):
-      del os.environ["LANG"] 
-      locale.setlocale(locale.LC_ALL, "")
-      de = "iso8859-1"
-   else:
-      de = locale.getpreferredencoding()
-   if de == "ANSI_X3.4-1968":
-      # Avoid using ASCII encoding.  The terminal is most likely latin1 or utf8
-      # The ASCII fallback is there for windows compatibility!
-      de = "iso-8859-1"
-   fe = os.environ.get("G_FILENAME_ENCODING")
-   if fe == None or fe == "":
-      if os.environ.get("G_BROKEN_FILENAMES") == "1":
-         fe = sys.getfilesystemencoding()
-         os.environ["G_FILENAME_ENCODING"]=fe
-      else:
-         fe = "UTF-8"
-   elif fe.lower() == "@locale" or fe.lower() == "locale":
-      fe = de
-      os.environ["G_FILENAME_ENCODING"]=fe
-   return de, fe                # note that fe can contain a comma separated list
-
-display_enc, file_enc = locale_encoding()
-
-try:
-   from ln_text import ln
-except:
-   sys.path.append(os.environ.get("pkgpyexecdir"))
-   from ln_text import ln
-
-import pygtk
-pygtk.require('2.0')
-import gtk, gobject, time, fcntl, signal, stat, cairo, socket, pickle, glib
-
-try:
-   pango.Font   # some users will not need to import pango explicitly
-except:
-   import pango
-
-# import the python modules
-import idjc_config
-from idjc_config import *
-from IDJCmedia import *
-from sourceclientgui import *
-from IDJCmixprefs import *
-from IDJCjingles import *
-from IDJCfree import int_object, threadslock, rich_safe, string_multireplace
-import IDJCcontrols
-import tooltips
-import p3db
 
 class MicButton(gtk.ToggleButton):
    @property
@@ -3151,7 +3103,7 @@ class MainWindow:
       close_menu_item.connect("activate", self.close_window, self.close_menu)
 
       # Create the jingles player
-      self.jingles = jingles(self)
+      self.jingles = Jingles(self)
 
       # Variable initialisation
       self.songname = u""
@@ -3327,45 +3279,20 @@ class MainWindow:
    def main(self):
       gtk.main()
 
-def environment_variables_okay():
-   # Shows a dialog box when one or more of the helper programs is missing
-   environvars = (
-      ("jackd from the jack-audio-connection-kit package\n", ("jackd", "missing")),)
-   error_message = "The following programs were found to be missing...\n\n"
-   for each in environvars:
-      if os.environ.get(each[1][0], "") == "":
-         if each[1][1] == "missing":
-            error_message = error_message + each[0]     # append the appropriate error message
-         os.environ[each[1][0]] = each[1][1]
-   if error_message[-2:] != "\n\n":
-      error_message = error_message + "\n\t\tDo you want to continue?"
-      message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_YES_NO, error_message)
-      message_dialog.set_icon_from_file(pkgdatadir + "icon" + gfext)
-      message_dialog.set_default_response(gtk.RESPONSE_YES)
-      if message_dialog.run() == gtk.RESPONSE_NO:
-         message_dialog.destroy()
-         return False
-      else:
-         message_dialog.destroy()
-   return True
 
 @threadslock
 def main():
-   if environment_variables_okay() == True:
+   try:
+      run_instance = MainWindow()
+   except (MainWindow.initfailed, MainWindow.initcleanexit, KeyboardInterrupt):
+      return 5
+   else:
       try:
-         run_instance = MainWindow()
-      except (MainWindow.initfailed,
-              MainWindow.initcleanexit,
-              KeyboardInterrupt):
+         run_instance.main()
+      except KeyboardInterrupt:
          return 5
-      else:
-         try:
-            run_instance.main()
-         except KeyboardInterrupt:
-            return 5
-         else:
-            return 0
-   return 5
+   return 0
+   
 
 if __name__ == "__main__":
    gtk.gdk.threads_init()
