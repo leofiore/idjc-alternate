@@ -26,21 +26,18 @@ import string
 import re
 import pango
 
-import pygtk
-pygtk.require('2.0')
 import gtk
 import mutagen
-
 import mutagen.id3 as id3
-
-from idjc_config import *
-from IDJCfree import *
-from ln_text import ln
 from mutagen.mp3 import MP3
 from mutagen.apev2 import APEv2, APETextValue
 from mutagen.musepack import Musepack
 from mutagen.monkeysaudio import MonkeysAudio
 from mutagen.asf import ASF, ASFUnicodeAttribute
+
+from idjc import FGlobs
+from .freefunctions import *
+from .ln_text import ln
 
 def set_tip(*args):
    """Dummy tooltips setter."""

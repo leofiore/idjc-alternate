@@ -17,13 +17,17 @@
 
 __all__ = ['MediaPane', 'Prefs']
 
-import pygtk
-pygtk.require('2.0')
-import gtk, gobject, time
-from idjc_config import *
-from IDJCfree import threadslock, DefaultEntry
-from ln_text import ln
+
+import time
 from urllib import quote
+
+import gobject
+import gtk
+
+from idjc import FGlobs
+from .gtkstuff import threadslock, DefaultEntry
+from .ln_text import ln
+
 
 try:
    import MySQLdb as sql

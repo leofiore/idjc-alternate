@@ -17,14 +17,19 @@
 
 __all__ = ['mixprefs']
 
-import pygtk
-pygtk.require('2.0')
-import gtk, os, licence_window, p3db, shutil
-import idjc_config
-from idjc_config import *
-from ln_text import ln
-from IDJCfree import int_object
-import IDJCcontrols
+
+import os
+import shutil
+
+import gtk
+
+from idjc import FGlobs
+from . import licence_window
+from . import p3db
+from . import midicontrols
+from .ln_text import ln
+from .freefunctions import int_object
+
 
 class XChatInstaller(gtk.Button):
    pluginname = "idjc-announce.py"

@@ -1,5 +1,5 @@
 #   popupwindow.py: for when standard gtk tooltips just don't cut it
-#   Copyright (C) 2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2007, 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -17,11 +17,11 @@
 
 __all__ = ['PopupWindow']
 
-import pygtk
-pygtk.require('2.0')
-import gtk
+
 import gobject
-from IDJCfree import threadslock
+import gtk
+from .gtkstuff import threadslock
+
 
 class PopupWindow:
    def message(self, text):

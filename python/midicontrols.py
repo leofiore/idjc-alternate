@@ -15,13 +15,21 @@
 #   along with this program in the file entitled COPYING.
 #   If not, see <http://www.gnu.org/licenses/>.
 
-import pygtk
-pygtk.require('2.0')
-import os.path, sys, re
-import gtk, gobject, pango, collections, time
-from ln_text import ln
-from idjc_config import *
-from IDJCfree import *
+
+import sys
+import re
+import os.path
+import time
+import collections
+
+import gobject
+import gtk
+import pango
+
+from idjc import FGlobs
+from .ln_text import ln
+from .freefunctions import *
+from .gtkstuff import threadslock
 
 
 class Binding(tuple):

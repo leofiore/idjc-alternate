@@ -27,13 +27,11 @@ import signal
 import re
 import xml.dom.minidom as mdom
 from stat import *
-from collections import deque
+from collections import deque, namedtuple, defaultdict
 from functools import partial
 
-import pygtk
-pygtk.require('2.0')
-import gtk
 import gobject
+import gtk
 import pango
 import mutagen
 from mutagen.mp3 import MP3
@@ -43,16 +41,13 @@ from mutagen.easyid3 import EasyID3
 from mutagen.apev2 import APEv2
 from mutagen.asf import ASF
    
-import popupwindow
-from mutagentagger import*
-from IDJCfree import *
-from idjc_config import *
-from ln_text import ln
+from idjc import FGlobs
+from . import popupwindow
+from .mutagentagger import *
+from .freefunctions import *
+from .gtkstuff import threadslock
+from .ln_text import ln
 
-try:
-   from collections import namedtuple, defaultdict
-except:
-   from nt import namedtuple
 
 # Named tuple for a playlist row.
 class PlayerRow(namedtuple("PlayerRow", "rsmeta filename length meta encoding title artist replaygain cuesheet album")):
@@ -520,7 +515,7 @@ class Supported(object):
       self.media = [ ".ogg", ".oga", ".wav", ".aiff", ".au", ".txt", ".cue" ]
       self.playlists = [ ".m3u", ".xspf", ".pls" ]
       
-      if avcodec and avformat:
+      if FGlobs.avcodec and FGlobs.avformat:
          self.media.append(".avi")
          self.media.append(".wma")
          self.media.append(".ape")
@@ -529,9 +524,9 @@ class Supported(object):
          self.media.append(".m4a")
          self.media.append(".m4b")
          self.media.append(".m4p")
-      if flacenabled:
+      if FGlobs.flacenabled:
          self.media.append(".flac")
-      if speexenabled:
+      if FGlobs.speexenabled:
          self.media.append(".spx")
 
 supported = Supported()

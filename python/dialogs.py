@@ -15,19 +15,15 @@
 #   along with this program in the file entitled COPYING.
 #   If not, see <http://www.gnu.org/licenses/>.
 
-import pygtk
-pygtk.require('2.0')
-import gtk
-
-try:
-   pango.Font
-except:
-   import pango
-
-from idjc_config import *
-from ln_text import ln
 
 import time
+
+import gtk
+import pango
+
+from idjc import FGlobs
+from .ln_text import ln
+
 
 # A mutually exclusive list of dialogs so that only one can be on screen at a time
 # The dialogs below can call the hide method to remove any other dialogs

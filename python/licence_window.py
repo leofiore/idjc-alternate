@@ -19,11 +19,11 @@
 
 __all__ = ['LicenceWindow']
 
-import pygtk
-pygtk.require('2.0')
 import gtk
-from ln_text import ln
-from idjc_config import *
+
+from idjc import FGlobs
+from .ln_text import ln
+
 
 class LicenceWindow(gtk.ScrolledWindow):
    gpl_text = """                    GNU GENERAL PUBLIC LICENSE

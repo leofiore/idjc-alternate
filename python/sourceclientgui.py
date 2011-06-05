@@ -18,26 +18,30 @@
 
 __all__ = ['SourceClientGui']
 
-import pygtk
-pygtk.require('2.0')
+
+import os
+import time
+import fcntl
+import subprocess
+import urllib
+import urllib2
+import base64
+import pango
+import xml.dom.minidom as mdom
+import xml.etree.ElementTree
+from collections import namedtuple
+from threading import Thread
+
 import gtk
 import gobject
 
-import os, time, fcntl, subprocess, urllib, urllib2, base64, pango
-import xml.dom.minidom as mdom
-import xml.etree.ElementTree
+from idjc import FGlobs
+from .ln_text import ln
+from .freefunctions import int_object, string_multireplace
+from .gtkstuff import DefaultEntry, threadslock
+from .dialogs import *
 
-import idjc_config
-from idjc_config import *
-from ln_text import ln
-from IDJCfree import int_object, threadslock, DefaultEntry, string_multireplace
-from IDJCservdialog import *
-from threading import Thread
 
-try:
-   from collections import namedtuple
-except:
-   from nt import namedtuple
 
 ENCODER_START=1; ENCODER_STOP=0                                 # start_stop_encoder constants
 
