@@ -41,12 +41,16 @@ from mutagen.easyid3 import EasyID3
 from mutagen.apev2 import APEv2
 from mutagen.asf import ASF
    
-from idjc import FGlobs
+from idjc import FGlobs, PGlobs
 from . import popupwindow
 from .mutagentagger import *
 from .freefunctions import *
 from .gtkstuff import threadslock
 from .ln_text import ln
+from .prelims import *
+
+
+pm = ProfileManager()
 
 
 # Named tuple for a playlist row.
@@ -274,7 +278,7 @@ class ExternalPL(gtk.Frame):
    
    def make_line(self, radio, dialog):
       button = gtk.FileChooserButton(dialog)
-      dialog.set_current_folder(self.player.parent.home)
+      dialog.set_current_folder(os.path.expanduser("~"))
       hbox = gtk.HBox()
       hbox.pack_start(radio, False, False, 0)
       hbox.pack_start(button, True, True, 0)
@@ -3513,7 +3517,7 @@ class IDJC_Media_Player:
       
       self.pbspeedzerobutton = gtk.Button()
       self.pbspeedzerobutton.connect("clicked", self.callback, "pbspeedzero")
-      pixbuf = gtk.gdk.pixbuf_new_from_file(pkgdatadir+ "speedicon" + gfext)
+      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "speedicon.png"))
       pixbuf = pixbuf.scale_simple(55, 14, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -3535,7 +3539,7 @@ class IDJC_Media_Player:
 
       # A set of buttons for hbox1 namely Prev/Play/Pause/Stop/Next/Playlist : XMMS order
       image = gtk.Image()
-      image.set_from_file(pkgdatadir + "prev" + gfext)
+      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "prev.png"))
       image.show()
       self.prev = gtk.Button()
       self.prev.add(image)
@@ -3544,7 +3548,7 @@ class IDJC_Media_Player:
       self.prev.show()
       parent.tooltips.set_tip(self.prev, ln.previous_tip)
       
-      pixbuf = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "play2" + gfext)
+      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "play2.png"))
       pixbuf = pixbuf.scale_simple(14, 14, gtk.gdk.INTERP_BILINEAR)
       image=gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -3557,7 +3561,7 @@ class IDJC_Media_Player:
       parent.tooltips.set_tip(self.play, ln.play_tip)
       
       image=gtk.Image()
-      image.set_from_file(pkgdatadir + "pause" + gfext)
+      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "pause.png"))
       image.show()
       self.pause = gtk.ToggleButton()
       self.pause.add(image)
@@ -3567,7 +3571,7 @@ class IDJC_Media_Player:
       parent.tooltips.set_tip(self.pause, ln.pause_tip)
       
       image=gtk.Image()
-      image.set_from_file(pkgdatadir + "stop" + gfext)
+      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "stop.png"))
       image.show()
       self.stop = gtk.Button()
       self.stop.add(image)
@@ -3577,7 +3581,7 @@ class IDJC_Media_Player:
       parent.tooltips.set_tip(self.stop, ln.stop_tip)
             
       image=gtk.Image()
-      image.set_from_file(pkgdatadir + "next" + gfext)
+      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "next.png"))
       image.show()
       self.next = gtk.Button()
       self.next.add(image)
@@ -3586,7 +3590,7 @@ class IDJC_Media_Player:
       self.next.show()
       parent.tooltips.set_tip(self.next, ln.next_track_tip)
 
-      pixbuf = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "add3" + gfext)
+      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "add3.png"))
       pixbuf = pixbuf.scale_simple(14, 14, gtk.gdk.INTERP_HYPER)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -3969,7 +3973,8 @@ class IDJC_Media_Player:
       self.other_player_initiated = False
       self.crossfader_initiated = False
       self.music_filename = ""
-      self.session_filename = self.parent.idjc + self.playername + "_session"
+      self.session_filename = os.path.join(PGlobs.profile_dir, pm.profile,
+                                             self.playername + "_session")
       self.oldstatusbartext = ""
       self.pbspeedfactor = 1.0
       self.playlist_changed = True

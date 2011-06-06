@@ -28,4 +28,4 @@ sys.path.insert(0, """@pythondir@""")
 import idjc
 
 
-idjc.main()
+exit(idjc.main())

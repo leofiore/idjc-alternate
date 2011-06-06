@@ -26,10 +26,14 @@ import gobject
 import gtk
 import pango
 
-from idjc import FGlobs
+from idjc import FGlobs, PGlobs
 from .ln_text import ln
 from .freefunctions import *
 from .gtkstuff import threadslock
+from .prelims import ProfileManager
+
+
+pm = ProfileManager()
 
 
 class Binding(tuple):
@@ -448,8 +452,9 @@ class Controls(object):
     def load_prefs(self):
         """Reload bindings list from prefs file
         """
-        if os.path.isfile(self.owner.idjc+'controls'):
-            fp= open(self.owner.idjc+'controls', 'r')
+        cpn = os.path.join(PGlobs.profile_dir, pm.profile, 'controls')
+        if os.path.isfile(cpn):
+            fp= open(cpn)
             self.bindings= []
             for line in fp:
                 line= line.strip()

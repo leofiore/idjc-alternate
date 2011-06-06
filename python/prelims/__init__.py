@@ -16,7 +16,7 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 
 
-__all__ = ["ArgumentParser", "ProfileManager"]
+__all__ = ["ArgumentParserImplementation", "ProfileManager"]
 
 
 import os

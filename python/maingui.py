@@ -17,7 +17,8 @@
 
 
 
-from .prelims import ProfileManager
+from .prelims import *
+args = ArgumentParserImplementation().parse_args()
 pm = ProfileManager()
 
 
@@ -40,6 +41,7 @@ import gtk
 import cairo
 import pango
 
+from idjc import FGlobs, PGlobs
 from .ln_text import ln
 from .playergui import *
 from .sourceclientgui import *
@@ -516,7 +518,7 @@ def make_stream_meter_unit(text, meters, tooltips):
    
    frame = gtk.Frame()              # for the listener count
    frame.set_label_align(0.5, 0.5)
-   pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "listenerphones" + gfext, 20, 16)
+   pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "listenerphones.png"), 20, 16)
    image = gtk.image_new_from_pixbuf(pixbuf)
    frame.set_label_widget(image)
    image.show()
@@ -820,8 +822,8 @@ class MicMeter(gtk.VBox):
       lhbox.add(pad)
       pad.show()
       lhbox.set_spacing(2)
-      self.led_onpb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "led_lit_green_black_border_64x64" + gfext, 7, 7)
-      self.led_offpb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "led_unlit_clear_border_64x64" + gfext, 7, 7)
+      self.led_onpb = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_lit_green_black_border_64x64.png"), 7, 7)
+      self.led_offpb = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_unlit_clear_border_64x64.png"), 7, 7)
       self.led = gtk.Image()
       lhbox.pack_start(self.led, False, False)
       self.set_led(False)
@@ -879,7 +881,7 @@ class RecIndicator(gtk.HBox):
       self.pack_start(self.image, False)
       self.image.show()
       
-      self.led = [gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + which + gfext, 9, 9) for which in (
+      self.led = [gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, which + ".png"), 9, 9) for which in (
                "led_unlit_clear_border_64x64", "led_lit_red_black_border_64x64",
                "led_lit_amber_black_border_64x64")]
       self.set_indicator("clear") 
@@ -915,160 +917,6 @@ class RecordingPanel(gtk.VBox):
          box[i%2].pack_start(ind, False)
          ind.show()
 
-
-# A dialog window for electing to create a new profile
-class profile_import_dialog(gtk.Dialog):
-   def __init__(self, title_text, additional_text, profiledir, newprofile):
-      gtk.Dialog.__init__(self, title_text, None, False, (gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.RESPONSE_NO, ))
-      gtk.Dialog.set_icon_from_file(self, pkgdatadir + "icon" + gfext)
-      gtk.Dialog.set_resizable(self, False)
-      hbox = gtk.HBox(False, 20)
-      hbox.set_border_width(20)
-      self.vbox.pack_start(hbox, True, True, 0)
-      hbox.show()
-      image = gtk.Image()
-      image.set_from_stock(gtk.STOCK_DIALOG_QUESTION, gtk.ICON_SIZE_DIALOG)
-      hbox.pack_start(image, True, True, 0)
-      image.show()
-      vbox = gtk.VBox()
-      vbox.set_spacing(8)
-      hbox.pack_start(vbox, True, True, 0)
-      vbox.show()
-      if additional_text is not None:
-         if type(additional_text) is str:
-            additional_text = additional_text.splitlines()
-         for each in additional_text:
-            label = gtk.Label()
-            attrlist = pango.AttrList()
-            attrlist.insert(pango.AttrSize(12500, 0, len(each)))
-            label.set_attributes(attrlist)
-            label.set_text(each)
-            vbox.add(label)
-            label.show()
-      self.combobox = gtk.combo_box_new_text()
-      self.combobox.append_text("default")
-      root, dirs, files = os.walk(profiledir).next()
-      for each in dirs:
-         if each != "default" and each != newprofile:
-            self.combobox.append_text(each)
-      self.combobox.set_active(0)
-      vbox.add(self.combobox)
-      self.combobox.show()
-
-# A dialog window for electing to create a new profile
-class select_profile_dialog(gtk.Dialog):
-   def profile_enter(self, widget):
-      if widget.get_text() != "":
-         self.enterbutton.clicked()
-      
-   def profile_changed(self, widget):
-      self.enterbutton.set_sensitive(len(widget.get_text()) != 0)
-   
-   def cb_keypress(self, widget, event):
-      # filter out undesired keys
-      if event.keyval == 65361: return False
-      if event.keyval == 65363: return False
-      if event.keyval == 65535: return False
-      if event.keyval == 65288: return False
-      if event.keyval == 65293: return False
-      if event.string.isalnum(): return False
-      if event.string == "_": return False
-      return True
-   
-   def comboselection(self, widget):
-      if widget.get_active() == 0:
-         self.new_profile_box.show()
-         self.new_profile_box.grab_focus()
-         self.profile_changed(self.new_profile_box)
-      else:
-         self.new_profile_box.hide()
-         self.enterbutton.set_sensitive(True)
-
-   def __init__(self, title_text, additional_text, profiledir, newprofile):
-      gtk.Dialog.__init__(self, title_text, None, False, None)
-      self.no_more_ask = gtk.CheckButton(ln.no_more_ask)
-      self.action_area.pack_start(self.no_more_ask, False, False, 0)
-      self.no_more_ask.show()
-      self.enterbutton = gtk.Dialog.add_button(self, gtk.STOCK_OK, gtk.RESPONSE_OK)
-      gtk.Dialog.add_button(self, gtk.STOCK_QUIT, gtk.RESPONSE_CANCEL)
-      gtk.Dialog.set_icon_from_file(self, pkgdatadir + "icon" + gfext)
-      gtk.Dialog.set_resizable(self, False)
-      hbox = gtk.HBox(False, 20)
-      hbox.set_border_width(20)
-      self.vbox.pack_start(hbox, True, True, 0)
-      hbox.show()
-      image = gtk.Image()
-      image.set_from_stock(gtk.STOCK_DIALOG_QUESTION, gtk.ICON_SIZE_DIALOG)
-      hbox.pack_start(image, True, True, 0)
-      image.show()
-      vbox = gtk.VBox()
-      vbox.set_spacing(8)
-      hbox.pack_start(vbox, True, True, 0)
-      vbox.show()
-      if additional_text is not None:
-         if type(additional_text) is str:
-            additional_text = additional_text.splitlines()
-         for each in additional_text:
-            label = gtk.Label()
-            attrlist = pango.AttrList()
-            attrlist.insert(pango.AttrSize(12500, 0, len(each)))
-            label.set_attributes(attrlist)
-            label.set_text(each)
-            vbox.add(label)
-            label.show()
-      self.combobox = gtk.combo_box_new_text()
-      self.combobox.append_text(ln.select_profile_new)
-      self.combobox.append_text("default")
-      for root, dirs, files in os.walk(profiledir):
-         for each in dirs:
-            if each != "default":
-               self.combobox.append_text(each)
-         break
-      self.combobox.connect("changed", self.comboselection)
-      vbox.add(self.combobox)
-      self.combobox.show()
-      self.new_profile_box = gtk.Entry()
-      self.new_profile_box.set_max_length(24)
-      self.new_profile_box.connect("key_press_event", self.cb_keypress)
-      self.new_profile_box.connect("activate", self.profile_enter)
-      self.new_profile_box.connect("changed", self.profile_changed)
-      if newprofile:
-         self.combobox.set_active(0)
-         self.new_profile_box.set_text(newprofile)
-      else:
-         self.combobox.set_active(1)
-      vbox.add(self.new_profile_box)
- 
-# A dialog window for electing to create a new profile
-class new_profile_dialog(gtk.Dialog):
-   def __init__(self, title_text, additional_text):
-      gtk.Dialog.__init__(self, title_text, None, False, (gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.RESPONSE_NO, gtk.STOCK_QUIT, gtk.RESPONSE_CANCEL))
-      gtk.Dialog.set_icon_from_file(self, pkgdatadir + "icon" + gfext)
-      gtk.Dialog.set_resizable(self, False)
-      hbox = gtk.HBox(False, 20)
-      hbox.set_border_width(20)
-      self.vbox.pack_start(hbox, True, True, 0)
-      hbox.show()
-      image = gtk.Image()
-      image.set_from_stock(gtk.STOCK_DIALOG_QUESTION, gtk.ICON_SIZE_DIALOG)
-      hbox.pack_start(image, True, True, 0)
-      image.show()
-      vbox = gtk.VBox()
-      vbox.set_spacing(8)
-      hbox.pack_start(vbox, True, True, 0)
-      vbox.show()
-      if additional_text is not None:
-         if type(additional_text) is str:
-            additional_text = additional_text.splitlines()
-         for each in additional_text:
-            label = gtk.Label()
-            attrlist = pango.AttrList()
-            attrlist.insert(pango.AttrSize(12500, 0, len(each)))
-            label.set_attributes(attrlist)
-            label.set_text(each)
-            vbox.add(label)
-            label.show()
-  
 # A dialog window to appear when shutdown is selected while still streaming.
 class idjc_shutdown_dialog:
    def window_attn(self, widget, event):
@@ -2132,112 +1980,6 @@ class MainWindow:
       print "the launch of a second instance of idjc was detected"
       self.second_instance = True       # idjc will handle this event in good time
 
-
-   def init_profile(self):
-      def profile_test(profile):
-         for each in profile:
-            if each.isalnum() or each == "_":
-               continue
-            else:
-               return False
-         return True
-      
-      def profile_exists(profile):
-         return os.path.exists(self.home + "/.idjc/profiles/" + profile)
-      
-      # decide if we need to run the profile chooser dialog
-      self.profile = os.environ["APP_PROFILE"]
-      specify_text = ""
-      ask_profile = not os.path.isfile(self.idjcroot + "do-not-ask-profile")
-      self.ask_profile_next_time = ask_profile
-      if self.profile == "(unspecified)":
-         self.profile = "default"
-      else:
-         if profile_test(self.profile) == False:
-            print "The profile specified must contain only alphanumeric characters or underscores"
-            raise self.initcleanexit
-         if self.profile == "ask":
-            ask_profile = True
-         elif not profile_exists(self.profile):
-            ask_profile = True
-            specify_text = self.profile
-         else:
-            ask_profile = False
-
-      # running the profile chooser
-      if ask_profile:
-         spd = select_profile_dialog(ln.select_profile_title, ln.select_profile_body, self.idjcroot + "profiles", specify_text)
-         response = spd.run()
-         if response == gtk.RESPONSE_OK:
-            if spd.combobox.get_active() != 0:
-               self.profile = spd.combobox.get_active_text()
-            else:
-               self.profile = spd.new_profile_box.get_text()
-            if spd.no_more_ask.get_active():
-               if not os.path.isfile(self.idjcroot + "do-not-ask-profile"):
-                  dnap = "do-not-ask-profile"
-                  try:
-                     os.mknod(self.idjcroot + dnap)
-                  except OSError:
-                     # mknod has been reported to fail on mac
-                     os.system("touch %s%s" % (self.idjcroot, dnap))
-                  self.ask_profile_next_time = False
-            spd.destroy()
-         else:
-            if response == gtk.RESPONSE_CANCEL:
-               spd.destroy()
-            raise self.initcleanexit
-
-      # creating a new profile to order
-      if not profile_exists(self.profile):
-         npd = new_profile_dialog(ln.new_profile_title, ln.new_profile_body % self.profile)
-         response = npd.run()
-         if response != gtk.RESPONSE_DELETE_EVENT:
-            npd.destroy()
-         if response == gtk.RESPONSE_CANCEL:
-            print "user chose to quit"
-            raise self.initcleanexit
-         if response == gtk.RESPONSE_NO or response == gtk.RESPONSE_DELETE_EVENT:
-            print "user chose no -- we will continue with the default profile"
-            self.profile = "default"
-            self.idjc = self.home + "/.idjc/"
-         if response == gtk.RESPONSE_YES:
-            print "user chose to create a new profile"
-            self.idjc = self.home + "/.idjc/profiles/" + self.profile + "/"
-            os.mkdir(self.idjc[:-1])
-            os.mkdir(self.idjc + "jingles")
-            pid = profile_import_dialog(ln.new_profile_title + ": " + self.profile, ln.profile_import_body, self.idjcroot + "profiles", self.profile)
-            response = pid.run()
-            if response != gtk.RESPONSE_DELETE_EVENT:
-               if response == gtk.RESPONSE_YES:
-                  importprofile = pid.combobox.get_active_text()
-                  print "copying settings from %s profile" % importprofile
-                  os.system("cp %s %s" % (self.home + "/.idjc/profiles/" + importprofile + "/*", self.idjc))
-                  # make hard links of jingles files to save space
-                  os.system("cp -l %s %s" % (self.home + "/.idjc/profiles/" + importprofile + "/jingles/*", self.idjc + "jingles/"))
-               if response == gtk.RESPONSE_NO:
-                  print "no profile imported"
-               pid.destroy()
-      else:
-         self.idjc = self.home + "/.idjc/profiles/" + self.profile + "/"
- 
-      while gtk.events_pending(): # clean up dialog boxes
-         gtk.main_iteration()
- 
-      if os.path.isfile(self.idjc + "lock"):
-         if os.system("fuser " + self.idjc + "lock") == 0:
-            message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, ln.profile_already_in_use)
-            message_dialog.set_icon_from_file(pkgdatadir + "icon" + gfext)
-            message_dialog.set_title(ln.idjc_launch_failed)
-            message_dialog.run()
-            message_dialog.destroy()
-            raise self.initfailed("Instance of idjc already running in this profile.")
- 
-      try:
-         self.lock = open(self.idjc + "lock", "w")
-      except:
-         raise self.initfailed("Failed to create lock file" + self.idjc + "lock")
-
    def cb_panehide(self, widget):
       """ hide widget when all it's children are hidden or non existent """
       c1 = widget.get_child1()
@@ -2265,82 +2007,36 @@ class MainWindow:
                (self.player_left.is_playing or self.player_right.is_playing)
 
    def __init__(self):
-      self.appname = appname
-      self.version = version
-      self.copyright = copyright2
-      self.license = license
+      self.appname = PGlobs.app_longform
+      self.version = FGlobs.package_version
+      self.copyright = PGlobs.copyright
+      self.license = PGlobs.license
+      self.profile = pm.profile
       
-      self.second_instance = False
-      signal.signal(signal.SIGUSR2, self.second_instance_handler)
       signal.signal(signal.SIGINT, self.destroy_hard)
       
       socket.setdefaulttimeout(15)
       
-      home = os.environ.get("HOME")
-      if home == "":
-         raise self.initfailed("Error, HOME environment variable is not set")
-      # Build the application data directory tree for idjc
-      self.home = home
-      self.idjcroot = home + "/.idjc/"
-      if not os.path.isdir(home + "/.idjc"):
-         os.mkdir(home + "/.idjc")
-      if not os.path.isdir(home + "/.idjc/jingles"):
-         os.mkdir(home + "/.idjc/jingles")
-      if not os.path.isdir(home + "/.idjc/profiles"):
-         os.mkdir(home + "/.idjc/profiles")
-      if not os.path.exists(home + "/.idjc/profiles/default"):
-         os.symlink(home + "/.idjc/", home + "/.idjc/profiles/default")
- 
-      jackname = os.environ["JACK_SERVER"]
-      if jackname == "default":
+      if args.jackserver is not None:
+         os.environ["JACK_SERVER"] = args.jackserver[0]
+      else:
          try:
-            jackname = os.environ["JACK_DEFAULT_SERVER"]
-         except:
+            del os.environ["JACK_SERVER"]
+         except KeyError:
             pass
-      os.environ["IDJC_JACK_SERVER"] = jackname
-         
-      self.denc = display_enc
-      self.fenc = file_enc
-      
-      print "%s Version %s\n%s\n%s\n" % (appname, self.version, copyright, license)
-      
-      if os.environ["VERSION_ONLY"] == "1":
-         raise self.initcleanexit
-      if os.environ["SHOW_HELP"] == "1":
-         print console_help_message
-         raise self.initcleanexit
-      
-      self.init_profile()            # decide which profile to use
-      print ln
+            
+      os.environ["mx_client_id"] = mx_id = "idjc-mx_" + pm.profile
+      os.environ["sc_client_id"] = sc_id = "idjc-sc_" + pm.profile
 
-      config = ConfigParser.RawConfigParser()
-      config.read(self.idjc + 'config')
-      try:
-         idjc_config.num_micpairs = config.getint('resource_count', 'num_micpairs') // 2
-      except ConfigParser.Error:
-         idjc_config.num_micpairs = 2
-      try:
-         idjc_config.num_streamers = idjc_config.num_encoders = config.getint('resource_count', 'num_streamers')
-      except ConfigParser.Error:
-         idjc_config.num_streamers = idjc_config.num_encoders = 6
-      try:
-         idjc_config.num_recorders = config.getint('resource_count', 'num_recorders')
-      except ConfigParser.Error:
-         idjc_config.num_recorders = 2
-
-      # Name the mixer and sourceclient jack client IDs.
-      tail = "-" + self.profile if os.environ["EXTRA"] == "1" else ""
-      os.environ["mx_client_id"] = mx_id = "idjc-mx" + tail
-      os.environ["sc_client_id"] = sc_id = "idjc-sc" + tail
       print "jack client IDs:", mx_id, sc_id
-      os.environ["mx_mic_qty"] = str(idjc_config.num_micpairs * 2)
+      os.environ["mx_mic_qty"] = str(PGlobs.num_micpairs * 2)
 
       self.session_loaded = False
  
       try:
-         sp_mx = subprocess.Popen([libexecdir + "idjcmixer"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
-      except Exception, inst:
-         print inst
+         sp_mx = subprocess.Popen([os.path.join(FGlobs.libexecdir, "idjcmixer")], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
+      except Exception, e:
+         print e
          raise self.initfailed("unable to open a pipe to the mixer module")
       else:
          (self.mixer_ctrl, self.mixer_rply) = (sp_mx.stdin, sp_mx.stdout)
@@ -2388,7 +2084,7 @@ class MainWindow:
       self.window.set_title(self.appname + self.profile_title)
       self.window.set_border_width(8)
       self.window.connect("delete_event",self.delete_event)
-      self.window.set_icon_from_file(pkgdatadir + "icon" + gfext)
+      self.window.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       self.tooltips = tooltips.Tooltips()
 
       self.hbox10 = gtk.HBox(False)
@@ -2475,7 +2171,7 @@ class MainWindow:
       phonebox.viewlevels = (5,)       
       phonebox.set_spacing(2)
       
-      pixbuf4 = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "greenphone" + gfext)
+      pixbuf4 = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "greenphone.png"))
       pixbuf4 = pixbuf4.scale_simple(25, 20, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf4)
@@ -2487,7 +2183,7 @@ class MainWindow:
       self.greenphone.show()
       self.tooltips.set_tip(self.greenphone, ln.green_phone_tip)
 
-      pixbuf5 = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "redphone" + gfext)
+      pixbuf5 = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "redphone.png"))
       pixbuf5 = pixbuf5.scale_simple(25, 20, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf5)
@@ -2502,7 +2198,7 @@ class MainWindow:
       self.hbox10.pack_start(phonebox)
       phonebox.show()
  
-      pixbuf3 = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "jack2" + gfext)
+      pixbuf3 = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "jack2.png"))
       pixbuf3 = pixbuf3.scale_simple(32, 20, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf3)
@@ -2522,7 +2218,7 @@ class MainWindow:
       self.mic_opener.show()
       
       # playlist advance button
-      pixbuf = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "advance" + gfext)
+      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "advance.png"))
       pixbuf = pixbuf.scale_simple(32, 14, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -2562,7 +2258,7 @@ class MainWindow:
            
       # A pictoral volume label above horizontally-stacked volume control(s)
       image = gtk.Image()
-      image.set_from_file(pkgdatadir + "volume2" + gfext)
+      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "volume2.png"))
       self.vboxvol.pack_start(image, False, False, 0)
       image.show()
       hboxvol = gtk.HBox(True, 0)
@@ -2594,7 +2290,7 @@ class MainWindow:
       self.spacerbox.set_size_request(1, 5)
       self.vboxvol.pack_start(self.spacerbox, False, False, 0)
        
-      pixbuf = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "pbphone" + gfext)
+      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "pbphone.png"))
       pixbuf = pixbuf.scale_simple(20, 17, gtk.gdk.INTERP_HYPER)
       self.pbphoneimage = gtk.Image()
       self.pbphoneimage.set_from_pixbuf(pixbuf)
@@ -2847,9 +2543,9 @@ class MainWindow:
       cell = gtk.CellRendererPixbuf()
       self.crosspattern.pack_start(cell, True)
       self.crosspattern.add_attribute(cell, 'pixbuf', 0)
-      liststore.append((gtk.gdk.pixbuf_new_from_file(pkgdatadir + "classic_cross" + gfext), ))
-      liststore.append((gtk.gdk.pixbuf_new_from_file(pkgdatadir + "mk2_cross" + gfext), ))
-      liststore.append((gtk.gdk.pixbuf_new_from_file(pkgdatadir + "pat3" + gfext), ))
+      liststore.append((gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "classic_cross.png")), ))
+      liststore.append((gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "mk2_cross.png")), ))
+      liststore.append((gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "pat3.png")), ))
       pvbox.pack_start(self.crosspattern, True, True, 0)
       self.crosspattern.show()
       self.crossbox.pack_start(patternbox, False, False, 0)
@@ -2900,7 +2596,7 @@ class MainWindow:
       pvbox.add(label)
       label.show()
       image = gtk.Image()
-      image.set_from_file(pkgdatadir + "pass" + gfext)
+      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "pass.png"))
       image.show()
       self.passbutton = gtk.Button()
       self.passbutton.set_size_request(53, -1)
@@ -2954,15 +2650,15 @@ class MainWindow:
 
       sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       self.stream_indicator = []
-      for i in range(idjc_config.num_streamers):
+      for i in range(PGlobs.num_streamers):
          self.stream_indicator.append(StreamMeter(1, 100))
       self.stream_indicator_box, self.listener_indicator = make_stream_meter_unit(ln.streams, self.stream_indicator, self.tooltips)
       self.streammeterbox.pack_start(self.stream_indicator_box, False, False, 0)
       self.stream_indicator_box.show()
       sg.add_widget(self.stream_indicator_box)
 
-      if idjc_config.num_recorders:
-         self.recording_panel = RecordingPanel(idjc_config.num_recorders)
+      if PGlobs.num_recorders:
+         self.recording_panel = RecordingPanel(PGlobs.num_recorders)
          self.streammeterbox.pack_start(self.recording_panel, False)
          self.recording_panel.show()
 
@@ -2973,7 +2669,7 @@ class MainWindow:
       stream_vu_box.show()
       self.tooltips.set_tip(stream_vu_box, ln.stream_vu_meter_tip)
        
-      self.mic_meters = [MicMeter("Mic ", i) for i in range(1, idjc_config.num_micpairs * 2 + 1)]
+      self.mic_meters = [MicMeter("Mic ", i) for i in range(1, PGlobs.num_micpairs * 2 + 1)]
       if len(self.mic_meters) <= 4:
          for meter in self.mic_meters:
             self.micmeterbox.pack_start(meter)
@@ -3156,23 +2852,10 @@ class MainWindow:
       self.minwiny = int_object(1)
       self.in_vu_timeout = False
       self.vucounter = 0
-      self.session_filename = self.idjc + "main_session"
+      self.session_filename = os.path.join(PGlobs.profile_dir, pm.profile, "main_session")
       self.files_played = {}
       self.files_played_offline = {}
       
-      # create or empty out the command file which should not exist when idjc is not running
-      # This interface should be replaced with D-Bus
-      try:
-         file = open(self.idjc + "command", "w")
-      except IOError:
-         print "unable to initialise the command file"
-         raise self.initfailed
-      else:
-         fcntl.flock(file.fileno(), fcntl.LOCK_EX)
-         file.truncate(0)
-         fcntl.flock(file.fileno(), fcntl.LOCK_UN)
-         file.close()
-
       # Variable map for stuff read from the mixer
       self.vumap = {
          "str_l_peak"   : self.str_l_peak,
@@ -3200,7 +2883,7 @@ class MainWindow:
       for i, mic in enumerate(self.mic_meters):
          self.vumap.update({"mic_%d_levels" % (i + 1): mic})
 
-      self.controls= IDJCcontrols.Controls(self)
+      self.controls= midicontrols.Controls(self)
       self.controls.load_prefs()
 
       self.window.realize()     # prevent ubuntu crash when activating vu meters
@@ -3280,7 +2963,6 @@ class MainWindow:
       gtk.main()
 
 
-@threadslock
 def main():
    try:
       run_instance = MainWindow()
@@ -3292,8 +2974,3 @@ def main():
       except KeyboardInterrupt:
          return 5
    return 0
-   
-
-if __name__ == "__main__":
-   gtk.gdk.threads_init()
-   sys.exit(main())

@@ -26,9 +26,13 @@ import os
 import gobject
 import gtk
 
+from idjc import *
 from .freefunctions import *
 from .ln_text import ln
+from .prelims import *
 
+
+pm = ProfileManager()
 
 
 class Jingles(object):
@@ -218,9 +222,11 @@ class Jingles(object):
       return True
    
    def load_jingles(self):
-      if not os.path.isdir(self.parent.idjc + "jingles"):
-         os.mkdir(self.parent.idjc + "jingles")
-      files = os.listdir(self.parent.idjc + "jingles")
+      jpath = os.path.join(PGlobs.profile_dir, pm.profile, "jingles")
+      
+      if not os.path.isdir(jpath):
+         os.mkdir(jpath)
+      files = os.listdir(jpath)
       count = 0
       self.liststore.clear()
       for each in files:        # files will be added with alpha numeric sorting
@@ -341,7 +347,7 @@ class Jingles(object):
       self.window.set_destroy_with_parent(True)
       self.window.set_border_width(8)
       self.window.connect("delete_event", self.delete_event)
-      self.window.set_icon_from_file(pkgdatadir + "icon" + gfext)
+      self.window.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       self.window.add_events(gtk.gdk.KEY_PRESS_MASK)
       self.window.connect("key-press-event", parent.cb_key_capture)
       self.window.connect("key-release-event", parent.cb_key_capture)
@@ -356,7 +362,7 @@ class Jingles(object):
            
       # A pictoral volume label
       image = gtk.Image()
-      image.set_from_file(pkgdatadir + "volume2" + gfext)
+      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "volume2.png"))
       self.vboxvol.pack_start(image, False, False, 0)
       image.show()
       
@@ -379,7 +385,7 @@ class Jingles(object):
       hbox.pack_end(self.vboxinter, False, False, 0)
            
       # A pictoral volume label
-      pixbuf = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "note" + gfext)
+      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "note.png"))
       pixbuf = pixbuf.scale_simple(20, 20, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -465,7 +471,7 @@ class Jingles(object):
       hbox.set_spacing(5)
       hbox.set_border_width(2)
       
-      pixbuf = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "play2" + gfext)
+      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "play2.png"))
       pixbuf = pixbuf.scale_simple(14, 14, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -478,7 +484,7 @@ class Jingles(object):
       self.play.show()
       parent.tooltips.set_tip(self.play, ln.play_jingles_tip)
       
-      pixbuf = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "play3" + gfext)
+      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "play3.png"))
       pixbuf = pixbuf.scale_simple(14, 14, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -492,7 +498,7 @@ class Jingles(object):
       parent.tooltips.set_tip(self.play_ex, ln.playex_jingles_tip)
       
       image = gtk.Image()
-      image.set_from_file(pkgdatadir + "stop" + gfext)
+      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "stop.png"))
       self.stop = gtk.Button()
       self.stop.set_size_request(40, -1)
       self.stop.add(image)
@@ -502,7 +508,7 @@ class Jingles(object):
       self.stop.show()
       parent.tooltips.set_tip(self.stop, ln.stop_jingles_tip)
       
-      pixbuf = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "interlude" + gfext)
+      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "interlude.png"))
       pixbuf = pixbuf.scale_simple(49, 21, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
