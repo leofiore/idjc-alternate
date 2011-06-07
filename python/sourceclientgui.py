@@ -35,12 +35,14 @@ from threading import Thread
 import gtk
 import gobject
 
-from idjc import FGlobs
+from idjc import FGlobs, PGlobs
 from .ln_text import ln
 from .freefunctions import int_object, string_multireplace
 from .gtkstuff import DefaultEntry, threadslock
 from .dialogs import *
 
+from .prelims import ProfileManager
+pm = ProfileManager()
 
 
 ENCODER_START=1; ENCODER_STOP=0                                 # start_stop_encoder constants
@@ -641,7 +643,7 @@ class ConnectionPane(gtk.VBox):
       self.listener_count_button = gtk.Button()
       ihbox = gtk.HBox()
       set_tip(ihbox, ln.listeners_total_tip)
-      pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "listenerphones" + gfext, 20, 16)
+      pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "listenerphones.png"), 20, 16)
       image = gtk.image_new_from_pixbuf(pixbuf)
       ihbox.pack_start(image, False, False, 0)
       image.show()
@@ -1498,7 +1500,7 @@ class StreamTab(Tab):
       hbox.pack_start(self.start_player_action, False, False, 0)
       self.start_player_action.show()
       set_tip(self.start_player_action, ln.auto_start_player_tip)
-      if idjc_config.num_recorders:
+      if PGlobs.num_recorders:
          vseparator = gtk.VSeparator()
          hbox.pack_start(vseparator, True, False, 0)
          vseparator.show()
@@ -1506,7 +1508,7 @@ class StreamTab(Tab):
       self.start_recorder_action = AutoAction(ln.start_recorder, [ (chr(ord("1") + i), t.record_buttons.record_button.activate) for i, t in enumerate(self.source_client_gui.recordtabframe.tabs) ])
       
       hbox.pack_end(self.start_recorder_action, False, False, 0)
-      if idjc_config.num_recorders:
+      if PGlobs.num_recorders:
          self.start_recorder_action.show()
       set_tip(self.start_recorder_action, ln.auto_start_recorder_tip)
       ic_vbox.pack_start(hbox, False, False, 0)
@@ -1705,7 +1707,7 @@ class StreamTab(Tab):
       set_tip(self.flac16bit, ln.flac16_tip)
       set_tip(self.flac20bit, ln.flac20_tip)
       set_tip(self.flac24bit, ln.flac24_tip)
-      if oggflacenabled:
+      if FGlobs.oggflacenabled:
          flac_pane = self.item_item_layout3((self.flacstereo, self.flacmetadata),(self.flac16bit, self.flac20bit, self.flac24bit))
       else:
          flac_pane = gtk.Label(ln.feature_disabled)
@@ -1730,7 +1732,7 @@ class StreamTab(Tab):
          self.speex_complexity.append_text("%d" % i)
       self.speex_complexity.set_active(2)
       
-      if speexenabled:
+      if FGlobs.speexenabled:
          svbox = gtk.VBox()
          svbox.set_border_width(5)
          
@@ -1864,7 +1866,7 @@ class StreamTab(Tab):
       contact_details_pane.show()
       
       vbox.pack_start(frame, False)
-      if enh_libshout:
+      if FGlobs.enh_libshout:
          frame.show()
       label = gtk.Label(ln.shoutcast_extra)
       self.details_nb.append_page(vbox, label)
@@ -2000,7 +2002,7 @@ class RecordTab(Tab):
                (self.record_button, "rec",   "toggled", ln.record_tip),
                (self.pause_button,  "pause", "toggled", ln.pause_rec_tip)):
             button.set_size_request(30, -1)
-            button.add(self.path2image("".join((pkgdatadir, gname, gfext))))
+            button.add(self.path2image(os.path.join(FGlobs.pkgdatadir, gname + ".png")))
             button.connect(signal, self.cb_recbuttons, gname)
             hbox.pack_start(button, False, False, 0)
             button.show()
@@ -2107,7 +2109,7 @@ class RecordTab(Tab):
                         "recording_directory": (self.source_dest.file_dialog, "directory") }
 
 class TabFrame(ModuleFrame):
-   def __init__(self, scg, frametext, q_tabs, tabtype, path, indicatorlist, file_extension, tab_tip_text):
+   def __init__(self, scg, frametext, q_tabs, tabtype, indicatorlist, tab_tip_text):
       ModuleFrame.__init__(self, frametext)
       self.notebook = gtk.Notebook()
       self.notebook.set_border_width(8)
@@ -2124,7 +2126,7 @@ class TabFrame(ModuleFrame):
          indicator_lookup = {}
          for colour, indicator in indicatorlist:
             image = gtk.Image()
-            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size("".join((path, indicator, file_extension)), 16, 16)
+            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, indicator + ".png"), 16, 16)
             image.set_from_pixbuf(pixbuf)
             labelbox.add(image)
             indicator_lookup[colour] = image
@@ -2158,8 +2160,8 @@ class StreamTabFrame(TabFrame):
       for each in (self.disconnect_group, self.kick_group):
          each.set_sensitive(sens)
          
-   def __init__(self, scg, frametext, q_tabs, tabtype, path, indicatorlist, file_extension, tab_tip_text):
-      TabFrame.__init__(self, scg, frametext, q_tabs, tabtype, path, indicatorlist, file_extension, tab_tip_text)
+   def __init__(self, scg, frametext, q_tabs, tabtype, indicatorlist, tab_tip_text):
+      TabFrame.__init__(self, scg, frametext, q_tabs, tabtype, indicatorlist, tab_tip_text)
 
       outerframe = gtk.Frame()
       scg.parent.tooltips.set_tip(outerframe, ln.group_action_tip)
@@ -2441,7 +2443,7 @@ class SourceClientGui:
       
    def source_client_open(self):
       try:
-         sp_sc = subprocess.Popen([libexecdir + "idjcsourceclient"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
+         sp_sc = subprocess.Popen([os.path.join(FGlobs.libexecdir, "idjcsourceclient")], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
       except Exception, inst:
          print inst
          print "unable to open a pipe to the sourceclient module"
@@ -2452,7 +2454,8 @@ class SourceClientGui:
       if reply != "succeeded":
          print self.server_errmsg
          self.app_exit()
-      self.send("encoders=%d\nstreamers=%d\nrecorders=%d\ncommand=threads_init\n" % (idjc_config.num_encoders, idjc_config.num_streamers, idjc_config.num_recorders))
+      self.send("encoders=%d\nstreamers=%d\nrecorders=%d\ncommand=threads_init\n" % (
+                     PGlobs.num_encoders, PGlobs.num_streamers, PGlobs.num_recorders))
       if self.receive() != "succeeded":
          print self.unexpected_reply
          print "failed to initialise threads\n"
@@ -2690,7 +2693,7 @@ class SourceClientGui:
       self.window.set_destroy_with_parent(True)
       self.window.set_border_width(11)
       self.window.set_resizable(True)
-      self.window.set_icon_from_file(pkgdatadir + "icon" + gfext)
+      self.window.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       self.window.connect("configure_event", self.cb_configure_event)
       self.window.connect_after("realize", self.cb_after_realize)
       self.window.connect("delete_event", self.cb_delete_event)
@@ -2698,17 +2701,15 @@ class SourceClientGui:
       vbox.set_spacing(10)
       self.window.add(vbox)
       
-      self.recordtabframe = TabFrame(self, ln.record, idjc_config.num_recorders, RecordTab, pkgdatadir, (
+      self.recordtabframe = TabFrame(self, ln.record, PGlobs.num_recorders, RecordTab, (
                                                                 ("clear", "led_unlit_clear_border_64x64"),
                                                                 ("amber", "led_lit_amber_black_border_64x64"),
                                                                 ("red", "led_lit_red_black_border_64x64")),
-                                                                gfext,
                                                                 ln.record_tab_tip)
-      self.streamtabframe = StreamTabFrame(self, ln.stream, idjc_config.num_streamers, StreamTab, pkgdatadir, (
+      self.streamtabframe = StreamTabFrame(self, ln.stream, PGlobs.num_streamers, StreamTab, (
                                                                 ("clear", "led_unlit_clear_border_64x64"),
                                                                 ("amber", "led_lit_amber_black_border_64x64"),
                                                                 ("green", "led_lit_green_black_border_64x64")),
-                                                                gfext,
                                                                 ln.stream_tab_tip)
          
       tab = self.streamtabframe.tabs[-1]
@@ -2723,7 +2724,7 @@ class SourceClientGui:
       for rectab in self.recordtabframe.tabs:
          rectab.source_dest.populate_stream_selector(ln.stream, self.streamtabframe.tabs)
       vbox.pack_start(self.recordtabframe, False, False, 0)
-      if idjc_config.num_recorders:
+      if PGlobs.num_recorders:
          self.recordtabframe.show()
       vbox.show()
       self.tabs = (self, )                      #

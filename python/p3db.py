@@ -18,6 +18,7 @@
 __all__ = ['MediaPane', 'Prefs']
 
 
+import os
 import time
 from urllib import quote
 
@@ -521,8 +522,8 @@ class Prefs(gtk.Frame):
       if sql:
          hbox.pack_start(self.prok_led_image, False, False, 4)
       hbox.show_all()
-      self.prok_ledgreen = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "led_lit_green_black_border_64x64" + gfext, 10, 10)
-      self.prok_ledclear = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "led_unlit_clear_border_64x64" + gfext, 10, 10)
+      self.prok_ledgreen = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_lit_green_black_border_64x64.png"), 10, 10)
+      self.prok_ledclear = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_unlit_clear_border_64x64.png"), 10, 10)
       self.prok_led_image.set_from_pixbuf(self.prok_ledclear)
       self.set_label_widget(hbox)
       self.set_border_width(3)

@@ -23,12 +23,16 @@ import shutil
 
 import gtk
 
-from idjc import FGlobs
+from idjc import FGlobs, PGlobs
 from . import licence_window
 from . import p3db
 from . import midicontrols
 from .ln_text import ln
 from .freefunctions import int_object
+from .prelims import ProfileManager
+
+
+pm = ProfileManager()
 
 
 class XChatInstaller(gtk.Button):
@@ -289,8 +293,8 @@ class AGCControl(gtk.Frame):
       self.status_led.show()
       ivbox = self.widget_frame(hbox, self.vbox, ln.open_unmute_tip, (1, 2))
       hbox.show()
-      self.status_off_pb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "led_unlit_clear_border_64x64" + gfext, 12, 12)
-      self.status_on_pb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "led_lit_green_black_border_64x64" + gfext, 12, 12)
+      self.status_off_pb = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_unlit_clear_border_64x64.png"), 12, 12)
+      self.status_on_pb = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_lit_green_black_border_64x64.png"), 12, 12)
       self.status_led.set_from_pixbuf(self.status_off_pb)
             
       hbox = gtk.HBox()
@@ -301,7 +305,7 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(hbox, False, False)
       hbox.show()
       
-      self.groups_adj = gtk.Adjustment(1.0, 1.0, idjc_config.num_micpairs, 1.0)
+      self.groups_adj = gtk.Adjustment(1.0, 1.0, PGlobs.num_micpairs, 1.0)
       self.valuesdict[self.commandname + "_groupnum"] = self.groups_adj
       groups_spin = gtk.SpinButton(self.groups_adj, 0.0, 0)
       hbox.pack_end(groups_spin, False)
@@ -558,9 +562,9 @@ class mixprefs:
          self.checkbutton.set_active(default_state)
          image = gtk.Image()
          if crossout:
-            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + "crossout" + gfext, width , height)
+            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "crossout.png"), width , height)
          else:
-            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + imagefile + gfext, width, height)
+            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, imagefile + ".png"), width, height)
          image.set_from_pixbuf(pixbuf)
          self.checkbutton.add(image)
          image.show()
@@ -633,14 +637,14 @@ class mixprefs:
 
    def load_jack_port_settings(self):
       for port in self.jack_ports:
-         if os.path.isfile(self.parent.idjc + port):
+         if os.path.isfile(os.path.join(PGlobs.profile_dir, pm.profile, port)):
             file = open(self.parent.idjc + port, "r")
             getattr(self, port+"entry").set_text(file.readline()[:-1])
             getattr(self, port+"check").set_active(file.readline() == "1\n")
             file.close()
             
       for i, mic in enumerate(self.mic_jack_data):
-         pathname = self.parent.idjc + "mic" + str(i + 1)
+         pathname = os.path.join(PGlobs.profile_dir, pm.profile, "mic" + str(i + 1))
          if os.path.isfile(pathname):
             file = open(pathname, "r")
             mic[1].set_text(file.readline()[:-1])
@@ -711,7 +715,7 @@ class mixprefs:
    def load_player_prefs(self):
       proktogglevalue = False
       try:
-         file = open(self.parent.idjc + "playerdefaults", "r")
+         file = open(os.path.join(PGlobs.profile_dir, pm.profile, "playerdefaults"))
          
          while 1:
             line = file.readline()
@@ -1028,7 +1032,7 @@ class mixprefs:
       self.window.set_resizable(True)
       self.window.connect("delete_event",self.delete_event)
       self.window.set_destroy_with_parent(True)
-      self.window.set_icon_from_file(pkgdatadir + "icon" + gfext)
+      self.window.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       self.notebook = gtk.Notebook()
       self.window.add(self.notebook)
 
@@ -1108,15 +1112,15 @@ class mixprefs:
          hbox.show()
          return hbox
 
-      self.mic_qty_adj = gtk.Adjustment(idjc_config.num_micpairs * 2, 2.0, 12.0, 2.0)
+      self.mic_qty_adj = gtk.Adjustment(PGlobs.num_micpairs * 2, 2.0, 12.0, 2.0)
       spin = gtk.SpinButton(self.mic_qty_adj)
       rrvbox.pack_start(hjoin(spin, gtk.Label(ln.n_microphones)))
    
-      self.stream_qty_adj = gtk.Adjustment(idjc_config.num_streamers, 1.0, 9.0, 1.0)
+      self.stream_qty_adj = gtk.Adjustment(PGlobs.num_streamers, 1.0, 9.0, 1.0)
       spin = gtk.SpinButton(self.stream_qty_adj)
       rrvbox.pack_start(hjoin(spin, gtk.Label(ln.n_streamers)))
 
-      self.recorder_qty_adj = gtk.Adjustment(idjc_config.num_recorders, 0.0, 4.0, 1.0)
+      self.recorder_qty_adj = gtk.Adjustment(PGlobs.num_recorders, 0.0, 4.0, 1.0)
       spin = gtk.SpinButton(self.recorder_qty_adj)
       rrvbox.pack_start(hjoin(spin, gtk.Label(ln.n_recorders)))
       
@@ -1683,7 +1687,7 @@ class mixprefs:
       
       mic_controls = []
       vbox = gtk.VBox()
-      for i in range(idjc_config.num_micpairs):
+      for i in range(PGlobs.num_micpairs):
          uhbox = gtk.HBox(True)
          vbox.pack_start(uhbox, False, False, 0)
          uhbox.show()
@@ -1967,7 +1971,7 @@ class mixprefs:
       #jack_vbox.set_border_width(4)
       jack_vbox.show()
       
-      jackname = os.environ["IDJC_JACK_SERVER"]
+      jackname = os.environ["jack_server"]
       if jackname != "default":
          label = gtk.Label(ln.using_jack_server + jackname)
          jack_vbox.add(label)
@@ -1980,7 +1984,7 @@ class mixprefs:
       frame.show()
       
       self.mic_jack_data = []
-      for i in range(1, idjc_config.num_micpairs * 2 + 1):
+      for i in range(1, PGlobs.num_micpairs * 2 + 1):
          n = str(i)
          box, check, entry, update = make_entry_line(self, "mic_in_" + n + ": ", "MIC", True, i - 1)
          vbox.add(box)
@@ -2062,7 +2066,7 @@ class mixprefs:
       scrolled.show()
 
       # Controls tab
-      tab= IDJCcontrols.ControlsUI(self.parent.controls)
+      tab= midicontrols.ControlsUI(self.parent.controls)
       label= gtk.Label(ln.ctrltab_label)
       self.notebook.append_page(tab, label)
       tab.show()
@@ -2124,7 +2128,7 @@ class mixprefs:
       vbox.pack_start(label, False, False, 0)
       label.show()
       
-      pixbuf = gtk.gdk.pixbuf_new_from_file(pkgdatadir + "logo" + gfext)
+      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "logo.png"))
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
       vbox.pack_start(image, False, False, 8)

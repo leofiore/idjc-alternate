@@ -107,7 +107,7 @@ class MicButton(gtk.ToggleButton):
       label.show()
       def image(name):
          i = gtk.Image()
-         pb = gtk.gdk.pixbuf_new_from_file_at_size(pkgdatadir + name + gfext, 47, 20)
+         pb = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, name + ".png"), 47, 20)
          i.set_from_pixbuf(pb)
          hbox.pack_start(i, False)
          return i
@@ -162,7 +162,7 @@ class MicOpener(gtk.HBox):
       joiner = ' <span foreground="red">&#64262;</span> '
 
       # Button grouping and label text stored here temporarily.
-      group_list = [[] for x in xrange(idjc_config.num_micpairs)]
+      group_list = [[] for x in xrange(PGlobs.num_micpairs)]
       
       # Categorisation of microphones into button groups and selection of button text.
       for m in self.mic_list:
@@ -1784,75 +1784,10 @@ class MainWindow:
       else:
          print "file not valid:", file
 
-   def process_command_file(self):
-      try:
-         file = open(self.idjc + "command", "r+")
-      except IOError:
-         print "Problem reading command file from disk"
-      else:
-         fcntl.flock(file.fileno(), fcntl.LOCK_EX)
-         class stop(Exception): pass
-         try:
-            while 1:
-               line = file.readline()
-               if not line:             # check if we are finished
-                  break
-               if line[0] != "[":       # 1st line must be of the form
-                  raise stop            # [--command x] where x is the number of lines that follow
-               if line[-2:] != "]\n":
-                  raise stop
-               line = line[1:-2].split(" ")
-               if not line[0].startswith("--"):
-                  raise stop
-               else:
-                  command = line[0][2:]
-               try:
-                  numberoffiles = int(line[1])
-               except:
-                  raise stop
-               command_data = []
-               for item in range(numberoffiles):
-                  filename = file.readline()
-                  if filename == "":    # check the correct number of files are present
-                     raise stop
-                  command_data.append(filename[:-1])
-               if command == "enqueue":
-                  self.process_enqueue_command(command_data)
-               elif command == "play":
-                  self.process_play_command(command_data)
-               elif command == "connect":
-                  self.process_connect_command(command_data)
-               elif command == "disconnect":
-                  self.process_disconnect_command(command_data)
-               elif command == "record_start":
-                  self.process_record_start_command(command_data)
-               elif command == "record_stop":
-                  self.process_record_stop_command(command_data)
-               elif command == "testmonitor_on":
-                  self.process_testmonitor_on_command(command_data)
-               elif command == "testmonitor_off":
-                  self.process_testmonitor_off_command(command_data)
-               elif command == "update":
-                  self.process_update_command(command_data)
-               else:
-                  print "unknown command", command
-         except stop:
-            print "corruption detected in command file\n"
-         file.truncate(0)
-         fcntl.flock(file.fileno(), fcntl.LOCK_UN)
-         file.close()
-
    def vu_update(self, locking = True):
       if locking:
          gtk.gdk.threads_enter()
       try:
-         if self.second_instance:
-            self.window.present()
-            self.second_instance = False
-
-         if os.stat(self.idjc + "command").st_size:
-            self.process_command_file()
-
          try:
             self.mixer_write("ACTN=requestlevels\nend\n", True)
          except ValueError, IOError:
@@ -2018,12 +1953,9 @@ class MainWindow:
       socket.setdefaulttimeout(15)
       
       if args.jackserver is not None:
-         os.environ["JACK_SERVER"] = args.jackserver[0]
+         os.environ["jack_server"] = args.jackserver[0]
       else:
-         try:
-            del os.environ["JACK_SERVER"]
-         except KeyError:
-            pass
+         os.environ["jack_server"] = "default"
             
       os.environ["mx_client_id"] = mx_id = "idjc-mx_" + pm.profile
       os.environ["sc_client_id"] = sc_id = "idjc-sc_" + pm.profile
@@ -2062,7 +1994,7 @@ class MainWindow:
          self.mixer_read()
       else:
          message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, ln.jack_connection_failed)
-         message_dialog.set_icon_from_file(pkgdatadir + "icon" + gfext)
+         message_dialog.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
          message_dialog.set_title(ln.idjc_launch_failed)
          message_dialog.run()
          message_dialog.destroy()
@@ -2895,7 +2827,7 @@ class MainWindow:
       self.prefs_window = mixprefs(self)
       self.prefs_window.load_player_prefs()
       self.prefs_window.apply_player_prefs()
-      self.prefs_window.ask_profile.set_active(self.ask_profile_next_time)
+      self.prefs_window.ask_profile.set_active(False)
       self.vutimeout = gobject.timeout_add(50, self.vu_update)
       self.statstimeout = gobject.timeout_add(100, self.stats_update)
       
@@ -2939,6 +2871,8 @@ class MainWindow:
       self.player_left.treeview.emit("cursor-changed")
       self.player_right.treeview.emit("cursor-changed")
 
+      """
+      Have this code read from the parsed command line.
       mic = os.environ["MICROPHONE"]
       for each in mic:
          self.mic_opener.open(each)
@@ -2958,7 +2892,8 @@ class MainWindow:
       for n in range(len(servtabs)):
          if chr(n + ord("1")) in serv:
             servtabs[n].server_connect.set_active(True)
-
+      """
+      
    def main(self):
       gtk.main()
 

@@ -2036,7 +2036,7 @@ class IDJC_Media_Player:
                filerqtext = ln.right_playlist_addition
             self.filerq = gtk.FileChooserDialog(filerqtext, None, gtk.FILE_CHOOSER_ACTION_OPEN, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
             self.filerq.set_select_multiple(True)
-            self.filerq.set_icon_from_file(pkgdatadir + "icon" + gfext)
+            self.filerq.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
             self.filerq.set_current_folder(str(self.file_requester_start_dir))
             self.filerq.add_filter(self.plfilefilter_all)
             self.filerq.add_filter(self.plfilefilter_playlists)
@@ -3289,7 +3289,7 @@ class IDJC_Media_Player:
       hbox.set_spacing(5)
       frame.add(hbox)
       image = gtk.Image()
-      image.set_from_file(pkgdatadir + "icon" + gfext)
+      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       hbox.add(image)
       image.show()
       separator = gtk.VSeparator()
