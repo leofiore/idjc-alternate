@@ -30,6 +30,7 @@ from stat import *
 from collections import deque, namedtuple, defaultdict
 from functools import partial
 
+import glib
 import gobject
 import gtk
 import pango
@@ -841,26 +842,11 @@ class IDJC_Media_Player:
  
       # Use this name for metadata when we can't get anything from tags.
       # The name will also appear grey to indicate a tagless state.
-      meta_name = os.path.basename(filename)
-      enclist = self.parent.fenc.split(",")
-      for each in enclist:
-         each = each.strip()
-         if each == "@locale":
-            each = self.parent.denc
-         try:
-            meta_name = unicode(os.path.splitext(meta_name)[0], each).lstrip("0123456789 -")
-         except:
-            pass
-         else:
-            encoding = each
-            rsmeta_name = '<span foreground="dark red">(%s)</span> %s' % (ln.notag, rich_safe(meta_name))
-            title_retval = meta_name
-            break
-      else:
-         encoding = "latin1"            # Have to default to something.
-         meta_name = u'Unknown'
-         rsmeta_name = u'<span foreground="gray">Unknown encoding</span>'
-         title_retval = u"Unknown"
+      meta_name = os.path.splitext(glib.filename_display_basename(filename))[0].lstrip("0123456789 -")
+      encoding = None  # Obsolete
+      rsmeta_name = '<span foreground="dark red">(%s)</span> %s' % (ln.notag, rich_safe(meta_name))
+      title_retval = meta_name
+ 
          
       # Obtain as much metadata from ubiquitous tags as possible.
       # Files can have ape and id3 tags. ID3 has priority in this case.
@@ -902,7 +888,7 @@ class IDJC_Media_Player:
           
          
       # Trying for metadata from native tagging formats.
-      if avcodec and avformat and filext == ".avi":
+      if FGlobs.avcodec and FGlobs.avformat and filext == ".avi":
          self.parent.mixer_write("AVFP=%s\nACTN=avformatinforequest\nend\n" % filename, True)
          while 1:
             line = self.parent.mixer_read()
@@ -2539,32 +2525,6 @@ class IDJC_Media_Player:
    def drag_data_received_data(self, treeview, context, x, y, dragged, info, etime):
       if info != 0:
          text = str(dragged.data)
-         if text.count("\x00"): # where did these come from??
-            try:
-               # Strip out any Null characters which may be due to the dragged
-               # text being composed of unicode and convert back to the 
-               # filesystem encoding.
-               # If fenc is wrong dnd will likely fail on filenames with non ASCII.
-               # The names must ultimately match what is written on your hard drive.
-               # This can be a problem when you have multiple encodings registered.
-               text = unicode(text)
-               fe = self.parent.fenc.split(",")
-               for each in fe:
-                  if each == "@locale" or each == "locale":
-                     each = self.parent.de
-                  try:
-                     result = text.encode(each, "strict")
-                  except:
-                     continue           # failed to encode text with the encoding in each
-                  else:
-                     text = result      # encoding succeeded even if it is wrong
-                     break
-               else:
-                  print "Unable to encode drag and drop filenames with the supplied list:", self.parent.fenc
-            except:
-               pass             # Not unicode aparrently or we wouldn't be here.
-            # Finally a blanket removal of any NULLs because they really need to go
-            text = text.replace("\x00", "") 
          if text[:20] == "idjcplayercontrol://":
             ct = text[20:].split("+")
             newrow = [ ct[0], "", int(ct[1]), ct[2], ct[3], "", "" ]
@@ -2843,7 +2803,7 @@ class IDJC_Media_Player:
             vbox.add(self.plframe)
                
             self.plfilerq = gtk.FileChooserDialog(filerqtext, None, gtk.FILE_CHOOSER_ACTION_SAVE, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
-            self.plfilerq.set_icon_from_file(pkgdatadir + "icon" + gfext)
+            self.plfilerq.set_icon_from_file(os.path.join(FGlobs.pkgdatadir + "icon.png"))
             self.plfilerq.set_current_folder(self.home)
             self.plfilerq.add_filter(self.plfilefilter_all)
             self.plfilerq.add_filter(self.plfilefilter_playlists)

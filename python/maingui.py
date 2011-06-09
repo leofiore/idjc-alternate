@@ -940,7 +940,7 @@ class idjc_shutdown_dialog:
       dialog = gtk.Dialog(ln.idjc_shutdown, None, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_QUIT, gtk.RESPONSE_OK))
       if window_group is not None:
          window_group.add_window(dialog)
-      dialog.set_icon_from_file(pkgdatadir + "icon" + gfext)
+      dialog.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       dialog.set_resizable(False)
       dialog.connect("close", self.respond, actionyes, actionno)
       dialog.connect("response", self.respond, actionyes, actionno)
@@ -1066,7 +1066,7 @@ class MainWindow:
       # update metadata on stream if it has changed
       if self.new_metadata != self.old_metadata:
          self.old_metadata = self.new_metadata             # now we need to send the new metadata
-         print "song title: %s\n" % self.songname.encode(self.denc, "replace")
+         print "song title: %s\n" % self.songname
          if self.songname != u"":
             self.window.set_title("%s :: IDJC%s" % (self.songname, self.profile_title))
             tm = time.localtime()
@@ -1076,7 +1076,7 @@ class MainWindow:
             adjustment = self.history_window.get_vadjustment()
             adjustment.set_value(adjustment.upper)
             try:
-               file = open(self.idjc + "history.log", "a")
+               file = open(os.path.join(PGlobs.profile_dir, pm.profile, "history.log"), "a")
             except IOError:
                print "unable to open history.log for writing"
             else:
@@ -1087,7 +1087,7 @@ class MainWindow:
                file.close()
 
             try: # The song the DJ is listening to for the xchat /listening trigger
-               file = open(self.idjcroot + "songtitle", "w")
+               file = open(os.path.join(PGlobs.config_dir, "songtitle"), "w")
                file.write(self.songname)                # <--- This is wrong
                file.close()
             except IOError:
@@ -1980,7 +1980,7 @@ class MainWindow:
          if rply == "":
             print "mixer crashed"
             message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, ln.mixer_crash)
-            message_dialog.set_icon_from_file(pkgdatadir + "icon" + gfext)
+            message_dialog.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
             message_dialog.set_title(ln.idjc_launch_failed)
             message_dialog.run()
             message_dialog.destroy()

@@ -615,7 +615,7 @@ class MutagenGUI:
    @staticmethod
    def is_supported(pathname):
       supported = [ "mp3", "ogg", "oga" ]
-      if avcodec and avformat:
+      if FGlobs.avcodec and FGlobs.avformat:
          supported += ["mp4", "m4a", "m4b", "m4p", "ape", "mpc", "wma"]
       if flacenabled:
          supported.append("flac")
@@ -651,7 +651,7 @@ class MutagenGUI:
       self.window.set_destroy_with_parent(True)
       self.window.set_border_width(9)
       self.window.set_resizable(True)
-      self.window.set_icon_from_file(pkgdatadir + "icon" + gfext)
+      self.window.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       if idjcroot == None:
          self.window.connect("destroy", self.destroy_and_quit)
       vbox = gtk.VBox()
