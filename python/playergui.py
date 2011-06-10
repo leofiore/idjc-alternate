@@ -2929,7 +2929,8 @@ class IDJC_Media_Player:
         
       if text == "ToJingles":
          source = model.get_value(iter, 1)
-         dest = self.parent.idjc + "jingles/" + os.path.split(source)[1]
+         dest = os.path.join(PGlobs.profile_dir, pm.profile,
+                                 "jingles", os.path.split(source)[1])
          try:
             source = open(source, "r")
             dest = open(dest, "w")

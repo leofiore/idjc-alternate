@@ -1515,9 +1515,6 @@ class MainWindow:
          self.server_window.save_session_settings()
       try:
          gtk.main_quit()
-         os.unlink(self.idjc + "command")
-         self.lock.close()
-         os.unlink(self.idjc + "lock")
       except:
          pass
       gtk.gdk.threads_leave()
@@ -1546,17 +1543,9 @@ class MainWindow:
       self.controls.save_prefs()
       self.server_window.save_session_settings()
       self.prefs_window.appexit_event.activate()        # run user specified command for application exit
-      if os.path.isfile(self.idjc + "command"):
-         os.unlink(self.idjc + "command")
-      self.lock.close()
-      os.unlink(self.idjc + "lock")
       if gtk.main_level():
          gtk.main_quit()
       time.sleep(0.3)   # Allow time for all subthreads/programs time to exit 
-      try:
-         os.unlink(self.idjc + "command")       # intentionally did this twice
-      except:
-         pass
       gtk.gdk.threads_leave()
       sys.exit(0)
 

@@ -2503,143 +2503,148 @@ class SourceClientGui:
          pass
       else:
          self.comms_cmd.close()
+
    def cb_delete_event(self, widget, event, data = None):
       self.window.hide()
       return True
+
    def save_session_settings(self):
       try:                              # check the following are initilised before proceeding
          tabframes = (self, self.streamtabframe, self.recordtabframe)
       except AttributeError:
          return                         # cancelled save
+
       try:
-         file = open(self.parent.idjc + "s_data", "w")
+         with open(os.path.join(PGlobs.profile_dir, pm.profile,
+                                                   "s_data"), "w") as f:
+            for tabframe in tabframes:
+               for tab in tabframe.tabs:
+                  f.write("".join(("[", tab.tab_type, " ", str(tab.numeric_id), "]\n")))
+                  for lvalue, (widget, method) in tab.objects.iteritems():
+                     if type(method) == tuple:
+                        rvalue = widget.__getattribute__(method[1])()
+                     elif method == "active":
+                        rvalue = str(int(widget.get_active()))
+                     elif method == "text":
+                        rvalue = widget.get_text()
+                     elif method == "value":
+                        rvalue = str(widget.get_value())
+                     elif method == "expanded":
+                        rvalue = str(int(widget.get_expanded()))
+                     elif method == "notebookpage":
+                        rvalue = str(widget.get_current_page())
+                     elif method == "password":
+                        rvalue = widget.get_text()
+                     elif method == "history":
+                        rvalue = widget.get_history()
+                     elif method == "radioindex":
+                        rvalue = str(widget.get_radio_index())
+                     elif method == "directory":
+                        rvalue = widget.get_filename() or ""
+                     elif method == "filename":
+                        rvalue = widget.get_filename() or ""
+                     else:
+                        print "unsupported", lvalue, widget, method
+                        continue
+                     if method != "password" or self.parent.prefs_window.keeppass.get_active():
+                        f.write("".join((lvalue, "=", rvalue, "\n")))
+                  f.write("\n")
       except:
          print "error attempting to write file: serverdata"
-      else:
-         for tabframe in tabframes:
-            for tab in tabframe.tabs:
-               file.write("".join(("[", tab.tab_type, " ", str(tab.numeric_id), "]\n")))
-               for lvalue, (widget, method) in tab.objects.iteritems():
-                  if type(method) == tuple:
-                     rvalue = widget.__getattribute__(method[1])()
-                  elif method == "active":
-                     rvalue = str(int(widget.get_active()))
-                  elif method == "text":
-                     rvalue = widget.get_text()
-                  elif method == "value":
-                     rvalue = str(widget.get_value())
-                  elif method == "expanded":
-                     rvalue = str(int(widget.get_expanded()))
-                  elif method == "notebookpage":
-                     rvalue = str(widget.get_current_page())
-                  elif method == "password":
-                     rvalue = widget.get_text()
-                  elif method == "history":
-                     rvalue = widget.get_history()
-                  elif method == "radioindex":
-                     rvalue = str(widget.get_radio_index())
-                  elif method == "directory":
-                     rvalue = widget.get_filename() or ""
-                  elif method == "filename":
-                     rvalue = widget.get_filename() or ""
-                  else:
-                     print "unsupported", lvalue, widget, method
-                     continue
-                  if method != "password" or self.parent.prefs_window.keeppass.get_active():
-                     file.write("".join((lvalue, "=", rvalue, "\n")))
-               file.write("\n")
-         file.close()
+
    def load_previous_session(self):
       try:
-         file = open(self.parent.idjc + "s_data", "r")
-      except:
-         print "failed to open serverdata file"
-      else:
-         tabframe = None
-         while 1:
-            line = file.readline()
-            if line == "":
-               break
-            else:
-               line = line[:-1]         # strip off the newline character
+         with open(os.path.join(PGlobs.profile_dir, pm.profile,
+                                                   "s_data")) as f:
+            tabframe = None
+            while 1:
+               line = f.readline()
                if line == "":
-                  continue
-            if line.startswith("[") and line.endswith("]"):
-               try:
-                  name, numeric_id = line[1:-1].split(" ")
-               except:
-                  print "malformed line:", line, "in serverdata file"
-                  tabframe = None
+                  break
                else:
-                  if name == "server_window":
-                     tabframe = self
-                  elif name == "streamer":
-                     tabframe = self.streamtabframe
-                  elif name == "recorder":
-                     tabframe = self.recordtabframe
-                  else:
-                     print "unsupported element:", line, "in serverdata file"
+                  line = line[:-1]         # strip off the newline character
+                  if line == "":
+                     continue
+               if line.startswith("[") and line.endswith("]"):
+                  try:
+                     name, numeric_id = line[1:-1].split(" ")
+                  except:
+                     print "malformed line:", line, "in serverdata file"
                      tabframe = None
+                  else:
+                     if name == "server_window":
+                        tabframe = self
+                     elif name == "streamer":
+                        tabframe = self.streamtabframe
+                     elif name == "recorder":
+                        tabframe = self.recordtabframe
+                     else:
+                        print "unsupported element:", line, "in serverdata file"
+                        tabframe = None
+                     if tabframe is not None:
+                        try:
+                           tab = tabframe.tabs[int(numeric_id)]
+                        except:
+                           print "unsupported tab number:", line, "in serverdata file"
+                           tabframe = None
+               else:
                   if tabframe is not None:
                      try:
-                        tab = tabframe.tabs[int(numeric_id)]
+                        lvalue, rvalue = line.split("=", 1)
                      except:
-                        print "unsupported tab number:", line, "in serverdata file"
-                        tabframe = None
-            else:
-               if tabframe is not None:
-                  try:
-                     lvalue, rvalue = line.split("=", 1)
-                  except:
-                     print "not a valid key, value pair:", line, "in serverdata file"
-                  else:
-                     if not lvalue:
-                        print "key value is missing:", line, "in serverdata file"        
+                        print "not a valid key, value pair:", line, "in serverdata file"
                      else:
-                        try:
-                           (widget, method) = tab.objects[lvalue]
-                        except KeyError:
-                           print "key value not recognised:", line, "in serverdata file"
+                        if not lvalue:
+                           print "key value is missing:", line, "in serverdata file"        
                         else:
                            try:
-                              int_rvalue = int(rvalue)
-                           except:
-                              int_rvalue = None
-                           try:
-                              float_rvalue = float(rvalue)
-                           except:
-                              float_rvalue = None
-                           if type(method) == tuple:
-                              widget.__getattribute__(method[0])(rvalue)
-                           elif method == "active":
-                              if int_rvalue is not None:
-                                 widget.set_active(int_rvalue)
-                           elif method == "expanded":
-                              if int_rvalue is not None:
-                                 widget.set_expanded(int_rvalue)
-                           elif method == "value":
-                              if float_rvalue is not None:
-                                 widget.set_value(float_rvalue)
-                           elif method == "notebookpage":
-                              if int_rvalue is not None:
-                                 widget.set_current_page(int_rvalue)
-                           elif method == "radioindex":
-                              if int_rvalue is not None:
-                                 widget.set_radio_index(int_rvalue)
-                           elif method == "text":
-                              widget.set_text(rvalue)
-                           elif method == "password":
-                              widget.set_text(rvalue)
-                           elif method == "history":
-                              widget.set_history(rvalue)
-                           elif method == "directory":
-                              if rvalue:
-                                 widget.set_current_folder(rvalue)
-                           elif method == "filename":
-                              if rvalue:
-                                 rvalue = widget.set_filename(rvalue)
+                              (widget, method) = tab.objects[lvalue]
+                           except KeyError:
+                              print "key value not recognised:", line, "in serverdata file"
                            else:
-                              print "method", method, "is unsupported at this time hence widget pertaining to", lvalue, "will not be set"
+                              try:
+                                 int_rvalue = int(rvalue)
+                              except:
+                                 int_rvalue = None
+                              try:
+                                 float_rvalue = float(rvalue)
+                              except:
+                                 float_rvalue = None
+                              if type(method) == tuple:
+                                 widget.__getattribute__(method[0])(rvalue)
+                              elif method == "active":
+                                 if int_rvalue is not None:
+                                    widget.set_active(int_rvalue)
+                              elif method == "expanded":
+                                 if int_rvalue is not None:
+                                    widget.set_expanded(int_rvalue)
+                              elif method == "value":
+                                 if float_rvalue is not None:
+                                    widget.set_value(float_rvalue)
+                              elif method == "notebookpage":
+                                 if int_rvalue is not None:
+                                    widget.set_current_page(int_rvalue)
+                              elif method == "radioindex":
+                                 if int_rvalue is not None:
+                                    widget.set_radio_index(int_rvalue)
+                              elif method == "text":
+                                 widget.set_text(rvalue)
+                              elif method == "password":
+                                 widget.set_text(rvalue)
+                              elif method == "history":
+                                 widget.set_history(rvalue)
+                              elif method == "directory":
+                                 if rvalue:
+                                    widget.set_current_folder(rvalue)
+                              elif method == "filename":
+                                 if rvalue:
+                                    rvalue = widget.set_filename(rvalue)
+                              else:
+                                 print "method", method, "is unsupported at this time hence widget pertaining to", lvalue, "will not be set"
+      except:
+         print "failed to open serverdata file"
+
+
    def cb_configure_event(self, widget, event):
       self.win_x.set_value(event.width)
       self.win_y.set_value(event.height)

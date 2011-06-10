@@ -106,7 +106,8 @@ class Jingles(object):
       for each in numericlist:
          if each.count("-") == 0:
             try:
-               arglist.append(self.parent.idjc + "jingles/" + self.liststore[int(each)-1][1])
+               arglist.append(os.path.join(PGlobs.profile_dir, pm.profile,
+                              "jingles", self.liststore[int(each)-1][1]))
             except:
                pass
          elif each.count("-") == 1:
@@ -121,7 +122,8 @@ class Jingles(object):
                   end = 1000000
             while start <= end:
                try:
-                  arglist.append(self.parent.idjc + "jingles/" + self.liststore[start][1])
+                  arglist.append(os.path.join(PGlobs.profile_dir, pm.profile,
+                                    "jingles", self.liststore[start][1]))
                except:
                   break;
                start = start + 1
@@ -291,7 +293,7 @@ class Jingles(object):
             widget.set_active(False)
             print "Can't start interlude player.  No file is selected."
             return
-         path = self.parent.idjc + "jingles/" + model.get_value(iter, 1)
+         path = os.path.join(PGlobs.profile_dir, pm.profile, "jingles", model.get_value(iter, 1))
          if os.path.isfile(path) == False:
             widget.set_active(False)
             print "Can't start the interlude player, the file", path, "is missing."

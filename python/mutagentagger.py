@@ -617,9 +617,9 @@ class MutagenGUI:
       supported = [ "mp3", "ogg", "oga" ]
       if FGlobs.avcodec and FGlobs.avformat:
          supported += ["mp4", "m4a", "m4b", "m4p", "ape", "mpc", "wma"]
-      if flacenabled:
+      if FGlobs.flacenabled:
          supported.append("flac")
-      if speexenabled:
+      if FGlobs.speexenabled:
          supported.append("spx")
       extension = os.path.splitext(pathname)[1][1:].lower()
       if supported.count(extension) != 1:
@@ -659,9 +659,12 @@ class MutagenGUI:
       vbox.show()
       label = gtk.Label()
       if idjcroot:
-         label.set_markup(u"<b>" + ln.tagger_filename + u" " + rich_safe(unicode(os.path.split(pathname)[1], encoding).encode("utf-8", "replace")) + u"</b>")
+         if encoding is not None:
+            label.set_markup(u"<b>" + ln.tagger_filename.decode("utf-8") + u" " + rich_safe(unicode(os.path.split(pathname)[1], encoding).encode("utf-8", "replace")) + u"</b>")
+         else:
+            label.set_markup(u"<b>" + ln.tagger_filename.decode("utf-8") + u" " + rich_safe(os.path.split(pathname)[1]).encode("utf-8", "replace") + u"</b>")
       else:
-         label.set_markup(u"<b>" + ln.tagger_filename + u" " + rich_safe(unicode(os.path.split(pathname)[1], "latin1").encode("utf-8", "replace")) + u"</b>")
+         label.set_markup(u"<b>" + ln.tagger_filename.decode("utf-8") + u" " + rich_safe(unicode(os.path.split(pathname)[1], "latin1").encode("utf-8", "replace")) + u"</b>")
       vbox.pack_start(label, False, False, 6)
       label.show()
       

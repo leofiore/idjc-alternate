@@ -637,32 +637,39 @@ class mixprefs:
 
    def load_jack_port_settings(self):
       for port in self.jack_ports:
-         if os.path.isfile(os.path.join(PGlobs.profile_dir, pm.profile, port)):
-            file = open(self.parent.idjc + port, "r")
-            getattr(self, port+"entry").set_text(file.readline()[:-1])
-            getattr(self, port+"check").set_active(file.readline() == "1\n")
-            file.close()
+         try:
+            with open(os.path.join(PGlobs.profile_dir,
+                                                pm.profile, port)) as f:
+               getattr(self, port+"entry").set_text(f.readline()[:-1])
+               getattr(self, port+"check").set_active(f.readline() == "1\n")
+         except:
+            pass
             
       for i, mic in enumerate(self.mic_jack_data):
-         pathname = os.path.join(PGlobs.profile_dir, pm.profile, "mic" + str(i + 1))
-         if os.path.isfile(pathname):
-            file = open(pathname, "r")
-            mic[1].set_text(file.readline()[:-1])
-            mic[0].set_active(file.readline() == "1\n")
+         try:
+            with open(os.path.join(PGlobs.profile_dir,
+                                 pm.profile, "mic" + str(i + 1))) as f:
+               mic[1].set_text(f.readline()[:-1])
+               mic[0].set_active(f.readline() == "1\n")
+         except:
+            pass
    
    def auto_click(self, widget, data):
       data.set_sensitive(not widget.get_active())
    
    def save_click(self, widget, data):
-      filename = self.parent.idjc + data[0].lower()
+      filename = data[0].lower()
       if data[2] is not None:
          filename += str(data[2] + 1)
-      file = open(filename, "w")
-      if data[1].flags() & gtk.SENSITIVE:
-         file.write(data[1].get_text() + "\n" + "0\n")
-      else:
-         file.write(data[1].get_text() + "\n" + "1\n")
-      file.close()
+      try:
+         with open(os.path.join(PGlobs.profile_dir, 
+                                    pm.profile, filename), "w") as f:
+            if data[1].flags() & gtk.SENSITIVE:
+               f.write(data[1].get_text() + "\n" + "0\n")
+            else:
+               f.write(data[1].get_text() + "\n" + "1\n")
+      except:
+         pass
    
    def update_click(self, widget, (code, entry, index)):
       if entry.flags() & gtk.SENSITIVE:
@@ -681,36 +688,24 @@ class mixprefs:
 
    def save_player_prefs(self):
       try:
-         file = open(self.parent.idjc + "playerdefaults", "w")
-         for name, widget in self.playersettingsdict.iteritems():
-            file.write(name + "=" + str(int(widget.get_active())) + "\n")
-         for name, widget in self.valuesdict.iteritems():
-            file.write(name + "=" + str(widget.get_value()) + "\n")
-         for name, widget in self.textdict.iteritems():
-            file.write(name + "=" + widget.get_text() + "\n")
-         file.close()
+         with open(os.path.join(PGlobs.profile_dir, pm.profile,
+                                       "playerdefaults"), "w") as f:
+            for name, widget in self.playersettingsdict.iteritems():
+               f.write(name + "=" + str(int(widget.get_active())) + "\n")
+            for name, widget in self.valuesdict.iteritems():
+               f.write(name + "=" + str(widget.get_value()) + "\n")
+            for name, widget in self.textdict.iteritems():
+               f.write(name + "=" + widget.get_text() + "\n")
       except IOError:
          print "Error while writing out player defaults"
       try:
-         file = open(self.parent.idjc + "config", "w")
-         file.write("[resource_count]\n")
-         for name, widget in self.rrvaluesdict.iteritems():
-            file.write(name + "=" + str(int(widget.get_value())) + "\n")
-         file.close()
+         with open(os.path.join(PGlobs.profile_dir, pm.profile, 
+                                                "config"), "w") as f:
+            f.write("[resource_count]\n")
+            for name, widget in self.rrvaluesdict.iteritems():
+               f.write(name + "=" + str(int(widget.get_value())) + "\n")
       except IOError:
          print "Error while writing out player defaults"
-      if self.ask_profile.get_active():
-         if os.path.isfile(self.parent.idjcroot + "do-not-ask-profile"):
-            try:
-               os.unlink(self.parent.idjcroot + "do-not-ask-profile")
-            except:
-               print "error removing file 'do-not-ask-profile'"
-      else:
-         try:
-            if not os.path.isfile(self.parent.idjcroot + "do-not-ask-profile"):
-               os.mknod(self.parent.idjcroot + "do-not-ask-profile")
-         except:
-            print "error creating file 'do-not-ask-profile'"
          
    def load_player_prefs(self):
       proktogglevalue = False
@@ -1268,11 +1263,6 @@ class mixprefs:
       self.dual_volume.show()
       parent.tooltips.set_tip(self.dual_volume, ln.dual_volume_tip)
 
-      self.ask_profile = gtk.CheckButton(ln.ask_profile)
-      vbox.pack_start(self.ask_profile, False, False, 0)
-      self.ask_profile.show()
-      parent.tooltips.set_tip(self.ask_profile, ln.ask_profile_tip)
-      
       self.flash_mic = gtk.CheckButton(ln.flash_mic_button)
       vbox.pack_start(self.flash_mic, False)
       self.flash_mic.show()

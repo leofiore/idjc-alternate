@@ -444,7 +444,7 @@ class Controls(object):
     def save_prefs(self):
         """Store bindings list to prefs file
         """
-        fp= open(self.owner.idjc+'controls', 'w')
+        fp= open(os.path.join(PGlobs.profile_dir, pm.profile, 'controls'), 'w')
         for binding in self.bindings:
             fp.write(str(binding)+'\n')
         fp.close()
@@ -462,7 +462,7 @@ class Controls(object):
                     try:
                         self.bindings.append(Binding(line))
                     except ValueError, e:
-                        sys.stderr.write('Warning: controls prefs file contained unreadable binding %r\n' % line)
+                        print >>sys.stderr, 'Warning: controls prefs file contained unreadable binding %r' % line
             fp.close()
             self.update_lookup()
 
