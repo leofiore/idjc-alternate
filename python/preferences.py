@@ -1961,7 +1961,7 @@ class mixprefs:
       #jack_vbox.set_border_width(4)
       jack_vbox.show()
       
-      jackname = os.environ["jack_server"]
+      jackname = os.environ["jack_server_name"]
       if jackname != "default":
          label = gtk.Label(ln.using_jack_server + jackname)
          jack_vbox.add(label)

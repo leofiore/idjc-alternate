@@ -79,7 +79,10 @@ class PGlobs(object):
    num_recorders = 2
    
 
+
 def main():
+   from .prelims import ProfileManager
+   pm = ProfileManager()
+
    import maingui
-   
    return maingui.main()

@@ -103,8 +103,6 @@ class ArgumentParserImplementation(object):
             help="the players to start among values {1,2}")
       group.add_argument("-s", "--servers", dest="servers", nargs="+", metavar="s",
             help="attempt connection with the specified servers")
-      group.add_argument("-r", "--recorders", dest="recorders", nargs="+", metavar="r",
-            help="the recorders to start")
       group.add_argument("-c", "--crossfader", dest="crossfader", choices=("1", "2"), 
             help="position the crossfader for the specified player")
       sp_mp.add_argument("newprofile", metavar="profile_name",

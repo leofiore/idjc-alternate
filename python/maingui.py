@@ -16,13 +16,6 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 
 
-
-from .prelims import *
-args = ArgumentParserImplementation().parse_args()
-pm = ProfileManager()
-
-
-
 import os
 import sys
 import fcntl
@@ -54,7 +47,11 @@ from .gtkstuff import threadslock
 from . import midicontrols
 from . import tooltips
 from . import p3db
+from .prelims import *
 
+
+args = ArgumentParserImplementation().parse_args()
+pm = ProfileManager()
 
 
 METER_TEXT_SIZE = 8000
@@ -1941,10 +1938,29 @@ class MainWindow:
       
       socket.setdefaulttimeout(15)
       
-      if args.jackserver is not None:
-         os.environ["jack_server"] = args.jackserver[0]
+      # Resources to reserve.
+      config = ConfigParser.RawConfigParser()
+      config.read(os.path.join(PGlobs.profile_dir, pm.profile, 'config'))
+      try:
+         PGlobs.num_micpairs = config.getint('resource_count', 'num_micpairs') // 2
+      except ConfigParser.Error:
+         pass
+      try:
+         count = config.getint('resource_count', 'num_streamers')
+      except ConfigParser.Error:
+         pass
       else:
-         os.environ["jack_server"] = "default"
+         PGlobs.num_streamers = count
+         PGlobs.num_encoders = count
+      try:
+         PGlobs.num_recorders = config.getint('resource_count', 'num_recorders')
+      except ConfigParser.Error:
+         pass
+      
+      if args.jackserver is not None:
+         os.environ["jack_server_name"] = args.jackserver[0]
+      else:
+         os.environ["jack_server_name"] = "default"
             
       os.environ["mx_client_id"] = mx_id = "idjc-mx_" + pm.profile
       os.environ["sc_client_id"] = sc_id = "idjc-sc_" + pm.profile
@@ -1953,7 +1969,7 @@ class MainWindow:
       os.environ["mx_mic_qty"] = str(PGlobs.num_micpairs * 2)
 
       self.session_loaded = False
- 
+
       try:
          sp_mx = subprocess.Popen([os.path.join(FGlobs.libexecdir, "idjcmixer")], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
       except Exception, e:
@@ -2596,7 +2612,7 @@ class MainWindow:
             self.micmeterbox.pack_start(meter)
             meter.show()
       else:
-         table = gtk.Table(idjc_config.num_micpairs, 2)
+         table = gtk.Table(PGlobs.num_micpairs, 2)
          table.set_row_spacings(4)
          table.set_col_spacings(4)
          self.micmeterbox.pack_start(table)
@@ -2816,7 +2832,6 @@ class MainWindow:
       self.prefs_window = mixprefs(self)
       self.prefs_window.load_player_prefs()
       self.prefs_window.apply_player_prefs()
-      self.prefs_window.ask_profile.set_active(False)
       self.vutimeout = gobject.timeout_add(50, self.vu_update)
       self.statstimeout = gobject.timeout_add(100, self.stats_update)
       
@@ -2860,29 +2875,38 @@ class MainWindow:
       self.player_left.treeview.emit("cursor-changed")
       self.player_right.treeview.emit("cursor-changed")
 
-      """
-      Have this code read from the parsed command line.
-      mic = os.environ["MICROPHONE"]
-      for each in mic:
-         self.mic_opener.open(each)
+      if args.mics is not None:
+         for each in args.mics:
+            self.mic_opener.open(each)
 
-      aux = os.environ["AUXILIARY"]
-      if "1" in aux:
-         self.aux_select.set_active(True)
+      if args.aux is not None:
+         if "1" in args.aux:
+            self.aux_select.set_active(True)
 
-      voip = os.environ["VOIPMODE"]
-      if voip == "1":
-         self.greenphone.set_active(True)
-      elif voip == "2":
-         self.redphone.set_active(True)
+      if args.voip is not None:
+         if args.voip == ["public"]:
+            self.greenphone.set_active(True)
+         elif args.voip == ["private"]:
+            self.redphone.set_active(True)
 
-      serv = os.environ["SERVERSTART"]
-      servtabs = self.server_window.streamtabframe.tabs
-      for n in range(len(servtabs)):
-         if chr(n + ord("1")) in serv:
-            servtabs[n].server_connect.set_active(True)
-      """
-      
+      if args.servers is not None:
+         servtabs = self.server_window.streamtabframe.tabs
+         for n in range(len(servtabs)):
+            if chr(n + ord("1")) in args.servers:
+               servtabs[n].server_connect.set_active(True)
+   
+      if args.crossfader is not None:
+         if args.crossfader == "1":
+            self.passleft.clicked()
+         elif args.crossfader == "2":
+            self.passright.clicked()
+
+      if args.players is not None:
+         if "1" in args.players:
+            self.player_left.play.clicked()
+         if "2" in args.players:
+            self.player_right.play.clicked()
+               
    def main(self):
       gtk.main()
 

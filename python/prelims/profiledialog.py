@@ -495,8 +495,14 @@ class ProfileDialog(gtk.Dialog):
       
    def set_profile(self, newprofile, newnickname):
       assert self._profile is None
+      self.hide()
       self._profile = newprofile
-      self.set_title(self.get_title() + "  (%s)" % newnickname)
+      if newnickname:
+         append = ":".join((newprofile, newnickname))
+      else:
+         append = newprofile
+      self.set_title(self.get_title() + "  (%s)" % append)
+
       self.cancel.set_label(gtk.STOCK_CLOSE)
       self.connect("delete-event", self._cb_delete_event)
       self.response(0)
