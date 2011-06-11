@@ -118,3 +118,22 @@ class FixedAttributes(type):
    
    def __call__(cls, *args, **kwds):
       raise NotImplementedError("this class cannot be instantiated")
+
+
+
+class PathStr(str):
+   """A data type to perform path joins using the / operator.
+   
+   In this case the higher precedence of / is unfortunate.
+   """
+   
+   def __div__(self, other):
+      return PathStr(os.path.join(str(self), other))
+   
+   
+   def __add__(self, other):
+      return PathStr(str.__add__(self, other))
+
+
+   def __repr__(self):
+      return "PathStr('%s')" % self

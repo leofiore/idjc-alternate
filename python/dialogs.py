@@ -58,7 +58,6 @@ class error_notification_dialog(gtk.Dialog):
       gtk.Dialog.__init__(self, window_title, None, gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE))
       if window_group is not None:
          window_group.add_window(self)
-      self.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       self.set_resizable(False)
       self.connect("close", self.respond)
       self.connect("response", self.respond)
@@ -119,7 +118,6 @@ class autodisconnection_notification_dialog(gtk.Dialog):
       gtk.Dialog.__init__(self, window_title, None, gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OK, gtk.RESPONSE_OK))
       if window_group is not None:
          window_group.add_window(self)
-      self.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       self.set_resizable(False)
       self.connect("close", self.respond, actionok, actioncancel)
       self.connect("response", self.respond, actionok, actioncancel)
@@ -243,7 +241,6 @@ class ReconnectionDialog(gtk.Dialog):
       self.vb.set_border_width(10)
       self.vb.set_spacing(10)
       
-      self.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       self.connect("delete-event", self.cb_delete)
       self.connect("response", self.cb_response)
       

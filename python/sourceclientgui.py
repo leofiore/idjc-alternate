@@ -143,7 +143,7 @@ class ConnectionDialog(gtk.Dialog):
       else:
          if iter:
             # In editing mode.
-            self.set_title(ln.connection_dialog_title_edit)
+            self.set_title(ln.connection_dialog_title_edit + pm.title_extra)
             index = model.get_path(iter)[0]
             data = ListLine._make(model[index])
             preselect = data.server_type
@@ -643,7 +643,7 @@ class ConnectionPane(gtk.VBox):
       self.listener_count_button = gtk.Button()
       ihbox = gtk.HBox()
       set_tip(ihbox, ln.listeners_total_tip)
-      pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "listenerphones.png"), 20, 16)
+      pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "listenerphones.png", 20, 16)
       image = gtk.image_new_from_pixbuf(pixbuf)
       ihbox.pack_start(image, False, False, 0)
       image.show()
@@ -2002,7 +2002,7 @@ class RecordTab(Tab):
                (self.record_button, "rec",   "toggled", ln.record_tip),
                (self.pause_button,  "pause", "toggled", ln.pause_rec_tip)):
             button.set_size_request(30, -1)
-            button.add(self.path2image(os.path.join(FGlobs.pkgdatadir, gname + ".png")))
+            button.add(self.path2image(FGlobs.pkgdatadir / (gname + ".png")))
             button.connect(signal, self.cb_recbuttons, gname)
             hbox.pack_start(button, False, False, 0)
             button.show()
@@ -2069,7 +2069,7 @@ class RecordTab(Tab):
          self.file_dialog = gtk.FileChooserDialog("", None, gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
          self.file_dialog.set_do_overwrite_confirmation(True)
          self.file_chooser_button = gtk.FileChooserButton(self.file_dialog)
-         self.file_dialog.set_title(ln.save_folder_dialog_title)
+         self.file_dialog.set_title(ln.save_folder_dialog_title + pm.title_extra)
          self.file_dialog.connect("current-folder-changed", self.cb_new_folder)
          self.file_dialog.set_current_folder(os.environ["HOME"])
          hbox.pack_start(self.file_chooser_button, True, True, 0)
@@ -2126,7 +2126,8 @@ class TabFrame(ModuleFrame):
          indicator_lookup = {}
          for colour, indicator in indicatorlist:
             image = gtk.Image()
-            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, indicator + ".png"), 16, 16)
+            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
+                     FGlobs.pkgdatadir / (indicator + ".png"), 16, 16)
             image.set_from_pixbuf(pixbuf)
             labelbox.add(image)
             indicator_lookup[colour] = image
@@ -2443,7 +2444,8 @@ class SourceClientGui:
       
    def source_client_open(self):
       try:
-         sp_sc = subprocess.Popen([os.path.join(FGlobs.libexecdir, "idjcsourceclient")], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
+         sp_sc = subprocess.Popen([FGlobs.libexecdir / "idjcsourceclient"],
+            bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
       except Exception, inst:
          print inst
          print "unable to open a pipe to the sourceclient module"
@@ -2515,8 +2517,7 @@ class SourceClientGui:
          return                         # cancelled save
 
       try:
-         with open(os.path.join(PGlobs.profile_dir, pm.profile,
-                                                   "s_data"), "w") as f:
+         with open(pm.basedir / "s_data", "w") as f:
             for tabframe in tabframes:
                for tab in tabframe.tabs:
                   f.write("".join(("[", tab.tab_type, " ", str(tab.numeric_id), "]\n")))
@@ -2554,8 +2555,7 @@ class SourceClientGui:
 
    def load_previous_session(self):
       try:
-         with open(os.path.join(PGlobs.profile_dir, pm.profile,
-                                                   "s_data")) as f:
+         with open(pm.basedir / "s_data") as f:
             tabframe = None
             while 1:
                line = f.readline()
@@ -2694,11 +2694,10 @@ class SourceClientGui:
       self.source_client_open()
       self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
       self.parent.window_group.add_window(self.window)
-      self.window.set_title(ln.output_window_title + parent.profile_title)
+      self.window.set_title(ln.output_window_title + pm.title_extra)
       self.window.set_destroy_with_parent(True)
       self.window.set_border_width(11)
       self.window.set_resizable(True)
-      self.window.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       self.window.connect("configure_event", self.cb_configure_event)
       self.window.connect_after("realize", self.cb_after_realize)
       self.window.connect("delete_event", self.cb_delete_event)

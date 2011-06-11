@@ -33,6 +33,7 @@ import glib
 from idjc import FGlobs
 from idjc import PGlobs
 from ..utils import Singleton
+from ..utils import PathStr
 
 
 # The name of the default profile.
@@ -143,7 +144,7 @@ class ArgumentParserImplementation(object):
 
 # Profile length limited for practical reasons. For more descriptive
 # purposes the nickname parameter was created.
-MAX_PROFILE_LENGTH = 12
+MAX_PROFILE_LENGTH = 18
 
 
 
@@ -192,7 +193,7 @@ class ProfileManager(object):
 
       if PGlobs.profile_dir is not None:
          try:
-            if not os.path.isdir(os.path.join(PGlobs.profile_dir, default)):
+            if not os.path.isdir(PGlobs.profile_dir / default):
                self._generate_default_profile()
 
             if "newprofile" in args:
@@ -241,14 +242,39 @@ class ProfileManager(object):
 
 
    @property
-   def nickname(self):
-      return self._nickname
+   def iconpathname(self):
+      return self._iconpathname
 
 
    @property
    def dbus_bus_name(self):
       return self._dbus_bus_name
 
+      
+   @property
+   def basedir(self):
+      """The base directory of this profile."""
+      
+      return PGlobs.profile_dir / self.profile
+      
+      
+   @property
+   def jinglesdir(self):
+      """The directory for jingles storage."""
+      
+      return self.basedir / "jingles"
+      
+      
+   @property
+   def title_extra(self):
+      """Window title text indicating which profile is in use."""
+      
+      n = self._nickname
+      if n:
+         return "  (%s:%s)" % ((self.profile, n))
+      else:
+         return "  (%s)" % self.profile
+      
       
    def show_profile_dialog(self):
       self._profile_dialog.show_all()
@@ -258,7 +284,7 @@ class ProfileManager(object):
       if profile is not dialog.profile:
          try:
             busname = self._grab_bus_name_for_profile(profile)
-            shutil.rmtree(os.path.join(PGlobs.profile_dir, profile))
+            shutil.rmtree(pm.basedir)
          except dbus.DBusException:
             pass
          if profile == default:
@@ -268,17 +294,17 @@ class ProfileManager(object):
    def _choose_profile(self, dialog, profile, verbose=False):
       if dialog._profile is None:
          try:
-            busname = self._grab_bus_name_for_profile(profile)
+            self._dbus_bus_name = self._grab_bus_name_for_profile(profile)
          except dbus.DBusException:
             if verbose:
                print "profile '%s' is in use" % profile
          else:
-            nickname = self._grab_nickname_for_profile(profile)
-            nickname = nickname or profile
-            dialog.set_profile(profile, nickname)
             self._profile = profile
-            self._nickname = nickname
-            self._dbus_bus_name = busname
+            self._nickname = self._grab_profile_filetext(
+                               profile, "nickname") or ""
+            self._iconpathname = self._grab_profile_filetext(
+                               profile, "icon") or PGlobs.default_icon
+            dialog.set_profile(profile, self.title_extra, self._iconpathname)
 
 
    def _generate_profile(self, newprofile, template=None, **kwds):
@@ -300,7 +326,7 @@ class ProfileManager(object):
                                  "The profile is currently running.")
 
          try:
-            tmp = tempfile.mkdtemp()
+            tmp = PathStr(tempfile.mkdtemp())
          except EnvironmentError:
             raise ProfileError("temporary directory creation failed",
                                  "Temporary directory creation failed.")
@@ -312,12 +338,11 @@ class ProfileManager(object):
                         "specified template not valid (%s)" % template,
                         "Specified template not valid (%s)" % template)
                
-               tdir = os.path.join(PGlobs.profile_dir, template)
+               tdir = PGlobs.profile_dir / template
                if os.path.isdir(tdir):
                   for x in self._optionals + ("config", ):
                      try:
-                        shutil.copyfile(os.path.join(tdir, x),
-                                        os.path.join(tmp, x))
+                        shutil.copyfile(tdir / x, tmp / x)
                      except EnvironmentError:
                         pass
                else:
@@ -328,14 +353,14 @@ class ProfileManager(object):
             for fname in self._optionals:
                if kwds.get(fname):
                   try:
-                     with open(os.path.join(tmp, fname), "w") as f:
+                     with open(tmp / fname, "w") as f:
                         f.write(kwds[fname])
                   except EnvironmentError:
                      raise ProfileError("could not write " + fname,
                                         "Could not write %s" % fname)
             
 
-            dest = os.path.join(PGlobs.profile_dir, newprofile)
+            dest = PGlobs.profile_dir / newprofile
             try:
                shutil.copytree(tmp, dest)
             except EnvironmentError as e:
@@ -366,11 +391,11 @@ class ProfileManager(object):
          return
       for profname in profdirs:
          if profile_name_valid(profname):
-            files = os.walk(os.path.join(d, profname)).next()[2]
+            files = os.walk(d / profname).next()[2]
             rslt = {"profile": profname}
             for each in self._optionals:
                try:
-                  with open(os.path.join(d, profname, each)) as f:
+                  with open(d / profname / each) as f:
                      rslt[each] = f.read()
                except EnvironmentError:
                   rslt[each] = None
@@ -396,11 +421,10 @@ class ProfileManager(object):
 
 
    @staticmethod
-   def _grab_nickname_for_profile(profile):
-      d = PGlobs.profile_dir
+   def _grab_profile_filetext(profile, filename):
       try:
-         with open(os.path.join(d, profile, "nickname")) as f:
-            return f.read()
+         with open(PGlobs.profile_dir / profile / filename) as f:
+            return f.readline().strip()
       except EnvironmentError:
          return None
 

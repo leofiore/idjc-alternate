@@ -26,7 +26,7 @@ import gobject
 import gtk
 
 from idjc import FGlobs
-from .gtkstuff import threadslock, DefaultEntry
+from .gtkstuff import threadslock, DefaultEntry, LEDDict
 from .ln_text import ln
 
 
@@ -459,7 +459,7 @@ class Prefs(gtk.Frame):
       self.prokuser.set_sensitive(sens)
       self.prokdatabase.set_sensitive(sens)
       self.prokpassword.set_sensitive(sens)
-      self.prok_led_image.set_from_pixbuf((self.prok_ledclear, self.prok_ledgreen)[state])
+      self.prok_led_image.set_from_pixbuf(self.led["green" if state else "clear"])
       if state:
          self.main.topleftpane.activate(self.db, ln.media_viewer_title % self.prokdatabase.get_text())
       else:
@@ -522,9 +522,8 @@ class Prefs(gtk.Frame):
       if sql:
          hbox.pack_start(self.prok_led_image, False, False, 4)
       hbox.show_all()
-      self.prok_ledgreen = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_lit_green_black_border_64x64.png"), 10, 10)
-      self.prok_ledclear = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_unlit_clear_border_64x64.png"), 10, 10)
-      self.prok_led_image.set_from_pixbuf(self.prok_ledclear)
+      self.led = LEDDict()
+      self.prok_led_image.set_from_pixbuf(self.led["clear"])
       self.set_label_widget(hbox)
       self.set_border_width(3)
       table = gtk.Table(3, 4)

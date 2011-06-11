@@ -104,7 +104,7 @@ class MicButton(gtk.ToggleButton):
       label.show()
       def image(name):
          i = gtk.Image()
-         pb = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, name + ".png"), 47, 20)
+         pb = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / (name + ".png"), 47, 20)
          i.set_from_pixbuf(pb)
          hbox.pack_start(i, False)
          return i
@@ -515,7 +515,7 @@ def make_stream_meter_unit(text, meters, tooltips):
    
    frame = gtk.Frame()              # for the listener count
    frame.set_label_align(0.5, 0.5)
-   pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "listenerphones.png"), 20, 16)
+   pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "listenerphones.png", 20, 16)
    image = gtk.image_new_from_pixbuf(pixbuf)
    frame.set_label_widget(image)
    image.show()
@@ -819,8 +819,10 @@ class MicMeter(gtk.VBox):
       lhbox.add(pad)
       pad.show()
       lhbox.set_spacing(2)
-      self.led_onpb = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_lit_green_black_border_64x64.png"), 7, 7)
-      self.led_offpb = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_unlit_clear_border_64x64.png"), 7, 7)
+      self.led_onpb = gtk.gdk.pixbuf_new_from_file_at_size(
+         FGlobs.pkgdatadir / "led_lit_green_black_border_64x64.png", 7, 7)
+      self.led_offpb = gtk.gdk.pixbuf_new_from_file_at_size(
+         FGlobs.pkgdatadir / "led_unlit_clear_border_64x64.png", 7, 7)
       self.led = gtk.Image()
       lhbox.pack_start(self.led, False, False)
       self.set_led(False)
@@ -878,7 +880,7 @@ class RecIndicator(gtk.HBox):
       self.pack_start(self.image, False)
       self.image.show()
       
-      self.led = [gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, which + ".png"), 9, 9) for which in (
+      self.led = [gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / (which + ".png"), 9, 9) for which in (
                "led_unlit_clear_border_64x64", "led_lit_red_black_border_64x64",
                "led_lit_amber_black_border_64x64")]
       self.set_indicator("clear") 
@@ -937,7 +939,7 @@ class idjc_shutdown_dialog:
       dialog = gtk.Dialog(ln.idjc_shutdown, None, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_QUIT, gtk.RESPONSE_OK))
       if window_group is not None:
          window_group.add_window(dialog)
-      dialog.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
+      dialog.set_icon_from_file(FGlobs.pkgdatadir / "icon.png")
       dialog.set_resizable(False)
       dialog.connect("close", self.respond, actionyes, actionno)
       dialog.connect("response", self.respond, actionyes, actionno)
@@ -1065,7 +1067,7 @@ class MainWindow:
          self.old_metadata = self.new_metadata             # now we need to send the new metadata
          print "song title: %s\n" % self.songname
          if self.songname != u"":
-            self.window.set_title("%s :: IDJC%s" % (self.songname, self.profile_title))
+            self.window.set_title("%s :: IDJC%s" % (self.songname, pm.title_extra))
             tm = time.localtime()
             ts = "%02d:%02d :: " % (tm[3], tm[4])       # hours and minutes
             self.history_buffer.place_cursor(self.history_buffer.get_end_iter())
@@ -1073,7 +1075,7 @@ class MainWindow:
             adjustment = self.history_window.get_vadjustment()
             adjustment.set_value(adjustment.upper)
             try:
-               file = open(os.path.join(PGlobs.profile_dir, pm.profile, "history.log"), "a")
+               file = open(PGlobs.profile_dir / pm.profile / "history.log", "a")
             except IOError:
                print "unable to open history.log for writing"
             else:
@@ -1083,13 +1085,6 @@ class MainWindow:
                   print "unable to append to file \"history.log\""
                file.close()
 
-            try: # The song the DJ is listening to for the xchat /listening trigger
-               file = open(os.path.join(PGlobs.config_dir, "songtitle"), "w")
-               file.write(self.songname)                # <--- This is wrong
-               file.close()
-            except IOError:
-               print "Failed to write the song title to disk"
-               
             # Write out the x-chat track announcement to a file
             # note how the announcement is done on a time delay
             
@@ -1105,7 +1100,7 @@ class MainWindow:
                gobject.timeout_add(int(self.prefs_window.announcedelayadj.get_value() * 1000 - 500), self.xchat_announce_the_track, xchat_text_packet)
             self.server_window.new_metadata(self.artist, self.title, self.album)
          else:
-            self.window.set_title(self.appname + self.profile_title)
+            self.window.set_title(self.appname + pm.title_extra)
 
    def xchat_announce_the_track(self, message):
       try:
@@ -1568,7 +1563,7 @@ class MainWindow:
          print "*** Mixer has likely crashed ***"
          
          try:
-            sp_mx = subprocess.Popen([libexecdir + "idjcmixer"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
+            sp_mx = subprocess.Popen([FGlobs.libexecdir / "idjcmixer"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
          except Exception, inst:
             print inst
             print "unable to open a pipe to the mixer module"
@@ -1940,7 +1935,7 @@ class MainWindow:
       
       # Resources to reserve.
       config = ConfigParser.RawConfigParser()
-      config.read(os.path.join(PGlobs.profile_dir, pm.profile, 'config'))
+      config.read(PGlobs.profile_dir / pm.profile / 'config')
       try:
          PGlobs.num_micpairs = config.getint('resource_count', 'num_micpairs') // 2
       except ConfigParser.Error:
@@ -1971,7 +1966,7 @@ class MainWindow:
       self.session_loaded = False
 
       try:
-         sp_mx = subprocess.Popen([os.path.join(FGlobs.libexecdir, "idjcmixer")], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
+         sp_mx = subprocess.Popen([FGlobs.libexecdir / "idjcmixer"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
       except Exception, e:
          print e
          raise self.initfailed("unable to open a pipe to the mixer module")
@@ -1985,8 +1980,7 @@ class MainWindow:
          if rply == "":
             print "mixer crashed"
             message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, ln.mixer_crash)
-            message_dialog.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
-            message_dialog.set_title(ln.idjc_launch_failed)
+            message_dialog.set_title(ln.idjc_launch_failed + pm.title_extra)
             message_dialog.run()
             message_dialog.destroy()
             raise self.initfailed()
@@ -1999,8 +1993,7 @@ class MainWindow:
          self.mixer_read()
       else:
          message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, ln.jack_connection_failed)
-         message_dialog.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
-         message_dialog.set_title(ln.idjc_launch_failed)
+         message_dialog.set_title(ln.idjc_launch_failed + pm.title_extra)
          message_dialog.run()
          message_dialog.destroy()
          raise self.initfailed()
@@ -2014,14 +2007,9 @@ class MainWindow:
       self.window_group = gtk.WindowGroup()
       self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
       self.window_group.add_window(self.window)
-      if self.profile == "default":
-         self.profile_title = ""
-      else:
-         self.profile_title = "  (%s)" % self.profile
-      self.window.set_title(self.appname + self.profile_title)
+      self.window.set_title(self.appname + pm.title_extra)
       self.window.set_border_width(8)
       self.window.connect("delete_event",self.delete_event)
-      self.window.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       self.tooltips = tooltips.Tooltips()
 
       self.hbox10 = gtk.HBox(False)
@@ -2108,7 +2096,7 @@ class MainWindow:
       phonebox.viewlevels = (5,)       
       phonebox.set_spacing(2)
       
-      pixbuf4 = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "greenphone.png"))
+      pixbuf4 = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "greenphone.png")
       pixbuf4 = pixbuf4.scale_simple(25, 20, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf4)
@@ -2120,7 +2108,7 @@ class MainWindow:
       self.greenphone.show()
       self.tooltips.set_tip(self.greenphone, ln.green_phone_tip)
 
-      pixbuf5 = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "redphone.png"))
+      pixbuf5 = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "redphone.png")
       pixbuf5 = pixbuf5.scale_simple(25, 20, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf5)
@@ -2135,7 +2123,7 @@ class MainWindow:
       self.hbox10.pack_start(phonebox)
       phonebox.show()
  
-      pixbuf3 = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "jack2.png"))
+      pixbuf3 = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "jack2.png")
       pixbuf3 = pixbuf3.scale_simple(32, 20, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf3)
@@ -2155,7 +2143,7 @@ class MainWindow:
       self.mic_opener.show()
       
       # playlist advance button
-      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "advance.png"))
+      pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "advance.png")
       pixbuf = pixbuf.scale_simple(32, 14, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -2195,7 +2183,7 @@ class MainWindow:
            
       # A pictoral volume label above horizontally-stacked volume control(s)
       image = gtk.Image()
-      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "volume2.png"))
+      image.set_from_file(FGlobs.pkgdatadir / "volume2.png")
       self.vboxvol.pack_start(image, False, False, 0)
       image.show()
       hboxvol = gtk.HBox(True, 0)
@@ -2227,7 +2215,7 @@ class MainWindow:
       self.spacerbox.set_size_request(1, 5)
       self.vboxvol.pack_start(self.spacerbox, False, False, 0)
        
-      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "pbphone.png"))
+      pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "pbphone.png")
       pixbuf = pixbuf.scale_simple(20, 17, gtk.gdk.INTERP_HYPER)
       self.pbphoneimage = gtk.Image()
       self.pbphoneimage.set_from_pixbuf(pixbuf)
@@ -2480,9 +2468,9 @@ class MainWindow:
       cell = gtk.CellRendererPixbuf()
       self.crosspattern.pack_start(cell, True)
       self.crosspattern.add_attribute(cell, 'pixbuf', 0)
-      liststore.append((gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "classic_cross.png")), ))
-      liststore.append((gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "mk2_cross.png")), ))
-      liststore.append((gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "pat3.png")), ))
+      liststore.append((gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "classic_cross.png"), ))
+      liststore.append((gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "mk2_cross.png"), ))
+      liststore.append((gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "pat3.png"), ))
       pvbox.pack_start(self.crosspattern, True, True, 0)
       self.crosspattern.show()
       self.crossbox.pack_start(patternbox, False, False, 0)
@@ -2533,7 +2521,7 @@ class MainWindow:
       pvbox.add(label)
       label.show()
       image = gtk.Image()
-      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "pass.png"))
+      image.set_from_file(FGlobs.pkgdatadir / "pass.png")
       image.show()
       self.passbutton = gtk.Button()
       self.passbutton.set_size_request(53, -1)
@@ -2789,7 +2777,7 @@ class MainWindow:
       self.minwiny = int_object(1)
       self.in_vu_timeout = False
       self.vucounter = 0
-      self.session_filename = os.path.join(PGlobs.profile_dir, pm.profile, "main_session")
+      self.session_filename = pm.basedir / "main_session"
       self.files_played = {}
       self.files_played_offline = {}
       

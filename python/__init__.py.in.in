@@ -28,6 +28,7 @@ import glib
 
 from .utils import FixedAttributes
 from .utils import PolicedAttributes
+from .utils import PathStr
 
 
 
@@ -41,9 +42,9 @@ class FGlobs(object):
    __metaclass__ = FixedAttributes
 
     
-   libexecdir = """@libexecdir@"""
-   pkgdatadir = """${pkgdatadir}"""
-   plugindir = """${plugindir}"""
+   libexecdir = PathStr("""@libexecdir@""")
+   pkgdatadir = PathStr("""${pkgdatadir}""")
+   plugindir = PathStr("""${plugindir}""")
    avformat = @HAVE_AVFORMAT@
    avcodec = @HAVE_AVCODEC@
    flacenabled = @HAVE_FLAC@
@@ -62,15 +63,15 @@ class PGlobs(object):
    __metaclass__ = PolicedAttributes
 
    
-   #config_dir = os.path.join(glib.get_user_config_dir(), FGlobs.package_name)
-   config_dir = os.path.join(os.path.expanduser("~"), "." + FGlobs.package_name)
-   profile_dir = os.path.join(config_dir, "profiles")
+   config_dir = PathStr(glib.get_user_config_dir()) / FGlobs.package_name
+   #config_dir = PathStr(os.path.expanduser("~")) / ("." + FGlobs.package_name)
+   profile_dir = config_dir / "profiles"
    dbus_bus_basename = "net.sf." + FGlobs.package_name
    dbus_objects_basename = "/net/sf/" + FGlobs.package_name
    app_shortform = "IDJC"
    app_longform = "Internet DJ Console"
-   default_icon = FGlobs.pkgdatadir + "/icon.png"
-   profile_dialog_refusal_pathname = os.path.join(config_dir, "profile_dialog_refusal")
+   default_icon = FGlobs.pkgdatadir / "icon.png"
+   profile_dialog_refusal_pathname = config_dir / "profile_dialog_refusal"
    copyright = "Copyright 2005-2011 Stephen Fairchild and others."
    license = "Released under the GNU General Public License V2.0 or later."
    num_micpairs = 2
@@ -81,8 +82,12 @@ class PGlobs(object):
 
 
 def main():
+   glib.set_application_name(PGlobs.app_longform)
    from .prelims import ProfileManager
    pm = ProfileManager()
+   import gtk
+   gtk.window_set_default_icon_from_file(pm.iconpathname)
+   glib.set_prgname(FGlobs.package_name + "_" + pm.profile)
 
    import maingui
    return maingui.main()

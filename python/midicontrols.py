@@ -444,7 +444,7 @@ class Controls(object):
     def save_prefs(self):
         """Store bindings list to prefs file
         """
-        fp= open(os.path.join(PGlobs.profile_dir, pm.profile, 'controls'), 'w')
+        fp= open(pm.basedir / 'controls', 'w')
         for binding in self.bindings:
             fp.write(str(binding)+'\n')
         fp.close()
@@ -452,7 +452,7 @@ class Controls(object):
     def load_prefs(self):
         """Reload bindings list from prefs file
         """
-        cpn = os.path.join(PGlobs.profile_dir, pm.profile, 'controls')
+        cpn = pm.basedir / 'controls'
         if os.path.isfile(cpn):
             fp= open(cpn)
             self.bindings= []
@@ -1057,7 +1057,6 @@ class BindingEditor(gtk.Dialog):
             gtk.DIALOG_DESTROY_WITH_PARENT | gtk.DIALOG_NO_SEPARATOR | gtk.DIALOG_MODAL,
             (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OK, gtk.RESPONSE_OK)
         )
-        gtk.Dialog.set_icon_from_file(self, os.path.join(FGlobs.pkgdatadir, 'icon.png'))
         gtk.Dialog.set_resizable(self, False)
         owner.owner.owner.window_group.add_window(self)
         self.connect('delete_event', self.on_delete)
@@ -1458,7 +1457,8 @@ class ControlsUI(gtk.VBox):
 
         self.source_icons= {}
         for ct in Binding.SOURCES:
-            self.source_icons[ct]= gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, 'control_' + ct + ".png"))
+            self.source_icons[ct]= gtk.gdk.pixbuf_new_from_file(
+                        FGlobs.pkgdatadir / ('control_' + ct + ".png"))
         self.editor= BindingEditor(self)
         self.editor.connect('response', self.on_editor_response)
         self.editing= None

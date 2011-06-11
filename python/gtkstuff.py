@@ -36,7 +36,7 @@ class LEDDict(dict):
                    "led_lit_amber_black_border_64x64.png")
       for name, filename in zip(names, filenames):
          self[name] = gtk.gdk.pixbuf_new_from_file_at_size(
-            os.path.join(FGlobs.pkgdatadir, filename), size, size)
+            FGlobs.pkgdatadir / filename, size, size)
 
 
 

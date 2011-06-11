@@ -22,11 +22,13 @@ __all__ = ["ProfileDialog"]
 import atexit
 
 # This is and needs to remain the initial gtk import point.
+import glib
 import gobject
 import gtk
 import pango
 
 from idjc import PGlobs, FGlobs
+from idjc.prelims import MAX_PROFILE_LENGTH, profile_name_valid
 from ..utils import Singleton
 
 gtk.gdk.threads_init()
@@ -168,16 +170,16 @@ class NewProfileDialog(gtk.Dialog):
                              gtk.STOCK_OK, gtk.RESPONSE_OK))
    
    
-   def __init__(self, row, filter_function=None):
+   def __init__(self, row, filter_function=None, title_extra = ""):
       gtk.Dialog.__init__(self)
       self.set_modal(True)
       self.set_destroy_with_parent(True)
       self.set_size_request(330, -1)
       
       if row is not None:
-         self.set_title("New profile based upon %s" % row[1])
+         self.set_title("New profile based upon %s" % row[1] + title_extra)
       else:
-         self.set_title("New profile details")
+         self.set_title("New profile details" + title_extra)
 
       vbox = gtk.VBox()
       vbox.set_border_width(5)
@@ -217,6 +219,11 @@ class NewProfileDialog(gtk.Dialog):
       self.get_action_area().add(box)
 
 
+   @classmethod
+   def append_dialog_title(cls, text):
+      cls._icon_dialog.set_title(cls._icon_dialog.get_title() + text)
+      
+
 
 class ProfileSingleton(Singleton, type(gtk.Dialog)):
    def __call__(cls, *args, **kwds):
@@ -252,9 +259,10 @@ class ProfileDialog(gtk.Dialog):
       self._profile = self._highlighted = None
       self._selection_active = False
       self._olddata = ()
+      self._title_extra = ""
 
-      gtk.Dialog.__init__(self, "Profile Manager")
-      self.set_icon_from_file(PGlobs.default_icon)
+      gtk.window_set_default_icon_from_file(PGlobs.default_icon)
+      gtk.Dialog.__init__(self, "IDJC Profile Manager")
       self.set_size_request(500, 300)
       w = gtk.ScrolledWindow()
       w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
@@ -317,7 +325,7 @@ class ProfileDialog(gtk.Dialog):
     
    
    def display_error(self, title, message, transient_parent=None):
-      error_dialog = ErrorMessageDialog(title, message)
+      error_dialog = ErrorMessageDialog(title + self._title_extra, message)
       error_dialog.set_transient_for(transient_parent or self)
       error_dialog.set_icon_from_file(PGlobs.default_icon)
       error_dialog.show_all()
@@ -357,7 +365,7 @@ class ProfileDialog(gtk.Dialog):
             if self._highlighted == self._default:
                message += "\n\nThis profile is protected and will" \
                " be recreated with initial settings."
-            conf = ConfirmationDialog("Confirmation", message)
+            conf = ConfirmationDialog("Confirmation" + self._title_extra, message)
             conf.set_transient_for(self)
             conf.ok.connect("clicked", lambda w: commands())
             conf.show_all()
@@ -375,7 +383,8 @@ class ProfileDialog(gtk.Dialog):
          row = None
          template = None
          
-      np_dialog = self._new_profile_dialog = NewProfileDialog(row)
+      np_dialog = self._new_profile_dialog = NewProfileDialog(row,
+                                    title_extra = self._title_extra)
       
       def sub_ok(widget):
          profile = np_dialog.profile_entry.get_text()
@@ -493,15 +502,14 @@ class ProfileDialog(gtk.Dialog):
       return self._profile
       
       
-   def set_profile(self, newprofile, newnickname):
+   def set_profile(self, newprofile, title_extra, iconpathname):
       assert self._profile is None
       self.hide()
       self._profile = newprofile
-      if newnickname:
-         append = ":".join((newprofile, newnickname))
-      else:
-         append = newprofile
-      self.set_title(self.get_title() + "  (%s)" % append)
+      self.set_title(self.get_title() + title_extra)
+      NewProfileDialog.append_dialog_title(title_extra)
+      self._title_extra = title_extra
+      self.set_icon_from_file(iconpathname)
 
       self.cancel.set_label(gtk.STOCK_CLOSE)
       self.connect("delete-event", self._cb_delete_event)

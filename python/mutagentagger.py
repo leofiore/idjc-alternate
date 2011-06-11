@@ -647,11 +647,10 @@ class MutagenGUI:
       if idjcroot is not None:
          idjcroot.window_group.add_window(self.window)
       self.window.set_size_request(550, 450)
-      self.window.set_title(ln.tagger_window_title)
+      self.window.set_title(ln.tagger_window_title + pm.title_extra)
       self.window.set_destroy_with_parent(True)
       self.window.set_border_width(9)
       self.window.set_resizable(True)
-      self.window.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       if idjcroot == None:
          self.window.connect("destroy", self.destroy_and_quit)
       vbox = gtk.VBox()

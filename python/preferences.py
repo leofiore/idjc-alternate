@@ -30,6 +30,7 @@ from . import midicontrols
 from .ln_text import ln
 from .freefunctions import int_object
 from .prelims import ProfileManager
+from .utils import PathStr
 
 
 pm = ProfileManager()
@@ -39,19 +40,19 @@ class XChatInstaller(gtk.Button):
    pluginname = "idjc-announce.py"
    
    def check_plugin(self):
-      if os.path.exists(os.path.join(self.home, ".xchat2", self.pluginname)):
+      if os.path.exists(self.home / ".xchat2" / self.pluginname):
          self.set_sensitive(False)
          self.set_label(ln.xchat_install_done)
          return True
       return False
          
    def cb_install(self, widget):
-      source = os.path.join(plugindir, self.pluginname)
+      source = plugindir / self.pluginname
       try:
-         os.mkdir(os.path.join(self.home, ".xchat2"))
+         os.mkdir(self.home / ".xchat2")
       except:
          pass
-      shutil.copy(source, os.path.join(self.home, ".xchat2", self.pluginname))
+      shutil.copy(source, self.home / ".xchat2" / self.pluginname)
       if not self.check_plugin():
          self.set_label(ln.xchat_install_failed)
 
@@ -59,7 +60,7 @@ class XChatInstaller(gtk.Button):
       gtk.Button.__init__(self, ln.xchat_install)      
       self.connect("clicked", self.cb_install)
       self.set_border_width(3)
-      self.home = os.environ["HOME"]
+      self.home = PathStr(os.path.expanduser("~"))
       self.check_plugin()
 
 class CSLEntry(gtk.Entry):
@@ -293,8 +294,8 @@ class AGCControl(gtk.Frame):
       self.status_led.show()
       ivbox = self.widget_frame(hbox, self.vbox, ln.open_unmute_tip, (1, 2))
       hbox.show()
-      self.status_off_pb = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_unlit_clear_border_64x64.png"), 12, 12)
-      self.status_on_pb = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "led_lit_green_black_border_64x64.png"), 12, 12)
+      self.status_off_pb = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "led_unlit_clear_border_64x64.png", 12, 12)
+      self.status_on_pb = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "led_lit_green_black_border_64x64.png", 12, 12)
       self.status_led.set_from_pixbuf(self.status_off_pb)
             
       hbox = gtk.HBox()
@@ -562,9 +563,9 @@ class mixprefs:
          self.checkbutton.set_active(default_state)
          image = gtk.Image()
          if crossout:
-            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, "crossout.png"), width , height)
+            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "crossout.png", width , height)
          else:
-            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(os.path.join(FGlobs.pkgdatadir, imagefile + ".png"), width, height)
+            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / (imagefile + ".png"), width, height)
          image.set_from_pixbuf(pixbuf)
          self.checkbutton.add(image)
          image.show()
@@ -638,8 +639,7 @@ class mixprefs:
    def load_jack_port_settings(self):
       for port in self.jack_ports:
          try:
-            with open(os.path.join(PGlobs.profile_dir,
-                                                pm.profile, port)) as f:
+            with open(pm.basedir / port) as f:
                getattr(self, port+"entry").set_text(f.readline()[:-1])
                getattr(self, port+"check").set_active(f.readline() == "1\n")
          except:
@@ -647,8 +647,7 @@ class mixprefs:
             
       for i, mic in enumerate(self.mic_jack_data):
          try:
-            with open(os.path.join(PGlobs.profile_dir,
-                                 pm.profile, "mic" + str(i + 1))) as f:
+            with open(pm.basedir / ("mic" + str(i + 1))) as f:
                mic[1].set_text(f.readline()[:-1])
                mic[0].set_active(f.readline() == "1\n")
          except:
@@ -662,8 +661,7 @@ class mixprefs:
       if data[2] is not None:
          filename += str(data[2] + 1)
       try:
-         with open(os.path.join(PGlobs.profile_dir, 
-                                    pm.profile, filename), "w") as f:
+         with open(pm.basedir / filename, "w") as f:
             if data[1].flags() & gtk.SENSITIVE:
                f.write(data[1].get_text() + "\n" + "0\n")
             else:
@@ -688,8 +686,7 @@ class mixprefs:
 
    def save_player_prefs(self):
       try:
-         with open(os.path.join(PGlobs.profile_dir, pm.profile,
-                                       "playerdefaults"), "w") as f:
+         with open(pm.basedir / "playerdefaults", "w") as f:
             for name, widget in self.playersettingsdict.iteritems():
                f.write(name + "=" + str(int(widget.get_active())) + "\n")
             for name, widget in self.valuesdict.iteritems():
@@ -699,8 +696,7 @@ class mixprefs:
       except IOError:
          print "Error while writing out player defaults"
       try:
-         with open(os.path.join(PGlobs.profile_dir, pm.profile, 
-                                                "config"), "w") as f:
+         with open(pm.basedir / "config", "w") as f:
             f.write("[resource_count]\n")
             for name, widget in self.rrvaluesdict.iteritems():
                f.write(name + "=" + str(int(widget.get_value())) + "\n")
@@ -710,7 +706,7 @@ class mixprefs:
    def load_player_prefs(self):
       proktogglevalue = False
       try:
-         file = open(os.path.join(PGlobs.profile_dir, pm.profile, "playerdefaults"))
+         file = open(pm.basedir / "playerdefaults")
          
          while 1:
             line = file.readline()
@@ -1022,12 +1018,11 @@ class mixprefs:
       self.window.connect("configure-event", self.cb_configure_event)
       self.window.connect("realize", self.cb_realize)
       self.parent.window_group.add_window(self.window)
-      self.window.set_title(ln.prefs_window + parent.profile_title)
+      self.window.set_title(ln.prefs_window + pm.title_extra)
       self.window.set_border_width(10)
       self.window.set_resizable(True)
       self.window.connect("delete_event",self.delete_event)
       self.window.set_destroy_with_parent(True)
-      self.window.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
       self.notebook = gtk.Notebook()
       self.window.add(self.notebook)
 
@@ -2118,7 +2113,7 @@ class mixprefs:
       vbox.pack_start(label, False, False, 0)
       label.show()
       
-      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "logo.png"))
+      pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "logo.png")
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
       vbox.pack_start(image, False, False, 8)

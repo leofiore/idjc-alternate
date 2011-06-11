@@ -310,9 +310,9 @@ class ExternalPL(gtk.Frame):
       filefilter.add_pattern("*.pls")
       filefilter.add_pattern("*.xspf")
 
-      self.filechooser = gtk.FileChooserDialog(title = ln.epc_choosefile, buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+      self.filechooser = gtk.FileChooserDialog(title = ln.epc_choosefile + pm.title_extra, buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
       self.filechooser.set_filter(filefilter)
-      self.directorychooser = gtk.FileChooserDialog(title = ln.epc_choosedirectory, action = gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+      self.directorychooser = gtk.FileChooserDialog(title = ln.epc_choosedirectory + pm.title_extra, action = gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
       
       self.radio_file = gtk.RadioButton()
       self.radio_directory = gtk.RadioButton(self.radio_file)
@@ -2020,9 +2020,8 @@ class IDJC_Media_Player:
                filerqtext = ln.left_playlist_addition
             else:
                filerqtext = ln.right_playlist_addition
-            self.filerq = gtk.FileChooserDialog(filerqtext, None, gtk.FILE_CHOOSER_ACTION_OPEN, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+            self.filerq = gtk.FileChooserDialog(filerqtext + pm.title_extra, None, gtk.FILE_CHOOSER_ACTION_OPEN, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
             self.filerq.set_select_multiple(True)
-            self.filerq.set_icon_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
             self.filerq.set_current_folder(str(self.file_requester_start_dir))
             self.filerq.add_filter(self.plfilefilter_all)
             self.filerq.add_filter(self.plfilefilter_playlists)
@@ -2802,8 +2801,7 @@ class IDJC_Media_Player:
                self.expander.set_expanded(True)
             vbox.add(self.plframe)
                
-            self.plfilerq = gtk.FileChooserDialog(filerqtext, None, gtk.FILE_CHOOSER_ACTION_SAVE, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
-            self.plfilerq.set_icon_from_file(os.path.join(FGlobs.pkgdatadir + "icon.png"))
+            self.plfilerq = gtk.FileChooserDialog(filerqtext + pm.title_extra, None, gtk.FILE_CHOOSER_ACTION_SAVE, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
             self.plfilerq.set_current_folder(self.home)
             self.plfilerq.add_filter(self.plfilefilter_all)
             self.plfilerq.add_filter(self.plfilefilter_playlists)
@@ -2929,8 +2927,7 @@ class IDJC_Media_Player:
         
       if text == "ToJingles":
          source = model.get_value(iter, 1)
-         dest = os.path.join(PGlobs.profile_dir, pm.profile,
-                                 "jingles", os.path.split(source)[1])
+         dest = pm.jinglesdir / os.path.split(source)[1]
          try:
             source = open(source, "r")
             dest = open(dest, "w")
@@ -3250,7 +3247,7 @@ class IDJC_Media_Player:
       hbox.set_spacing(5)
       frame.add(hbox)
       image = gtk.Image()
-      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "icon.png"))
+      image.set_from_file(FGlobs.pkgdatadir / "icon.png")
       hbox.add(image)
       image.show()
       separator = gtk.VSeparator()
@@ -3478,7 +3475,7 @@ class IDJC_Media_Player:
       
       self.pbspeedzerobutton = gtk.Button()
       self.pbspeedzerobutton.connect("clicked", self.callback, "pbspeedzero")
-      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "speedicon.png"))
+      pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "speedicon.png")
       pixbuf = pixbuf.scale_simple(55, 14, gtk.gdk.INTERP_BILINEAR)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -3500,7 +3497,7 @@ class IDJC_Media_Player:
 
       # A set of buttons for hbox1 namely Prev/Play/Pause/Stop/Next/Playlist : XMMS order
       image = gtk.Image()
-      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "prev.png"))
+      image.set_from_file(FGlobs.pkgdatadir / "prev.png")
       image.show()
       self.prev = gtk.Button()
       self.prev.add(image)
@@ -3509,7 +3506,7 @@ class IDJC_Media_Player:
       self.prev.show()
       parent.tooltips.set_tip(self.prev, ln.previous_tip)
       
-      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "play2.png"))
+      pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "play2.png")
       pixbuf = pixbuf.scale_simple(14, 14, gtk.gdk.INTERP_BILINEAR)
       image=gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -3522,7 +3519,7 @@ class IDJC_Media_Player:
       parent.tooltips.set_tip(self.play, ln.play_tip)
       
       image=gtk.Image()
-      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "pause.png"))
+      image.set_from_file(FGlobs.pkgdatadir / "pause.png")
       image.show()
       self.pause = gtk.ToggleButton()
       self.pause.add(image)
@@ -3532,7 +3529,7 @@ class IDJC_Media_Player:
       parent.tooltips.set_tip(self.pause, ln.pause_tip)
       
       image=gtk.Image()
-      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "stop.png"))
+      image.set_from_file(FGlobs.pkgdatadir / "stop.png")
       image.show()
       self.stop = gtk.Button()
       self.stop.add(image)
@@ -3542,7 +3539,7 @@ class IDJC_Media_Player:
       parent.tooltips.set_tip(self.stop, ln.stop_tip)
             
       image=gtk.Image()
-      image.set_from_file(os.path.join(FGlobs.pkgdatadir, "next.png"))
+      image.set_from_file(FGlobs.pkgdatadir / "next.png")
       image.show()
       self.next = gtk.Button()
       self.next.add(image)
@@ -3551,7 +3548,7 @@ class IDJC_Media_Player:
       self.next.show()
       parent.tooltips.set_tip(self.next, ln.next_track_tip)
 
-      pixbuf = gtk.gdk.pixbuf_new_from_file(os.path.join(FGlobs.pkgdatadir, "add3.png"))
+      pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "add3.png")
       pixbuf = pixbuf.scale_simple(14, 14, gtk.gdk.INTERP_HYPER)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
@@ -3622,10 +3619,6 @@ class IDJC_Media_Player:
       frame.hbox.pack_start(self.listen, True, True, 0)
       self.listen.show()
       parent.tooltips.set_tip(self.listen, ln.listen_tip)
-      
-      #sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
-      #sizegroup.add_widget(self.stream)
-      #sizegroup.add_widget(self.listen)
       
       # hbox2 is now filled so lets show it
       self.hbox2.show()
@@ -3934,8 +3927,7 @@ class IDJC_Media_Player:
       self.other_player_initiated = False
       self.crossfader_initiated = False
       self.music_filename = ""
-      self.session_filename = os.path.join(PGlobs.profile_dir, pm.profile,
-                                             self.playername + "_session")
+      self.session_filename = pm.basedir / (self.playername + "_session")
       self.oldstatusbartext = ""
       self.pbspeedfactor = 1.0
       self.playlist_changed = True
