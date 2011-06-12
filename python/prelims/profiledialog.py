@@ -38,6 +38,7 @@ atexit.register(gtk.gdk.threads_leave)
 from ..gtkstuff import ConfirmationDialog
 from ..gtkstuff import ErrorMessageDialog
 from ..gtkstuff import CellRendererLED
+from ..gtkstuff import CellRendererTime
 from ..gtkstuff import threadslock
 
 
@@ -267,7 +268,7 @@ class ProfileDialog(gtk.Dialog):
       w = gtk.ScrolledWindow()
       w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       self.get_content_area().add(w)
-      self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int, str, str)
+      self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int, str, str, int)
       self.sorted = gtk.TreeModelSort(self.store)
       self.sorted.set_sort_func(1, self._sort_func)
       self.sorted.set_sort_column_id(1, gtk.SORT_ASCENDING)
@@ -278,25 +279,31 @@ class ProfileDialog(gtk.Dialog):
       pbrend = gtk.CellRendererPixbuf()
       strrend = gtk.CellRendererText()
       ledrend = CellRendererLED()
+      time_rend = CellRendererTime()
+      strrend_ellip = gtk.CellRendererText()
+      strrend_ellip.set_property("ellipsize", pango.ELLIPSIZE_END)
       c1 = gtk.TreeViewColumn("Profile")
       c1.pack_start(pbrend, expand=False)
       c1.pack_start(strrend)
       c1.add_attribute(pbrend, "pixbuf", 0)
       c1.add_attribute(strrend, "text", 1)
-      c1.set_spacing(3)
+      c1.set_spacing(2)
       self.treeview.append_column(c1)
       c2 = gtk.TreeViewColumn("Nickname")
       c2.pack_start(strrend)
       c2.add_attribute(strrend, "text", 5)
       self.treeview.append_column(c2)
       c3 = gtk.TreeViewColumn("Description")
-      c3.pack_start(strrend)
-      c3.add_attribute(strrend, "text", 2)
+      c3.pack_start(strrend_ellip)
+      c3.add_attribute(strrend_ellip, "text", 2)
       c3.set_expand(True)
       self.treeview.append_column(c3)
-      c4 = gtk.TreeViewColumn()
+      c4 = gtk.TreeViewColumn("Up-time")
       c4.pack_start(ledrend)
+      c4.pack_start(time_rend)
       c4.add_attribute(ledrend, "active", 3)
+      c4.add_attribute(time_rend, "time", 6)
+      c4.set_spacing(2)
       self.treeview.append_column(c4)
       self.selection = self.treeview.get_selection()
       self.selection.connect("changed", self._cb_selection)
@@ -489,7 +496,8 @@ class ProfileDialog(gtk.Dialog):
                desc = d["description"] or ""
                active = d["active"]
                nick = d["nickname"] or ""
-               self.store.append((pb, d["profile"], desc, active, i or "", nick))
+               uptime = d["uptime"]
+               self.store.append((pb, d["profile"], desc, active, i or "", nick, uptime))
             self._highlight_profile(h)
       return self.props.visible
       

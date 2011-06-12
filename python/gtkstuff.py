@@ -65,7 +65,34 @@ class CellRendererLED(gtk.CellRendererPixbuf):
          item = self._led[value]
       else:
          raise AttributeError("unknown property %s" % prop.name)
+         
       gtk.CellRendererPixbuf.set_property(self, "pixbuf", item)
+
+
+
+class CellRendererTime(gtk.CellRendererText):
+   """Displays time in days, hours, minutes."""
+   
+   
+   __gproperties__ = {
+         "time" : (gobject.TYPE_INT, "time", "time",
+                   0, 1000000000, 0, gobject.PARAM_WRITABLE)
+   }
+   
+   
+   def do_set_property(self, prop, value):
+      if prop.name == "time":
+         m, s = divmod(value, 60)
+         h, m = divmod(m, 60)
+         d, h = divmod(h, 24)
+         if d:
+            text = "%dd.%02d:%02d" % (d, h, m)
+         else:
+            text = "%02d:%02d:%02d" % (h, m, s)
+      else:
+         raise AttributeError("unknown property %s" % prop.name)
+         
+      gtk.CellRendererText.set_property(self, "text", text)
 
 
 

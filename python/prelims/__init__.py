@@ -401,6 +401,7 @@ class ProfileManager(object):
                   rslt[each] = None
                
             rslt["active"] = self._profile_has_owner(profname)
+            rslt["uptime"] = 0  # ToDo: Use D-Bus to get this value.
             yield rslt
 
 
