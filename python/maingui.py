@@ -973,8 +973,6 @@ class idjc_shutdown_dialog:
 
 class MainWindow:
    def send_new_mixer_stats(self):
-      def xtp(in_str):                  # xchat text package maker
-         return "".join(("d", str(len(in_str)), ":", in_str))
 
       deckadj = deck2adj = self.deckadj.get_value() * -1.0 + 100.0
       if self.prefs_window.dual_volume.get_active():
@@ -1085,34 +1083,9 @@ class MainWindow:
                   print "unable to append to file \"history.log\""
                file.close()
 
-            # Write out the x-chat track announcement to a file
-            # note how the announcement is done on a time delay
-            
-            if self.prefs_window.announce_enable.get_active() and self.server_window.is_streaming:
-               raw = self.prefs_window.announcemessageentry.get_text().strip().encode("utf-8")
-               table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((getattr(self, x) or "<Unknown>") for x in ("artist", "title", "album")))
-               table.append(("%s", self.songname.encode("utf-8")))
-               xchat_text_packet = "".join((
-                        xtp(self.prefs_window.nickentry.get_text().encode("utf-8")),
-                        xtp(self.prefs_window.channelsentry.get_text().encode("utf-8")),
-                        xtp(string_multireplace(raw, table)),
-                        xtp(str(int(time.time() + self.prefs_window.announcedelayadj.get_value())))))
-               gobject.timeout_add(int(self.prefs_window.announcedelayadj.get_value() * 1000 - 500), self.xchat_announce_the_track, xchat_text_packet)
             self.server_window.new_metadata(self.artist, self.title, self.album)
          else:
             self.window.set_title(self.appname + pm.title_extra)
-
-   def xchat_announce_the_track(self, message):
-      try:
-         with open(self.idjcroot + "announce.xchat", "w") as file:
-            try:
-               fcntl.flock(file.fileno(), fcntl.LOCK_EX)
-               file.write(message)
-            finally:
-               fcntl.flock(file.fileno(), fcntl.LOCK_UN)
-      except IOError:
-         print "Problem writing the announcement file to disk"
-      return False  
 
    def songname_decode(self, data):
       data = data[13:]

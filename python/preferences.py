@@ -36,32 +36,149 @@ from .utils import PathStr
 pm = ProfileManager()
 
 
-class XChatInstaller(gtk.Button):
-   pluginname = "idjc-announce.py"
-   
-   def check_plugin(self):
-      if os.path.exists(self.home / ".xchat2" / self.pluginname):
-         self.set_sensitive(False)
-         self.set_label(ln.xchat_install_done)
-         return True
-      return False
-         
-   def cb_install(self, widget):
-      source = plugindir / self.pluginname
-      try:
-         os.mkdir(self.home / ".xchat2")
-      except:
-         pass
-      shutil.copy(source, self.home / ".xchat2" / self.pluginname)
-      if not self.check_plugin():
-         self.set_label(ln.xchat_install_failed)
 
-   def __init__(self):
-      gtk.Button.__init__(self, ln.xchat_install)      
-      self.connect("clicked", self.cb_install)
-      self.set_border_width(3)
-      self.home = PathStr(os.path.expanduser("~"))
-      self.check_plugin()
+class IRCEntry(gtk.Entry):
+   """Specialised IRC text entry widget.
+   
+   Features pop-up menu and direct control character insertion.
+   """
+   
+   
+   _control_keytable = {107:u"\u0003", 98:u"\u0002", 117:u"\u001F", 111:u"\u000F"}
+
+   _XChat_colour = {
+      0:  0xCCCCCCFF,
+      1:  0x000000FF,
+      2:  0x3636B2FF,
+      3:  0x2A8C2AFF,
+      4:  0xC33B3BFF,
+      5:  0xC73232FF,
+      6:  0x80267FFF,
+      7:  0x66361FFF,
+      8:  0xD9A641FF,
+      9:  0x3DCC3DFF,
+      10: 0x1A5555FF,
+      11: 0x2F8C74FF,
+      12: 0x4545E6FF,
+      13: 0xB037B0FF,
+      14: 0x4C4C4CFF,
+      15: 0x959595FF
+   }
+
+
+   def __init__(self, *args, **kwds):
+      gtk.Entry.__init__(self, *args, **kwds)
+      self.connect("key-press-event", self._on_key_press_event)
+      self.connect("populate-popup", self._popup_menu_populate)
+
+
+   def _on_key_press_event(self, entry, event, data=None):
+      """Handle direct insertion of control characters."""
+
+
+      # Check for CTRL key modifier.
+      if event.state & (~gtk.gdk.LOCK_MASK) == gtk.gdk.CONTROL_MASK:
+         # Remove the effect of CAPS lock - works for letter keys only.
+         keyval = event.keyval + (32 if event.state & gtk.gdk.LOCK_MASK else 0)
+         try:
+            replacement = self._control_keytable[keyval]
+         except KeyError:
+            pass
+         else:
+            cursor = entry.get_position()
+            entry.insert_text(replacement, cursor)
+            entry.set_position(cursor + 1)
+
+
+   def _popup_menu_populate(self, entry, menu):
+      menuitem = gtk.MenuItem(ln.insert_attribute_or_colour_code)
+      menu.append(menuitem)
+      submenu = gtk.Menu()
+      menuitem.set_submenu(submenu)
+      menuitem.show()
+      
+      for menutext, code in ((ln.irc_bold, u"\u0002"), (ln.irc_underline, u"\u001F"),
+                                                    (ln.irc_normal, u"\u000F")):
+         mi = gtk.MenuItem()
+         l = gtk.Label()
+         l.set_alignment(0.0, 0.5)
+         l.set_markup(menutext)
+         mi.add(l)
+         l.show()
+         mi.connect("activate", self._on_menu_item_activate, entry, code)
+         submenu.append(mi)
+         mi.show()
+      
+      for each in ("0-7", "8-15"):
+         mi = gtk.MenuItem(" ".join(("Colours", each)))
+         submenu.append(mi)
+         cmenu = gtk.Menu()
+         mi.set_submenu(cmenu)
+         cmenu.show()
+         lower, upper = [int(x) for x in each.split("-")]
+         for i in xrange(lower, upper + 1):
+            try:
+               rgba = self._XChat_colour[i]
+            except:
+               continue
+
+            cmi = gtk.MenuItem()
+            cmi.connect("activate", self._on_menu_insert_colour_code, entry, i)
+            hbox = gtk.HBox()
+            
+            l = gtk.Label()
+            l.set_alignment(0, 0.5)
+            l.set_markup("<span font_family='monospace'>%02d</span>" % i)
+            hbox.pack_start(l)
+            l.show()
+
+            pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, 20, 20)
+            pixbuf.fill(rgba)
+            image = gtk.image_new_from_pixbuf(pixbuf)
+            image.connect_after("expose-event", self._on_colour_box_expose)
+            hbox.pack_start(image)
+            image.show()
+
+            cmi.add(hbox)
+            hbox.show()
+            cmenu.append(cmi)
+            cmi.show()
+         mi.show()
+
+
+   def _on_menu_item_activate(self, menuitem, entry, code):
+      """Perform relevant character code insertion."""
+      
+      
+      cursor = entry.get_position()
+      entry.insert_text(code, cursor)
+      entry.set_position(cursor + 1)
+
+
+   def _on_menu_insert_colour_code(self, menuitem, entry, code):
+      """One of the colour palette items was chosen."""
+      
+      
+      cursor = entry.get_position()
+      if cursor < 3 or entry.get_text()[cursor - 3] !="\x03":
+         # Foreground colour.
+         entry.insert_text(u"\u0003" + unicode("%02d" % code), cursor)
+      else:
+         # Background colour.
+         entry.insert_text(unicode(",%02d" % code), cursor)
+      entry.set_position(cursor + 3)
+
+
+   def _on_colour_box_expose(self, widget, event, data=None):
+      """A colour palette item is hovered over.
+      
+      This implies also prelight which needs to be cancelled.
+      """ 
+
+
+      widget.set_state(gtk.STATE_NORMAL)
+
+
 
 class CSLEntry(gtk.Entry):
    def cb_keypress(self, widget, event):
@@ -74,6 +191,8 @@ class CSLEntry(gtk.Entry):
    def __init__(self, max = 0):
       gtk.Entry.__init__(self, max)
       self.connect("key-press-event", self.cb_keypress)
+
+
 
 class ReconnectionDialogConfig(gtk.Frame):
    """Prefereneces for reconnection"""
@@ -116,6 +235,8 @@ class ReconnectionDialogConfig(gtk.Frame):
       self.attempt_reconnection = gtk.RadioButton(self.discard_data, ln.rdc_attempt_reconnection)
       vbox.add(self.lj(self.discard_data, 20))
       vbox.add(self.lj(self.attempt_reconnection, 20))
+
+
    
 class AGCControl(gtk.Frame):
    can_mark = all(hasattr(gtk.Scale, x) for x in ('add_mark', 'clear_marks'))
@@ -485,6 +606,8 @@ class AGCControl(gtk.Frame):
       indjmix.set_active(True)
       self.partner = None
 
+
+
 def make_entry_line(parent, item, code, hastoggle, index=None):
    box = gtk.HBox(False, 0)
    box.set_border_width(4)
@@ -527,6 +650,8 @@ def make_entry_line(parent, item, code, hastoggle, index=None):
    parent.parent.tooltips.set_tip(entry, ln.jack_entry)
    
    return box, checkbox, entry, setbutton
+
+
 
 class mixprefs:
    class event_command_container(gtk.Frame):
@@ -875,111 +1000,6 @@ class mixprefs:
       self.parent.str_l_rms_vu.set_line(level)
       self.parent.str_r_rms_vu.set_line(level)
       self.parent.send_new_mixer_stats()
-
-   def cb_xchat_insert_text(self, menuitem, entry, code):
-      cursor = entry.get_position()
-      entry.insert_text(code, cursor)
-      entry.set_position(cursor + 1)
-
-   def cb_xchat_insert_colour_code(self, menuitem, entry, code):
-      cursor = entry.get_position()
-      if cursor < 3 or entry.get_text()[cursor - 3] !="\x03":
-         entry.insert_text(u"\u0003" + unicode("%02d" % code), cursor)
-      else:
-         # The background colour.
-         entry.insert_text(unicode(",%02d" % code), cursor)
-      entry.set_position(cursor + 3)
-
-   IRC_colour = {
-      0:  0xCCCCCCFF,
-      1:  0x000000FF,
-      2:  0x3636B2FF,
-      3:  0x2A8C2AFF,
-      4:  0xC33B3BFF,
-      5:  0xC73232FF,
-      6:  0x80267FFF,
-      7:  0x66361FFF,
-      8:  0xD9A641FF,
-      9:  0x3DCC3DFF,
-      10: 0x1A5555FF,
-      11: 0x2F8C74FF,
-      12: 0x4545E6FF,
-      13: 0xB037B0FF,
-      14: 0x4C4C4CFF,
-      15: 0x959595FF }
-
-   def xchat_menu_populate(self, entry, menu):
-      menuitem = gtk.MenuItem(ln.insert_attribute_or_colour_code)
-      menu.append(menuitem)
-      submenu = gtk.Menu()
-      menuitem.set_submenu(submenu)
-      menuitem.show()
-      
-      for menutext, code in ((ln.xchat_bold, u"\u0002"), (ln.xchat_underline, u"\u001F"),
-                                                    (ln.xchat_normal, u"\u000F")):
-         mi = gtk.MenuItem()
-         l = gtk.Label()
-         l.set_alignment(0.0, 0.5)
-         l.set_markup(menutext)
-         mi.add(l)
-         l.show()
-         mi.connect("activate", self.cb_xchat_insert_text, entry, code)
-         submenu.append(mi)
-         mi.show()
-      
-      for each in ("0-7", "8-15"):
-         mi = gtk.MenuItem(" ".join(("Colours", each)))
-         submenu.append(mi)
-         cmenu = gtk.Menu()
-         mi.set_submenu(cmenu)
-         cmenu.show()
-         lower, upper = [int(x) for x in each.split("-")]
-         for i in xrange(lower, upper + 1):
-            try:
-               rgba = self.IRC_colour[i]
-            except:
-               continue
-
-            cmi = gtk.MenuItem()
-            cmi.connect("activate", self.cb_xchat_insert_colour_code, entry, i)
-            hbox = gtk.HBox()
-            
-            l = gtk.Label()
-            l.set_alignment(0, 0.5)
-            l.set_markup("<span font_family='monospace'>%02d</span>" % i)
-            hbox.pack_start(l)
-            l.show()
-
-            pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, 20, 20)
-            pixbuf.fill(rgba)
-            image = gtk.image_new_from_pixbuf(pixbuf)
-            image.connect_after("expose-event", self.cb_colour_box_expose)
-            hbox.pack_start(image)
-            image.show()
-
-            cmi.add(hbox)
-            hbox.show()
-            cmenu.append(cmi)
-            cmi.show()
-         mi.show()
-
-   def cb_colour_box_expose(self, widget, event, data=None):
-      widget.set_state(gtk.STATE_NORMAL)   # Prevent pre-light from messing up the colour
-      
-   xchat_keytable = {107:u"\u0003", 98:u"\u0002", 117:u"\u001F", 111:u"\u000F"}
-   def cb_handle_xchat_special_characters(self, entry, event, data=None):
-      # Check for CTRL key modifier.
-      if event.state & (~gtk.gdk.LOCK_MASK) == gtk.gdk.CONTROL_MASK:
-         # Remove the effect of CAPS lock - works for letter keys only.
-         keyval = event.keyval + (32 if event.state & gtk.gdk.LOCK_MASK else 0)
-         try:
-            replacement = self.xchat_keytable[keyval]
-         except KeyError:
-            pass
-         else:
-            cursor = entry.get_position()
-            entry.insert_text(replacement, cursor)
-            entry.set_position(cursor + 1)
       
    def bind_jack_ports(self):
       for port in self.jack_ports:
@@ -1719,233 +1739,17 @@ class mixprefs:
       self.notebook.append_page(scrolled_window, compressor_label)
       compressor_label.show()
        
-      # X-Chat IRC announcements tag.
+      # IRC tab.
       
       vbox = gtk.VBox()
-      vbox.set_border_width(6)
-      sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
-      
-      trackannouncerframe = gtk.Frame(" " + ln.track_announcer + " ")
-      trackannouncerframe.set_border_width(3)
-      vbox.pack_start(trackannouncerframe, False, False, 0)
-      announcervbox = gtk.VBox()
-      announcervbox.set_border_width(5)
-      trackannouncerframe.add(announcervbox)
-      announcervbox.show()
-      
-      hbox = gtk.HBox()
-      announcervbox.add(hbox)
-      hbox.show()
-      leftpaddingbox = gtk.VBox()
-      leftpaddingbox.set_size_request(6, -1)
-      hbox.pack_start(leftpaddingbox, False, False, 0)
-      leftpaddingbox.show()
-      leftvbox = gtk.VBox()
-      hbox.pack_start(leftvbox, False, False, 0)
-      leftvbox.show()
-      rightvbox = gtk.VBox()
-      hbox.pack_start(rightvbox, True, True, 0)
-      rightvbox.show()
-      paddingbox = gtk.VBox()
-      paddingbox.set_size_request(6, -1)
-      hbox.pack_start(paddingbox, False, False, 0)
-      paddingbox.show()
-      
-      enablebox = gtk.HBox()
-      self.announce_enable = gtk.CheckButton(" " + ln.enable)
-      sizegroup.add_widget(self.announce_enable)
-      enablebox.pack_end(self.announce_enable, False, False, 0)
-      self.announce_enable.show()
-      enablebox.show()
-      leftvbox.add(enablebox)
-      enablebox.show()
-      parent.tooltips.set_tip(self.announce_enable, ln.enable_track_announcer_tip)
 
-      nickbox = gtk.HBox()
-      self.nickentry = gtk.Entry()
-      sizegroup.add_widget(self.nickentry)
-      self.nickentry.set_width_chars(14)
-      self.nickentry.set_max_length(30)
-      nickbox.pack_end(self.nickentry, False, False, 0)
-      self.nickentry.show()
-      nicklabel = gtk.Label(ln.nick + " ")
-      nickbox.pack_end(nicklabel, False, False, 0)
-      nicklabel.show()
-      parent.tooltips.set_tip(self.nickentry, ln.nick_entry_tip)
       
-      delaybox = gtk.HBox()
-      nickbox.pack_end(delaybox, False, False, 14)
-      delaybox.show()
-      delaylabel = gtk.Label(ln.latency + " ")
-      delaybox.pack_start(delaylabel, False, False, 0)
-      delaylabel.show()
-      self.announcedelayadj = gtk.Adjustment(10.0, 1.0, 60.0, 1.0, 1.0)
-      delay = gtk.SpinButton(self.announcedelayadj, 4, 0)
-      delaybox.pack_start(delay, False, False, 0)
-      delay.show()
-      parent.tooltips.set_tip(delay, ln.track_announcer_latency_tip)
-      
-      rightvbox.pack_start(nickbox, False, False, 1)
-      nickbox.show()
-      
-      channelslabel = gtk.Label(ln.channels + " ")
-      sizegroup.add_widget(channelslabel)
-      channelslabelbox = gtk.HBox()
-      channelslabelbox.pack_end(channelslabel, False, False, 0)
-      channelslabel.show()
-      leftvbox.add(channelslabelbox)
-      channelslabelbox.show()
-      
-      self.channelsentry = gtk.Entry()
-      sizegroup.add_widget(self.channelsentry)
-      channelsbox = gtk.HBox()
-      channelsbox.pack_start(self.channelsentry, True, True, 0)
-      self.channelsentry.show()
-      rightvbox.pack_start(channelsbox, False, False, 1)
-      channelsbox.show()
-      parent.tooltips.set_tip(self.channelsentry, ln.irc_channels_tip)
-      
-      announcemessagelabel = gtk.Label(ln.message + " ")
-      sizegroup.add_widget(announcemessagelabel)
-      announcemessagelabelbox = gtk.HBox()
-      announcemessagelabelbox.pack_end(announcemessagelabel, False, False, 0)
-      announcemessagelabel.show()
-      leftvbox.add(announcemessagelabelbox)
-      announcemessagelabelbox.show()
-      
-      self.announcemessageentry = gtk.Entry()
-      sizegroup.add_widget(self.announcemessageentry)
-      announcemessagebox = gtk.HBox()
-      announcemessagebox.pack_start(self.announcemessageentry, True, True, 0)
-      self.announcemessageentry.show()
-      rightvbox.pack_start(announcemessagebox, False, False, 1)
-      self.announcemessageentry.connect("populate-popup", self.xchat_menu_populate)
-      self.announcemessageentry.connect("key-press-event", self.cb_handle_xchat_special_characters)
-      announcemessagebox.show()
-      parent.tooltips.set_tip(self.announcemessageentry, ln.announce_tip)
-      
-      trackannouncerframe.show()
-      
-      timerframe = gtk.Frame(" " + ln.irc_message_timer + " ")
-      timerframe.set_border_width(3)
-      vbox.pack_start(timerframe, False, False, 2)
-      timerframe.show()
-      timervbox = gtk.VBox()
-      timervbox.set_border_width(5)
-      timerframe.add(timervbox)
-      timervbox.show()
-      
-      hbox = gtk.HBox()
-      timervbox.add(hbox)
-      hbox.show()
-      leftpaddingbox = gtk.VBox()
-      leftpaddingbox.set_size_request(6,-1)
-      hbox.pack_start(leftpaddingbox, False, False, 0)
-      leftpaddingbox.show()
-      leftvbox = gtk.VBox()
-      hbox.pack_start(leftvbox, False, False, 0)
-      leftvbox.show()
-      rightvbox = gtk.VBox()
-      hbox.pack_start(rightvbox, True, True, 0)
-      rightvbox.show()
-      paddingbox = gtk.VBox()
-      paddingbox.set_size_request(6, -1)
-      hbox.pack_start(paddingbox, False, False, 0)
-      paddingbox.show()
-      
-      enablebox = gtk.HBox()
-      self.timer_enable = gtk.CheckButton(" " + ln.enable)
-      sizegroup.add_widget(self.timer_enable)
-      enablebox.pack_end(self.timer_enable, False, False, 0)
-      self.timer_enable.show()
-      enablebox.show()
-      leftvbox.add(enablebox)
-      enablebox.show()
-      parent.tooltips.set_tip(self.timer_enable, ln.enable_message_timer_tip)
-
-      nickbox = gtk.HBox()
-      self.timernickentry = gtk.Entry()
-      sizegroup.add_widget(self.timernickentry)
-      self.timernickentry.set_width_chars(14)
-      self.timernickentry.set_max_length(30)
-      nickbox.pack_end(self.timernickentry, False, False, 0)
-      self.timernickentry.show()
-      nicklabel = gtk.Label(ln.nick + " ")
-      nickbox.pack_end(nicklabel, False, False, 0)
-      nicklabel.show()
-      intervalbox = gtk.HBox()
-      nickbox.pack_end(intervalbox, False, False, 14)
-      parent.tooltips.set_tip(self.timernickentry, ln.nick_entry_tip)
-      
-      intervalbox.show()
-      intervallabel = gtk.Label(ln.interval + " ")
-      intervalbox.pack_start(intervallabel, False, False, 0)
-      intervallabel.show()
-      self.intervaladj = gtk.Adjustment(20.0, 1.0, 60.0, 1.0, 1.0)
-      interval = gtk.SpinButton(self.intervaladj, 4, 0)
-      intervalbox.pack_start(interval, False, False, 0)
-      interval.show()
-      rightvbox.pack_start(nickbox, True, True, 1)
-      nickbox.show()
-      parent.tooltips.set_tip(interval, ln.message_timer_interval)
-      
-      channelslabel = gtk.Label(ln.channels + " ")
-      sizegroup.add_widget(channelslabel)
-      channelslabelbox = gtk.HBox()
-      channelslabelbox.pack_end(channelslabel, False, False, 0)
-      channelslabel.show()
-      leftvbox.add(channelslabelbox)
-      channelslabelbox.show()
-      
-      self.timerchannelsentry = gtk.Entry()
-      sizegroup.add_widget(self.timerchannelsentry)
-      channelsbox = gtk.HBox()
-      channelsbox.pack_start(self.timerchannelsentry, True, True, 0)
-      self.timerchannelsentry.show()
-      rightvbox.pack_start(channelsbox, True, True, 1)
-      channelsbox.show()
-      parent.tooltips.set_tip(self.timerchannelsentry, ln.irc_channels_tip)
-      
-      timemessagelabel = gtk.Label(ln.message + " ")
-      sizegroup.add_widget(timemessagelabel)
-      timemessagelabelbox = gtk.HBox()
-      timemessagelabelbox.pack_end(timemessagelabel, False, False, 0)
-      timemessagelabel.show()
-      leftvbox.add(timemessagelabelbox)
-      timemessagelabelbox.show()
-      
-      self.timermessageentry = gtk.Entry()
-      sizegroup.add_widget(self.timermessageentry)
-      timemessagebox = gtk.HBox()
-      timemessagebox.pack_start(self.timermessageentry, True, True, 0)
-      self.timermessageentry.show()
-      rightvbox.pack_start(timemessagebox, True, True, 1)
-      self.timermessageentry.connect("populate-popup", self.xchat_menu_populate)
-      self.timermessageentry.connect("key-press-event", self.cb_handle_xchat_special_characters)
-      timemessagebox.show()
-      parent.tooltips.set_tip(self.timermessageentry, ln.announce_tip)
-      
-      timerframe.show()
-      
-      label = gtk.Label(ln.song_placemarker)
-      hbox = gtk.HBox()
-      hbox.add(label)
-      vbox.pack_start(hbox, False, False, 2)
-      hbox.show()
-      label.show()
-      
-      xchat_installer = XChatInstaller() 
-      parent.tooltips.set_tip(xchat_installer, ln.xchat_install_tip)
-
-      vbox.pack_end(xchat_installer, False)
-      xchat_installer.show()
-      
-      irc_label = gtk.Label("XChat")
+      irc_label = gtk.Label("IRC")
       self.notebook.append_page(vbox, irc_label)
       irc_label.show()
       vbox.show()
        
-      # Jack settings Tab      
+      # Jack settings tab      
                  
       scrolled = gtk.ScrolledWindow()
       scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
@@ -2205,8 +2009,6 @@ class mixprefs:
          "rstream"       : self.rstream,
          "rlisten"       : self.rlisten,
          "startmini"     : self.startmini,
-         "announce_en"   : self.announce_enable,
-         "timer_en"      : self.timer_enable,
          "djalarm"       : self.djalarm,
          "trxpld"        : self.tracks_played,
          "strmon"        : self.stream_mon,
@@ -2248,8 +2050,6 @@ class mixprefs:
          self.playersettingsdict.update(mic_control.booleandict)
          
       self.valuesdict = {
-         "interval"          : self.intervaladj,
-         "latency"           : self.announcedelayadj,
          "interval_vol"  : self.parent.jingles.interadj,
          "fullwinx"      : self.parent.fullwinx,
          "fullwiny"      : self.parent.fullwiny,
@@ -2278,12 +2078,6 @@ class mixprefs:
          "prokdatabase"  : self.p3prefs.prokdatabase,
          "prokpassword"  : self.p3prefs.prokpassword,
          "prokhostname"  : self.p3prefs.prokhostname,
-         "announcenick"  : self.nickentry,
-         "announcechan"  : self.channelsentry, 
-         "announcemess"  : self.announcemessageentry,
-         "timernick"     : self.timernickentry,
-         "timerchan"     : self.timerchannelsentry,
-         "timermess"     : self.timermessageentry,
          "ltfilerqdir"   : self.parent.player_left.file_requester_start_dir,
          "rtfilerqdir"   : self.parent.player_right.file_requester_start_dir,
          "et_appstart"   : self.appstart_event,

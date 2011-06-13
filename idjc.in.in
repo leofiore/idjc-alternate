@@ -21,7 +21,6 @@
 import locale
 locale.setlocale(locale.LC_ALL, "")
 
-import os
 import sys
 sys.path.insert(0, """@pythondir@""")
 

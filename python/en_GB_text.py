@@ -1529,21 +1529,13 @@ wet_voice_volume_tip = "This adjusts the volume level of the music that plays wh
 
 window_close = "Close"
 
-xchat_bold = "<b>Bold</b>"
+irc_bold = "<b>Bold</b>"
 
-xchat_underline = "<u>Underline</u>"
+irc_underline = "<u>Underline</u>"
 
-xchat_normal = "Normal"
+irc_normal = "Normal"
 
-xchat_colours = "Colours"
-
-xchat_install_tip = "Having problems? Launch XChat, close XChat, press this button, launch XChat again."
-
-xchat_install = "Install The XChat Plugin"
-
-xchat_install_done = "The XChat Plugin Is Already Installed"
-
-xchat_install_failed = "The Plugin Would Not Install -- Try Again?"
+irc_colours = "Colours"
 
 dual_volume = "Separate left/right volume faders"
 dual_volume_tip = "Tick this option to use an independent volume fader for the left and right music players."

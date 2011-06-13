@@ -44,7 +44,6 @@ class FGlobs(object):
     
    libexecdir = PathStr("""@libexecdir@""")
    pkgdatadir = PathStr("""${pkgdatadir}""")
-   plugindir = PathStr("""${plugindir}""")
    avformat = @HAVE_AVFORMAT@
    avcodec = @HAVE_AVCODEC@
    flacenabled = @HAVE_FLAC@
@@ -82,12 +81,8 @@ class PGlobs(object):
 
 
 def main():
-   glib.set_application_name(PGlobs.app_longform)
    from .prelims import ProfileManager
-   pm = ProfileManager()
-   import gtk
-   gtk.window_set_default_icon_from_file(pm.iconpathname)
-   glib.set_prgname(FGlobs.package_name + "_" + pm.profile)
+   ProfileManager()
 
    import maingui
    return maingui.main()
