@@ -31,6 +31,7 @@ import xml.dom.minidom as mdom
 import xml.etree.ElementTree
 from collections import namedtuple
 from threading import Thread
+from irc import IRCPane
 
 import gtk
 import gobject
@@ -1872,6 +1873,11 @@ class StreamTab(Tab):
       self.details_nb.append_page(vbox, label)
       label.show()
       vbox.show()
+      
+      label = gtk.Label("IRC")
+      ircpane = IRCPane()
+      self.details_nb.append_page(ircpane, label)
+      label.show()
       
       self.stream_resample_frame.resample_no_resample.emit("clicked")   # bogus signal to update mp3 pane
       self.objects = {  "metadata"    : (self.metadata, "history"),

@@ -171,9 +171,84 @@ class IRCEntry(gtk.Entry):
 
 
 
+class NewServerDialog(gtk.Dialog):
+   def __init__(self, tv):
+      gtk.Dialog.__init__(self)
+      self.set_modal(True)
+      
+      
+
+
 class IRCPane(gtk.VBox):
-   """IRC bot controls."""
-   
-   
    def __init__(self):
       gtk.VBox.__init__(self)
+      self.set_border_width(4)
+      self.set_spacing(3)
+      self._treestore = gtk.TreeStore(int, int, int, int, str)
+      self._treestore.append(None, (0, 0, 0, 0, ""))
+      self._treeview = gtk.TreeView(self._treestore)
+      self._treeview.set_headers_visible(False)
+      
+      col = gtk.TreeViewColumn()
+     
+      toggle = gtk.CellRendererToggle()
+      col.pack_start(toggle, False)
+      col.add_attribute(toggle, "active", 1)
+      toggle.connect("toggled", self._on_toggle)
+      
+      str1 = gtk.CellRendererText()
+      col.pack_start(str1, False)
+      col.set_cell_data_func(str1, self._cdf1)
+      
+      str2 = gtk.CellRendererText()
+      col.pack_start(str2, False)
+      col.set_cell_data_func(str2, self._cdf2)
+      
+      self._treeview.append_column(col)
+      
+      sw = gtk.ScrolledWindow()
+      sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+      sw.add(self._treeview)
+      self.pack_start(sw)
+      bb = gtk.HButtonBox()
+      bb.set_spacing(8)
+      bb.set_layout(gtk.BUTTONBOX_END)
+      new = gtk.Button("New")
+      remove = gtk.Button("Remove")
+      edit = gtk.Button("Edit")
+      for b, c in zip((new, remove, edit), ("new", "remove", "edit")):
+         bb.add(b)
+         b.connect("clicked", getattr(self, "_on_" + c))
+   
+      bb.set_child_secondary(new, True)
+      bb.set_child_secondary(remove, True)
+      self.pack_start(bb, False)
+      self.show_all()
+
+
+   def _on_toggle(self, cell, path):
+      self._treestore[path][1] = not self._treestore[path][1]
+      
+
+   def _cdf1(self, column, cell, model, iter):
+      cell.props.text = ("Server", "", "Announce", "Timer", "On up",
+                              "On down", "")[model.get_value(iter, 0)]
+      cell.props.visible = cell.props.text != ""
+      
+      
+   def _cdf2(self, column, cell, model, iter):
+      cell.text = ""
+
+
+   def _on_new(self, widget):
+      n = NewServerDialog(self._treeview)
+      n.set_transient_for(self.get_toplevel())
+      n.show_all()
+      
+      
+   def _on_remove(self, widget):
+      pass
+      
+      
+   def _on_edit(self, widget):
+      pass

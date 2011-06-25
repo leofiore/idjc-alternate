@@ -27,7 +27,6 @@ from idjc import FGlobs, PGlobs
 from . import licence_window
 from . import p3db
 from . import midicontrols
-from . import irc
 from .ln_text import ln
 from .freefunctions import int_object
 from .prelims import ProfileManager
@@ -1595,15 +1594,6 @@ class mixprefs:
       compressor_label = gtk.Label(ln.microphone_tab)
       self.notebook.append_page(scrolled_window, compressor_label)
       compressor_label.show()
-       
-      # IRC tab.
-  
-      irc_label = gtk.Label("IRC")
-      irc_pane = irc.IRCPane()
-      self.notebook.append_page(irc_pane, irc_label)
-      irc_label.show()
-      irc_pane.show()
-      vbox.show()
        
       # Jack settings tab      
                  
