@@ -27,6 +27,12 @@ except ImportError:
    irclib = None
 
 
+from idjc.prelims import ProfileManager
+
+
+pm = ProfileManager()
+
+
 
 class IRCEntry(gtk.Entry):
    """Specialised IRC text entry widget.
@@ -171,12 +177,53 @@ class IRCEntry(gtk.Entry):
 
 
 
-class NewServerDialog(gtk.Dialog):
-   def __init__(self, tv):
+class ServerDialog(gtk.Dialog):
+   def __init__(self, tv, mode="Add"):
       gtk.Dialog.__init__(self)
       self.set_modal(True)
+      self.set_title(mode + " IRC server" + pm.title_extra)
       
+      self.ok = gtk.Button(gtk.STOCK_OK)
+      cancel = gtk.Button(gtk.STOCK_CANCEL)
+      bb = gtk.HButtonBox()
+      for each in (self.ok, cancel):
+         each.set_use_stock(True)
+         each.connect_after("clicked", lambda w: self.destroy())
+         bb.add(each)
+      self.get_action_area().add(bb)
+
+      adj = gtk.Adjustment(6767.0, 0.0, 65535.0, 1.0, 10.0)
+
+      self.network = gtk.Entry()
+      self.hostname = gtk.Entry()
+      self.port = gtk.SpinButton(adj)
+      self.ssl = gtk.CheckButton("SSL")
+      self.password = gtk.Entry()
+      self.password.set_visibility(False)
       
+      hbox = gtk.HBox()
+      hbox.set_border_width(16)
+      hbox.set_spacing(5)
+      
+      image = gtk.image_new_from_stock(gtk.STOCK_NETWORK, gtk.ICON_SIZE_DIALOG)
+      lvbox = gtk.VBox(True)
+      rvbox = gtk.VBox(True)
+      hbox.pack_start(image, False, padding=20)
+      hbox.pack_start(lvbox, False)
+      hbox.pack_start(rvbox, False)
+      
+      for each in (lvbox, rvbox):
+         each.set_spacing(4)
+      
+      for text, widget in zip(("Network", "Hostname", "Port", "", "Password"),
+            (self.network, self.hostname, self.port, self.ssl, self.password)):
+         l = gtk.Label(text)
+         l.set_alignment(1.0, 0.5)
+         lvbox.pack_start(l, False)
+         rvbox.pack_start(widget, False)
+         
+      self.get_content_area().add(hbox)
+         
 
 
 class IRCPane(gtk.VBox):
@@ -241,9 +288,19 @@ class IRCPane(gtk.VBox):
 
 
    def _on_new(self, widget):
-      n = NewServerDialog(self._treeview)
-      n.set_transient_for(self.get_toplevel())
-      n.show_all()
+      model, iter = self._treeview.get_selection().get_selected()
+      if iter is not None:
+         mode = model.get_value(iter, 0)
+         if mode == 0:
+            d = ServerDialog(self._treeview)
+            d.set_transient_for(self.get_toplevel())
+            d.show_all()
+            d.ok.connect("clicked", self._cb_add_server, d)
+         elif mode == 2:
+            d = AnnounceDialog(self._treeview, model, iter)
+            d.set_transient_for(self.get_toplevel())
+            d.show_all()
+            d.ok.connect("clicked", self._add_server, d)
       
       
    def _on_remove(self, widget):
@@ -252,3 +309,8 @@ class IRCPane(gtk.VBox):
       
    def _on_edit(self, widget):
       pass
+
+
+   def _cb_add_server(self, ok, dialog):
+      print "ok button pressed"
+      # Add to the tree.
