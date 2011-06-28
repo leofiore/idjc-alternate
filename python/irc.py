@@ -19,13 +19,14 @@
 __all__ = ["IRCPane"]
 
 
+from functools import wraps
+
 import gtk
 
 try:
    import irclib
 except ImportError:
    irclib = None
-
 
 from idjc.prelims import ProfileManager
 
@@ -177,20 +178,34 @@ class IRCEntry(gtk.Entry):
 
 
 
+def grabselected(f):
+   """Function decorator to obtain selected item info from a TreeView."""
+   
+   @wraps(f)
+   def inner(self, widget=None):
+      del widget
+      model, iter = self._treeview.get_selection().get_selected()
+      if iter is not None:
+         return f(self, model, iter, model.get_value(iter, 0))
+      else:
+         return None
+   return inner
+
+
+
 class ServerDialog(gtk.Dialog):
-   def __init__(self, tv, mode="Add"):
+   def __init__(self):
       gtk.Dialog.__init__(self)
       self.set_modal(True)
-      self.set_title(mode + " IRC server" + pm.title_extra)
+      self.set_title("Add IRC server" + pm.title_extra)
       
       self.ok = gtk.Button(gtk.STOCK_OK)
       cancel = gtk.Button(gtk.STOCK_CANCEL)
-      bb = gtk.HButtonBox()
+      bb = self.get_action_area()
       for each in (self.ok, cancel):
          each.set_use_stock(True)
          each.connect_after("clicked", lambda w: self.destroy())
          bb.add(each)
-      self.get_action_area().add(bb)
 
       adj = gtk.Adjustment(6767.0, 0.0, 65535.0, 1.0, 10.0)
 
@@ -223,16 +238,28 @@ class ServerDialog(gtk.Dialog):
          rvbox.pack_start(widget, False)
          
       self.get_content_area().add(hbox)
+      
+
+
+class EditServerDialog(ServerDialog):
+   def __init__(self):
+      ServerDialog.__init__(self)
+      self.set_title("Edit IRC server" + pm.title_extra)
+      bb = self.get_action_area()
+      self.refresh = gtk.Button(gtk.STOCK_REFRESH)
+      self.refresh.set_use_stock(True)
+      bb.add(self.refresh)
+      bb.set_child_secondary(self.refresh, True)
+
+       
          
-
-
 class IRCPane(gtk.VBox):
    def __init__(self):
       gtk.VBox.__init__(self)
       self.set_border_width(4)
       self.set_spacing(3)
-      self._treestore = gtk.TreeStore(int, int, int, int, str)
-      self._treestore.append(None, (0, 0, 0, 0, ""))
+      self._treestore = gtk.TreeStore(int, int, int, int, str, str, str)
+      self._treestore.append(None, (0, 0, 0, 0, "", "", ""))
       self._treeview = gtk.TreeView(self._treestore)
       self._treeview.set_headers_visible(False)
       
@@ -284,33 +311,77 @@ class IRCPane(gtk.VBox):
       
       
    def _cdf2(self, column, cell, model, iter):
-      cell.text = ""
+      mode = model.get_value(iter, 0)
+      text = ""
+      
+      if mode == 1:
+         hostname = model.get_value(iter, 5)
+         port = model.get_value(iter, 2)
+         ssl = model.get_value(iter, 3)
+         network = model.get_value(iter, 4)
+         password = model.get_value(iter, 6)
+         
+         text = "%s:%d" % (hostname, port)
+         if network:
+            text += "(%s)" % network
+
+         opt = []
+         if ssl:
+            opt.append("SSL")
+         if password:
+            opt.append("PASSWORD")
+         if opt:
+            text += " " + ", ".join(opt)
+
+      cell.props.text = text
 
 
-   def _on_new(self, widget):
-      model, iter = self._treeview.get_selection().get_selected()
-      if iter is not None:
-         mode = model.get_value(iter, 0)
-         if mode == 0:
-            d = ServerDialog(self._treeview)
-            d.set_transient_for(self.get_toplevel())
-            d.show_all()
-            d.ok.connect("clicked", self._cb_add_server, d)
-         elif mode == 2:
-            d = AnnounceDialog(self._treeview, model, iter)
-            d.set_transient_for(self.get_toplevel())
-            d.show_all()
-            d.ok.connect("clicked", self._add_server, d)
+   @grabselected
+   def _on_new(self, model, iter, mode):
+      if mode == 0:
+         d = ServerDialog()
+         d.set_transient_for(self.get_toplevel())
+         d.show_all()
+         d.ok.connect("clicked", self._cb_add_server, d, model, iter)
+      elif mode == 2:
+         d = AnnounceDialog(self._treeview, model, iter)
+         d.set_transient_for(self.get_toplevel())
+         d.show_all()
+         d.ok.connect("clicked", self._add_server, d, model, iter)
       
-      
-   def _on_remove(self, widget):
+    
+   @grabselected
+   def _on_remove(self, model, iter, mode):
       pass
       
-      
-   def _on_edit(self, widget):
-      pass
+   
+   @grabselected
+   def _on_edit(self, model, iter, mode):
+      if mode == 1:
+         d = EditServerDialog()
+         d.set_transient_for(self.get_toplevel())
+         d.show_all()
+         d.ok.connect("clicked", self._cb_edit_server, d, model, iter)
+         d.refresh.connect("clicked", self._cb_refresh_edit_server, d, model, iter)
+         d.refresh.clicked()
 
 
-   def _cb_add_server(self, ok, dialog):
-      print "ok button pressed"
-      # Add to the tree.
+   def _cb_add_server(self, ok, d, model, parent_iter):
+      model.append(parent_iter, (1, 1, d.port.get_value(), d.ssl.get_active(),
+               d.network.get_text().strip(), d.hostname.get_text().strip(),
+               d.password.get_text().strip()))
+               
+               
+   def _cb_edit_server(self, ok, d, model, iter):
+      for i, each in enumerate((d.port.get_value(), d.ssl.get_active(),
+            d.network.get_text().strip(), d.hostname.get_text().strip(),
+                              d.password.get_text().strip()), start=2):
+         model.set_value(iter, i, each)
+
+
+   def _cb_refresh_edit_server(self, refresh, d, model, iter):
+      d.port.set_value(model.get_value(iter, 2))
+      d.ssl.set_active(model.get_value(iter, 3))
+      d.network.set_text(model.get_value(iter, 4))
+      d.hostname.set_text(model.get_value(iter, 5))
+      d.password.set_text(model.get_value(iter, 6))
