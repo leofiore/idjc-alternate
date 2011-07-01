@@ -22,6 +22,7 @@ __all__ = ["IRCPane"]
 from functools import wraps
 
 import gtk
+import pango
 
 try:
    import irclib
@@ -29,6 +30,8 @@ except ImportError:
    irclib = None
 
 from idjc.prelims import ProfileManager
+from .gtkstuff import DefaultEntry
+from .ln_text import ln
 
 
 pm = ProfileManager()
@@ -178,105 +181,309 @@ class IRCEntry(gtk.Entry):
 
 
 
-def grabselected(f):
-   """Function decorator to obtain selected item info from a TreeView."""
+class WYSIWYGView(gtk.ScrolledWindow):
+   def __init__(self):
+      gtk.ScrolledWindow.__init__(self)
+      self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
+      self._textview = gtk.TextView()
+      self._textview.set_size_request(500, -1)
+      self.add(self._textview)
+      
+
+
+class EditDialogMixin(object):
+   """Mix-in class to convert initial-data-entry dialogs to edit dialogs."""
+   
+   
+   def __init__(self, orig_data):
+      bb = self.get_action_area()
+      self.refresh = gtk.Button(gtk.STOCK_REFRESH)
+      self.refresh.set_use_stock(True)
+      self.refresh.connect("clicked", lambda w: self.from_tuple(orig_data))
+      bb.add(self.refresh)
+      bb.set_child_secondary(self.refresh, True)
+      self.refresh.clicked()
+
+
+
+server_port_adj = gtk.Adjustment(6767.0, 0.0, 65535.0, 1.0, 10.0)
+
+
+
+class ServerDialog(gtk.Dialog):
+   """Data entry dialog for adding a new irc server."""
+   
+   
+   def __init__(self, title="Add IRC server" + pm.title_extra):
+      gtk.Dialog.__init__(self, title)
+
+      self.network = gtk.Entry()
+      self.hostname = gtk.Entry()
+      self.port = gtk.SpinButton(server_port_adj)
+      self.ssl = gtk.CheckButton("SSL")
+      self.username = DefaultEntry("Nobody")
+      self.password = gtk.Entry()
+      self.password.set_visibility(False)
+      self.nick1 = gtk.Entry()
+      self.nick2 = gtk.Entry()
+      self.nick3 = gtk.Entry()
+      self.realname = gtk.Entry()
+      self.nickserv = gtk.Entry()
+      self.nickserv.set_visibility(False)
+     
+      hbox = gtk.HBox()
+      hbox.set_border_width(16)
+      hbox.set_spacing(5)
+      
+      image = gtk.image_new_from_stock(gtk.STOCK_NETWORK, gtk.ICON_SIZE_DIALOG)
+      table = gtk.Table(9, 2)
+      table.set_col_spacings(6)
+      table.set_row_spacings(3)
+      table.set_row_spacing(5, 20)
+      rvbox = gtk.VBox(True)
+      hbox.pack_start(image, False, padding=20)
+      hbox.pack_start(table, True)
+      
+      for i, (text, widget) in enumerate(zip(("Network", "Hostname", "Port", "",
+                              "User name", "Password", "Nickname", "Second choice",
+                              "Third choice", "Real name", "Nickserv p/w"),
+            (self.network, self.hostname, self.port, self.ssl,
+             self.username, self.password, self.nick1, self.nick2,
+             self.nick3, self.realname, self.nickserv))):
+         l = gtk.Label(text)
+         l.set_alignment(1.0, 0.5)
+         
+         table.attach(l, 0, 1, i, i + 1, gtk.SHRINK | gtk.FILL)
+         table.attach(widget, 1, 2, i, i + 1)
+         
+      self.get_content_area().add(hbox)
+      
+      
+   def as_tuple(self):
+      return (self.port.get_value(), self.ssl.get_active(),
+         self.network.get_text().strip(), self.hostname.get_text().strip(),
+         self.username.get_text().strip(), self.password.get_text().strip(),
+         self.nick1.get_text().strip(), self.nick2.get_text().strip(),
+         self.nick3.get_text().strip(), self.realname.get_text().strip(),
+         self.nickserv.get_text().strip())
+
+
+
+class EditServerDialog(ServerDialog, EditDialogMixin):
+   def __init__(self, orig_data):
+      ServerDialog.__init__(self, "Edit existing IRC server")
+      EditDialogMixin.__init__(self, orig_data)
+      
+       
+   def from_tuple(self, orig_data):
+      n = iter(orig_data).next
+      self.port.set_value(n())
+      self.ssl.set_active(n())
+      self.network.set_text(n())
+      self.hostname.set_text(n())
+      self.username.set_text(n())
+      self.password.set_text(n())
+      self.nick1.set_text(n())
+      self.nick2.set_text(n())
+      self.nick3.set_text(n())
+      self.realname.set_text(n())
+      self.nickserv.set_text(n())
+
+
+
+message_delay_adj = gtk.Adjustment(10, 0, 30, 1, 10)
+message_offset_adj = gtk.Adjustment(0, 0, 9999, 1, 10)
+message_interval_adj = gtk.Adjustment(600, 60, 9999, 1, 10)
+
+         
+class MessageDialog(gtk.Dialog):
+   def __init__(self, title):
+      gtk.Dialog.__init__(self, title + pm.title_extra)
+
+      hbox1 = gtk.HBox()
+      hbox1.set_spacing(6)
+      l = gtk.Label("Channels/Users")
+      self.channels = gtk.Entry()
+      hbox1.pack_start(l, False)
+      hbox1.pack_start(self.channels, True)
+      
+      hbox2 = gtk.HBox()
+      hbox2.set_spacing(6)
+      l = gtk.Label("Message")
+      self.message = IRCEntry()
+      hbox2.pack_start(l, False)
+      hbox2.pack_start(self.message)
+      
+      self.wysiwyg = WYSIWYGView()
+      vbox = gtk.VBox()
+      vbox.set_spacing(5)
+      vbox.pack_start(hbox1, False)
+      vbox.pack_start(hbox2, False)
+      vbox.pack_start(self.wysiwyg)
+      
+      self.hbox = gtk.HBox()
+      self.hbox.set_border_width(16)
+      self.hbox.set_spacing(5)
+      self.image = gtk.image_new_from_stock(gtk.STOCK_NEW, gtk.ICON_SIZE_DND)
+      self.hbox.pack_start(self.image, False, padding=20)
+      self.hbox.pack_start(vbox)
+      
+      self.get_content_area().add(self.hbox)
+      
+      
+   def _from_channels(self):
+      text = self.channels.get_text().replace(",", " ").split()
+      return ",".join(x for x in text if x)
+
+
+   def as_tuple(self):
+      return self._from_channels(), self.message.get_text().strip()
+
+
+
+class EditMessageDialog(MessageDialog, EditDialogMixin):
+   def __init__(self, title, orig_data):
+      MessageDialog.__init__(self, title)
+      EditDialogMixin.__init__(self, orig_data)
+      self.image.set_from_stock(gtk.STOCK_EDIT, gtk.ICON_SIZE_DND)
+      
+      
+   def from_tuple(self, orig_data):
+      self.channels.set_text(orig_data[0])
+      self.message.set_text(orig_data[1])
+
+
+
+class AnnounceMessageDialog(MessageDialog):
+   def __init__(self, title):
+      MessageDialog.__init__(self, title)
+      self.delay = gtk.SpinButton(message_delay_adj)
+      self.hbox.add(self.delay)
+      
+      
+   def as_tuple(self):
+      return (self.delay.get_value(), ) + MessageDialog.as_tuple(self)
+
+
+
+class EditAnnounceMessageDialog(AnnounceMessageDialog, EditDialogMixin):
+   def __init__(self, title, orig_data):
+      AnnounceMessageDialog.__init__(self, title)
+      EditDialogMixin.__init__(self, orig_data)
+      self.image.set_from_stock(gtk.STOCK_EDIT, gtk.ICON_SIZE_DND)
+      
+      
+   def from_tuple(self, orig_data):
+      return (self.delay.set_value(orig_data[0]),
+              self.channels.set_text(orig_data[1]),
+              self.message.set_text(orig_data[2]))
+
+   
+
+class TimerMessageDialog(MessageDialog):
+   def __init__(self, title):
+      MessageDialog.__init__(self, title)
+      self.offset = gtk.SpinButton(message_offset_adj)
+      self.hbox.add(self.offset)
+      self.interval = gtk.SpinButton(message_interval_adj)
+      self.hbox.add(self.interval)
+      
+      
+   def as_tuple(self):
+      return (self.offset.get_value(), self.interval.get_value()
+                                    ) + MessageDialog.as_tuple(self)
+
+
+
+class EditTimerMessageDialog(TimerMessageDialog, EditDialogMixin):
+   def __init__(self, title, orig_data):
+      TimerMessageDialog.__init__(self, title)
+      EditDialogMixin.__init__(self, orig_data)
+      self.image.set_from_stock(gtk.STOCK_EDIT, gtk.ICON_SIZE_DND)
+      
+      
+   def from_tuple(self, orig_data):
+      return (self.offset.set_value(orig_data[0]),
+              self.interval.set_value(orig_data[1]),
+              self.channels.set_text(orig_data[2]),
+              self.message.set_text(orig_data[3]))
+   
+
+
+def modifier(f):
+   """IRCPane function decorator for new/remove/edit callbacks."""
+
    
    @wraps(f)
-   def inner(self, widget=None):
-      del widget
-      model, iter = self._treeview.get_selection().get_selected()
-      if iter is not None:
-         return f(self, model, iter, model.get_value(iter, 0))
+   def inner(self, widget):
+      model, _iter = self._treeview.get_selection().get_selected()
+         
+      if _iter is not None:
+         def dialog(d, cb, *args, **kwds):
+            d.ok = gtk.Button(gtk.STOCK_OK)
+            cancel = gtk.Button(gtk.STOCK_CANCEL)
+            bb = d.get_action_area()
+            for each in (d.ok, cancel):
+               each.set_use_stock(True)
+               each.connect_after("clicked", lambda w: d.destroy())
+               bb.add(each)
+
+            d.set_modal(True)
+            d.set_transient_for(self.get_toplevel())
+            d.ok.connect("clicked", lambda w: cb(d, model, _iter, *args, **kwds))
+            d.show_all()
+
+         return f(self, model.get_value(_iter, 0), model, _iter, dialog)
       else:
          return None
    return inner
 
 
 
-class ServerDialog(gtk.Dialog):
-   def __init__(self):
-      gtk.Dialog.__init__(self)
-      self.set_modal(True)
-      self.set_title("Add IRC server" + pm.title_extra)
+def highlight(f):
+   """IRCPane function decorator to highlight newly added item."""
+   
+   
+   @wraps(f)
+   def inner(self, mode, model, iter, *args, **kwds):
+      new_iter = f(self, mode, model, iter, *args, **kwds)
       
-      self.ok = gtk.Button(gtk.STOCK_OK)
-      cancel = gtk.Button(gtk.STOCK_CANCEL)
-      bb = self.get_action_area()
-      for each in (self.ok, cancel):
-         each.set_use_stock(True)
-         each.connect_after("clicked", lambda w: self.destroy())
-         bb.add(each)
+      path = model.get_path(new_iter)
+      self._treeview.expand_to_path(path)
+      self._treeview.expand_row(path, True)
+      self._treeview.get_selection().select_path(path)
+      
+      return new_iter
+   return inner
+   
+   
 
-      adj = gtk.Adjustment(6767.0, 0.0, 65535.0, 1.0, 10.0)
-
-      self.network = gtk.Entry()
-      self.hostname = gtk.Entry()
-      self.port = gtk.SpinButton(adj)
-      self.ssl = gtk.CheckButton("SSL")
-      self.password = gtk.Entry()
-      self.password.set_visibility(False)
-      
-      hbox = gtk.HBox()
-      hbox.set_border_width(16)
-      hbox.set_spacing(5)
-      
-      image = gtk.image_new_from_stock(gtk.STOCK_NETWORK, gtk.ICON_SIZE_DIALOG)
-      lvbox = gtk.VBox(True)
-      rvbox = gtk.VBox(True)
-      hbox.pack_start(image, False, padding=20)
-      hbox.pack_start(lvbox, False)
-      hbox.pack_start(rvbox, False)
-      
-      for each in (lvbox, rvbox):
-         each.set_spacing(4)
-      
-      for text, widget in zip(("Network", "Hostname", "Port", "", "Password"),
-            (self.network, self.hostname, self.port, self.ssl, self.password)):
-         l = gtk.Label(text)
-         l.set_alignment(1.0, 0.5)
-         lvbox.pack_start(l, False)
-         rvbox.pack_start(widget, False)
-         
-      self.get_content_area().add(hbox)
-      
-
-
-class EditServerDialog(ServerDialog):
-   def __init__(self):
-      ServerDialog.__init__(self)
-      self.set_title("Edit IRC server" + pm.title_extra)
-      bb = self.get_action_area()
-      self.refresh = gtk.Button(gtk.STOCK_REFRESH)
-      self.refresh.set_use_stock(True)
-      bb.add(self.refresh)
-      bb.set_child_secondary(self.refresh, True)
-
-       
-         
 class IRCPane(gtk.VBox):
    def __init__(self):
       gtk.VBox.__init__(self)
       self.set_border_width(4)
       self.set_spacing(3)
-      self._treestore = gtk.TreeStore(int, int, int, int, str, str, str)
-      self._treestore.append(None, (0, 0, 0, 0, "", "", ""))
+      self._treestore = gtk.TreeStore(int, int, int, int, str, str, str,
+                                      str, str, str, str, str, str, str)
+      self._treestore.append(None, (0, 1, 0, 0) + ("", ) * 10)
       self._treeview = gtk.TreeView(self._treestore)
       self._treeview.set_headers_visible(False)
+      self._treeview.set_enable_tree_lines(True)
+      self._treeview.get_selection().select_path(0)
       
       col = gtk.TreeViewColumn()
      
       toggle = gtk.CellRendererToggle()
+      toggle.props.mode = gtk.CELL_RENDERER_MODE_INERT
+      toggle.props.sensitive = False
       col.pack_start(toggle, False)
       col.add_attribute(toggle, "active", 1)
-      toggle.connect("toggled", self._on_toggle)
+      toggle.connect("toggled", self._on_cell_toggle)
       
-      str1 = gtk.CellRendererText()
-      col.pack_start(str1, False)
-      col.set_cell_data_func(str1, self._cdf1)
-      
-      str2 = gtk.CellRendererText()
-      col.pack_start(str2, False)
-      col.set_cell_data_func(str2, self._cdf2)
+      crt = gtk.CellRendererText()
+      crt.props.ellipsize = pango.ELLIPSIZE_END
+      col.pack_start(crt, True)
+      col.set_cell_data_func(crt, self._cell_data_func)
       
       self._treeview.append_column(col)
       
@@ -284,6 +491,7 @@ class IRCPane(gtk.VBox):
       sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       sw.add(self._treeview)
       self.pack_start(sw)
+      
       bb = gtk.HButtonBox()
       bb.set_spacing(8)
       bb.set_layout(gtk.BUTTONBOX_END)
@@ -293,95 +501,149 @@ class IRCPane(gtk.VBox):
       for b, c in zip((new, remove, edit), ("new", "remove", "edit")):
          bb.add(b)
          b.connect("clicked", getattr(self, "_on_" + c))
-   
-      bb.set_child_secondary(new, True)
-      bb.set_child_secondary(remove, True)
+
+      cell_toggle_mode = gtk.ToggleButton("+Toggle")
+      cell_toggle_mode.connect("toggled", self._on_cell_toggle_mode, toggle)
+      bb.add(cell_toggle_mode)
+      bb.set_child_secondary(cell_toggle_mode, True)
+
       self.pack_start(bb, False)
       self.show_all()
 
 
-   def _on_toggle(self, cell, path):
+   def _on_cell_toggle_mode(self, mode, cell):
+      if mode.get_active():
+         cell.props.mode = gtk.CELL_RENDERER_MODE_ACTIVATABLE
+         cell.props.sensitive = True
+      else:
+         cell.props.mode = gtk.CELL_RENDERER_MODE_INERT
+         cell.props.sensitive = False
+
+      tr = self._treeview.get_visible_rect()
+      x, y = self._treeview.convert_tree_to_bin_window_coords(tr.x, tr.y)
+      br = gtk.gdk.Rectangle(x, y, tr.width, tr.height)
+      self._treeview.get_bin_window().invalidate_rect(br, True)
+
+
+   def _on_cell_toggle(self, cell, path):
       self._treestore[path][1] = not self._treestore[path][1]
       
 
-   def _cdf1(self, column, cell, model, iter):
-      cell.props.text = ("Server", "", "Announce", "Timer", "On up",
-                              "On down", "")[model.get_value(iter, 0)]
-      cell.props.visible = cell.props.text != ""
-      
-      
-   def _cdf2(self, column, cell, model, iter):
+   def _cell_data_func(self, column, cell, model, iter):
       mode = model.get_value(iter, 0)
       text = ""
       
-      if mode == 1:
-         hostname = model.get_value(iter, 5)
-         port = model.get_value(iter, 2)
-         ssl = model.get_value(iter, 3)
-         network = model.get_value(iter, 4)
-         password = model.get_value(iter, 6)
-         
-         text = "%s:%d" % (hostname, port)
-         if network:
-            text += "(%s)" % network
+      if mode % 2:
+         if mode == 1:
+            port = model.get_value(iter, 2)
+            ssl = model.get_value(iter, 3)
+            network = model.get_value(iter, 4)
+            hostname = model.get_value(iter, 5)
+            password = model.get_value(iter, 7)
+            nickserv = model.get_value(iter, 12)
+            nick = model.get_value(iter, 13)
+            
+            if nick:
+               text = nick + "@"
+            text += "%s:%d" % (hostname, port)
+            if network:
+               text += "(%s)" % network
 
-         opt = []
-         if ssl:
-            opt.append("SSL")
-         if password:
-            opt.append("PASSWORD")
-         if opt:
-            text += " " + ", ".join(opt)
+            opt = []
+            if ssl:
+               opt.append("SSL")
+            if password:
+               opt.append("PASSWORD")
+            if nickserv:
+               opt.append("NICKSERV")
+            if opt:
+               text += " " + ", ".join(opt)
+         else:
+            channels = model.get_value(iter, 4)
+            message = model.get_value(iter, 5)
+            
+            if mode == 3:
+               delay = model.get_value(iter, 3)
+               text = "+%d;%s; %s" % (delay, channels, message)
+            elif mode == 5:
+               offset = model.get_value(iter, 2)
+               interval = model.get_value(iter, 3)
+               text = "%d/%d;%s; %s" % (offset, interval, channels, message)
+            else:
+               text = channels + "; " + message
+      else:
+         text = ("Server", "Announce", "Timer", "On up", "On down")[mode / 2]
 
       cell.props.text = text
 
 
-   @grabselected
-   def _on_new(self, model, iter, mode):
+   @modifier
+   def _on_new(self, mode, model, iter, dialog):
       if mode == 0:
-         d = ServerDialog()
-         d.set_transient_for(self.get_toplevel())
-         d.show_all()
-         d.ok.connect("clicked", self._cb_add_server, d, model, iter)
+         dialog(ServerDialog(), self._add_server)
       elif mode == 2:
-         d = AnnounceDialog(self._treeview, model, iter)
-         d.set_transient_for(self.get_toplevel())
-         d.show_all()
-         d.ok.connect("clicked", self._add_server, d, model, iter)
+         dialog(AnnounceMessageDialog("Add an IRC track announce message"),
+                                                      self._add_announce)
+      elif mode == 4:
+         dialog(TimerMessageDialog("Add an IRC timed interval message"),
+                                                      self._add_timer)
+      elif mode in (6, 8):
+         title = "Add an IRC radio stream up message" if mode == 6 \
+            else "And an IRC radio stream down message"
+         dialog(MessageDialog(title), self._add_message, mode)
       
     
-   @grabselected
-   def _on_remove(self, model, iter, mode):
+   @modifier
+   def _on_remove(self, mode, model, _iter, dialog):
       pass
       
    
-   @grabselected
-   def _on_edit(self, model, iter, mode):
+   @modifier
+   def _on_edit(self, mode, model, iter, dialog):
       if mode == 1:
-         d = EditServerDialog()
-         d.set_transient_for(self.get_toplevel())
-         d.show_all()
-         d.ok.connect("clicked", self._cb_edit_server, d, model, iter)
-         d.refresh.connect("clicked", self._cb_refresh_edit_server, d, model, iter)
-         d.refresh.clicked()
+         dialog(EditServerDialog(tuple(model[model.get_path(iter)])[2:13]),
+                                                self._standard_edit, 2)
+      if mode == 3:
+         dialog(EditAnnounceMessageDialog("Edit IRC track announce message",
+                              tuple(model[model.get_path(iter)])[3:6]),
+                                                self._standard_edit, 3)
+      if mode == 5:
+         dialog(EditTimerMessageDialog("Edit IRC timed interval message",
+                              tuple(model[model.get_path(iter)])[2:6]),
+                                                self._standard_edit, 2)
+      if mode in (7, 9):
+         title = "Edit IRC radio stream up message" if mode == 7 \
+            else "Edit IRC radio stream down message"
+         dialog(EditMessageDialog(title, tuple(
+            model[model.get_path(iter)])[4:6]), self._standard_edit, 4)
+                                                
 
-
-   def _cb_add_server(self, ok, d, model, parent_iter):
-      model.append(parent_iter, (1, 1, d.port.get_value(), d.ssl.get_active(),
-               d.network.get_text().strip(), d.hostname.get_text().strip(),
-               d.password.get_text().strip()))
-               
-               
-   def _cb_edit_server(self, ok, d, model, iter):
-      for i, each in enumerate((d.port.get_value(), d.ssl.get_active(),
-            d.network.get_text().strip(), d.hostname.get_text().strip(),
-                              d.password.get_text().strip()), start=2):
+   def _standard_edit(self, d, model, iter, start):
+      for i, each in enumerate(d.as_tuple(), start=start):
          model.set_value(iter, i, each)
 
 
-   def _cb_refresh_edit_server(self, refresh, d, model, iter):
-      d.port.set_value(model.get_value(iter, 2))
-      d.ssl.set_active(model.get_value(iter, 3))
-      d.network.set_text(model.get_value(iter, 4))
-      d.hostname.set_text(model.get_value(iter, 5))
-      d.password.set_text(model.get_value(iter, 6))
+   @highlight
+   def _add_server(self, d, model, parent_iter):
+      iter = model.append(parent_iter, (1, 1) + d.as_tuple() + ("", ))
+
+      # Add the subelements.
+      for i in xrange(2, 10, 2):
+         model.append(iter, (i, 1, 0, 0) + ("", ) * 10)
+         
+      return iter
+
+               
+   @highlight
+   def _add_announce(self, d, model, parent_iter):
+      return model.append(parent_iter, (3, 1, 0) + d.as_tuple() + ("", ) * 8)
+
+
+   @highlight
+   def _add_timer(self, d, model, parent_iter):
+      return model.append(parent_iter, (5, 1) + d.as_tuple() + ("", ) * 8)
+      
+   
+   @highlight
+   def _add_message(self, d, model, parent_iter, mode):
+      return model.append(parent_iter, (mode + 1, 1, 0, 0) + d.as_tuple() + ("", ) * 8)
