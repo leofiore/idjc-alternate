@@ -329,11 +329,25 @@ class MessageDialog(gtk.Dialog):
       self.hbox.pack_start(vbox)
       
       self.get_content_area().add(self.hbox)
+      self.channels.grab_focus()
       
       
    def _from_channels(self):
       text = self.channels.get_text().replace(",", " ").split()
       return ",".join(x for x in text if x)
+
+
+   def _pack(self, widgets):
+      vbox = gtk.VBox()
+      for l, w in widgets:
+         ivbox = gtk.VBox()
+         ivbox.set_spacing(4)
+         vbox.pack_start(ivbox, True, False)
+         l = gtk.Label(l)
+         ivbox.pack_start(l)
+         ivbox.pack_start(w)
+         
+      self.hbox.pack_start(vbox, False, padding=20)
 
 
    def as_tuple(self):
@@ -357,8 +371,9 @@ class EditMessageDialog(MessageDialog, EditDialogMixin):
 class AnnounceMessageDialog(MessageDialog):
    def __init__(self, title):
       MessageDialog.__init__(self, title)
+      
       self.delay = gtk.SpinButton(message_delay_adj)
-      self.hbox.add(self.delay)
+      self._pack((("Delay", self.delay), ))
       
       
    def as_tuple(self):
@@ -383,11 +398,10 @@ class EditAnnounceMessageDialog(AnnounceMessageDialog, EditDialogMixin):
 class TimerMessageDialog(MessageDialog):
    def __init__(self, title):
       MessageDialog.__init__(self, title)
-      self.offset = gtk.SpinButton(message_offset_adj)
-      self.hbox.add(self.offset)
-      self.interval = gtk.SpinButton(message_interval_adj)
-      self.hbox.add(self.interval)
       
+      self.offset = gtk.SpinButton(message_offset_adj)
+      self.interval = gtk.SpinButton(message_interval_adj)
+      self._pack((("Offset", self.offset), ("Interval", self.interval)))
       
    def as_tuple(self):
       return (self.offset.get_value(), self.interval.get_value()
