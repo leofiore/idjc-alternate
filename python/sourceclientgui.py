@@ -680,7 +680,7 @@ class ConnectionPane(gtk.VBox):
       lcmenu.show_all()
       
       bbox = gtk.HButtonBox()
-      bbox.set_spacing(8)
+      bbox.set_spacing(6)
       bbox.set_layout(gtk.BUTTONBOX_END)
       new = gtk.Button("New")
       self.remove = gtk.Button("Remove")

@@ -203,6 +203,8 @@ class EditDialogMixin(object):
       bb.add(self.refresh)
       bb.set_child_secondary(self.refresh, True)
       self.refresh.clicked()
+      self.delete = gtk.Button(stock=gtk.STOCK_DELETE)
+      bb.add(self.delete)
 
 
 
@@ -214,10 +216,11 @@ class ServerDialog(gtk.Dialog):
    """Data entry dialog for adding a new irc server."""
    
    
-   def __init__(self, title="Add IRC server" + pm.title_extra):
-      gtk.Dialog.__init__(self, title)
+   def __init__(self, title="IRC server"):
+      gtk.Dialog.__init__(self, title + " - IDJC" + pm.title_extra)
 
       self.network = gtk.Entry()
+      self.network.set_width_chars(25)
       self.hostname = gtk.Entry()
       self.port = gtk.SpinButton(server_port_adj)
       self.ssl = gtk.CheckButton("SSL")
@@ -236,6 +239,7 @@ class ServerDialog(gtk.Dialog):
       hbox.set_spacing(5)
       
       image = gtk.image_new_from_stock(gtk.STOCK_NETWORK, gtk.ICON_SIZE_DIALOG)
+      image.set_alignment(0.5, 0)
       table = gtk.Table(9, 2)
       table.set_col_spacings(6)
       table.set_row_spacings(3)
@@ -271,7 +275,7 @@ class ServerDialog(gtk.Dialog):
 
 class EditServerDialog(ServerDialog, EditDialogMixin):
    def __init__(self, orig_data):
-      ServerDialog.__init__(self, "Edit existing IRC server")
+      ServerDialog.__init__(self)
       EditDialogMixin.__init__(self, orig_data)
       
        
@@ -295,10 +299,16 @@ message_delay_adj = gtk.Adjustment(10, 0, 30, 1, 10)
 message_offset_adj = gtk.Adjustment(0, 0, 9999, 1, 10)
 message_interval_adj = gtk.Adjustment(600, 60, 9999, 1, 10)
 
+
          
 class MessageDialog(gtk.Dialog):
-   def __init__(self, title):
-      gtk.Dialog.__init__(self, title + pm.title_extra)
+   icon = gtk.STOCK_NEW
+
+   def __init__(self, title=None):
+      if title is None:
+         title = self.title
+      
+      gtk.Dialog.__init__(self, title + " - IDJC" + pm.title_extra)
 
       hbox1 = gtk.HBox()
       hbox1.set_spacing(6)
@@ -324,7 +334,8 @@ class MessageDialog(gtk.Dialog):
       self.hbox = gtk.HBox()
       self.hbox.set_border_width(16)
       self.hbox.set_spacing(5)
-      self.image = gtk.image_new_from_stock(gtk.STOCK_NEW, gtk.ICON_SIZE_DND)
+      self.image = gtk.image_new_from_stock(self.icon, gtk.ICON_SIZE_DIALOG)
+      self.image.set_alignment(0.5, 0)
       self.hbox.pack_start(self.image, False, padding=20)
       self.hbox.pack_start(vbox)
       
@@ -356,10 +367,11 @@ class MessageDialog(gtk.Dialog):
 
 
 class EditMessageDialog(MessageDialog, EditDialogMixin):
+   icon = gtk.STOCK_EDIT
+
    def __init__(self, title, orig_data):
       MessageDialog.__init__(self, title)
       EditDialogMixin.__init__(self, orig_data)
-      self.image.set_from_stock(gtk.STOCK_EDIT, gtk.ICON_SIZE_DND)
       
       
    def from_tuple(self, orig_data):
@@ -369,8 +381,10 @@ class EditMessageDialog(MessageDialog, EditDialogMixin):
 
 
 class AnnounceMessageDialog(MessageDialog):
-   def __init__(self, title):
-      MessageDialog.__init__(self, title)
+   title = "IRC track announce"
+
+   def __init__(self):
+      MessageDialog.__init__(self)
       
       self.delay = gtk.SpinButton(message_delay_adj)
       self._pack((("Delay", self.delay), ))
@@ -382,10 +396,11 @@ class AnnounceMessageDialog(MessageDialog):
 
 
 class EditAnnounceMessageDialog(AnnounceMessageDialog, EditDialogMixin):
-   def __init__(self, title, orig_data):
-      AnnounceMessageDialog.__init__(self, title)
+   icon = gtk.STOCK_EDIT
+   
+   def __init__(self, orig_data):
+      AnnounceMessageDialog.__init__(self)
       EditDialogMixin.__init__(self, orig_data)
-      self.image.set_from_stock(gtk.STOCK_EDIT, gtk.ICON_SIZE_DND)
       
       
    def from_tuple(self, orig_data):
@@ -396,8 +411,10 @@ class EditAnnounceMessageDialog(AnnounceMessageDialog, EditDialogMixin):
    
 
 class TimerMessageDialog(MessageDialog):
-   def __init__(self, title):
-      MessageDialog.__init__(self, title)
+   title = "IRC timed message"
+
+   def __init__(self):
+      MessageDialog.__init__(self)
       
       self.offset = gtk.SpinButton(message_offset_adj)
       self.interval = gtk.SpinButton(message_interval_adj)
@@ -410,10 +427,11 @@ class TimerMessageDialog(MessageDialog):
 
 
 class EditTimerMessageDialog(TimerMessageDialog, EditDialogMixin):
-   def __init__(self, title, orig_data):
-      TimerMessageDialog.__init__(self, title)
+   icon = gtk.STOCK_EDIT
+   
+   def __init__(self, orig_data):
+      TimerMessageDialog.__init__(self)
       EditDialogMixin.__init__(self, orig_data)
-      self.image.set_from_stock(gtk.STOCK_EDIT, gtk.ICON_SIZE_DND)
       
       
    def from_tuple(self, orig_data):
@@ -421,11 +439,11 @@ class EditTimerMessageDialog(TimerMessageDialog, EditDialogMixin):
               self.interval.set_value(orig_data[1]),
               self.channels.set_text(orig_data[2]),
               self.message.set_text(orig_data[3]))
-   
 
 
-def modifier(f):
-   """IRCPane function decorator for new/remove/edit callbacks."""
+
+def iteminfo(f):
+   """IRCPane function decorator for new/edit callbacks."""
 
    
    @wraps(f)
@@ -434,10 +452,10 @@ def modifier(f):
          
       if _iter is not None:
          def dialog(d, cb, *args, **kwds):
-            d.ok = gtk.Button(gtk.STOCK_OK)
             cancel = gtk.Button(gtk.STOCK_CANCEL)
+            d.ok = gtk.Button(gtk.STOCK_OK)
             bb = d.get_action_area()
-            for each in (d.ok, cancel):
+            for each in (cancel, d.ok):
                each.set_use_stock(True)
                each.connect_after("clicked", lambda w: d.destroy())
                bb.add(each)
@@ -445,6 +463,16 @@ def modifier(f):
             d.set_modal(True)
             d.set_transient_for(self.get_toplevel())
             d.ok.connect("clicked", lambda w: cb(d, model, _iter, *args, **kwds))
+            
+            if hasattr(d, "delete"):
+               def delete(w):
+                  iter_parent = model.iter_parent(_iter)
+                  self._treeview.get_selection().select_iter(iter_parent)
+                  model.remove(_iter)
+                  
+               d.delete.connect("clicked", delete)
+               d.delete.connect_after("clicked", lambda w: d.destroy())
+            
             d.show_all()
 
          return f(self, model.get_value(_iter, 0), model, _iter, dialog)
@@ -475,7 +503,7 @@ def highlight(f):
 class IRCPane(gtk.VBox):
    def __init__(self):
       gtk.VBox.__init__(self)
-      self.set_border_width(4)
+      self.set_border_width(8)
       self.set_spacing(3)
       self._treestore = gtk.TreeStore(int, int, int, int, str, str, str,
                                       str, str, str, str, str, str, str)
@@ -483,16 +511,13 @@ class IRCPane(gtk.VBox):
       self._treeview = gtk.TreeView(self._treestore)
       self._treeview.set_headers_visible(False)
       self._treeview.set_enable_tree_lines(True)
-      self._treeview.get_selection().select_path(0)
       
       col = gtk.TreeViewColumn()
      
       toggle = gtk.CellRendererToggle()
-      toggle.props.mode = gtk.CELL_RENDERER_MODE_INERT
       toggle.props.sensitive = False
       col.pack_start(toggle, False)
       col.add_attribute(toggle, "active", 1)
-      toggle.connect("toggled", self._on_cell_toggle)
       
       crt = gtk.CellRendererText()
       crt.props.ellipsize = pango.ELLIPSIZE_END
@@ -507,41 +532,39 @@ class IRCPane(gtk.VBox):
       self.pack_start(sw)
       
       bb = gtk.HButtonBox()
-      bb.set_spacing(8)
+      bb.set_spacing(6)
       bb.set_layout(gtk.BUTTONBOX_END)
-      new = gtk.Button("New")
-      remove = gtk.Button("Remove")
-      edit = gtk.Button("Edit")
-      for b, c in zip((new, remove, edit), ("new", "remove", "edit")):
-         bb.add(b)
+      edit = gtk.Button(gtk.STOCK_EDIT)
+      new = gtk.Button(gtk.STOCK_NEW)
+      for b, c in zip((edit, new), ("edit", "new")):
+         b.set_use_stock(True)
          b.connect("clicked", getattr(self, "_on_" + c))
+         bb.add(b)
 
-      cell_toggle_mode = gtk.ToggleButton("+Toggle")
-      cell_toggle_mode.connect("toggled", self._on_cell_toggle_mode, toggle)
-      bb.add(cell_toggle_mode)
-      bb.set_child_secondary(cell_toggle_mode, True)
+      toggle_button = gtk.Button("_Toggle")
+      toggle_button.connect("clicked", self._on_toggle)
+      bb.add(toggle_button)
+      bb.set_child_secondary(toggle_button, True)
 
       self.pack_start(bb, False)
+      selection = self._treeview.get_selection()
+      selection.connect("changed", self._on_selection_changed, edit, new)
+      selection.select_path(0)
       self.show_all()
 
 
-   def _on_cell_toggle_mode(self, mode, cell):
-      if mode.get_active():
-         cell.props.mode = gtk.CELL_RENDERER_MODE_ACTIVATABLE
-         cell.props.sensitive = True
-      else:
-         cell.props.mode = gtk.CELL_RENDERER_MODE_INERT
-         cell.props.sensitive = False
-
-      tr = self._treeview.get_visible_rect()
-      x, y = self._treeview.convert_tree_to_bin_window_coords(tr.x, tr.y)
-      br = gtk.gdk.Rectangle(x, y, tr.width, tr.height)
-      self._treeview.get_bin_window().invalidate_rect(br, True)
-
-
-   def _on_cell_toggle(self, cell, path):
-      self._treestore[path][1] = not self._treestore[path][1]
+   def _on_selection_changed(self, selection, edit, new):
+      model, iter = selection.get_selected()
+      mode = model.get_value(iter, 0)
       
+      edit.set_sensitive(mode % 2)
+      new.set_sensitive(not mode % 2)
+      
+
+   def _on_toggle(self, widget):
+      model, iter = self._treeview.get_selection().get_selected()
+      model.set_value(iter, 1, not model.get_value(iter, 1))
+
 
    def _cell_data_func(self, column, cell, model, iter):
       mode = model.get_value(iter, 0)
@@ -591,43 +614,36 @@ class IRCPane(gtk.VBox):
       cell.props.text = text
 
 
-   @modifier
+   @iteminfo
    def _on_new(self, mode, model, iter, dialog):
       if mode == 0:
          dialog(ServerDialog(), self._add_server)
       elif mode == 2:
-         dialog(AnnounceMessageDialog("Add an IRC track announce message"),
-                                                      self._add_announce)
+         dialog(AnnounceMessageDialog(), self._add_announce)
       elif mode == 4:
-         dialog(TimerMessageDialog("Add an IRC timed interval message"),
-                                                      self._add_timer)
+         dialog(TimerMessageDialog(), self._add_timer)
       elif mode in (6, 8):
-         title = "Add an IRC radio stream up message" if mode == 6 \
-            else "And an IRC radio stream down message"
+         title = "IRC stream up message" if mode == 6 \
+            else "IRC stream down message"
          dialog(MessageDialog(title), self._add_message, mode)
-      
     
-   @modifier
-   def _on_remove(self, mode, model, _iter, dialog):
-      pass
-      
    
-   @modifier
+   @iteminfo
    def _on_edit(self, mode, model, iter, dialog):
       if mode == 1:
          dialog(EditServerDialog(tuple(model[model.get_path(iter)])[2:13]),
                                                 self._standard_edit, 2)
       if mode == 3:
-         dialog(EditAnnounceMessageDialog("Edit IRC track announce message",
+         dialog(EditAnnounceMessageDialog(
                               tuple(model[model.get_path(iter)])[3:6]),
                                                 self._standard_edit, 3)
       if mode == 5:
-         dialog(EditTimerMessageDialog("Edit IRC timed interval message",
+         dialog(EditTimerMessageDialog(
                               tuple(model[model.get_path(iter)])[2:6]),
                                                 self._standard_edit, 2)
       if mode in (7, 9):
-         title = "Edit IRC radio stream up message" if mode == 7 \
-            else "Edit IRC radio stream down message"
+         title = "IRC stream up message" if mode == 7 \
+            else "IRC stream down message"
          dialog(EditMessageDialog(title, tuple(
             model[model.get_path(iter)])[4:6]), self._standard_edit, 4)
                                                 
