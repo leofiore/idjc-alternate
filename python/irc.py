@@ -77,8 +77,11 @@ class IRCEntry(gtk.Entry):
       """Handle direct insertion of control characters."""
 
 
+      if entry.im_context_filter_keypress(event):
+         return True
+         
       # Check for CTRL key modifier.
-      if event.state & (~gtk.gdk.LOCK_MASK) == gtk.gdk.CONTROL_MASK:
+      if event.state & gtk.gdk.CONTROL_MASK:
          # Remove the effect of CAPS lock - works for letter keys only.
          keyval = event.keyval + (32 if event.state & gtk.gdk.LOCK_MASK else 0)
          try:
@@ -86,9 +89,11 @@ class IRCEntry(gtk.Entry):
          except KeyError:
             pass
          else:
+            entry.reset_im_context()
             cursor = entry.get_position()
             entry.insert_text(replacement, cursor)
             entry.set_position(cursor + 1)
+            return True
 
 
    def _popup_menu_populate(self, entry, menu):
@@ -181,14 +186,21 @@ class IRCEntry(gtk.Entry):
 
 
 
-class WYSIWYGView(gtk.ScrolledWindow):
+class WYSIWYG(gtk.TextView):
+   """Viewer for IRC text."""
+   
+   
    def __init__(self):
-      gtk.ScrolledWindow.__init__(self)
-      self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
-      self._textview = gtk.TextView()
-      self._textview.set_size_request(500, -1)
-      self.add(self._textview)
-      
+      gtk.TextView.__init__(self)
+      self.set_size_request(500, -1)
+      self.set_wrap_mode(gtk.WRAP_CHAR)
+      self.set_editable(False)
+      self.set_cursor_visible(False)
+
+
+   def set_text(self, text, cursor_position):
+      self.get_buffer().set_text(text)
+
 
 
 class EditDialogMixin(object):
@@ -324,12 +336,15 @@ class MessageDialog(gtk.Dialog):
       hbox2.pack_start(l, False)
       hbox2.pack_start(self.message)
       
-      self.wysiwyg = WYSIWYGView()
+      sw = gtk.ScrolledWindow()
+      sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
+      wysiwyg = WYSIWYG()
+      sw.add(wysiwyg)
       vbox = gtk.VBox()
       vbox.set_spacing(5)
       vbox.pack_start(hbox1, False)
       vbox.pack_start(hbox2, False)
-      vbox.pack_start(self.wysiwyg)
+      vbox.pack_start(sw)
       
       self.hbox = gtk.HBox()
       self.hbox.set_border_width(16)
@@ -339,8 +354,14 @@ class MessageDialog(gtk.Dialog):
       self.hbox.pack_start(self.image, False, padding=20)
       self.hbox.pack_start(vbox)
       
+      self.message.connect("changed", self._on_message_changed, wysiwyg)
+      
       self.get_content_area().add(self.hbox)
       self.channels.grab_focus()
+      
+      
+   def _on_message_changed(self, entry, wysiwyg):
+      wysiwyg.set_text(entry.get_text(), entry.props.cursor_position)
       
       
    def _from_channels(self):
