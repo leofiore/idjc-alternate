@@ -19,6 +19,7 @@
 __all__ = ["IRCPane"]
 
 
+import re
 from functools import wraps
 
 import gtk
@@ -38,6 +39,27 @@ pm = ProfileManager()
 
 
 
+XChat_colour = {
+   0:  0xCCCCCCFF,
+   1:  0x000000FF,
+   2:  0x3636B2FF,
+   3:  0x2A8C2AFF,
+   4:  0xC33B3BFF,
+   5:  0xC73232FF,
+   6:  0x80267FFF,
+   7:  0x66361FFF,
+   8:  0xD9A641FF,
+   9:  0x3DCC3DFF,
+   10: 0x1A5555FF,
+   11: 0x2F8C74FF,
+   12: 0x4545E6FF,
+   13: 0xB037B0FF,
+   14: 0x4C4C4CFF,
+   15: 0x959595FF
+}
+
+
+
 class IRCEntry(gtk.Entry):
    """Specialised IRC text entry widget.
    
@@ -46,26 +68,6 @@ class IRCEntry(gtk.Entry):
    
    
    _control_keytable = {107:u"\u0003", 98:u"\u0002", 117:u"\u001F", 111:u"\u000F"}
-
-   _XChat_colour = {
-      0:  0xCCCCCCFF,
-      1:  0x000000FF,
-      2:  0x3636B2FF,
-      3:  0x2A8C2AFF,
-      4:  0xC33B3BFF,
-      5:  0xC73232FF,
-      6:  0x80267FFF,
-      7:  0x66361FFF,
-      8:  0xD9A641FF,
-      9:  0x3DCC3DFF,
-      10: 0x1A5555FF,
-      11: 0x2F8C74FF,
-      12: 0x4545E6FF,
-      13: 0xB037B0FF,
-      14: 0x4C4C4CFF,
-      15: 0x959595FF
-   }
-
 
    def __init__(self, *args, **kwds):
       gtk.Entry.__init__(self, *args, **kwds)
@@ -124,7 +126,7 @@ class IRCEntry(gtk.Entry):
          lower, upper = [int(x) for x in each.split("-")]
          for i in xrange(lower, upper + 1):
             try:
-               rgba = self._XChat_colour[i]
+               rgba = XChat_colour[i]
             except:
                continue
 
@@ -189,7 +191,17 @@ class IRCEntry(gtk.Entry):
 class WYSIWYG(gtk.TextView):
    """Viewer for IRC text."""
    
-   
+
+   matches = tuple((a, re.compile(b)) for a, b in (
+      ("fgbg", "\x03[0-9]{1,2},[0-9]{1,2}"),
+      ("fg",   "\x03[0-9]{1,2}(?!=,)"),
+      ("bold", "\x02"),
+      ("ul",   "\x1F"),
+      ("norm", "\x0F"),
+      ("text", "[^\x00-\x1F]*"),
+      ))
+
+
    def __init__(self):
       gtk.TextView.__init__(self)
       self.set_size_request(500, -1)
@@ -199,7 +211,65 @@ class WYSIWYG(gtk.TextView):
 
 
    def set_text(self, text, cursor_position):
-      self.get_buffer().set_text(text)
+      b = self.get_buffer()
+      b.remove_all_tags(b.get_start_iter(), b.get_end_iter())
+      b.delete(b.get_start_iter(), b.get_end_iter())
+
+      fg = bg = None
+      bold = ul = False
+      start = 0
+      
+      while start < len(text):
+         for name, match in self.matches:
+            rslt = match.match(text, start)
+            if rslt is not None and rslt.group():
+               if name == "bold":
+                  bold = not bold
+
+               elif name == "ul":
+                  ul = not ul
+
+               elif name == "fg":
+                  try:
+                     fg = rslt.group()[1:]
+                  except IndexError:
+                     fg = None
+
+               elif name == "fgbg":
+                  try:
+                     fg, bg = rslt.group()[1:].split(",")
+                  except IndexError:
+                     fg = bg = None
+
+               elif name == "norm":
+                  bold = ul = False
+                  fg = bg = None
+
+               elif name == "text":
+                  tag = b.create_tag()
+                  p = tag.props
+                  p.family = "monospace"
+                  try:
+                     p.foreground = self._colour_string(fg)
+                     p.background = self._colour_string(bg)
+                  except (TypeError, KeyError):
+                     pass
+
+                  if ul:
+                     p.underline = pango.UNDERLINE_SINGLE
+                  if bold:
+                     p.weight = pango.WEIGHT_BOLD
+                     
+                  b.insert_with_tags(b.get_end_iter(), rslt.group(), tag)
+               start = rslt.end()
+               break               
+         else:
+            start += 1
+
+
+   @staticmethod
+   def _colour_string(code):
+      return "#%000000X" % (XChat_colour[int(code)] >> 8)
 
 
 
