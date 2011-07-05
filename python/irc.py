@@ -188,7 +188,7 @@ class IRCEntry(gtk.Entry):
 
 
 
-class WYSIWYG(gtk.TextView):
+class IRCView(gtk.TextView):
    """Viewer for IRC text."""
    
 
@@ -408,8 +408,8 @@ class MessageDialog(gtk.Dialog):
       
       sw = gtk.ScrolledWindow()
       sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
-      wysiwyg = WYSIWYG()
-      sw.add(wysiwyg)
+      irc_view = IRCView()
+      sw.add(irc_view)
       vbox = gtk.VBox()
       vbox.set_spacing(5)
       vbox.pack_start(hbox1, False)
@@ -424,14 +424,14 @@ class MessageDialog(gtk.Dialog):
       self.hbox.pack_start(self.image, False, padding=20)
       self.hbox.pack_start(vbox)
       
-      self.message.connect("changed", self._on_message_changed, wysiwyg)
+      self.message.connect("changed", self._on_message_changed, irc_view)
       
       self.get_content_area().add(self.hbox)
       self.channels.grab_focus()
       
       
-   def _on_message_changed(self, entry, wysiwyg):
-      wysiwyg.set_text(entry.get_text(), entry.props.cursor_position)
+   def _on_message_changed(self, entry, irc_view):
+      irc_view.set_text(entry.get_text(), entry.props.cursor_position)
       
       
    def _from_channels(self):
@@ -590,6 +590,34 @@ def highlight(f):
    return inner
    
    
+   
+class IRCTreeView(gtk.TreeView):
+   def __init__(self, model=None):
+      gtk.TreeView.__init__(self, model)
+      self.set_headers_visible(False)
+      self.set_enable_tree_lines(True)
+      self.connect("query-tooltip", self._on_query_tooltip)
+      self.set_has_tooltip(True)
+      self.tooltip_coords = (0, 0)
+      
+   
+   def _on_query_tooltip(self, tv, x, y, kb_mode, tooltip):
+      if (x, y) != self.tooltip_coords:
+         self.tooltip_coords = (x, y)
+      elif None not in (x, y):
+         path = tv.get_path_at_pos(*tv.convert_widget_to_bin_window_coords(x, y))
+         if path is not None:
+            model = tv.get_model()
+            iter = model.get_iter(path[0])
+            mode = model.get_value(iter, 0)
+            if mode in (3, 5, 7, 9):
+               message = model.get_value(iter, 5)
+               irc_view = IRCView()
+               irc_view.set_text(message, 0)
+               tooltip.set_custom(irc_view)
+               return True
+
+
 
 class IRCPane(gtk.VBox):
    def __init__(self):
@@ -599,9 +627,7 @@ class IRCPane(gtk.VBox):
       self._treestore = gtk.TreeStore(int, int, int, int, str, str, str,
                                       str, str, str, str, str, str, str)
       self._treestore.append(None, (0, 1, 0, 0) + ("", ) * 10)
-      self._treeview = gtk.TreeView(self._treestore)
-      self._treeview.set_headers_visible(False)
-      self._treeview.set_enable_tree_lines(True)
+      self._treeview = IRCTreeView(self._treestore)
       
       col = gtk.TreeViewColumn()
      

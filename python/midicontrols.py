@@ -1,4 +1,4 @@
-#   IDJCcontrols.py: MIDI and hotkey controls for IDJC
+#   midicontrols.py: MIDI and hotkey controls for IDJC
 #   Copyright (C) 2010 Andrew Clover (and@doxdesk.com)
 #
 #   This program is free software: you can redistribute it and/or modify
