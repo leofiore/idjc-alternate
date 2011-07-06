@@ -105,17 +105,25 @@ class IRCEntry(gtk.Entry):
       menuitem.set_submenu(submenu)
       menuitem.show()
       
-      for menutext, code in ((ln.irc_bold, u"\u0002"), (ln.irc_underline, u"\u001F"),
-                                                    (ln.irc_normal, u"\u000F")):
-         mi = gtk.MenuItem()
-         l = gtk.Label()
-         l.set_alignment(0.0, 0.5)
-         l.set_markup(menutext)
-         mi.add(l)
-         l.show()
-         mi.connect("activate", self._on_menu_item_activate, entry, code)
-         submenu.append(mi)
-         mi.show()
+      def sub(pairs):
+         for menutext, code in pairs:
+            mi = gtk.MenuItem()
+            l = gtk.Label()
+            l.set_alignment(0.0, 0.5)
+            l.set_markup(menutext)
+            mi.add(l)
+            l.show()
+            mi.connect("activate", self._on_menu_item_activate, entry, code)
+            submenu.append(mi)
+            mi.show()
+
+      sub(zip((ln.artist, ln.title, ln.album, ln.songname), (u"%r", u"%t", u"%l", u"%s")))
+
+      s = gtk.SeparatorMenuItem()
+      submenu.append(s)
+      s.show()
+      
+      sub(zip((ln.irc_bold, ln.irc_underline, ln.irc_normal), (u"\u0002", u"\u001F", u"\u000F")))
       
       for each in ("0-7", "8-15"):
          mi = gtk.MenuItem(" ".join(("Colours", each)))
@@ -160,7 +168,7 @@ class IRCEntry(gtk.Entry):
       
       cursor = entry.get_position()
       entry.insert_text(code, cursor)
-      entry.set_position(cursor + 1)
+      entry.set_position(cursor + len(code))
 
 
    def _on_menu_insert_colour_code(self, menuitem, entry, code):

@@ -102,6 +102,8 @@ agc_ducker_tip = "The ducker automatically reduces the level of player audio whe
 
 agc_phaserotator_tip = "This feature processes the microphone audio so that it sounds more even. The effect is particularly noticable on male voices."
 
+album = "Album"
+
 all = "All"
 
 alternate = "Alternate"
@@ -135,6 +137,8 @@ app_start_tip = "When IDJC starts run the commands to the right."
 append = "Append"
 
 append_cursor = "Append Cursor"
+
+artist = "Artist"
 
 ask_profile = "At startup ask which profile to use"
 
@@ -1255,6 +1259,8 @@ server_type_codes = ("I2M", "SM", "I2R", "SR")
 server_type_labels = ("Icecast 2 Master", "Shoutcast Master",
                       "Icecast 2 Stats/Relay", "Shoutcast Stats/Relay")
 
+songname = "Song name"
+
 stream_details = "Configuration"
 
 stream_details_tip = "The controls for configuring a stream."
@@ -1442,6 +1448,8 @@ time = "Time"
 timer = "Timer:"
 
 timed_out = ('Automatically disconnected from the server,', 'after the connection timed out.')
+
+title = "Title"
 
 to_here = "To Here"
 
