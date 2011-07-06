@@ -104,6 +104,8 @@ agc_phaserotator_tip = "This feature processes the microphone audio so that it s
 
 album = "Album"
 
+album_ircview = "<Album>"
+
 all = "All"
 
 alternate = "Alternate"
@@ -139,6 +141,8 @@ append = "Append"
 append_cursor = "Append Cursor"
 
 artist = "Artist"
+
+artist_ircview = "<Artist>"
 
 ask_profile = "At startup ask which profile to use"
 
@@ -354,6 +358,10 @@ delete_mode_tip = "This button toggles delete mode which allows the removal of t
 
 description = "Description:"
 
+description_popup = "Description"
+
+description_ircview = "<Description>"
+
 description_tip = "A description of your radio station."
 
 digiprogress_tip = "Left click toggles between showing the amount of time elapsed or remaining on the current track being played."
@@ -379,6 +387,10 @@ dj_audio_level = "DJ Aud Level"
 dj_audio_tip = "This adjusts the sound level of the DJ audio."
 
 dj_name = "DJ Name:"
+
+dj_name_popup = "DJ name"
+
+dj_name_ircview = "<DJ name>"
 
 dj_name_tip = "Enter your DJ name or station name here. Typically this information will be displayed by listener clients."
 
@@ -713,6 +725,10 @@ listener_indicator_tip = "The combined total number of listeners in all server t
 listen_tip = "Make output from this player audible to the DJ."
 
 listen_url = "Listen URL:"
+
+listen_url_popup = "Listen URL"
+
+listen_url_ircview = "<Listen URL>"
 
 listen_url_tip = "The URL of your radio station. This and the rest of the information below is intended for display on a radio station listings website."
 
@@ -1261,6 +1277,8 @@ server_type_labels = ("Icecast 2 Master", "Shoutcast Master",
 
 songname = "Song name"
 
+songname_ircview = "<Song name>"
+
 stream_details = "Configuration"
 
 stream_details_tip = "The controls for configuring a stream."
@@ -1450,6 +1468,8 @@ timer = "Timer:"
 timed_out = ('Automatically disconnected from the server,', 'after the connection timed out.')
 
 title = "Title"
+
+title_ircview = "<Title>"
 
 to_here = "To Here"
 

@@ -32,6 +32,7 @@ except ImportError:
 
 from idjc.prelims import ProfileManager
 from .gtkstuff import DefaultEntry
+from .freefunctions import string_multireplace
 from .ln_text import ln
 
 
@@ -117,7 +118,9 @@ class IRCEntry(gtk.Entry):
             submenu.append(mi)
             mi.show()
 
-      sub(zip((ln.artist, ln.title, ln.album, ln.songname), (u"%r", u"%t", u"%l", u"%s")))
+      sub(zip((ln.artist, ln.title, ln.album, ln.songname, ln.dj_name_popup,
+                                 ln.description_popup, ln.listen_url_popup),
+                                 (u"%r", u"%t", u"%l", u"%s", u"%n", u"%d", u"%u")))
 
       s = gtk.SeparatorMenuItem()
       submenu.append(s)
@@ -210,6 +213,12 @@ class IRCView(gtk.TextView):
       ))
 
 
+   readable_equiv = (("%r", ln.artist_ircview), ("%t", ln.title_ircview),
+      ("%l", ln.album_ircview), ("%s", ln.songname_ircview),
+      ("%n", ln.dj_name_ircview), ("%d", ln.description_ircview),
+      ("%u", ln.listen_url_ircview))
+
+
    def __init__(self):
       gtk.TextView.__init__(self)
       self.set_size_request(500, -1)
@@ -218,7 +227,9 @@ class IRCView(gtk.TextView):
       self.set_cursor_visible(False)
 
 
-   def set_text(self, text, cursor_position):
+   def set_text(self, text):
+      text = string_multireplace(text, self.readable_equiv)
+      
       b = self.get_buffer()
       b.remove_all_tags(b.get_start_iter(), b.get_end_iter())
       b.delete(b.get_start_iter(), b.get_end_iter())
@@ -432,14 +443,10 @@ class MessageDialog(gtk.Dialog):
       self.hbox.pack_start(self.image, False, padding=20)
       self.hbox.pack_start(vbox)
       
-      self.message.connect("changed", self._on_message_changed, irc_view)
+      self.message.connect("changed", lambda w: irc_view.set_text(w.get_text()))
       
       self.get_content_area().add(self.hbox)
       self.channels.grab_focus()
-      
-      
-   def _on_message_changed(self, entry, irc_view):
-      irc_view.set_text(entry.get_text(), entry.props.cursor_position)
       
       
    def _from_channels(self):
@@ -621,7 +628,7 @@ class IRCTreeView(gtk.TreeView):
             if mode in (3, 5, 7, 9):
                message = model.get_value(iter, 5)
                irc_view = IRCView()
-               irc_view.set_text(message, 0)
+               irc_view.set_text(message)
                tooltip.set_custom(irc_view)
                return True
 
