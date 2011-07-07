@@ -40,6 +40,12 @@ from ..utils import PathStr
 default = "default"
 
 
+config_files = ("config", "controls", "left_session", "main_session",
+   "main_session_files_played", "main_session_tracks", "playerdefaults",
+   "right_session", "s_data", "mic1", "mic2", "mic3", "mic4", "mic5",
+   "mic6", "mic7", "mic8", "mic9", "mic10", "mic11", "mic12")
+
+
 class ArgumentParserError(Exception):
    pass
 
@@ -340,11 +346,12 @@ class ProfileManager(object):
                
                tdir = PGlobs.profile_dir / template
                if os.path.isdir(tdir):
-                  for x in self._optionals + ("config", ):
+                  for x in self._optionals + config_files:
                      try:
                         shutil.copyfile(tdir / x, tmp / x)
                      except EnvironmentError:
                         pass
+                  shutil.copytree(tdir / "jingles", tmp / "jingles")
                else:
                   raise ProfileError(
                      "template profile '%s' does not exist" % template,

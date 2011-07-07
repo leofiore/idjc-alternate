@@ -180,7 +180,7 @@ class NewProfileDialog(gtk.Dialog):
       gtk.Dialog.__init__(self)
       self.set_modal(True)
       self.set_destroy_with_parent(True)
-      self.set_size_request(330, -1)
+      self._icon_dialog.set_transient_for(self)
       
       if row is not None:
          if edit:
@@ -192,32 +192,42 @@ class NewProfileDialog(gtk.Dialog):
          title = "New profile details"
       self.set_title(title + title_extra)
 
-      vbox = gtk.VBox()
-      vbox.set_border_width(5)
-      vbox.set_spacing(5)
+      hbox = gtk.HBox()
+      hbox.set_border_width(6)
+      if edit:
+         icon = gtk.STOCK_EDIT
+      else:
+         icon = gtk.STOCK_COPY if row else gtk.STOCK_NEW
+      self.image = gtk.image_new_from_stock(icon, gtk.ICON_SIZE_DIALOG)
+      self.image.set_alignment(0.5, 0)
+      hbox.pack_start(self.image, False, padding=20)
+      table = gtk.Table(2, 4)
+      table.set_row_spacings(6)
+      table.set_col_spacing(0, 6)
+      hbox.pack_start(table)
 
-      labels = (gtk.Label(x) for x in ("Profile name:",
-                        "Icon:", "Nickname:", "Description:"))
+      labels = ("Profile name:", "Icon:", "Nickname:", "Description:")
       names = ("profile_entry", "icon_button", "nickname_entry",
                                           "description_entry")
       widgets = (ProfileEntry(), IconChooserButton(self._icon_dialog),
                  gtk.Entry(), gtk.Entry())
-      for label, name, widget in zip(labels, names, widgets):
-         item_vbox = gtk.VBox()
-         item_vbox.add(label)
-         label.set_alignment(0, 0.5)
-         item_vbox.add(widget)
-         setattr(self, name, widget)
-         vbox.add(item_vbox)
-                                          
-      self._icon_dialog.set_transient_for(self)
 
-      self.get_content_area().add(vbox)
+      for i, (label, name, widget) in enumerate(zip(labels, names, widgets)):
+         label = gtk.Label(label)
+         label.set_alignment(1.0, 0.5)
+         table.attach(label, 0, 1, i, i + 1, gtk.SHRINK | gtk.FILL)
+
+         table.attach(widget, 1, 2, i, i + 1, yoptions=gtk.SHRINK)
+         setattr(self, name, widget)
+
+      self.profile_entry.set_width_chars(24)
+
+      self.get_content_area().add(hbox)
       box = self.get_action_area()
 
       if row is not None:
          profile = row[1] if edit else ""
-         revert = gtk.Button(stock=gtk.STOCK_REVERT_TO_SAVED)
+         revert = gtk.Button(stock=gtk.STOCK_REFRESH)
          revert.connect("clicked", self._revert, row, edit)
          revert.clicked()
          box.add(revert)
