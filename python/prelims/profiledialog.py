@@ -55,10 +55,6 @@ class IconChooserButton(gtk.Button):
    
    def __init__(self, dialog):
       gtk.Button.__init__(self)
-      filefilter = gtk.FileFilter()
-      filefilter.set_name("Supported Image Formats")
-      filefilter.add_pixbuf_formats()
-      dialog.add_filter(filefilter)
       dialog.set_icon_from_file(PGlobs.default_icon)
 
       hbox = gtk.HBox()
@@ -121,6 +117,11 @@ class IconChooserButton(gtk.Button):
 class IconPreviewFileChooserDialog(gtk.FileChooserDialog):
    def __init__(self, *args, **kwds):
       gtk.FileChooserDialog.__init__(self, *args, **kwds)
+      filefilter = gtk.FileFilter()
+      filefilter.set_name("Supported Image Formats")
+      filefilter.add_pixbuf_formats()
+      self.add_filter(filefilter)
+
       vbox = gtk.VBox()
       frame = gtk.Frame()
       vbox.pack_start(frame, expand=True, fill=False)
