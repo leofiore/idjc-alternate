@@ -176,16 +176,21 @@ class NewProfileDialog(gtk.Dialog):
                              gtk.STOCK_OK, gtk.RESPONSE_OK))
    
    
-   def __init__(self, row, filter_function=None, title_extra = ""):
+   def __init__(self, row, filter_function=None, title_extra = "", edit=False):
       gtk.Dialog.__init__(self)
       self.set_modal(True)
       self.set_destroy_with_parent(True)
       self.set_size_request(330, -1)
       
       if row is not None:
-         self.set_title("New profile based upon %s" % row[1] + title_extra)
+         if edit:
+            title = "Edit profile %s"
+         else:
+            title = "New profile based upon %s"
+         title %= row[1]
       else:
-         self.set_title("New profile details" + title_extra)
+         title = "New profile details"
+      self.set_title(title + title_extra)
 
       vbox = gtk.VBox()
       vbox.set_border_width(5)
@@ -207,22 +212,33 @@ class NewProfileDialog(gtk.Dialog):
                                           
       self._icon_dialog.set_transient_for(self)
 
+      self.get_content_area().add(vbox)
+      box = self.get_action_area()
+
       if row is not None:
-         self.icon_button.set_filename(row[4])
-         self.nickname_entry.set_text(row[5])
-         self.description_entry.set_text(row[2])
+         profile = row[1] if edit else ""
+         revert = gtk.Button(stock=gtk.STOCK_REVERT_TO_SAVED)
+         revert.connect("clicked", self._revert, row, edit)
+         revert.clicked()
+         box.add(revert)
+         box.set_child_secondary(revert, True)
       else:
          self.icon_button.set_filename(None)
-         
-      self.get_content_area().add(vbox)
-         
-      box = gtk.HButtonBox()
+
       cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
       cancel.connect("clicked", lambda w: self.destroy())
       box.add(cancel)
       self.ok = gtk.Button(stock=gtk.STOCK_OK)
       box.add(self.ok)
-      self.get_action_area().add(box)
+
+
+   def _revert(self, widget, row, edit):
+      profile_text = row[1] if edit else ""
+      self.profile_entry.set_text(profile_text)
+      self.icon_button.set_filename(row[4])
+      self.nickname_entry.set_text(row[5])
+      self.description_entry.set_text(row[2])
+      self.profile_entry.grab_focus()
 
 
    @classmethod
