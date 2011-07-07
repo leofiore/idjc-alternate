@@ -284,7 +284,7 @@ class ProfileManager(object):
       if profile is not dialog.profile:
          try:
             busname = self._grab_bus_name_for_profile(profile)
-            shutil.rmtree(pm.basedir)
+            shutil.rmtree(PGlobs.profile_dir / profile)
          except dbus.DBusException:
             pass
          if profile == default:

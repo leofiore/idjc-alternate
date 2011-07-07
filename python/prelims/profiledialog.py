@@ -43,6 +43,10 @@ from ..gtkstuff import threadslock
 
 
 
+gtk.window_set_default_icon_from_file(PGlobs.default_icon)
+
+
+
 class IconChooserButton(gtk.Button):
    """Imitate a FileChooserButton but specific to image types.
    
@@ -262,10 +266,12 @@ class ProfileDialog(gtk.Dialog):
       self._olddata = ()
       self._title_extra = ""
 
-      gtk.window_set_default_icon_from_file(PGlobs.default_icon)
       gtk.Dialog.__init__(self, "IDJC Profile Manager")
       self.set_size_request(500, 300)
+      self.set_border_width(6)
+      self.get_child().set_spacing(12)
       w = gtk.ScrolledWindow()
+      w.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
       w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       self.get_content_area().add(w)
       self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int, str, str, int)
@@ -307,22 +313,19 @@ class ProfileDialog(gtk.Dialog):
       self.treeview.append_column(c4)
       self.selection = self.treeview.get_selection()
       self.selection.connect("changed", self._cb_selection)
-      box = gtk.HButtonBox()
-      box.set_layout(gtk.BUTTONBOX_START)
-      self.get_action_area().add(box)
-      self.new = gtk.Button(stock=gtk.STOCK_NEW)
-      box.pack_start(self.new)
-      self.clone = gtk.Button(stock=gtk.STOCK_COPY)
-      box.pack_start(self.clone)
-      self.delete = gtk.Button(stock=gtk.STOCK_DELETE)
-      box.pack_start(self.delete)
-      self.cancel = gtk.Button(stock=gtk.STOCK_QUIT)
+      box = self.get_action_area()
+      box.set_spacing(6)
+      for attr, label, sec in zip(
+                        ("new", "clone", "delete", "cancel", "choose"), 
+                        (gtk.STOCK_NEW, gtk.STOCK_COPY, gtk.STOCK_DELETE,
+                         gtk.STOCK_QUIT, gtk.STOCK_OPEN),
+                        (True,) * 3 + (False,) * 2):
+         w = gtk.Button(stock=label)
+         box.add(w)
+         box.set_child_secondary(w, sec)
+         setattr(self, attr, w)
+
       self.cancel.connect("clicked", self._cb_cancel)
-      box.pack_start(self.cancel)
-      box.set_child_secondary(self.cancel, True)
-      self.choose = gtk.Button(stock=gtk.STOCK_OPEN)
-      box.pack_start(self.choose)
-      box.set_child_secondary(self.choose, True)
       self.set_data_function(data_function)
       self.connect("notify::visible", self._cb_visible)
       for each in self._signal_names:
