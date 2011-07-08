@@ -97,53 +97,60 @@ class CellRendererTime(gtk.CellRendererText):
 
 
 class StandardDialog(gtk.Dialog):
-   def __init__(self, title, message, stock_item, label_width, modal):
+   def __init__(self, title, message, stock_item, label_width, modal, markup):
       gtk.Dialog.__init__(self)
+      self.set_border_width(6)
+      self.get_child().set_spacing(12)
       self.set_modal(modal)
       self.set_destroy_with_parent(True)
       self.set_title(title)
       self.set_icon_from_file(PGlobs.default_icon)
       
       hbox = gtk.HBox()
-      hbox.set_border_width(10)
+      hbox.set_spacing(12)
+      hbox.set_border_width(6)
       image = gtk.image_new_from_stock(stock_item,
                                           gtk.ICON_SIZE_DIALOG)
-      hbox.pack_start(image, False, padding=30)
+      image.set_alignment(0.0, 0.0)
+      hbox.pack_start(image, False)
       vbox = gtk.VBox()
       hbox.pack_start(vbox)
       for each in message.split("\n"):
          label = gtk.Label(each)
-         label.set_alignment(0, 0.5)
+         label.set_use_markup(markup)
+         label.set_alignment(0.0, 0.0)
          label.set_size_request(label_width, -1)
          label.set_line_wrap(True)
          vbox.pack_start(label)
-      self.get_content_area().add(hbox)
+      ca = self.get_content_area()
+      ca.add(hbox)
+      aa = self.get_action_area()
+      aa.set_spacing(6)
 
 
 
 class ConfirmationDialog(StandardDialog):
    """This needs to be pulled out since it's generic."""
    
-   def __init__(self, title, message, label_width=300, modal=True):
+   def __init__(self, title, message, label_width=300, modal=True, markup=False):
       StandardDialog.__init__(self, title, message,
-                     gtk.STOCK_DIALOG_QUESTION, label_width, modal)
-      box = gtk.HButtonBox()
+                     gtk.STOCK_DIALOG_WARNING, label_width, modal, markup)
+      aa = self.get_action_area()
       cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
       cancel.connect("clicked", lambda w: self.destroy())
-      box.pack_start(cancel)
-      self.ok = gtk.Button(stock=gtk.STOCK_OK)
+      aa.pack_start(cancel)
+      self.ok = gtk.Button(stock=gtk.STOCK_DELETE)
       self.ok.connect_after("clicked", lambda w: self.destroy())
-      box.pack_start(self.ok)
-      self.get_action_area().add(box)
+      aa.pack_start(self.ok)
 
 
 
 class ErrorMessageDialog(StandardDialog):
    """This needs to be pulled out since it's generic."""
    
-   def __init__(self, title, message, label_width=300, modal=True):
+   def __init__(self, title, message, label_width=300, modal=True, markup=False):
       StandardDialog.__init__(self, title, message,
-                     gtk.STOCK_DIALOG_ERROR, label_width, modal)
+                     gtk.STOCK_DIALOG_ERROR, label_width, modal, markup)
       b = gtk.Button(stock=gtk.STOCK_CLOSE)
       b.connect("clicked", lambda w: self.destroy())
       self.get_action_area().add(b)

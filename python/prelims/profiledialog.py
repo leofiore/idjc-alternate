@@ -235,6 +235,10 @@ class NewProfileDialog(gtk.Dialog):
       else:
          self.icon_button.set_filename(None)
 
+      if edit:
+         self.delete = gtk.Button(stock=gtk.STOCK_DELETE)
+         self.delete.connect_after("clicked", lambda w: self.destroy())
+         box.add(self.delete)
       cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
       cancel.connect("clicked", lambda w: self.destroy())
       box.add(cancel)
@@ -272,8 +276,8 @@ class ProfileDialog(gtk.Dialog):
                         "selected profile is active",
                         0, gobject.PARAM_READABLE),}
 
-   _signal_names = "delete", "choose"
-   _new_profile_dialog_signal_names = "new", "clone"
+   _signal_names = "choose", "delete"
+   _new_profile_dialog_signal_names = "new", "clone", "edit"
 
    __gsignals__ = { "selection-active-changed" : (
                         gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
@@ -343,15 +347,16 @@ class ProfileDialog(gtk.Dialog):
       box = self.get_action_area()
       box.set_spacing(6)
       for attr, label, sec in zip(
-                        ("new", "clone", "delete", "cancel", "choose"), 
-                        (gtk.STOCK_NEW, gtk.STOCK_COPY, gtk.STOCK_DELETE,
-                         gtk.STOCK_QUIT, gtk.STOCK_OPEN),
-                        (True,) * 3 + (False,) * 2):
+                        ("new", "clone", "edit", "delete", "cancel", "choose"), 
+                        (gtk.STOCK_NEW, gtk.STOCK_COPY, gtk.STOCK_EDIT,
+                         gtk.STOCK_DELETE, gtk.STOCK_QUIT, gtk.STOCK_OPEN),
+                        (True,) * 4 + (False,) * 2):
          w = gtk.Button(stock=label)
          box.add(w)
          box.set_child_secondary(w, sec)
          setattr(self, attr, w)
 
+      self.delete.set_no_show_all(True)
       self.cancel.connect("clicked", self._cb_cancel)
       self.set_data_function(data_function)
       self.connect("notify::visible", self._cb_visible)
@@ -387,7 +392,7 @@ class ProfileDialog(gtk.Dialog):
    def do_selection_active_changed(self, state):
       state = not state
       self.choose.set_sensitive(state and self._profile is None)
-      self.delete.set_sensitive(state)
+      self.edit.set_sensitive(state)
       self.clone.set_sensitive(state)
 
    
@@ -398,11 +403,14 @@ class ProfileDialog(gtk.Dialog):
             self._update_data()
 
          if signal == "delete":
-            message = "Delete profile: %s?" % self._highlighted
+            message = "<span weight='bold' size='12000'>Delete profile: %s?</span>" % self._highlighted
             if self._highlighted == self._default:
                message += "\n\nThis profile is protected and will" \
-               " be recreated with initial settings."
-            conf = ConfirmationDialog("Confirmation" + self._title_extra, message)
+               " be recreated with initial settings." \
+               "\n\nThis action cannot be undone."
+            else:
+               message += "\n\nData in deleted profiles cannot be recovered."
+            conf = ConfirmationDialog("", message, markup=True)
             conf.set_transient_for(self)
             conf.ok.connect("clicked", lambda w: commands())
             conf.show_all()
@@ -411,7 +419,7 @@ class ProfileDialog(gtk.Dialog):
 
    
    def _cb_new_profile_dialog(self, widget, action):
-      if action == "clone":
+      if action in ("clone", "edit"):
          if self._highlighted is None:
             return
          row = self._get_row_for_profile(self._highlighted)
@@ -421,7 +429,8 @@ class ProfileDialog(gtk.Dialog):
          template = None
          
       np_dialog = self._new_profile_dialog = NewProfileDialog(row,
-                                    title_extra = self._title_extra)
+               title_extra = self._title_extra, edit=action=="edit")
+      np_dialog.set_transient_for(self)
       
       def sub_ok(widget):
          profile = np_dialog.profile_entry.get_text()
@@ -431,8 +440,9 @@ class ProfileDialog(gtk.Dialog):
          self.emit(action, profile, template, icon, nickname, description)
          self._update_data()
          
-      np_dialog.set_transient_for(self)
       np_dialog.ok.connect("clicked", sub_ok)
+      if action == "edit":
+         np_dialog.delete.connect("clicked", lambda w: self.delete.clicked())
       np_dialog.show_all()
 
 
