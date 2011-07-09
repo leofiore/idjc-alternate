@@ -192,7 +192,6 @@ class ProfileManager(object):
 
 
 
-
    def __init__(self):
       ap = ArgumentParserImplementation()
       args = ap.parse_args()

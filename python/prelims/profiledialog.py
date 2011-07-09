@@ -233,7 +233,7 @@ class NewProfileDialog(gtk.Dialog):
          box.add(revert)
          box.set_child_secondary(revert, True)
       else:
-         self.icon_button.set_filename(None)
+         self.icon_button.set_filename(PGlobs.default_icon)
 
       if edit:
          self.delete = gtk.Button(stock=gtk.STOCK_DELETE)
@@ -274,20 +274,33 @@ class ProfileDialog(gtk.Dialog):
    __gproperties__ = {  "selection-active" : (gobject.TYPE_BOOLEAN, 
                         "selection active", 
                         "selected profile is active",
-                        0, gobject.PARAM_READABLE),}
+                        0, gobject.PARAM_READABLE),
+                        
+                        "selection": (str, "profile selection", 
+                        "profile selected in profile manager",
+                        "", MAX_PROFILE_LENGTH)
+   }
 
    _signal_names = "choose", "delete"
    _new_profile_dialog_signal_names = "new", "clone", "edit"
 
    __gsignals__ = { "selection-active-changed" : (
                         gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                        (gobject.TYPE_BOOLEAN,)) }
+                        (str, gobject.TYPE_BOOLEAN,)),
+                        
+                    "selection-changed" : (
+                        gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
+                        (str,))
+   }
+
    __gsignals__.update(dict(
          (x, (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
          (gobject.TYPE_STRING,))) for x in (_signal_names)))
+
    __gsignals__.update(dict(
          (x, (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-         (gobject.TYPE_STRING,) * 5)) for x in (_new_profile_dialog_signal_names)))
+         (gobject.TYPE_STRING,) * (5 + (x == "edit"))))
+         for x in (_new_profile_dialog_signal_names)))
 
 
    def __init__(self, default, data_function=None):
@@ -385,11 +398,13 @@ class ProfileDialog(gtk.Dialog):
    def do_get_property(self, prop):
       if prop.name == "selection-active":
          return self._selection_active
+      elif prop.name == "selection":
+         return self._highlighted
       else:
          raise AttributeError("unknown property: %s" % prop.name)
    
 
-   def do_selection_active_changed(self, state):
+   def do_selection_active_changed(self, profile, state):
       state = not state
       self.choose.set_sensitive(state and self._profile is None)
       self.edit.set_sensitive(state)
@@ -437,7 +452,12 @@ class ProfileDialog(gtk.Dialog):
          icon = np_dialog.icon_button.get_filename()
          description = np_dialog.description_entry.get_text().strip()
          nickname = np_dialog.nickname_entry.get_text().strip()
-         self.emit(action, profile, template, icon, nickname, description)
+         if action == "edit":
+            self.emit(action, profile, template, icon, nickname,
+                                                   description, template)
+         else:
+            self.emit(action, profile, template, icon, nickname,
+                                                            description)
          self._update_data()
          
       np_dialog.ok.connect("clicked", sub_ok)
@@ -466,14 +486,17 @@ class ProfileDialog(gtk.Dialog):
    def _cb_selection(self, ts):
       model, iter = ts.get_selected()
       if iter is not None:
-         self._highlighted = model.get_value(iter, 1)
+         highlighted = model.get_value(iter, 1)
          active = model.get_value(iter, 3)
       else:
-         self._highlighted = None
-         active = True
+         highlighted = None
+         active = False
+      if highlighted != self._highlighted:
+         self._highlighted = highlighted
+         self.emit("selection-changed", self._highlighted)
       if active != self._selection_active:
          self._selection_active = active
-         self.emit("selection-active-changed", active)
+         self.emit("selection-active-changed", self._highlighted, active)
             
       
    def _highlight_profile(self, target):
@@ -517,6 +540,7 @@ class ProfileDialog(gtk.Dialog):
             self._olddata = data
 
             h = self._highlighted
+            self.selection.handler_block_by_func(self._cb_selection)
             self.store.clear()
             for d in data:
                if d["icon"] is not None:
@@ -538,6 +562,7 @@ class ProfileDialog(gtk.Dialog):
                nick = d["nickname"] or ""
                uptime = d["uptime"]
                self.store.append((pb, d["profile"], desc, active, i or "", nick, uptime))
+            self.selection.handler_unblock_by_func(self._cb_selection)
             self._highlight_profile(h)
       return self.props.visible
       
