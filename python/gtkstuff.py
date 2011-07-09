@@ -104,7 +104,6 @@ class StandardDialog(gtk.Dialog):
       self.set_modal(modal)
       self.set_destroy_with_parent(True)
       self.set_title(title)
-      self.set_icon_from_file(PGlobs.default_icon)
       
       hbox = gtk.HBox()
       hbox.set_spacing(12)

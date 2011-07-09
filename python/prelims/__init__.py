@@ -221,17 +221,20 @@ class ProfileManager(object):
          self._profile_dialog = self._get_profile_dialog()
          self._profile_dialog.connect("delete", self._cb_delete_profile)
          self._profile_dialog.connect("choose", self._choose_profile)
+
          def new_profile(dialog, profile, template, icon, nickname, description):
             try:
                self._generate_profile(profile, template, icon=icon,
                            nickname=nickname, description=description)
                dialog.destroy_new_profile_dialog()
             except ProfileError as e:
-               dialog.display_error("Error while creating new profile",
-               e.gui_text, transient_parent=dialog.get_new_profile_dialog())
+               dialog.display_error("<span weight='bold' size='12000'>" \
+               "Error while creating new profile.</span>\n\n" + e.gui_text,
+               transient_parent=dialog.get_new_profile_dialog(), markup=True)
 
          self._profile_dialog.connect("new", new_profile)
          self._profile_dialog.connect("clone", new_profile)
+         self._profile_dialog.connect("edit", self._cb_edit_profile)
          if dialog_selects:
             self._profile_dialog.run()
             self._profile_dialog.hide()
@@ -285,6 +288,49 @@ class ProfileManager(object):
       self._profile_dialog.show_all()
       
       
+   def _cb_edit_profile(self, dialog, newprofile, oldprofile, *opts):
+      busses = []
+      
+      try:
+         try:
+            busses.append(self._grab_bus_name_for_profile(oldprofile))
+            if newprofile != oldprofile:
+               busses.append(self._grab_bus_name_for_profile(newprofile))
+         except dbus.DBusException:
+            raise ProfileError(None, "Profile %s is active." % 
+                                    (oldprofile, newprofile)[len(busses)])
+
+         if newprofile != oldprofile:
+            try:
+               shutil.copytree(PGlobs.profile_dir / oldprofile,
+                                       PGlobs.profile_dir / newprofile)
+            except EnvironmentError as e:
+               if e.errno == 17:
+                  raise ProfileError(None, 
+                  "Cannot rename profile {0} to {1}, {1} currently exists.".format(
+                                                oldprofile, newprofile))
+               else:
+                  raise ProfileError(None, 
+                           "Error during attempt to rename %s to %s." %
+                                                (oldprofile, newprofile))
+
+            shutil.rmtree(PGlobs.profile_dir / oldprofile)
+
+         for name, data in zip(self._optionals, opts):
+            with open(PGlobs.profile_dir / newprofile / name, "w") as f:
+               f.write(data)
+
+      except ProfileError, e:
+         text = "<span weight='bold' size='12000'>%s %s.</span>" % (
+                        "Error while editing profile:", oldprofile) + \
+                        "\n\n" + e.gui_text
+
+         dialog.display_error(text, markup=True,
+                        transient_parent=dialog.get_new_profile_dialog())
+      else:
+         dialog.destroy_new_profile_dialog()
+      
+      
    def _cb_delete_profile(self, dialog, profile):
       if profile is not dialog.profile:
          try:
@@ -297,7 +343,7 @@ class ProfileManager(object):
       
    
    def _choose_profile(self, dialog, profile, verbose=False):
-      if dialog._profile is None:
+      if dialog.profile is None:
          try:
             self._dbus_bus_name = self._grab_bus_name_for_profile(profile)
          except dbus.DBusException:

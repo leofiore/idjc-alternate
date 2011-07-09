@@ -28,7 +28,7 @@ import gtk
 import pango
 
 from idjc import PGlobs, FGlobs
-from idjc.prelims import MAX_PROFILE_LENGTH, profile_name_valid
+from idjc.prelims import MAX_PROFILE_LENGTH, profile_name_valid, default
 from ..utils import Singleton
 
 gtk.gdk.threads_init()
@@ -245,6 +245,8 @@ class NewProfileDialog(gtk.Dialog):
          self.icon_button.set_filename(PGlobs.default_icon)
 
       if edit:
+         if self.profile_entry.get_text() == default:
+            self.profile_entry.set_sensitive(False)
          self.delete = gtk.Button(stock=gtk.STOCK_DELETE)
          self.delete.connect_after("clicked", lambda w: self.destroy())
          bb.add(self.delete)
@@ -308,8 +310,13 @@ class ProfileDialog(gtk.Dialog):
 
    __gsignals__.update(dict(
          (x, (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-         (gobject.TYPE_STRING,) * (5 + (x == "edit"))))
+         (gobject.TYPE_STRING,) * 5))
          for x in (_new_profile_dialog_signal_names)))
+
+
+   @property
+   def profile(self):
+      return self._profile
 
 
    def __init__(self, default, data_function=None):
@@ -388,10 +395,9 @@ class ProfileDialog(gtk.Dialog):
          getattr(self, each).connect("clicked", self._cb_new_profile_dialog, each)
     
    
-   def display_error(self, title, message, transient_parent=None):
-      error_dialog = ErrorMessageDialog(title + self._title_extra, message)
+   def display_error(self, message, transient_parent=None, markup=False):
+      error_dialog = ErrorMessageDialog("", message, markup=markup)
       error_dialog.set_transient_for(transient_parent or self)
-      error_dialog.set_icon_from_file(PGlobs.default_icon)
       error_dialog.show_all()
 
    
@@ -461,13 +467,9 @@ class ProfileDialog(gtk.Dialog):
          icon = np_dialog.icon_button.get_filename()
          description = np_dialog.description_entry.get_text().strip()
          nickname = np_dialog.nickname_entry.get_text().strip()
-         if action == "edit":
-            self.emit(action, profile, template, icon, nickname,
-                                                   description, template)
-         else:
-            self.emit(action, profile, template, icon, nickname,
-                                                            description)
+         self.emit(action, profile, template, icon, nickname, description)
          self._update_data()
+         self._highlight_profile(profile)
          
       np_dialog.ok.connect("clicked", sub_ok)
       if action == "edit":
