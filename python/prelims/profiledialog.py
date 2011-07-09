@@ -104,6 +104,11 @@ class IconChooserButton(gtk.Button):
       response = dialog.run()
       if response == gtk.RESPONSE_OK:
          self.set_filename(dialog.get_filename())
+      elif response == gtk.RESPONSE_NONE:
+         filename = self.get_filename()
+         if filename is not None:
+            dialog.set_filename(filename)
+         self.set_filename(None)
       dialog.hide()
 
 
@@ -172,12 +177,15 @@ class ProfileEntry(gtk.Entry):
 
 class NewProfileDialog(gtk.Dialog):
    _icon_dialog = IconPreviewFileChooserDialog("Choose An Icon",
-                  buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                  buttons = (gtk.STOCK_CLEAR, gtk.RESPONSE_NONE,
+                             gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                              gtk.STOCK_OK, gtk.RESPONSE_OK))
    
    
    def __init__(self, row, filter_function=None, title_extra = "", edit=False):
       gtk.Dialog.__init__(self)
+      self.set_border_width(6)
+      self.get_child().set_spacing(12)
       self.set_modal(True)
       self.set_destroy_with_parent(True)
       self._icon_dialog.set_transient_for(self)
@@ -194,13 +202,14 @@ class NewProfileDialog(gtk.Dialog):
 
       hbox = gtk.HBox()
       hbox.set_border_width(6)
+      hbox.set_spacing(12)
       if edit:
          icon = gtk.STOCK_EDIT
       else:
          icon = gtk.STOCK_COPY if row else gtk.STOCK_NEW
       self.image = gtk.image_new_from_stock(icon, gtk.ICON_SIZE_DIALOG)
-      self.image.set_alignment(0.5, 0)
-      hbox.pack_start(self.image, False, padding=20)
+      self.image.set_alignment(0.0, 0.0)
+      hbox.pack_start(self.image, False)
       table = gtk.Table(2, 4)
       table.set_row_spacings(6)
       table.set_col_spacing(0, 6)
@@ -214,36 +223,36 @@ class NewProfileDialog(gtk.Dialog):
 
       for i, (label, name, widget) in enumerate(zip(labels, names, widgets)):
          label = gtk.Label(label)
-         label.set_alignment(1.0, 0.5)
+         label.set_alignment(1.0, 0.0)
          table.attach(label, 0, 1, i, i + 1, gtk.SHRINK | gtk.FILL)
 
          table.attach(widget, 1, 2, i, i + 1, yoptions=gtk.SHRINK)
          setattr(self, name, widget)
 
-      self.profile_entry.set_width_chars(24)
-
+      self.profile_entry.set_width_chars(30)
       self.get_content_area().add(hbox)
-      box = self.get_action_area()
+      bb = self.get_action_area()
+      bb.set_spacing(6)
 
       if row is not None:
          profile = row[1] if edit else ""
          revert = gtk.Button(stock=gtk.STOCK_REFRESH)
          revert.connect("clicked", self._revert, row, edit)
          revert.clicked()
-         box.add(revert)
-         box.set_child_secondary(revert, True)
+         bb.add(revert)
+         bb.set_child_secondary(revert, True)
       else:
          self.icon_button.set_filename(PGlobs.default_icon)
 
       if edit:
          self.delete = gtk.Button(stock=gtk.STOCK_DELETE)
          self.delete.connect_after("clicked", lambda w: self.destroy())
-         box.add(self.delete)
+         bb.add(self.delete)
       cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
       cancel.connect("clicked", lambda w: self.destroy())
-      box.add(cancel)
+      bb.add(cancel)
       self.ok = gtk.Button(stock=gtk.STOCK_OK)
-      box.add(self.ok)
+      bb.add(self.ok)
 
 
    def _revert(self, widget, row, edit):
@@ -313,8 +322,8 @@ class ProfileDialog(gtk.Dialog):
       gtk.Dialog.__init__(self, "IDJC Profile Manager")
       self.set_size_request(500, 300)
       self.set_border_width(6)
-      self.get_child().set_spacing(12)
       w = gtk.ScrolledWindow()
+      w.set_border_width(6)
       w.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
       w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       self.get_content_area().add(w)
