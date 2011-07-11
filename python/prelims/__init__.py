@@ -28,6 +28,8 @@ from functools import partial
 
 import dbus
 import dbus.service
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
 import glib
 
 from idjc import FGlobs
@@ -148,6 +150,19 @@ class ArgumentParserImplementation(object):
 
      
 
+class DBusUptimeReporter(dbus.service.Object):
+   def __init__(self, bus, get_uptime):
+      dbus.service.Object.__init__(self, bus, 
+                              PGlobs.dbus_objects_basename + "/uptime")
+      self._get_uptime = get_uptime
+                           
+                           
+   @dbus.service.method(PGlobs.dbus_bus_basename + ".profile")
+   def get_uptime(self):
+      return self._get_uptime()
+
+
+
 # Profile length limited for practical reasons. For more descriptive
 # purposes the nickname parameter was created.
 MAX_PROFILE_LENGTH = 18
@@ -186,7 +201,7 @@ class ProfileManager(object):
    __metaclass__ = Singleton
    
 
-   _profile = _dbus_bus_name = _profile_dialog = None
+   _profile = _dbus_bus_name = _profile_dialog = _init_time = None
 
    _optionals = ("icon", "nickname", "description")
 
@@ -282,7 +297,14 @@ class ProfileManager(object):
          return "  (%s:%s)" % ((self.profile, n))
       else:
          return "  (%s)" % self.profile
-      
+
+
+   def get_uptime(self):
+      if self._init_time is not None:
+         return time.time() - self._init_time
+      else:
+         return 0.0
+
       
    def show_profile_dialog(self):
       self._profile_dialog.show_all()
@@ -356,6 +378,7 @@ class ProfileManager(object):
             self._iconpathname = self._grab_profile_filetext(
                                profile, "icon") or PGlobs.default_icon
             dialog.set_profile(profile, self.title_extra, self._iconpathname)
+            self._uprep = DBusUptimeReporter(self._dbus_bus_name, self.get_uptime)
 
 
    def _generate_profile(self, newprofile, template=None, **kwds):
