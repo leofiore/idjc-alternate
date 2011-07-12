@@ -24,7 +24,9 @@ import sys
 import argparse
 import shutil
 import tempfile
+import time
 from functools import partial
+from collections import defaultdict
 
 import dbus
 import dbus.service
@@ -151,15 +153,71 @@ class ArgumentParserImplementation(object):
      
 
 class DBusUptimeReporter(dbus.service.Object):
-   def __init__(self, bus, get_uptime):
-      dbus.service.Object.__init__(self, bus, 
-                              PGlobs.dbus_objects_basename + "/uptime")
-      self._get_uptime = get_uptime
+   """Supply uptime to other idjc instances."""
+
+
+   interface_name = PGlobs.dbus_bus_basename + ".profile"
+   obj_path  = PGlobs.dbus_objects_basename + "/uptime"
+   
+   
+   def __init__(self):
+      self._uptime_cache = defaultdict(float)
+      self._interface_cache = {}
+      # Defer base class initialisation.
                            
                            
-   @dbus.service.method(PGlobs.dbus_bus_basename + ".profile")
+   @dbus.service.method(interface_name, out_signature="d")
    def get_uptime(self):
+      """Broadcast uptime from the current profile."""
+      
       return self._get_uptime()
+
+
+   def activate_for_profile(self, bus_name, get_uptime):
+      self._get_uptime = get_uptime
+      dbus.service.Object.__init__(self, bus_name, self.obj_path)
+
+
+   def get_uptime_for_profile(self, profile):
+      """Ask and return the uptime of an active profile.
+      
+      Step 1, Issue an async request for new data.
+      Step 2, Return immediately with the cached value.
+      
+      Note: On error the cache is purged.
+      """
+
+
+      def rh(retval):
+         self._uptime_cache[profile] = retval
+         
+      
+      def eh(exception):
+         try:
+            del self._uptime_cache[profile]
+         except KeyError:
+            pass
+         try:
+            del self._interface_cache[profile]
+         except KeyError:
+            pass
+
+
+      try:
+         interface = self._interface_cache[profile]
+      except KeyError:
+         try:
+            p = dbus.SessionBus().get_object(PGlobs.dbus_bus_basename + \
+                                             "." + profile, self.obj_path)
+            interface = dbus.Interface(p, self.interface_name)
+         except dbus.exceptions.DBusException as e:
+            eh(e)
+            return self._uptime_cache.default_factory()
+         
+         self._interface_cache[profile] = interface
+
+      interface.get_uptime(reply_handler=rh, error_handler=eh)
+      return self._uptime_cache[profile]
 
 
 
@@ -233,6 +291,7 @@ class ProfileManager(object):
          if args.dialog is not None:
             dialog_selects = args.dialog[0] == "true"
          
+         self._uprep = DBusUptimeReporter()
          self._profile_dialog = self._get_profile_dialog()
          self._profile_dialog.connect("delete", self._cb_delete_profile)
          self._profile_dialog.connect("choose", self._choose_profile)
@@ -305,7 +364,7 @@ class ProfileManager(object):
       else:
          return 0.0
 
-      
+
    def show_profile_dialog(self):
       self._profile_dialog.show_all()
       
@@ -362,8 +421,8 @@ class ProfileManager(object):
             pass
          if profile == default:
             self._generate_default_profile()
-      
-   
+
+
    def _choose_profile(self, dialog, profile, verbose=False):
       if dialog.profile is None:
          try:
@@ -372,13 +431,14 @@ class ProfileManager(object):
             if verbose:
                print "profile '%s' is in use" % profile
          else:
+            self._init_time = time.time()
             self._profile = profile
             self._nickname = self._grab_profile_filetext(
                                profile, "nickname") or ""
             self._iconpathname = self._grab_profile_filetext(
                                profile, "icon") or PGlobs.default_icon
             dialog.set_profile(profile, self.title_extra, self._iconpathname)
-            self._uprep = DBusUptimeReporter(self._dbus_bus_name, self.get_uptime)
+            self._uprep.activate_for_profile(self._dbus_bus_name, self.get_uptime)
 
 
    def _generate_profile(self, newprofile, template=None, **kwds):
@@ -476,7 +536,7 @@ class ProfileManager(object):
                   rslt[each] = None
                
             rslt["active"] = self._profile_has_owner(profname)
-            rslt["uptime"] = 0  # ToDo: Use D-Bus to get this value.
+            rslt["uptime"] = self._uprep.get_uptime_for_profile(profname)
             yield rslt
 
 
