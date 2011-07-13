@@ -71,8 +71,8 @@ class HistoryEntryWithMenu(HistoryEntry):
       attr_menu_item = gtk.MenuItem(ln.insert_attribute)
       submenu = gtk.Menu()
       attr_menu_item.set_submenu(submenu)
-      for label, subst in zip((ln.artist_popup, ln.title_popup, 
-            ln.album_popup, ln.songname_popup), (u"%r", u"%t", u"%l", u"%s")):
+      for label, subst in zip((ln.artist, ln.title, ln.album, ln.songname),
+                                             (u"%r", u"%t", u"%l", u"%s")):
          mi = gtk.MenuItem(label)
          mi.connect("activate", self._on_menu_activate, entry, subst)
          submenu.append(mi)
