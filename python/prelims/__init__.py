@@ -24,10 +24,14 @@ import sys
 import argparse
 import shutil
 import tempfile
+import time
 from functools import partial
+from collections import defaultdict
 
 import dbus
 import dbus.service
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
 import glib
 
 from idjc import FGlobs
@@ -38,6 +42,12 @@ from ..utils import PathStr
 
 # The name of the default profile.
 default = "default"
+
+
+config_files = ("config", "controls", "left_session", "main_session",
+   "main_session_files_played", "main_session_tracks", "playerdefaults",
+   "right_session", "s_data", "mic1", "mic2", "mic3", "mic4", "mic5",
+   "mic6", "mic7", "mic8", "mic9", "mic10", "mic11", "mic12")
 
 
 class ArgumentParserError(Exception):
@@ -142,6 +152,75 @@ class ArgumentParserImplementation(object):
 
      
 
+class DBusUptimeReporter(dbus.service.Object):
+   """Supply uptime to other idjc instances."""
+
+
+   interface_name = PGlobs.dbus_bus_basename + ".profile"
+   obj_path  = PGlobs.dbus_objects_basename + "/uptime"
+   
+   
+   def __init__(self):
+      self._uptime_cache = defaultdict(float)
+      self._interface_cache = {}
+      # Defer base class initialisation.
+                           
+                           
+   @dbus.service.method(interface_name, out_signature="d")
+   def get_uptime(self):
+      """Broadcast uptime from the current profile."""
+      
+      return self._get_uptime()
+
+
+   def activate_for_profile(self, bus_name, get_uptime):
+      self._get_uptime = get_uptime
+      dbus.service.Object.__init__(self, bus_name, self.obj_path)
+
+
+   def get_uptime_for_profile(self, profile):
+      """Ask and return the uptime of an active profile.
+      
+      Step 1, Issue an async request for new data.
+      Step 2, Return immediately with the cached value.
+      
+      Note: On error the cache is purged.
+      """
+
+
+      def rh(retval):
+         self._uptime_cache[profile] = retval
+         
+      
+      def eh(exception):
+         try:
+            del self._uptime_cache[profile]
+         except KeyError:
+            pass
+         try:
+            del self._interface_cache[profile]
+         except KeyError:
+            pass
+
+
+      try:
+         interface = self._interface_cache[profile]
+      except KeyError:
+         try:
+            p = dbus.SessionBus().get_object(PGlobs.dbus_bus_basename + \
+                                             "." + profile, self.obj_path)
+            interface = dbus.Interface(p, self.interface_name)
+         except dbus.exceptions.DBusException as e:
+            eh(e)
+            return self._uptime_cache.default_factory()
+         
+         self._interface_cache[profile] = interface
+
+      interface.get_uptime(reply_handler=rh, error_handler=eh)
+      return self._uptime_cache[profile]
+
+
+
 # Profile length limited for practical reasons. For more descriptive
 # purposes the nickname parameter was created.
 MAX_PROFILE_LENGTH = 18
@@ -180,10 +259,9 @@ class ProfileManager(object):
    __metaclass__ = Singleton
    
 
-   _profile = _dbus_bus_name = _profile_dialog = None
+   _profile = _dbus_bus_name = _profile_dialog = _init_time = None
 
    _optionals = ("icon", "nickname", "description")
-
 
 
 
@@ -213,20 +291,24 @@ class ProfileManager(object):
          if args.dialog is not None:
             dialog_selects = args.dialog[0] == "true"
          
+         self._uprep = DBusUptimeReporter()
          self._profile_dialog = self._get_profile_dialog()
          self._profile_dialog.connect("delete", self._cb_delete_profile)
          self._profile_dialog.connect("choose", self._choose_profile)
+
          def new_profile(dialog, profile, template, icon, nickname, description):
             try:
                self._generate_profile(profile, template, icon=icon,
                            nickname=nickname, description=description)
                dialog.destroy_new_profile_dialog()
             except ProfileError as e:
-               dialog.display_error("Error while creating new profile",
-               e.gui_text, transient_parent=dialog.get_new_profile_dialog())
+               dialog.display_error("<span weight='bold' size='12000'>" \
+               "Error while creating new profile.</span>\n\n" + e.gui_text,
+               transient_parent=dialog.get_new_profile_dialog(), markup=True)
 
          self._profile_dialog.connect("new", new_profile)
          self._profile_dialog.connect("clone", new_profile)
+         self._profile_dialog.connect("edit", self._cb_edit_profile)
          if dialog_selects:
             self._profile_dialog.run()
             self._profile_dialog.hide()
@@ -274,37 +356,89 @@ class ProfileManager(object):
          return "  (%s:%s)" % ((self.profile, n))
       else:
          return "  (%s)" % self.profile
-      
-      
+
+
+   def get_uptime(self):
+      if self._init_time is not None:
+         return time.time() - self._init_time
+      else:
+         return 0.0
+
+
    def show_profile_dialog(self):
       self._profile_dialog.show_all()
+      
+      
+   def _cb_edit_profile(self, dialog, newprofile, oldprofile, *opts):
+      busses = []
+      
+      try:
+         try:
+            busses.append(self._grab_bus_name_for_profile(oldprofile))
+            if newprofile != oldprofile:
+               busses.append(self._grab_bus_name_for_profile(newprofile))
+         except dbus.DBusException:
+            raise ProfileError(None, "Profile %s is active." % 
+                                    (oldprofile, newprofile)[len(busses)])
+
+         if newprofile != oldprofile:
+            try:
+               shutil.copytree(PGlobs.profile_dir / oldprofile,
+                                       PGlobs.profile_dir / newprofile)
+            except EnvironmentError as e:
+               if e.errno == 17:
+                  raise ProfileError(None, 
+                  "Cannot rename profile {0} to {1}, {1} currently exists.".format(
+                                                oldprofile, newprofile))
+               else:
+                  raise ProfileError(None, 
+                           "Error during attempt to rename %s to %s." %
+                                                (oldprofile, newprofile))
+
+            shutil.rmtree(PGlobs.profile_dir / oldprofile)
+
+         for name, data in zip(self._optionals, opts):
+            with open(PGlobs.profile_dir / newprofile / name, "w") as f:
+               f.write(data)
+
+      except ProfileError, e:
+         text = "<span weight='bold' size='12000'>%s %s.</span>" % (
+                        "Error while editing profile:", oldprofile) + \
+                        "\n\n" + e.gui_text
+
+         dialog.display_error(text, markup=True,
+                        transient_parent=dialog.get_new_profile_dialog())
+      else:
+         dialog.destroy_new_profile_dialog()
       
       
    def _cb_delete_profile(self, dialog, profile):
       if profile is not dialog.profile:
          try:
             busname = self._grab_bus_name_for_profile(profile)
-            shutil.rmtree(pm.basedir)
+            shutil.rmtree(PGlobs.profile_dir / profile)
          except dbus.DBusException:
             pass
          if profile == default:
             self._generate_default_profile()
-      
-   
+
+
    def _choose_profile(self, dialog, profile, verbose=False):
-      if dialog._profile is None:
+      if dialog.profile is None:
          try:
             self._dbus_bus_name = self._grab_bus_name_for_profile(profile)
          except dbus.DBusException:
             if verbose:
                print "profile '%s' is in use" % profile
          else:
+            self._init_time = time.time()
             self._profile = profile
             self._nickname = self._grab_profile_filetext(
                                profile, "nickname") or ""
             self._iconpathname = self._grab_profile_filetext(
                                profile, "icon") or PGlobs.default_icon
             dialog.set_profile(profile, self.title_extra, self._iconpathname)
+            self._uprep.activate_for_profile(self._dbus_bus_name, self.get_uptime)
 
 
    def _generate_profile(self, newprofile, template=None, **kwds):
@@ -340,11 +474,12 @@ class ProfileManager(object):
                
                tdir = PGlobs.profile_dir / template
                if os.path.isdir(tdir):
-                  for x in self._optionals + ("config", ):
+                  for x in self._optionals + config_files:
                      try:
                         shutil.copyfile(tdir / x, tmp / x)
                      except EnvironmentError:
                         pass
+                  shutil.copytree(tdir / "jingles", tmp / "jingles")
                else:
                   raise ProfileError(
                      "template profile '%s' does not exist" % template,
@@ -401,7 +536,7 @@ class ProfileManager(object):
                   rslt[each] = None
                
             rslt["active"] = self._profile_has_owner(profname)
-            rslt["uptime"] = 0  # ToDo: Use D-Bus to get this value.
+            rslt["uptime"] = self._uprep.get_uptime_for_profile(profname)
             yield rslt
 
 

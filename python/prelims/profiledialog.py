@@ -28,7 +28,7 @@ import gtk
 import pango
 
 from idjc import PGlobs, FGlobs
-from idjc.prelims import MAX_PROFILE_LENGTH, profile_name_valid
+from idjc.prelims import MAX_PROFILE_LENGTH, profile_name_valid, default
 from ..utils import Singleton
 
 gtk.gdk.threads_init()
@@ -43,6 +43,10 @@ from ..gtkstuff import threadslock
 
 
 
+gtk.window_set_default_icon_from_file(PGlobs.default_icon)
+
+
+
 class IconChooserButton(gtk.Button):
    """Imitate a FileChooserButton but specific to image types.
    
@@ -51,10 +55,6 @@ class IconChooserButton(gtk.Button):
    
    def __init__(self, dialog):
       gtk.Button.__init__(self)
-      filefilter = gtk.FileFilter()
-      filefilter.set_name("Supported Image Formats")
-      filefilter.add_pixbuf_formats()
-      dialog.add_filter(filefilter)
       dialog.set_icon_from_file(PGlobs.default_icon)
 
       hbox = gtk.HBox()
@@ -104,6 +104,11 @@ class IconChooserButton(gtk.Button):
       response = dialog.run()
       if response == gtk.RESPONSE_OK:
          self.set_filename(dialog.get_filename())
+      elif response == gtk.RESPONSE_NONE:
+         filename = self.get_filename()
+         if filename is not None:
+            dialog.set_filename(filename)
+         self.set_filename(None)
       dialog.hide()
 
 
@@ -117,6 +122,11 @@ class IconChooserButton(gtk.Button):
 class IconPreviewFileChooserDialog(gtk.FileChooserDialog):
    def __init__(self, *args, **kwds):
       gtk.FileChooserDialog.__init__(self, *args, **kwds)
+      filefilter = gtk.FileFilter()
+      filefilter.set_name("Supported Image Formats")
+      filefilter.add_pixbuf_formats()
+      self.add_filter(filefilter)
+
       vbox = gtk.VBox()
       frame = gtk.Frame()
       vbox.pack_start(frame, expand=True, fill=False)
@@ -167,57 +177,93 @@ class ProfileEntry(gtk.Entry):
 
 class NewProfileDialog(gtk.Dialog):
    _icon_dialog = IconPreviewFileChooserDialog("Choose An Icon",
-                  buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                  buttons = (gtk.STOCK_CLEAR, gtk.RESPONSE_NONE,
+                             gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                              gtk.STOCK_OK, gtk.RESPONSE_OK))
    
    
-   def __init__(self, row, filter_function=None, title_extra = ""):
+   def __init__(self, row, filter_function=None, title_extra = "", edit=False):
       gtk.Dialog.__init__(self)
+      self.set_border_width(6)
+      self.get_child().set_spacing(12)
       self.set_modal(True)
       self.set_destroy_with_parent(True)
-      self.set_size_request(330, -1)
+      self._icon_dialog.set_transient_for(self)
       
       if row is not None:
-         self.set_title("New profile based upon %s" % row[1] + title_extra)
+         if edit:
+            title = "Edit profile %s"
+         else:
+            title = "New profile based upon %s"
+         title %= row[1]
       else:
-         self.set_title("New profile details" + title_extra)
+         title = "New profile details"
+      self.set_title(title + title_extra)
 
-      vbox = gtk.VBox()
-      vbox.set_border_width(5)
-      vbox.set_spacing(5)
+      hbox = gtk.HBox()
+      hbox.set_border_width(6)
+      hbox.set_spacing(12)
+      if edit:
+         icon = gtk.STOCK_EDIT
+      else:
+         icon = gtk.STOCK_COPY if row else gtk.STOCK_NEW
+      self.image = gtk.image_new_from_stock(icon, gtk.ICON_SIZE_DIALOG)
+      self.image.set_alignment(0.0, 0.0)
+      hbox.pack_start(self.image, False)
+      table = gtk.Table(2, 4)
+      table.set_row_spacings(6)
+      table.set_col_spacing(0, 6)
+      hbox.pack_start(table)
 
-      labels = (gtk.Label(x) for x in ("Profile name:",
-                        "Icon:", "Nickname:", "Description:"))
+      labels = ("Profile name:", "Icon:", "Nickname:", "Description:")
       names = ("profile_entry", "icon_button", "nickname_entry",
                                           "description_entry")
       widgets = (ProfileEntry(), IconChooserButton(self._icon_dialog),
                  gtk.Entry(), gtk.Entry())
-      for label, name, widget in zip(labels, names, widgets):
-         item_vbox = gtk.VBox()
-         item_vbox.add(label)
-         label.set_alignment(0, 0.5)
-         item_vbox.add(widget)
+
+      for i, (label, name, widget) in enumerate(zip(labels, names, widgets)):
+         label = gtk.Label(label)
+         label.set_alignment(1.0, 0.0)
+         table.attach(label, 0, 1, i, i + 1, gtk.SHRINK | gtk.FILL)
+
+         table.attach(widget, 1, 2, i, i + 1, yoptions=gtk.SHRINK)
          setattr(self, name, widget)
-         vbox.add(item_vbox)
-                                          
-      self._icon_dialog.set_transient_for(self)
+
+      self.profile_entry.set_width_chars(30)
+      self.get_content_area().add(hbox)
+      bb = self.get_action_area()
+      bb.set_spacing(6)
 
       if row is not None:
-         self.icon_button.set_filename(row[4])
-         self.nickname_entry.set_text(row[5])
-         self.description_entry.set_text(row[2])
+         profile = row[1] if edit else ""
+         revert = gtk.Button(stock=gtk.STOCK_REFRESH)
+         revert.connect("clicked", self._revert, row, edit)
+         revert.clicked()
+         bb.add(revert)
+         bb.set_child_secondary(revert, True)
       else:
-         self.icon_button.set_filename(None)
-         
-      self.get_content_area().add(vbox)
-         
-      box = gtk.HButtonBox()
+         self.icon_button.set_filename(PGlobs.default_icon)
+
+      if edit:
+         if self.profile_entry.get_text() == default:
+            self.profile_entry.set_sensitive(False)
+         self.delete = gtk.Button(stock=gtk.STOCK_DELETE)
+         self.delete.connect_after("clicked", lambda w: self.destroy())
+         bb.add(self.delete)
       cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
       cancel.connect("clicked", lambda w: self.destroy())
-      box.add(cancel)
+      bb.add(cancel)
       self.ok = gtk.Button(stock=gtk.STOCK_OK)
-      box.add(self.ok)
-      self.get_action_area().add(box)
+      bb.add(self.ok)
+
+
+   def _revert(self, widget, row, edit):
+      profile_text = row[1] if edit else ""
+      self.profile_entry.set_text(profile_text)
+      self.icon_button.set_filename(row[4])
+      self.nickname_entry.set_text(row[5])
+      self.description_entry.set_text(row[2])
+      self.profile_entry.grab_focus()
 
 
    @classmethod
@@ -239,20 +285,38 @@ class ProfileDialog(gtk.Dialog):
    __gproperties__ = {  "selection-active" : (gobject.TYPE_BOOLEAN, 
                         "selection active", 
                         "selected profile is active",
-                        0, gobject.PARAM_READABLE),}
+                        0, gobject.PARAM_READABLE),
+                        
+                        "selection": (str, "profile selection", 
+                        "profile selected in profile manager",
+                        "", MAX_PROFILE_LENGTH)
+   }
 
-   _signal_names = "delete", "choose"
-   _new_profile_dialog_signal_names = "new", "clone"
+   _signal_names = "choose", "delete"
+   _new_profile_dialog_signal_names = "new", "clone", "edit"
 
    __gsignals__ = { "selection-active-changed" : (
                         gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                        (gobject.TYPE_BOOLEAN,)) }
+                        (str, gobject.TYPE_BOOLEAN,)),
+                        
+                    "selection-changed" : (
+                        gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
+                        (str,))
+   }
+
    __gsignals__.update(dict(
          (x, (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
          (gobject.TYPE_STRING,))) for x in (_signal_names)))
+
    __gsignals__.update(dict(
          (x, (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-         (gobject.TYPE_STRING,) * 5)) for x in (_new_profile_dialog_signal_names)))
+         (gobject.TYPE_STRING,) * 5))
+         for x in (_new_profile_dialog_signal_names)))
+
+
+   @property
+   def profile(self):
+      return self._profile
 
 
    def __init__(self, default, data_function=None):
@@ -262,10 +326,12 @@ class ProfileDialog(gtk.Dialog):
       self._olddata = ()
       self._title_extra = ""
 
-      gtk.window_set_default_icon_from_file(PGlobs.default_icon)
       gtk.Dialog.__init__(self, "IDJC Profile Manager")
       self.set_size_request(500, 300)
+      self.set_border_width(6)
       w = gtk.ScrolledWindow()
+      w.set_border_width(6)
+      w.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
       w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       self.get_content_area().add(w)
       self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int, str, str, int)
@@ -307,22 +373,20 @@ class ProfileDialog(gtk.Dialog):
       self.treeview.append_column(c4)
       self.selection = self.treeview.get_selection()
       self.selection.connect("changed", self._cb_selection)
-      box = gtk.HButtonBox()
-      box.set_layout(gtk.BUTTONBOX_START)
-      self.get_action_area().add(box)
-      self.new = gtk.Button(stock=gtk.STOCK_NEW)
-      box.pack_start(self.new)
-      self.clone = gtk.Button(stock=gtk.STOCK_COPY)
-      box.pack_start(self.clone)
-      self.delete = gtk.Button(stock=gtk.STOCK_DELETE)
-      box.pack_start(self.delete)
-      self.cancel = gtk.Button(stock=gtk.STOCK_QUIT)
+      box = self.get_action_area()
+      box.set_spacing(6)
+      for attr, label, sec in zip(
+                        ("new", "clone", "edit", "delete", "cancel", "choose"), 
+                        (gtk.STOCK_NEW, gtk.STOCK_COPY, gtk.STOCK_EDIT,
+                         gtk.STOCK_DELETE, gtk.STOCK_QUIT, gtk.STOCK_OPEN),
+                        (True,) * 4 + (False,) * 2):
+         w = gtk.Button(stock=label)
+         box.add(w)
+         box.set_child_secondary(w, sec)
+         setattr(self, attr, w)
+
+      self.delete.set_no_show_all(True)
       self.cancel.connect("clicked", self._cb_cancel)
-      box.pack_start(self.cancel)
-      box.set_child_secondary(self.cancel, True)
-      self.choose = gtk.Button(stock=gtk.STOCK_OPEN)
-      box.pack_start(self.choose)
-      box.set_child_secondary(self.choose, True)
       self.set_data_function(data_function)
       self.connect("notify::visible", self._cb_visible)
       for each in self._signal_names:
@@ -331,10 +395,9 @@ class ProfileDialog(gtk.Dialog):
          getattr(self, each).connect("clicked", self._cb_new_profile_dialog, each)
     
    
-   def display_error(self, title, message, transient_parent=None):
-      error_dialog = ErrorMessageDialog(title + self._title_extra, message)
+   def display_error(self, message, transient_parent=None, markup=False):
+      error_dialog = ErrorMessageDialog("", message, markup=markup)
       error_dialog.set_transient_for(transient_parent or self)
-      error_dialog.set_icon_from_file(PGlobs.default_icon)
       error_dialog.show_all()
 
    
@@ -350,14 +413,16 @@ class ProfileDialog(gtk.Dialog):
    def do_get_property(self, prop):
       if prop.name == "selection-active":
          return self._selection_active
+      elif prop.name == "selection":
+         return self._highlighted
       else:
          raise AttributeError("unknown property: %s" % prop.name)
    
 
-   def do_selection_active_changed(self, state):
+   def do_selection_active_changed(self, profile, state):
       state = not state
       self.choose.set_sensitive(state and self._profile is None)
-      self.delete.set_sensitive(state)
+      self.edit.set_sensitive(state)
       self.clone.set_sensitive(state)
 
    
@@ -368,11 +433,14 @@ class ProfileDialog(gtk.Dialog):
             self._update_data()
 
          if signal == "delete":
-            message = "Delete profile: %s?" % self._highlighted
+            message = "<span weight='bold' size='12000'>Delete profile: %s?</span>" % self._highlighted
             if self._highlighted == self._default:
                message += "\n\nThis profile is protected and will" \
-               " be recreated with initial settings."
-            conf = ConfirmationDialog("Confirmation" + self._title_extra, message)
+               " be recreated with initial settings." \
+               "\n\nThis action cannot be undone."
+            else:
+               message += "\n\nData in deleted profiles cannot be recovered."
+            conf = ConfirmationDialog("", message, markup=True)
             conf.set_transient_for(self)
             conf.ok.connect("clicked", lambda w: commands())
             conf.show_all()
@@ -381,7 +449,7 @@ class ProfileDialog(gtk.Dialog):
 
    
    def _cb_new_profile_dialog(self, widget, action):
-      if action == "clone":
+      if action in ("clone", "edit"):
          if self._highlighted is None:
             return
          row = self._get_row_for_profile(self._highlighted)
@@ -391,7 +459,8 @@ class ProfileDialog(gtk.Dialog):
          template = None
          
       np_dialog = self._new_profile_dialog = NewProfileDialog(row,
-                                    title_extra = self._title_extra)
+               title_extra = self._title_extra, edit=action=="edit")
+      np_dialog.set_transient_for(self)
       
       def sub_ok(widget):
          profile = np_dialog.profile_entry.get_text()
@@ -400,9 +469,11 @@ class ProfileDialog(gtk.Dialog):
          nickname = np_dialog.nickname_entry.get_text().strip()
          self.emit(action, profile, template, icon, nickname, description)
          self._update_data()
+         self._highlight_profile(profile)
          
-      np_dialog.set_transient_for(self)
       np_dialog.ok.connect("clicked", sub_ok)
+      if action == "edit":
+         np_dialog.delete.connect("clicked", lambda w: self.delete.clicked())
       np_dialog.show_all()
 
 
@@ -426,14 +497,17 @@ class ProfileDialog(gtk.Dialog):
    def _cb_selection(self, ts):
       model, iter = ts.get_selected()
       if iter is not None:
-         self._highlighted = model.get_value(iter, 1)
+         highlighted = model.get_value(iter, 1)
          active = model.get_value(iter, 3)
       else:
-         self._highlighted = None
-         active = True
+         highlighted = None
+         active = False
+      if highlighted != self._highlighted:
+         self._highlighted = highlighted
+         self.emit("selection-changed", self._highlighted)
       if active != self._selection_active:
          self._selection_active = active
-         self.emit("selection-active-changed", active)
+         self.emit("selection-active-changed", self._highlighted, active)
             
       
    def _highlight_profile(self, target):
@@ -477,6 +551,7 @@ class ProfileDialog(gtk.Dialog):
             self._olddata = data
 
             h = self._highlighted
+            self.selection.handler_block_by_func(self._cb_selection)
             self.store.clear()
             for d in data:
                if d["icon"] is not None:
@@ -498,6 +573,7 @@ class ProfileDialog(gtk.Dialog):
                nick = d["nickname"] or ""
                uptime = d["uptime"]
                self.store.append((pb, d["profile"], desc, active, i or "", nick, uptime))
+            self.selection.handler_unblock_by_func(self._cb_selection)
             self._highlight_profile(h)
       return self.props.visible
       
