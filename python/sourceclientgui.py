@@ -39,7 +39,7 @@ import gobject
 from idjc import FGlobs, PGlobs
 from .ln_text import ln
 from .freefunctions import int_object, string_multireplace
-from .gtkstuff import DefaultEntry, threadslock
+from .gtkstuff import DefaultEntry, threadslock, HistoryEntry
 from .dialogs import *
 
 from .prelims import ProfileManager
@@ -61,44 +61,31 @@ class SmallLabel(gtk.Label):
       self.set_attributes(attrlist)
       
 
-class HistoryEntry(gtk.ComboBoxEntry):
-   def __init__(self, max_size=6, initial_text=("",), store_blank=True):
-      self.max_size = max_size
-      self.store_blank = store_blank
-      self.ls = gtk.ListStore(str)
-      gtk.ComboBoxEntry.__init__(self, self.ls, 0)
-      self.connect("notify::popup-shown", self.update_history)
-      self.child.connect("activate", self.update_history)
-      self.set_history("\x00".join(initial_text))
-
-   def update_history(self, *args):
-      text = self.child.get_text().strip()
-      if self.store_blank or text:
-         # Remove duplicate stored text.
-         for i, row in enumerate(self.ls):
-            if row[0] == text:
-               del self.ls[i]
-         # Newly entered text goes at top of history.
-         self.ls.prepend((text,))
-         # History size is kept trimmed.
-         if len(self.ls) > self.max_size:
-            del self.ls[-1]
-   
-   def get_text(self):
-      return self.child.get_text()
-
-   def set_text(self, text):
-      self.update_history()
-      self.child.set_text(text)
+class HistoryEntryWithMenu(HistoryEntry):
+   def __init__(self):
+      HistoryEntry.__init__(self, initial_text=("", "%s", "%r - %t"))
+      self.child.connect("populate-popup", self._on_populate_popup)
       
-   def get_history(self):
-      self.update_history()
-      return "\x00".join([row[0] for row in self.ls])
       
-   def set_history(self, hist):
-      self.ls.clear()
-      for text in reversed(hist.split("\x00")):
-         self.set_text(text)
+   def _on_populate_popup(self, entry, menu):
+      attr_menu_item = gtk.MenuItem(ln.insert_attribute)
+      submenu = gtk.Menu()
+      attr_menu_item.set_submenu(submenu)
+      for label, subst in zip((ln.artist_popup, ln.title_popup, 
+            ln.album_popup, ln.songname_popup), (u"%r", u"%t", u"%l", u"%s")):
+         mi = gtk.MenuItem(label)
+         mi.connect("activate", self._on_menu_activate, entry, subst)
+         submenu.append(mi)
+      
+      menu.append(attr_menu_item)
+      attr_menu_item.show_all()
+
+
+   def _on_menu_activate(self, mi, entry, subst):
+      p = entry.get_position()
+      entry.insert_text(subst, p)
+      entry.set_position(p + len(subst))
+
 
 class ModuleFrame(gtk.Frame):
    def __init__(self, frametext = None):
@@ -1527,7 +1514,7 @@ class StreamTab(Tab):
       
       format_label = SmallLabel(ln.metadata_format)
       fallback_label = SmallLabel(ln.metadata_fallback)
-      self.metadata = HistoryEntry(initial_text=("", "%s", "%r - %t"))
+      self.metadata = HistoryEntryWithMenu()
       self.metadata.child.connect("changed", self.cb_new_metadata_format)
       self.metadata_fallback = gtk.Entry()
       self.metadata_fallback.set_width_chars(10)
@@ -2216,7 +2203,7 @@ class StreamTabFrame(TabFrame):
       label = gtk.Label(ln.metadata)
       hbox.pack_start(label, False)
       label.show()
-      self.metadata_group = HistoryEntry(initial_text=("", "%s", "%r - %t"))
+      self.metadata_group = HistoryEntryWithMenu()
       hbox.pack_start(self.metadata_group)
       self.metadata_group.show()
       self.metadata_group_set = gtk.Button()

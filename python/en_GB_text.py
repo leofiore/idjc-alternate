@@ -619,6 +619,8 @@ initial_player_settings = "Player Settings At Startup"
 
 individual_controls = "Individual Controls"
 
+insert_attribute = "Insert Attribute"
+
 insert_attribute_or_colour_code = "Insert Attribute or Colour Code"
 
 interval = "Interval:"

@@ -20,6 +20,7 @@ import os
 
 import gobject
 import gtk
+import pango
 
 from idjc import FGlobs, PGlobs
 
@@ -218,3 +219,56 @@ class DefaultEntry(gtk.Entry):
             self.props.primary_icon_pixbuf = self.empty_pixbuf
          except AttributeError:
             pass
+
+
+
+class HistoryEntry(gtk.ComboBoxEntry):
+   """Combobox which performs history function."""
+   
+
+   def __init__(self, max_size=6, initial_text=("",), store_blank=True):
+      self.max_size = max_size
+      self.store_blank = store_blank
+      self.ls = gtk.ListStore(str)
+      gtk.ComboBoxEntry.__init__(self, self.ls, 0)
+      self.connect("notify::popup-shown", self.update_history)
+      self.child.connect("activate", self.update_history)
+      self.set_history("\x00".join(initial_text))
+      geo = self.get_screen().get_root_window().get_geometry()
+      cell = self.get_cells()[0]
+      cell.props.wrap_width = geo[2] * 2 // 3
+      cell.props.wrap_mode = pango.WRAP_CHAR
+
+
+   def update_history(self, *args):
+      text = self.child.get_text().strip()
+      if self.store_blank or text:
+         # Remove duplicate stored text.
+         for i, row in enumerate(self.ls):
+            if row[0] == text:
+               del self.ls[i]
+         # Newly entered text goes at top of history.
+         self.ls.prepend((text,))
+         # History size is kept trimmed.
+         if len(self.ls) > self.max_size:
+            del self.ls[-1]
+
+   
+   def get_text(self):
+      return self.child.get_text()
+
+
+   def set_text(self, text):
+      self.update_history()
+      self.child.set_text(text)
+
+      
+   def get_history(self):
+      self.update_history()
+      return "\x00".join([row[0] for row in self.ls])
+
+      
+   def set_history(self, hist):
+      self.ls.clear()
+      for text in reversed(hist.split("\x00")):
+         self.set_text(text)
