@@ -20,6 +20,7 @@ __all__ = ["IRCPane"]
 
 
 import re
+import json
 from functools import wraps
 
 import gtk
@@ -639,13 +640,12 @@ class IRCPane(gtk.VBox):
       gtk.VBox.__init__(self)
       self.set_border_width(8)
       self.set_spacing(3)
-      self._treestore = gtk.TreeStore(int, int, int, int, str, str, str,
-                                      str, str, str, str, str, str, str)
+      self._data_format = (int,) * 4 + (str,) * 10
+      self._treestore = gtk.TreeStore(*self._data_format)
       self._treestore.append(None, (0, 1, 0, 0) + ("", ) * 10)
       self._treeview = IRCTreeView(self._treestore)
       
       col = gtk.TreeViewColumn()
-     
       toggle = gtk.CellRendererToggle()
       toggle.props.sensitive = False
       col.pack_start(toggle, False)
@@ -661,7 +661,6 @@ class IRCPane(gtk.VBox):
       sw = gtk.ScrolledWindow()
       sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       sw.add(self._treeview)
-      self.pack_start(sw)
       
       bb = gtk.HButtonBox()
       bb.set_spacing(6)
@@ -678,11 +677,57 @@ class IRCPane(gtk.VBox):
       bb.add(toggle_button)
       bb.set_child_secondary(toggle_button, True)
 
-      self.pack_start(bb, False)
       selection = self._treeview.get_selection()
       selection.connect("changed", self._on_selection_changed, edit, new)
       selection.select_path(0)
+
+      if irclib is not None:
+         self.pack_start(sw)
+         self.pack_start(bb, False)
+      else:
+         self.set_sensitive(False)
+         label = gtk.Label("This feature requires the installation of python-irclib.")
+         self.add(label)
+
       self.show_all()
+
+
+   def _m_signature(self):
+      """The client data storage signature. 
+      
+      Used to crosscheck with that of the saved data to test for usability.
+      """
+
+      return [x.__name__ for x in self._data_format]
+
+
+   def marshall(self):
+      store = [self._m_signature()]
+      self._treestore.foreach(self._m_read, store)
+      return json.dumps(store)
+
+
+   def _m_read(self, model, path, iter, store):
+      line = tuple(model[path])
+      store.append((path, line))
+
+
+   def unmarshall(self, data):
+      store = json.loads(data)
+      if store.pop(0) != self._m_signature():
+         print "mismatch"
+         return
+         
+      selection = self._treeview.get_selection()
+      selection.handler_block_by_func(self._on_selection_changed)
+      self._treestore.clear()
+      for path, row in store:
+         pos = path.pop()
+         pi = self._treestore.get_iter(tuple(path)) if path else None
+         self._treestore.insert(pi, pos, row)
+      self._treeview.expand_all()
+      selection.handler_unblock_by_func(self._on_selection_changed)
+      selection.select_path(0)
 
 
    def _on_selection_changed(self, selection, edit, new):

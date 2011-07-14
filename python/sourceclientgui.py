@@ -1920,7 +1920,8 @@ class StreamTab(Tab):
                         "action_play_active" : (self.start_player_action, "active"),
                         "action_play_which" : (self.start_player_action, "radioindex"),
                         "action_record_active" : (self.start_recorder_action, "active"),
-                        "action_record_which" : (self.start_recorder_action, "radioindex") }
+                        "action_record_which" : (self.start_recorder_action, "radioindex"),
+                        "irc_data" : (ircpane, "marshall") }
       self.reconnection_dialog = ReconnectionDialog(self)
 
 class RecordTab(Tab):
@@ -2537,6 +2538,8 @@ class SourceClientGui:
                         rvalue = widget.get_filename() or ""
                      elif method == "filename":
                         rvalue = widget.get_filename() or ""
+                     elif method == "marshall":
+                        rvalue = widget.marshall()
                      else:
                         print "unsupported", lvalue, widget, method
                         continue
@@ -2632,6 +2635,8 @@ class SourceClientGui:
                               elif method == "filename":
                                  if rvalue:
                                     rvalue = widget.set_filename(rvalue)
+                              elif method == "marshall":
+                                 widget.unmarshall(rvalue)
                               else:
                                  print "method", method, "is unsupported at this time hence widget pertaining to", lvalue, "will not be set"
       except:
@@ -2656,7 +2661,6 @@ class SourceClientGui:
             self.window.resize((int(self.win_x)), 1)
          else:
             pass
-            #self.window.resize((int(self.win_x)), 1000)
       else:
          next_expander.set_expanded(expander.get_expanded())
 
