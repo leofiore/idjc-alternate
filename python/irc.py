@@ -684,10 +684,12 @@ class IRCPane(gtk.VBox):
       if irclib is not None:
          self.pack_start(sw)
          self.pack_start(bb, False)
+         self.connection_manager = ConnectionManager(self._treestore)
       else:
          self.set_sensitive(False)
          label = gtk.Label("This feature requires the installation of python-irclib.")
          self.add(label)
+         self.connection_manager = ConnectionManager(None)
 
       self.show_all()
 
@@ -715,7 +717,7 @@ class IRCPane(gtk.VBox):
    def unmarshall(self, data):
       store = json.loads(data)
       if store.pop(0) != self._m_signature():
-         print "mismatch"
+         print "IRC server data format mismatch."
          return
          
       selection = self._treeview.get_selection()
@@ -854,3 +856,54 @@ class IRCPane(gtk.VBox):
    @highlight
    def _add_message(self, d, model, parent_iter, mode):
       return model.append(parent_iter, (mode + 1, 1, 0, 0) + d.as_tuple() + ("", ) * 8)
+      
+      
+
+class ConnectionManager(list):
+   """Layer between the user interface and the ServerConnection classes.
+   
+   As a list it contains the active server connections.
+   """
+   
+   
+   def __init__(self, model):
+      list.__init__(self)
+
+      if model is not None:
+         model.connect("row-inserted", self._on_row_inserted)
+         model.connect("row-deleted", self._on_row_deleted)
+         model.connect("row-changed", self._on_row_changed)
+     
+
+   def server_up(self):
+      for each in self:
+         each.server_up()
+      
+      
+   def server_down(self):
+      for each in self:
+         each.server_down()
+      
+      
+   def new_metadata(self, artist, title, album, songname):
+      for each in self:
+         each.new_metadata(artist, title, album, songname)
+
+
+   def _on_row_inserted(self, model, path, iter):
+      if model.get_value(iter, 0) == 1:
+         # This is a server line - make new connection.
+         pass
+
+
+   def _on_row_deleted(self, model, path):
+      if len(path) == 2:
+         # This was a server line - delete connection.
+         # TreeRowReferences that are invalid must go.
+         pass
+
+
+   def _on_row_changed(self, model, path, iter):
+      if model.get_value(iter, 0) == 1:
+         # This is a server line - remake connection.
+         pass
