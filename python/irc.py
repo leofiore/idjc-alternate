@@ -684,12 +684,12 @@ class IRCPane(gtk.VBox):
       if irclib is not None:
          self.pack_start(sw)
          self.pack_start(bb, False)
-         self.connection_manager = ConnectionManager(self._treestore)
+         self.connections_controller = ConnectionsController(self._treestore)
       else:
          self.set_sensitive(False)
          label = gtk.Label("This feature requires the installation of python-irclib.")
          self.add(label)
-         self.connection_manager = ConnectionManager(None)
+         self.connections_controller = ConnectionsController()
 
       self.show_all()
 
@@ -834,12 +834,12 @@ class IRCPane(gtk.VBox):
 
    @highlight
    def _add_server(self, d, model, parent_iter):
-      iter = model.append(parent_iter, (1, 1) + d.as_tuple() + ("", ))
+      iter = model.insert(parent_iter, 0, (1, 1) + d.as_tuple() + ("", ))
 
       # Add the subelements.
-      for i in xrange(2, 10, 2):
-         model.append(iter, (i, 1, 0, 0) + ("", ) * 10)
-         
+      for i, x in enumerate(xrange(2, 10, 2)):
+         model.insert(iter, i, (x, 1, 0, 0) + ("", ) * 10)
+
       return iter
 
                
@@ -859,20 +859,20 @@ class IRCPane(gtk.VBox):
       
       
 
-class ConnectionManager(list):
+class ConnectionsController(list):
    """Layer between the user interface and the ServerConnection classes.
    
    As a list it contains the active server connections.
    """
    
    
-   def __init__(self, model):
+   def __init__(self, model=None):
       list.__init__(self)
 
       if model is not None:
          model.connect("row-inserted", self._on_row_inserted)
          model.connect("row-deleted", self._on_row_deleted)
-         model.connect("row-changed", self._on_row_changed)
+         self._row_changed_id = model.connect("row-changed", self._on_row_changed)
      
 
    def server_up(self):
@@ -892,18 +892,77 @@ class ConnectionManager(list):
 
    def _on_row_inserted(self, model, path, iter):
       if model.get_value(iter, 0) == 1:
-         # This is a server line - make new connection.
-         pass
+         if self._path_is_active(model, path):
+            self.append(IRCConnection(model, path, self._row_changed_id))
+            print "added new TreeRowReference"
+         else:
+            print "inactive chain so no reference added."
 
 
    def _on_row_deleted(self, model, path):
       if len(path) == 2:
-         # This was a server line - delete connection.
-         # TreeRowReferences that are invalid must go.
-         pass
+         for i, irc_conn in enumerate(self):
+            if not irc_conn.valid():
+               del self[i]
+               print "row deleted - removed invalid TreeRowReference"
+               break
 
 
    def _on_row_changed(self, model, path, iter):
+      if model.get_value(iter, 0) == 0:
+         if model.get_value(iter, 1):
+            c = model.iter_children(iter)
+            while c is not None:
+               print "re-evaluating a server"
+               model.emit("row-changed", model.get_path(c), c)
+               c = model.iter_next(c)
+         else:
+            del self[:]
+            print "purged all TreeRowReferences"
+         
       if model.get_value(iter, 0) == 1:
-         # This is a server line - remake connection.
-         pass
+         for i, irc_conn in enumerate(self):
+            if irc_conn.get_path() == path:
+               del self[i]
+               print "existing TreeRowReference removed due to data changed"
+         
+         if self._path_is_active(model, path):
+            self.append(IRCConnection(model, path, self._row_changed_id))
+            print "added replacement TreeRowReference"
+         else:
+            print "did not add replacement due to inactive path"
+
+
+   def _path_is_active(self, model, path):
+      """True when active and all parent paths are active."""
+
+
+      while model[path][1]:
+         path = path[:-1]
+         if not path:
+            return True
+
+      return False
+
+
+
+class IRCConnection(gtk.TreeRowReference):
+   def __init__(self, model, path, row_changed_id):
+      self._row_changed_id = row_changed_id
+      
+      gtk.TreeRowReference.__init__(self, model, path)
+      self._ui_set_nick("cats")
+      
+
+   def __del__(self):
+      self._ui_set_nick("")
+      
+
+   def _ui_set_nick(self, nickname):
+      model = self.get_model()
+      iter = model.get_iter(self.get_path())
+      # Updating the UI for nickname would otherwise purge the server.
+      model.handler_block(self._row_changed_id) 
+      model.set_value(iter, 13, nickname)
+      model.handler_unblock(self._row_changed_id)
+      
