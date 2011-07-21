@@ -21,6 +21,7 @@ __all__ = ["IRCPane"]
 
 import re
 import json
+import gc
 from functools import wraps
 
 import gtk
@@ -634,6 +635,91 @@ class IRCTreeView(gtk.TreeView):
                return True
 
 
+class IRCRowReference(object):
+   """An object wrapper that provides named attribute access."""
+
+
+   __slots__ = ("_tree_row_ref",)
+   
+   
+   _lookup = {
+      1: {"port":2, "ssl":3, "network":4, "hostname":5, "username":6,
+          "password":7, "nick1":8, "nick2":9, "nick3":10, "realname":11,
+          "nickserv":12, "nick":13},
+
+      3: {"delay":3, "channels":4, "message":5},
+
+      5: {"offset":2, "interval":3, "channels":4, "message":5},
+      
+      7: {"channels":4, "message":5},
+
+      9: {"channels":4, "message":5}
+      }
+   
+   
+   def __init__(self, tree_row_ref):
+      object.__setattr__(self, "_tree_row_ref", tree_row_ref)
+      
+      
+   def __getitem__(self, path):
+      return self._tree_row_ref[path]
+      
+      
+   def __setitem__(self, path, data):
+      self._tree_row_ref[path] = data
+      
+   
+   @classmethod
+   def get_index_for_name(cls, data_type, name):
+      if name == "type":
+         return 0
+      elif name == "active":
+         return 1
+      else:
+         return cls._lookup[data_type][name]
+
+
+   def _index_for_name(self, name):
+      try:
+         return self.get_index_for_name(self._tree_row_ref[0], name)
+      except KeyError:
+         raise AttributeError("%s has no attribute: %s" % (repr(self._tree_row_ref), name))
+      
+      
+   def __getattr__(self, name):
+      return self._tree_row_ref.__getitem__(self._index_for_name(name))
+
+
+   def __setattr__(self, name, data):
+      self._tree_row_ref[self._index_for_name(name)] = data
+
+
+
+class IRCTreeStore(gtk.TreeStore):
+   def __init__(self, *args, **kwds):
+      gtk.TreeStore.__init__(self, *args, **kwds)
+      self._row_changed_blocked = False
+      self.connect("row-changed", self._on_row_changed)
+   
+   def row_changed_block(self):
+      self._row_changed_blocked = True
+      
+      
+   def row_changed_unblock(self):
+      self._row_changed_blocked = False
+      
+
+   def _on_row_changed(self, model, path, iter):
+      """This is the very first handler that will be called."""
+
+      if self._row_changed_blocked:
+         self.stop_emission("row-changed")
+
+
+   def __getitem__(self, path):
+      return IRCRowReference(gtk.TreeStore.__getitem__(self, path))
+      
+
 
 class IRCPane(gtk.VBox):
    def __init__(self):
@@ -641,7 +727,7 @@ class IRCPane(gtk.VBox):
       self.set_border_width(8)
       self.set_spacing(3)
       self._data_format = (int,) * 4 + (str,) * 10
-      self._treestore = gtk.TreeStore(*self._data_format)
+      self._treestore = IRCTreeStore(*self._data_format)
       self._treestore.append(None, (0, 1, 0, 0) + ("", ) * 10)
       self._treeview = IRCTreeView(self._treestore)
       
@@ -689,7 +775,7 @@ class IRCPane(gtk.VBox):
          self.set_sensitive(False)
          label = gtk.Label("This feature requires the installation of python-irclib.")
          self.add(label)
-         self.connections_controller = ConnectionsController()
+         self.connections_controller = ConnectionsController(None)
 
       self.show_all()
 
@@ -746,49 +832,38 @@ class IRCPane(gtk.VBox):
 
 
    def _cell_data_func(self, column, cell, model, iter):
-      mode = model.get_value(iter, 0)
+      row = model[model.get_path(iter)]
       text = ""
       
-      if mode % 2:
-         if mode == 1:
-            port = model.get_value(iter, 2)
-            ssl = model.get_value(iter, 3)
-            network = model.get_value(iter, 4)
-            hostname = model.get_value(iter, 5)
-            password = model.get_value(iter, 7)
-            nickserv = model.get_value(iter, 12)
-            nick = model.get_value(iter, 13)
-            
-            if nick:
-               text = nick + "@"
-            text += "%s:%d" % (hostname, port)
-            if network:
-               text += "(%s)" % network
+      if row.type % 2:
+         if row.type == 1:
+            if row.nick:
+               text = row.nick + "@"
+            text += "%s:%d" % (row.hostname, row.port)
+            if row.network:
+               text += "(%s)" % row.network
 
             opt = []
-            if ssl:
+            if row.ssl:
                opt.append("SSL")
-            if password:
+            if row.password:
                opt.append("PASSWORD")
-            if nickserv:
+            if row.nickserv:
                opt.append("NICKSERV")
             if opt:
                text += " " + ", ".join(opt)
          else:
-            channels = model.get_value(iter, 4)
-            message = model.get_value(iter, 5)
+            channels = row.channels
+            message = row.message
             
-            if mode == 3:
-               delay = model.get_value(iter, 3)
-               text = "+%d;%s; %s" % (delay, channels, message)
-            elif mode == 5:
-               offset = model.get_value(iter, 2)
-               interval = model.get_value(iter, 3)
-               text = "%d/%d;%s; %s" % (offset, interval, channels, message)
+            if row.type == 3:
+               text = "+%d;%s; %s" % (row.delay, channels, message)
+            elif row.type == 5:
+               text = "%d/%d;%s; %s" % (row.offset, row.interval, channels, message)
             else:
                text = channels + "; " + message
       else:
-         text = ("Server", "Announce", "Timer", "On up", "On down")[mode / 2]
+         text = ("Server", "Announce", "Timer", "On up", "On down")[row.type / 2]
 
       cell.props.text = text
 
@@ -828,8 +903,11 @@ class IRCPane(gtk.VBox):
                                                 
 
    def _standard_edit(self, d, model, iter, start):
+      model.row_changed_block()
       for i, each in enumerate(d.as_tuple(), start=start):
          model.set_value(iter, i, each)
+      model.row_changed_unblock()
+      model.emit("row-changed", model.get_path(iter), iter)
 
 
    @highlight
@@ -859,6 +937,19 @@ class IRCPane(gtk.VBox):
       
       
 
+def path_is_active(model, path):
+   """True when this and all parent elements are active."""
+
+
+   while model[path][1]:
+      path = path[:-1]
+      if not path:
+         return True
+
+   return False
+
+
+
 class ConnectionsController(list):
    """Layer between the user interface and the ServerConnection classes.
    
@@ -866,14 +957,16 @@ class ConnectionsController(list):
    """
    
    
-   def __init__(self, model=None):
-      list.__init__(self)
-
+   def __init__(self, model):
+      self.model = model
+      self._ignore_count = 0
       if model is not None:
          model.connect("row-inserted", self._on_row_inserted)
          model.connect("row-deleted", self._on_row_deleted)
-         self._row_changed_id = model.connect("row-changed", self._on_row_changed)
-     
+         model.connect("row-changed", self._on_row_changed)
+         
+      list.__init__(self)
+    
 
    def server_up(self):
       for each in self:
@@ -892,77 +985,59 @@ class ConnectionsController(list):
 
    def _on_row_inserted(self, model, path, iter):
       if model.get_value(iter, 0) == 1:
-         if self._path_is_active(model, path):
-            self.append(IRCConnection(model, path, self._row_changed_id))
-            print "added new TreeRowReference"
-         else:
-            print "inactive chain so no reference added."
+         if path_is_active(model, path):
+            self.append(IRCConnection(model, path))
 
 
    def _on_row_deleted(self, model, path):
       if len(path) == 2:
          for i, irc_conn in enumerate(self):
             if not irc_conn.valid():
+               self[i].cleanup()
                del self[i]
-               print "row deleted - removed invalid TreeRowReference"
                break
 
 
    def _on_row_changed(self, model, path, iter):
-      if model.get_value(iter, 0) == 0:
-         if model.get_value(iter, 1):
-            c = model.iter_children(iter)
-            while c is not None:
-               print "re-evaluating a server"
-               model.emit("row-changed", model.get_path(c), c)
-               c = model.iter_next(c)
-         else:
-            del self[:]
-            print "purged all TreeRowReferences"
-         
+      i = model.iter_children(iter)
+      while i is not None:
+         model.row_changed(model.get_path(i), i)
+         i = model.iter_next(i)
+      
       if model.get_value(iter, 0) == 1:
          for i, irc_conn in enumerate(self):
             if irc_conn.get_path() == path:
-               del self[i]
-               print "existing TreeRowReference removed due to data changed"
-         
-         if self._path_is_active(model, path):
-            self.append(IRCConnection(model, path, self._row_changed_id))
-            print "added replacement TreeRowReference"
+               if path_is_active(model, path):
+                  irc_conn.connect(model, path)
+               else:
+                  irc_conn.cleanup()
+                  del self[i]
+               break
          else:
-            print "did not add replacement due to inactive path"
-
-
-   def _path_is_active(self, model, path):
-      """True when active and all parent paths are active."""
-
-
-      while model[path][1]:
-         path = path[:-1]
-         if not path:
-            return True
-
-      return False
-
-
+            if path_is_active(model, path):
+               self.append(IRCConnection(model, path))
+               
+               
 
 class IRCConnection(gtk.TreeRowReference):
-   def __init__(self, model, path, row_changed_id):
-      self._row_changed_id = row_changed_id
-      
+   def __init__(self, model, path):
       gtk.TreeRowReference.__init__(self, model, path)
-      self._ui_set_nick("cats")
+      self.connect(model, path)
+      self._ui_set_nick("initialconnection")
       
+      
+   def connect(self, model, path):
+      self._ui_set_nick("reconnection")
+     
 
-   def __del__(self):
+   def cleanup(self):
       self._ui_set_nick("")
       
 
    def _ui_set_nick(self, nickname):
-      model = self.get_model()
-      iter = model.get_iter(self.get_path())
-      # Updating the UI for nickname would otherwise purge the server.
-      model.handler_block(self._row_changed_id) 
-      model.set_value(iter, 13, nickname)
-      model.handler_unblock(self._row_changed_id)
-      
+      if self.valid():
+         model = self.get_model()
+         iter = model.get_iter(self.get_path())
+         model.row_changed_block()
+         model.set_value(iter, 13, nickname)
+         model.row_changed_unblock()
