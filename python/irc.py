@@ -33,7 +33,7 @@ except ImportError:
    irclib = None
 
 from idjc.prelims import ProfileManager
-from .gtkstuff import DefaultEntry
+from .gtkstuff import DefaultEntry, NamedTreeRowReference
 from .freefunctions import string_multireplace
 from .ln_text import ln
 
@@ -635,13 +635,8 @@ class IRCTreeView(gtk.TreeView):
                return True
 
 
-class IRCRowReference(object):
-   """An object wrapper that provides named attribute access."""
 
-
-   __slots__ = ("_tree_row_ref",)
-   
-   
+class IRCRowReference(NamedTreeRowReference):
    _lookup = {
       1: {"port":2, "ssl":3, "network":4, "hostname":5, "username":6,
           "password":7, "nick1":8, "nick2":9, "nick3":10, "realname":11,
@@ -656,51 +651,30 @@ class IRCRowReference(object):
       9: {"channels":4, "message":5}
       }
    
-   
-   def __init__(self, tree_row_ref):
-      object.__setattr__(self, "_tree_row_ref", tree_row_ref)
-      
-      
-   def __getitem__(self, path):
-      return self._tree_row_ref[path]
-      
-      
-   def __setitem__(self, path, data):
-      self._tree_row_ref[path] = data
-      
-   
-   @classmethod
-   def get_index_for_name(cls, data_type, name):
+
+   def get_index_for_name(self, tree_row_ref, name):
       if name == "type":
          return 0
       elif name == "active":
          return 1
       else:
-         return cls._lookup[data_type][name]
-
-
-   def _index_for_name(self, name):
-      try:
-         return self.get_index_for_name(self._tree_row_ref[0], name)
-      except KeyError:
-         raise AttributeError("%s has no attribute: %s" % (repr(self._tree_row_ref), name))
-      
-      
-   def __getattr__(self, name):
-      return self._tree_row_ref.__getitem__(self._index_for_name(name))
-
-
-   def __setattr__(self, name, data):
-      self._tree_row_ref[self._index_for_name(name)] = data
+         data_type = tree_row_ref[0]
+         return self._lookup[data_type][name]
 
 
 
 class IRCTreeStore(gtk.TreeStore):
-   def __init__(self, *args, **kwds):
-      gtk.TreeStore.__init__(self, *args, **kwds)
+   @property
+   def data_format(self):
+      return (int,) * 4 + (str,) * 10
+
+
+   def __init__(self):
+      gtk.TreeStore.__init__(self, *self.data_format)
       self._row_changed_blocked = False
       self.connect("row-changed", self._on_row_changed)
-   
+
+
    def row_changed_block(self):
       self._row_changed_blocked = True
       
@@ -726,8 +700,7 @@ class IRCPane(gtk.VBox):
       gtk.VBox.__init__(self)
       self.set_border_width(8)
       self.set_spacing(3)
-      self._data_format = (int,) * 4 + (str,) * 10
-      self._treestore = IRCTreeStore(*self._data_format)
+      self._treestore = IRCTreeStore()
       self._treestore.append(None, (0, 1, 0, 0) + ("", ) * 10)
       self._treeview = IRCTreeView(self._treestore)
       
@@ -786,7 +759,7 @@ class IRCPane(gtk.VBox):
       Used to crosscheck with that of the saved data to test for usability.
       """
 
-      return [x.__name__ for x in self._data_format]
+      return [x.__name__ for x in self._treestore.data_format]
 
 
    def marshall(self):

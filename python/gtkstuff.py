@@ -17,12 +17,14 @@
 
 
 import os
+from abc import ABCMeta, abstractmethod
 
 import gobject
 import gtk
 import pango
 
 from idjc import FGlobs, PGlobs
+
 
 
 class LEDDict(dict):
@@ -278,3 +280,55 @@ class HistoryEntry(gtk.ComboBoxEntry):
       self.ls.clear()
       for text in reversed(hist.split("\x00")):
          self.set_text(text)
+
+
+
+class NamedTreeRowReference(object):
+   """Provides named attribute access to gtk.TreeRowReference objects.
+   
+   This is a virtual base class.
+   Virtual method 'get_index_for_name()' must be provided in a subclass.
+   """
+   
+   
+   __metaclass__ = ABCMeta
+
+
+   def __init__(self, tree_row_ref):
+      object.__setattr__(self, "_tree_row_ref", tree_row_ref)
+      
+      
+   @abstractmethod
+   def get_index_for_name(self, tree_row_ref, name):
+      """This method must be subclassed. Note the TreeRowReference
+      in question is passed in in case that information is required
+      to allocate the names.
+      
+      When a name is not available an exception must be raised and when
+      one is the index into the TreeRowReference must be returned.
+      """
+      
+      pass
+
+
+   def _index_for_name(self, name):
+      try:
+         return self.get_index_for_name(self._tree_row_ref, name)
+      except Exception:
+         raise AttributeError("%s has no attribute: %s" % (repr(self._tree_row_ref), name))
+
+
+   def __getitem__(self, path):
+      return self._tree_row_ref[path]
+      
+      
+   def __setitem__(self, path, data):
+      self._tree_row_ref[path] = data
+
+
+   def __getattr__(self, name):
+      return self._tree_row_ref.__getitem__(self._index_for_name(name))
+
+
+   def __setattr__(self, name, data):
+      self._tree_row_ref[self._index_for_name(name)] = data
