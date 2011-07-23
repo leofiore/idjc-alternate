@@ -26,6 +26,7 @@ import random
 import signal
 import re
 import xml.dom.minidom as mdom
+import warnings
 from stat import *
 from collections import deque
 from functools import partial
@@ -53,6 +54,12 @@ try:
    from collections import namedtuple, defaultdict
 except:
    from nt import namedtuple
+
+# Suppress warning when None is placed in a ListStore element where some kind of GObject should go. 
+warnings.filterwarnings("ignore", r"g_object_set_qdata: assertion `G_IS_OBJECT \(object\)' failed")
+# Suppress warning when drag 'n dropping tracks to an empty playlist window.
+warnings.filterwarnings("ignore", "IA__gtk_tree_view_scroll_to_cell: assertion `tree_view->priv->tree != NULL' failed.*")
+
 
 # Named tuple for a playlist row.
 class PlayerRow(namedtuple("PlayerRow", "rsmeta filename length meta encoding title artist replaygain cuesheet album")):
@@ -89,7 +96,7 @@ class CueSheetListStore(gtk.ListStore):
       
    def __init__(self):
       gtk.ListStore.__init__(self, *self._columns)
-
+      
 class NumberedLabel(gtk.Label):
    attrs = pango.AttrList()
    attrs.insert(pango.AttrFamily("Monospace" , 0, 3))
@@ -1103,7 +1110,6 @@ class IDJC_Media_Player:
       
       for entry in self.liststore:
          fh.write("pe=")
-         entry = list(entry)
          if entry[0].startswith("<b>"):   # clean off any accidental bold tags
             entry[0] = entry[0][3:-4]
          for item in entry:
