@@ -1862,8 +1862,8 @@ class StreamTab(Tab):
       vbox.show()
       
       label = gtk.Label("IRC")
-      ircpane = IRCPane()
-      self.details_nb.append_page(ircpane, label)
+      self.ircpane = IRCPane()
+      self.details_nb.append_page(self.ircpane, label)
       label.show()
       
       self.stream_resample_frame.resample_no_resample.emit("clicked")   # bogus signal to update mp3 pane
@@ -1921,7 +1921,7 @@ class StreamTab(Tab):
                         "action_play_which" : (self.start_player_action, "radioindex"),
                         "action_record_active" : (self.start_recorder_action, "active"),
                         "action_record_which" : (self.start_recorder_action, "radioindex"),
-                        "irc_data" : (ircpane, "marshall") }
+                        "irc_data" : (self.ircpane, "marshall") }
       self.reconnection_dialog = ReconnectionDialog(self)
 
 class RecordTab(Tab):
@@ -2357,6 +2357,9 @@ class SourceClientGui:
    def stop_streaming_all(self):
       for streamtab in self.streamtabframe.tabs:
          streamtab.server_connect.set_active(False)
+   def stop_irc_all(self):
+      for streamtab in self.streamtabframe.tabs:
+         streamtab.ircpane.connections_controller.cleanup()
    def stop_recording_all(self):
       for rectab in self.recordtabframe.tabs:
          rectab.record_buttons.stop_button.clicked()
@@ -2366,6 +2369,7 @@ class SourceClientGui:
    def cleanup(self):
       self.stop_recording_all()
       self.stop_streaming_all()
+      self.stop_irc_all()
       self.stop_test_monitor_all()
       gobject.source_remove(self.monitor_source_id)
    def app_exit(self):

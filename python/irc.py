@@ -21,7 +21,9 @@ __all__ = ["IRCPane"]
 
 import re
 import json
-import gc
+import time
+import sys
+import threading
 from functools import wraps
 
 import gtk
@@ -32,8 +34,9 @@ try:
 except ImportError:
    irclib = None
 
+from idjc import FGlobs
 from idjc.prelims import ProfileManager
-from .gtkstuff import DefaultEntry, NamedTreeRowReference
+from .gtkstuff import DefaultEntry, NamedTreeRowReference, threadslock
 from .freefunctions import string_multireplace
 from .ln_text import ln
 
@@ -672,7 +675,7 @@ class IRCTreeStore(gtk.TreeStore):
    def __init__(self):
       gtk.TreeStore.__init__(self, *self.data_format)
       self._row_changed_blocked = False
-      self.connect("row-changed", self._on_row_changed)
+      self.connect_after("row-changed", self._on_row_changed)
 
 
    def row_changed_block(self):
@@ -880,7 +883,7 @@ class IRCPane(gtk.VBox):
       for i, each in enumerate(d.as_tuple(), start=start):
          model.set_value(iter, i, each)
       model.row_changed_unblock()
-      model.emit("row-changed", model.get_path(iter), iter)
+      model.row_changed(model.get_path(iter), iter)
 
 
    @highlight
@@ -914,7 +917,7 @@ def path_is_active(model, path):
    """True when this and all parent elements are active."""
 
 
-   while model[path][1]:
+   while model[path].active:
       path = path[:-1]
       if not path:
          return True
@@ -936,9 +939,14 @@ class ConnectionsController(list):
       if model is not None:
          model.connect("row-inserted", self._on_row_inserted)
          model.connect("row-deleted", self._on_row_deleted)
-         model.connect("row-changed", self._on_row_changed)
+         model.connect_after("row-changed", self._on_row_changed)
          
       list.__init__(self)
+    
+    
+   def cleanup(self):
+      for each in self:
+         each.cleanup()
     
 
    def server_up(self):
@@ -976,41 +984,159 @@ class ConnectionsController(list):
       while i is not None:
          model.row_changed(model.get_path(i), i)
          i = model.iter_next(i)
-      
-      if model.get_value(iter, 0) == 1:
-         for i, irc_conn in enumerate(self):
-            if irc_conn.get_path() == path:
-               if path_is_active(model, path):
-                  irc_conn.connect(model, path)
-               else:
-                  irc_conn.cleanup()
-                  del self[i]
-               break
-         else:
-            if path_is_active(model, path):
-               self.append(IRCConnection(model, path))
                
                
 
-class IRCConnection(gtk.TreeRowReference):
+class IRCConnection(gtk.TreeRowReference, threading.Thread):
    def __init__(self, model, path):
       gtk.TreeRowReference.__init__(self, model, path)
-      self.connect(model, path)
-      self._ui_set_nick("initialconnection")
+      threading.Thread.__init__(self)
+      self._hooks = []
+      self._queue = []
+      self._keepalive = True
+      self.irc = irclib.IRC()
+      self.server = self.irc.server()
+      self.start()
+      self._hooks.append((model, model.connect_after("row-changed", self._on_ui_row_changed)))
+      self._on_ui_row_changed(model, path, model.get_iter(path))
+
+
+   def _on_ui_row_changed(self, model, path, iter):
+      if path == self.get_path():
+         row = self.get_model()[self.get_path()]
+         if path_is_active(model, path):
+            hostname = row.hostname
+            port = row.port
+            nickname = row.nick1 or "eyedeejaycee"
+            password = row.password or None
+            username = row.username or None
+            ircname = row.realname or None
+            ssl = bool(row.ssl)
+            def deferred():
+               try:
+                  self._alternates = [row.nick2, row.nick3, nickname + "_",
+                     row.nick2 + "_", row.nick3 + "_", nickname + "__",
+                     row.nick2 + "__", row.nick3 + "__"]
+                  self.server.connect(hostname, port, nickname, password, username, ircname, ssl=ssl)
+               except irclib.ServerConnectionError, e:
+                  self._ui_set_nick("")
+                  print >>sys.stderr, str(e) + " %s@%s:%d" % (nickname, hostname, port) 
+               else:
+                  self._ui_set_nick(nickname)
+                  print "New IRC connection: %s@%s:%d" % (nickname, hostname, port)
+         else:
+            def deferred():
+               try:
+                  self.server.disconnect("bye")
+               except irclib.ServerConnectionError, e:
+                  print >>sys.stderr, str(e)
+               self._ui_set_nick("")
+
+         self._queue.append(deferred)
+
       
+   #events_handled = ("welcome", "disconnect", "nicknameinuse", "nonicknamegiven", "join", "ctcp")
       
-   def connect(self, model, path):
-      self._ui_set_nick("reconnection")
-     
+         
+   def run(self):
+      for event in irclib.all_events:
+         try:
+            target = getattr(self, "_on_" + event)
+         except AttributeError:
+            target = self._generic_handler
+         self.server.add_global_handler(event, target)
+      
+      while not self._queue:
+         time.sleep(0.05)
+      
+      while self._keepalive:
+         while len(self._queue):
+            self._queue.pop(0)()
+         
+         self.irc.process_once()
+         
 
    def cleanup(self):
-      self._ui_set_nick("")
-      
+      print "IRC cleanup was called."
+      self._keepalive = False
+      self.join(1.0)
+      if self.is_alive():
+         print "Problem shutting down IRC connection."
+         self.server.close()
+         self.join(0.5)
+         if self.is_alive():
+            print "Failed to shut down IRC connection thread. Giving up."
+         else:
+            print "IRC connection finally shut down."
+      for obj, handler_id in self._hooks:
+         obj.disconnect(handler_id)
+      print "IRC callbacks unhooked"
 
+
+   @threadslock
    def _ui_set_nick(self, nickname):
       if self.valid():
          model = self.get_model()
-         iter = model.get_iter(self.get_path())
+         row = model[self.get_path()]
          model.row_changed_block()
-         model.set_value(iter, 13, nickname)
+         row.nick = nickname
          model.row_changed_unblock()
+         
+
+   def _try_alternate_nick(self):
+      try:
+         nextnick = self._alternates.pop(0)
+      except IndexError:
+         # Ran out of nick choices.
+         self.server.disconnect()
+      else:
+         self._ui_set_nick(nextnick)
+         self.server.nick(nextnick)
+
+
+   def _on_welcome(self, server, event):
+      print "got welcome message"
+      server.join("#idjctesting")
+
+
+   def _on_disconnect(self, server, event):
+      print "disconnected"
+      self._ui_set_nick("")
+
+      
+   def _on_nicknameinuse(self, server, event):
+      self._try_alternate_nick()
+
+
+   def _on_nickcollision(self, server, event):
+      self._try_alternate_nick()
+      
+      
+   def _on_nonicknamegiven(self, server, event):
+      self._try_alternate_nick()
+      
+      
+   def _on_erroneousenickname(self, server, event):
+      self._try_alternate_nick()
+
+
+   def _on_join(self, server, event):
+      print "Channel joined", event.target()
+      print event.target()
+
+
+   def _on_ctcp(self, server, event):
+      try:
+         if event.arguments() == ["VERSION"]:
+            server.ctcp_reply(event.source().split("!")[0],
+                           "VERSION %s %s (python-irclib)" % (
+                           FGlobs.package_name, FGlobs.package_version))
+      except Exception, e:
+         print e
+
+
+   def _generic_handler(self, server, event):
+      print "Type:", event.eventtype()
+      print "Source:", event.source()
+      print "Target:", event.target()
+      print "Args:", event.arguments()
