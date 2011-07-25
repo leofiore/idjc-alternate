@@ -966,8 +966,7 @@ class ConnectionsController(list):
 
    def _on_row_inserted(self, model, path, iter):
       if model.get_value(iter, 0) == 1:
-         if path_is_active(model, path):
-            self.append(IRCConnection(model, path))
+         self.append(IRCConnection(model, path))
 
 
    def _on_row_deleted(self, model, path):
@@ -1027,7 +1026,7 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
          else:
             def deferred():
                try:
-                  self.server.disconnect("bye")
+                  self.server.disconnect()
                except irclib.ServerConnectionError, e:
                   print >>sys.stderr, str(e)
                self._ui_set_nick("")
