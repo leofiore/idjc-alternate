@@ -66,6 +66,10 @@ XChat_colour = {
 
 
 
+message_categories = ("Announce", "Timer", "On up", "On down")
+
+
+
 class IRCEntry(gtk.Entry):
    """Specialised IRC text entry widget.
    
@@ -839,7 +843,7 @@ class IRCPane(gtk.VBox):
             else:
                text = channels + "; " + message
       else:
-         text = ("Server", "Announce", "Timer", "On up", "On down")[row.type / 2]
+         text = (("Server", ) + message_categories)[row.type / 2]
 
       cell.props.text = text
 
@@ -856,6 +860,12 @@ class IRCPane(gtk.VBox):
          title = "IRC stream up message" if mode == 6 \
             else "IRC stream down message"
          dialog(MessageDialog(title), self._add_message, mode)
+      else:
+         if mode / 2 < len(message_categories):
+            print "there is no data entry dialog implemented for the '%s' message category"\
+                                             % message_category[mode / 2]
+         else:
+            print "unknown message category with numerical code,", mode
     
    
    @iteminfo
@@ -891,7 +901,7 @@ class IRCPane(gtk.VBox):
       iter = model.insert(parent_iter, 0, (1, 1) + d.as_tuple() + ("", ))
 
       # Add the subelements.
-      for i, x in enumerate(xrange(2, 10, 2)):
+      for i, x in enumerate(xrange(2, 2 + len(message_categories) * 2, 2)):
          model.insert(iter, i, (x, 1, 0, 0) + ("", ) * 10)
 
       return iter
@@ -992,12 +1002,21 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       threading.Thread.__init__(self)
       self._hooks = []
       self._queue = []
+      self._message_handlers = []
       self._keepalive = True
       self.irc = irclib.IRC()
       self.server = self.irc.server()
       self.start()
+      self._hooks.append((model, model.connect("row-inserted", self._on_row_inserted, path)))
       self._hooks.append((model, model.connect_after("row-changed", self._on_ui_row_changed)))
       self._on_ui_row_changed(model, path, model.get_iter(path))
+
+
+   def _on_row_inserted(self, model, path, iter, parent_path):
+      if path[:-1] == parent_path:
+         type = model[path].type
+         mh = globals()["MessageHandlerForType_" + str(type + 1)](model, path)
+         self._message_handlers.append(mh)
 
 
    def _on_ui_row_changed(self, model, path, iter):
@@ -1034,9 +1053,6 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
          self._queue.append(deferred)
 
       
-   #events_handled = ("welcome", "disconnect", "nicknameinuse", "nonicknamegiven", "join", "ctcp")
-      
-         
    def run(self):
       for event in irclib.all_events:
          try:
@@ -1056,7 +1072,10 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
          
 
    def cleanup(self):
-      print "IRC cleanup was called."
+      for each in self._message_handlers:
+         each.cleanup()
+      for obj, handler_id in self._hooks:
+         obj.disconnect(handler_id)
       self._keepalive = False
       self.join(1.0)
       if self.is_alive():
@@ -1067,9 +1086,6 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
             print "Failed to shut down IRC connection thread. Giving up."
          else:
             print "IRC connection finally shut down."
-      for obj, handler_id in self._hooks:
-         obj.disconnect(handler_id)
-      print "IRC callbacks unhooked"
 
 
    @threadslock
@@ -1099,7 +1115,6 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
 
 
    def _on_disconnect(self, server, event):
-      print "disconnected"
       self._ui_set_nick("")
 
       
@@ -1139,3 +1154,44 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       print "Source:", event.source()
       print "Target:", event.target()
       print "Args:", event.arguments()
+
+
+
+class MessageHandlerForType_3(gtk.TreeRowReference):
+   def __init__(self, model, path):
+      gtk.TreeRowReference.__init__(self, model, path)
+      print "Message handler for 3"
+
+
+   def cleanup(self):
+      pass
+
+      
+
+class MessageHandlerForType_5(gtk.TreeRowReference):
+   def __init__(self, model, path):
+      gtk.TreeRowReference.__init__(self, model, path)
+      print "Message handler for 5"
+
+   def cleanup(self):
+      pass
+
+
+
+class MessageHandlerForType_7(gtk.TreeRowReference):
+   def __init__(self, model, path):
+      gtk.TreeRowReference.__init__(self, model, path)
+      print "Message handler for 7"
+
+   def cleanup(self):
+      pass
+
+
+
+class MessageHandlerForType_9(gtk.TreeRowReference):
+   def __init__(self, model, path):
+      gtk.TreeRowReference.__init__(self, model, path)
+      print "Message handler for 9"
+
+   def cleanup(self):
+      pass
