@@ -26,6 +26,7 @@ import sys
 import threading
 from functools import wraps
 
+import gobject
 import gtk
 import pango
 
@@ -682,6 +683,17 @@ class IRCTreeStore(gtk.TreeStore):
       self.connect_after("row-changed", self._on_row_changed)
 
 
+   def path_is_active(self, path):
+      """True when this and all parent elements are active."""
+
+      while self[path].active:
+         path = path[:-1]
+         if not path:
+            return True
+
+      return False
+
+
    def row_changed_block(self):
       self._row_changed_blocked = True
       
@@ -708,7 +720,7 @@ class IRCPane(gtk.VBox):
       self.set_border_width(8)
       self.set_spacing(3)
       self._treestore = IRCTreeStore()
-      self._treestore.append(None, (0, 1, 0, 0) + ("", ) * 10)
+      self._treestore.insert(None, 0, (0, 1, 0, 0) + ("", ) * 10)
       self._treeview = IRCTreeView(self._treestore)
       
       col = gtk.TreeViewColumn()
@@ -909,32 +921,19 @@ class IRCPane(gtk.VBox):
                
    @highlight
    def _add_announce(self, d, model, parent_iter):
-      return model.append(parent_iter, (3, 1, 0) + d.as_tuple() + ("", ) * 8)
+      return model.insert(parent_iter, 0, (3, 1, 0) + d.as_tuple() + ("", ) * 8)
 
 
    @highlight
    def _add_timer(self, d, model, parent_iter):
-      return model.append(parent_iter, (5, 1) + d.as_tuple() + ("", ) * 8)
+      return model.insert(parent_iter, 0, (5, 1) + d.as_tuple() + ("", ) * 8)
       
    
    @highlight
    def _add_message(self, d, model, parent_iter, mode):
-      return model.append(parent_iter, (mode + 1, 1, 0, 0) + d.as_tuple() + ("", ) * 8)
+      return model.insert(parent_iter, 0, (mode + 1, 1, 0, 0) + d.as_tuple() + ("", ) * 8)
       
       
-
-def path_is_active(model, path):
-   """True when this and all parent elements are active."""
-
-
-   while model[path].active:
-      path = path[:-1]
-      if not path:
-         return True
-
-   return False
-
-
 
 class ConnectionsController(list):
    """Layer between the user interface and the ServerConnection classes.
@@ -1002,7 +1001,7 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       threading.Thread.__init__(self)
       self._hooks = []
       self._queue = []
-      self._message_handlers = []
+      self._message_handlers = set()
       self._keepalive = True
       self.irc = irclib.IRC()
       self.server = self.irc.server()
@@ -1016,13 +1015,23 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       if path[:-1] == parent_path:
          type = model[path].type
          mh = globals()["MessageHandlerForType_" + str(type + 1)](model, path)
-         self._message_handlers.append(mh)
+         mh.connect("channels-changed", self._evaluate_channels)
+         self._message_handlers.add(mh)
+
+
+   def _evaluate_channels(self, message_handler, channel_set):
+      rest = frozenset.union(frozenset(), *(x.props.channels for x in self._message_handlers if x is not message_handler))
+      joins = channel_set.difference(rest and message_handler.props.channels)
+      parts = message_handler.props.channels.difference(channel_set).difference(rest)
+      print "rest", rest
+      print "joins", joins
+      print "parts", parts
 
 
    def _on_ui_row_changed(self, model, path, iter):
       if path == self.get_path():
          row = self.get_model()[self.get_path()]
-         if path_is_active(model, path):
+         if model.path_is_active(path):
             hostname = row.hostname
             port = row.port
             nickname = row.nick1 or "eyedeejaycee"
@@ -1157,10 +1166,72 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
 
 
 
-class MessageHandlerForType_3(gtk.TreeRowReference):
+class MessageHandler(gobject.GObject):
+   __gsignals__ = { 
+      'channels-changed': (gobject.SIGNAL_RUN_LAST | gobject.SIGNAL_ACTION,
+                                       gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, ))
+   }
+
+   __gproperties__ = {
+      'channels':          (gobject.TYPE_PYOBJECT, 'channels',
+                            'ircchannels', gobject.PARAM_READABLE)
+   }
+   
+
    def __init__(self, model, path):
-      gtk.TreeRowReference.__init__(self, model, path)
-      print "Message handler for 3"
+      gobject.GObject.__init__(self)
+      self.tree_row_ref = gtk.TreeRowReference(model, path)
+
+      self._channels = frozenset()
+      model.connect("row-inserted", self.channels_evaluate)
+      model.connect("row-deleted", self.channels_evaluate)
+      model.connect_after("row-changed", self.channels_evaluate)
+
+
+   def channels_evaluate(self, model, path, iter=None):
+      pp = self.tree_row_ref.get_path()
+      if path[:-1] == pp:
+         nc = set()
+         
+         iter = model.iter_children(model.get_iter(pp))
+         while iter is not None:
+            rowpath = model.get_path(iter)
+            if model.path_is_active(rowpath):
+               row = model[rowpath]
+               for each in row.channels.split(","):
+                  if each:
+                     nc.add(each)
+            iter = model.iter_next(iter)
+
+         nc = frozenset(nc)
+         if nc != self._channels:
+            self.channels_changed(nc)
+
+
+   def channels_changed(self, new_channels):
+      self.emit("channels-changed", new_channels)
+
+
+   def do_channels_changed(self, new_channels):
+      """Called after the handlers connected on 'channels-changed'.
+
+      Joins and parts may be computed against self.props.channels.
+      """
+      
+      self._channels = frozenset(new_channels)
+  
+
+   def do_get_property(self, prop):
+      if prop.name == 'channels':
+         return self._channels
+      else:
+         raise AttributeError("unknown property '%s'" % prop.name)
+
+
+
+class MessageHandlerForType_3(MessageHandler):
+   def __init__(self, model, path):
+      MessageHandler.__init__(self, model, path)
 
 
    def cleanup(self):
@@ -1168,30 +1239,30 @@ class MessageHandlerForType_3(gtk.TreeRowReference):
 
       
 
-class MessageHandlerForType_5(gtk.TreeRowReference):
+class MessageHandlerForType_5(MessageHandler):
    def __init__(self, model, path):
-      gtk.TreeRowReference.__init__(self, model, path)
-      print "Message handler for 5"
+      MessageHandler.__init__(self, model, path)
+
 
    def cleanup(self):
       pass
 
 
 
-class MessageHandlerForType_7(gtk.TreeRowReference):
+class MessageHandlerForType_7(MessageHandler):
    def __init__(self, model, path):
-      gtk.TreeRowReference.__init__(self, model, path)
-      print "Message handler for 7"
+      MessageHandler.__init__(self, model, path)
+
 
    def cleanup(self):
       pass
 
 
 
-class MessageHandlerForType_9(gtk.TreeRowReference):
+class MessageHandlerForType_9(MessageHandler):
    def __init__(self, model, path):
-      gtk.TreeRowReference.__init__(self, model, path)
-      print "Message handler for 9"
+      MessageHandler.__init__(self, model, path)
+
 
    def cleanup(self):
       pass
