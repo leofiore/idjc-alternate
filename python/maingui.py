@@ -42,7 +42,6 @@ from .preferences import *
 from .jingles import *
 from .freefunctions import int_object
 from .freefunctions import rich_safe
-from .freefunctions import string_multireplace
 from .gtkstuff import threadslock
 from . import midicontrols
 from . import tooltips
@@ -1083,7 +1082,7 @@ class MainWindow:
                   print "unable to append to file \"history.log\""
                file.close()
 
-            self.server_window.new_metadata(self.artist, self.title, self.album)
+            self.server_window.new_metadata(self.artist, self.title, self.album, self.songname)
          else:
             self.window.set_title(self.appname + pm.title_extra)
 

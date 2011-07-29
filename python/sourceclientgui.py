@@ -2280,7 +2280,9 @@ class SourceClientGui:
             self.receive()
             if reply.startswith("streamer%dreport=" % streamtab.numeric_id):
                streamer_state, stream_sendbuffer_pc, brand_new = reply.split("=")[1].split(":")
-               streamtab.show_indicator(("clear", "amber", "green", "clear")[int(streamer_state)])
+               state = int(streamer_state)
+               streamtab.show_indicator(("clear", "amber", "green", "clear")[state])
+               streamtab.ircpane.connections_controller.set_stream_active(state > 1)
                mi = self.parent.stream_indicator[streamtab.numeric_id]
                if (streamer_state == "2"):
                   mi.set_active(True)
@@ -2331,26 +2333,6 @@ class SourceClientGui:
          self.is_streaming = streaming
          self.is_recording = recording
          streamtab.reconnection_dialog.run()
-      if streaming and self.parent.prefs_window.timer_enable.get_active() and (self.last_message_time + (self.parent.prefs_window.intervaladj.get_value() * 60) < time.time()):
-         pw = self.parent.prefs_window
-         self.last_message_time = time.time()
-         try:
-            with open(self.parent.idjcroot + "timer.xchat", "w") as file:
-               try:
-                  fcntl.flock(file.fileno(), fcntl.LOCK_EX)
-                  file.write("d" + str(len(self.parent.prefs_window.timernickentry.get_text().encode("utf-8"))) + ":" + self.parent.prefs_window.timernickentry.get_text().encode("utf-8"))
-                  file.write("d" + str(len(self.parent.prefs_window.timerchannelsentry.get_text().encode("utf-8"))) + ":" + self.parent.prefs_window.timerchannelsentry.get_text().encode("utf-8"))
-                  raw = self.parent.prefs_window.timermessageentry.get_text().encode("utf-8")
-                  table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((getattr(self.parent, x) or "<Unknown>") for x in ("artist", "title", "album")))
-                  cooked = string_multireplace(raw, table)
-                  file.write("d" + str(len(cooked)) + ":" + cooked)
-                  timestr = str(int(time.time()))
-                  file.write("d" + str(len(timestr)) + ":" + timestr)
-               finally:
-                  fcntl.flock(file.fileno(), fcntl.LOCK_UN)
-         except IOError:
-            print "Problem writing the timer file to disk"
-
       if update_listeners:
          self.parent.listener_indicator.set_text(str(l_count))
       return True
@@ -2423,7 +2405,7 @@ class SourceClientGui:
                self.source_client_crash_count -= 1
                self.uptime = time.time()
          
-   def new_metadata(self, artist, title, album):
+   def new_metadata(self, artist, title, album, songname):
       if artist:
          artist_title = artist + " - " + title
       else:
@@ -2439,6 +2421,7 @@ class SourceClientGui:
 
       for tab in self.streamtabframe.tabs:         # Update the custom metadata on all stream tabs.
          tab.metadata_update.clicked()
+         tab.ircpane.connections_controller.new_metadata(artist, title, album, songname)
       
    def source_client_open(self):
       try:

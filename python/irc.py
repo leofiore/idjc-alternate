@@ -958,14 +958,9 @@ class ConnectionsController(list):
          each.cleanup()
     
 
-   def server_up(self):
+   def set_stream_active(self, active):
       for each in self:
-         each.server_up()
-      
-      
-   def server_down(self):
-      for each in self:
-         each.server_down()
+         each.set_stream_active(active)
       
       
    def new_metadata(self, artist, title, album, songname):
@@ -1001,8 +996,9 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       threading.Thread.__init__(self)
       self._hooks = []
       self._queue = []
-      self._message_handlers = set()
+      self._message_handlers = []
       self._keepalive = True
+      self._have_welcome = False
       self.irc = irclib.IRC()
       self.server = self.irc.server()
       self.start()
@@ -1011,21 +1007,64 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       self._on_ui_row_changed(model, path, model.get_iter(path))
 
 
+   def set_stream_active(self, active):
+      for each in self._message_handlers:
+         each.set_stream_active(active)
+   
+
+   def new_metadata(self, artist, title, album, songname):
+      for each in self._message_handlers:
+         each.new_metadata(artist, title, album, songname)
+
+
    def _on_row_inserted(self, model, path, iter, parent_path):
       if path[:-1] == parent_path:
          type = model[path].type
          mh = globals()["MessageHandlerForType_" + str(type + 1)](model, path)
-         mh.connect("channels-changed", self._evaluate_channels)
-         self._message_handlers.add(mh)
+         mh.connect("channels-changed", self._on_channels_changed)
+         mh.connect("privmsg-ready", self._on_privmsg_ready)
+         self._message_handlers.append(mh)
 
 
-   def _evaluate_channels(self, message_handler, channel_set):
-      rest = frozenset.union(frozenset(), *(x.props.channels for x in self._message_handlers if x is not message_handler))
-      joins = channel_set.difference(rest and message_handler.props.channels)
-      parts = message_handler.props.channels.difference(channel_set).difference(rest)
-      print "rest", rest
-      print "joins", joins
-      print "parts", parts
+   def _on_channels_changed(self, message_handler, channel_set):
+      if self._have_welcome:
+         rest = frozenset.union(frozenset(), *(x.props.channels for x in self._message_handlers if x is not message_handler))
+         joins = channel_set.difference(rest and message_handler.props.channels)
+         parts = message_handler.props.channels.difference(channel_set).difference(rest)
+         def deferred():
+            for each in joins:
+               if each[0] in "#&":
+                  each = each.split(":")
+                  try:
+                     channel, key = each
+                  except:
+                     channel = each[0]
+                     key = ""
+                  self.server.join(channel, key)
+               
+            for each in parts:
+               if each[0] in "#&":
+                  self.server.part(each)
+         
+         self._queue.append(deferred)
+
+
+   def _channels_invalidate(self):
+      for each in self._message_handlers:
+         each.channels_invalidate()
+
+
+   def _on_privmsg_ready(self, handler, targets, message):
+      if self._have_welcome:
+         chan_targets = filter(lambda x: x[0] in "#&", targets)
+         user_targets = filter(lambda x: x[0] not in "#&", targets)
+
+         def deferred():
+            self.server.privmsg_many(chan_targets, message)
+            for target in user_targets:
+               self.server.notice(target, message)
+               
+         self._queue.append(deferred)
 
 
    def _on_ui_row_changed(self, model, path, iter):
@@ -1101,9 +1140,8 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
    def _ui_set_nick(self, nickname):
       if self.valid():
          model = self.get_model()
-         row = model[self.get_path()]
          model.row_changed_block()
-         row.nick = nickname
+         model[self.get_path()].nick = nickname
          model.row_changed_unblock()
          
 
@@ -1118,12 +1156,23 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
          self.server.nick(nextnick)
 
 
+   @threadslock
    def _on_welcome(self, server, event):
-      print "got welcome message"
-      server.join("#idjctesting")
+      self._have_welcome = True
+      self._channels_invalidate()
+      model = self.get_model()
+      path = self.get_path()
+      iter = model.iter_children(model.get_iter(path))
+      while iter is not None:
+         model.row_changed(model.get_path(iter), iter)
+         iter = model.iter_next(iter)
+      model.row_changed_block()
+      model[path].nick = event.target()
+      model.row_changed_unblock()
 
 
    def _on_disconnect(self, server, event):
+      self._have_welcome = False
       self._ui_set_nick("")
 
       
@@ -1149,13 +1198,14 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
 
 
    def _on_ctcp(self, server, event):
-      try:
-         if event.arguments() == ["VERSION"]:
-            server.ctcp_reply(event.source().split("!")[0],
-                           "VERSION %s %s (python-irclib)" % (
-                           FGlobs.package_name, FGlobs.package_version))
-      except Exception, e:
-         print e
+      source = event.source().split("!")[0]
+      args = event.arguments()
+      
+      if args == ["VERSION"]:
+         server.ctcp_reply(source, "VERSION %s %s (python-irclib)" % (
+                        FGlobs.package_name, FGlobs.package_version))
+      elif args == ["TIME"]:
+         server.ctcp_reply(source, "TIME " + time.ctime())
 
 
    def _generic_handler(self, server, event):
@@ -1169,7 +1219,11 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
 class MessageHandler(gobject.GObject):
    __gsignals__ = { 
       'channels-changed': (gobject.SIGNAL_RUN_LAST | gobject.SIGNAL_ACTION,
-                                       gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, ))
+                                       gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, )),
+
+      'privmsg-ready':    (gobject.SIGNAL_RUN_LAST | gobject.SIGNAL_ACTION,
+                                       gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, gobject.TYPE_STRING))
+
    }
 
    __gproperties__ = {
@@ -1177,15 +1231,53 @@ class MessageHandler(gobject.GObject):
                             'ircchannels', gobject.PARAM_READABLE)
    }
    
+   @property
+   def stream_active(self):
+      return self._stream_active
+   
 
    def __init__(self, model, path):
       gobject.GObject.__init__(self)
       self.tree_row_ref = gtk.TreeRowReference(model, path)
 
       self._channels = frozenset()
+      self._stream_active = False
       model.connect("row-inserted", self.channels_evaluate)
       model.connect("row-deleted", self.channels_evaluate)
       model.connect_after("row-changed", self.channels_evaluate)
+
+
+   def set_stream_active(self, active):
+      if self._stream_active != active:
+         self._stream_active = active
+         if active:
+            self.on_stream_active()
+         else:
+            self.on_stream_inactive()
+            
+      
+   def on_stream_active(self):
+      pass
+      
+      
+   def on_stream_inactive(self):
+      pass
+
+
+   def cleanup(self):
+      pass
+
+
+   def new_metadata(self, artist, title, album, songname):
+      self.artist = artist
+      self.title = title
+      self.album = album
+      self.songname = songname
+      self.on_new_metadata(artist, title, album, songname)
+      
+      
+   def on_new_metadata(self, artist, title, album, songname):
+      pass
 
 
    def channels_evaluate(self, model, path, iter=None):
@@ -1208,6 +1300,10 @@ class MessageHandler(gobject.GObject):
             self.channels_changed(nc)
 
 
+   def channels_invalidate(self):
+      self._channels = frozenset()
+
+
    def channels_changed(self, new_channels):
       self.emit("channels-changed", new_channels)
 
@@ -1226,6 +1322,22 @@ class MessageHandler(gobject.GObject):
          return self._channels
       else:
          raise AttributeError("unknown property '%s'" % prop.name)
+         
+         
+   def issue_messages(self, filter=lambda row: True):
+      model = self.tree_row_ref.get_model()
+      iter = model.get_iter(self.tree_row_ref.get_path())
+      iter = model.iter_children(iter)
+      while iter is not None:
+         row = model[model.get_path(iter)]
+         if filter(row):
+            targets = [x.split("!")[0] for x in row.channels.split(",")]
+            table = [("%%", "%")] + zip(("%r", "%t", "%l", "%s"), (
+                  self.artist, self.title, self.album, self.songname))
+            message = string_multireplace(row.message, table)
+            self.emit("privmsg-ready", targets, message)
+        
+         iter = model.iter_next(iter)
 
 
 
@@ -1234,18 +1346,16 @@ class MessageHandlerForType_3(MessageHandler):
       MessageHandler.__init__(self, model, path)
 
 
-   def cleanup(self):
-      pass
+   def on_new_metadata(self, *args):
+      self.issue_messages()
 
-      
+
 
 class MessageHandlerForType_5(MessageHandler):
    def __init__(self, model, path):
       MessageHandler.__init__(self, model, path)
 
 
-   def cleanup(self):
-      pass
 
 
 
@@ -1254,8 +1364,8 @@ class MessageHandlerForType_7(MessageHandler):
       MessageHandler.__init__(self, model, path)
 
 
-   def cleanup(self):
-      pass
+   def on_stream_active(self):
+      self.issue_messages()
 
 
 
@@ -1264,5 +1374,5 @@ class MessageHandlerForType_9(MessageHandler):
       MessageHandler.__init__(self, model, path)
 
 
-   def cleanup(self):
-      pass
+   def on_stream_inactive(self):
+      self.issue_messages()
