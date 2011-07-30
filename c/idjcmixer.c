@@ -1557,7 +1557,7 @@ int main(int argc, char **argv)
    int sync = FALSE;
    int use_dsp;
    jack_status_t status;
-   char *server_name = getenv("IDJC_JACK_SERVER");
+   char *server_name = getenv("jack_server_name");
    char midi_output[MIDI_QUEUE_SIZE];
    char *our_sc_str_in_l;
    char *our_sc_str_in_r;

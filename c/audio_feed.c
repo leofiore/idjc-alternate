@@ -168,7 +168,7 @@ struct audio_feed *audio_feed_init(struct threads_info *ti)
    jack_set_info_function(custom_jack_info_callback);
 #endif
 
-   if (!(self->jack_h = jack_client_open(self->jack_client_name, JackUseExactName | JackServerName, NULL, getenv("IDJC_JACK_SERVER"))))
+   if (!(self->jack_h = jack_client_open(self->jack_client_name, JackUseExactName | JackServerName, NULL, getenv("jack_server_name"))))
       {
       fprintf(stderr, "audio_feed_init: creation of a new jack client failed\nthis could be due to jackd having not been started or another instance of idjcsourceclient is currently running\n");
       return NULL;

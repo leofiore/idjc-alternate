@@ -2,13 +2,15 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(idjc, 0.8.6_development, s-fairchild@users.sourceforge.net)
+AC_INIT([idjc], [0.8.6_development], 
+                [https://sourceforge.net/tracker/?group_id=135773])
+AC_SUBST(COPYRIGHT_YEAR, [2011])
 AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
 
 # Generate python installation stuff
-AM_PATH_PYTHON(2.6)
+AM_PATH_PYTHON([2.7])
 
 # Checks for programs.
 AM_PROG_CC_C_O
@@ -108,10 +110,10 @@ fi
 PKG_CHECK_MODULES([PYGTK], [pygtk-2.0 >= 2.6.0])
 
 AC_MSG_CHECKING([for mutagen])
-python -c "import mutagen" >/dev/null 2>&1
+${PYTHON}${PYTHON_VERSION} -c "import mutagen" >/dev/null 2>&1
 if test $? -ne 0 ; then
     AC_MSG_RESULT([no])
-    AC_MSG_ERROR([required dependency (mutagen / python-mutagen) is missing])
+    AC_MSG_WARN([runtime dependency (mutagen / python-mutagen) is missing])
 else
     AC_MSG_RESULT([yes])
 fi
@@ -209,9 +211,12 @@ fi
 
 AC_CONFIG_FILES([Makefile
                   c/Makefile
-                  idjcpython/Makefile
+                  python/Makefile
+                  python/prelims/Makefile
                   artwork/Makefile
                   Man/Makefile
-                  doc/Makefile])
+                  doc/Makefile
+                  python/__init__.py.in
+                  idjc.in])
 
 AC_OUTPUT

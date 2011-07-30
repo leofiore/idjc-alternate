@@ -2,6 +2,12 @@
 
 * Changes in version 0.8.6 *
 
+Replaced XChat plugin with python-irclib based integrated IRC.
+
+New profile manager.
+
+Program launcher is now written in Python, replacing Bash.
+
 Removed deprecated 'Application' category from the desktop file. 
 
 Fixed libavcodecdecode.c to work with libavcodec 0.7 (Obsolete macro updated) Patch: Jonathan Nieder <jrnieder@gmail.com>
