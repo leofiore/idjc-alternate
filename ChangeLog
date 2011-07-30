@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.6 *
 
+Replaced XChat plugin with python-irclib based integrated IRC.
+
 New profile manager.
 
 Program launcher is now written in Python, replacing Bash.

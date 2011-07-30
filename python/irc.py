@@ -24,7 +24,7 @@ import json
 import time
 import sys
 import threading
-from functools import wraps
+from functools import wraps, partial
 
 import gobject
 import gtk
@@ -652,7 +652,7 @@ class IRCRowReference(NamedTreeRowReference):
 
       3: {"delay":3, "channels":4, "message":5},
 
-      5: {"offset":2, "interval":3, "channels":4, "message":5},
+      5: {"offset":2, "interval":3, "channels":4, "message":5, "issue":13},
       
       7: {"channels":4, "message":5},
 
@@ -963,9 +963,9 @@ class ConnectionsController(list):
          each.set_stream_active(active)
       
       
-   def new_metadata(self, artist, title, album, songname):
+   def new_metadata(self, new_meta):
       for each in self:
-         each.new_metadata(artist, title, album, songname)
+         each.new_metadata(new_meta)
 
 
    def _on_row_inserted(self, model, path, iter):
@@ -988,7 +988,7 @@ class ConnectionsController(list):
          model.row_changed(model.get_path(i), i)
          i = model.iter_next(i)
                
-               
+
 
 class IRCConnection(gtk.TreeRowReference, threading.Thread):
    def __init__(self, model, path):
@@ -1002,7 +1002,7 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       self.irc = irclib.IRC()
       self.server = self.irc.server()
       self.start()
-      self._hooks.append((model, model.connect("row-inserted", self._on_row_inserted, path)))
+      self._hooks.append((model, model.connect("row-inserted", self._on_row_inserted)))
       self._hooks.append((model, model.connect_after("row-changed", self._on_ui_row_changed)))
       self._on_ui_row_changed(model, path, model.get_iter(path))
 
@@ -1012,13 +1012,13 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
          each.set_stream_active(active)
    
 
-   def new_metadata(self, artist, title, album, songname):
+   def new_metadata(self, new_meta):
       for each in self._message_handlers:
-         each.new_metadata(artist, title, album, songname)
+         each.new_metadata(new_meta)
 
 
-   def _on_row_inserted(self, model, path, iter, parent_path):
-      if path[:-1] == parent_path:
+   def _on_row_inserted(self, model, path, iter):
+      if path[:-1] == self.get_path():
          type = model[path].type
          mh = globals()["MessageHandlerForType_" + str(type + 1)](model, path)
          mh.connect("channels-changed", self._on_channels_changed)
@@ -1054,7 +1054,7 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
          each.channels_invalidate()
 
 
-   def _on_privmsg_ready(self, handler, targets, message):
+   def _on_privmsg_ready(self, handler, targets, message, delay):
       if self._have_welcome:
          chan_targets = filter(lambda x: x[0] in "#&", targets)
          user_targets = filter(lambda x: x[0] not in "#&", targets)
@@ -1063,8 +1063,11 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
             self.server.privmsg_many(chan_targets, message)
             for target in user_targets:
                self.server.notice(target, message)
-               
-         self._queue.append(deferred)
+
+         if delay:
+            self._queue.append(lambda: self.server.execute_delayed(delay, deferred))
+         else:
+            self._queue.append(deferred)
 
 
    def _on_ui_row_changed(self, model, path, iter):
@@ -1108,15 +1111,12 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
          except AttributeError:
             target = self._generic_handler
          self.server.add_global_handler(event, target)
-      
-      while not self._queue:
-         time.sleep(0.05)
-      
+            
       while self._keepalive:
          while len(self._queue):
             self._queue.pop(0)()
          
-         self.irc.process_once()
+         self.irc.process_once(0.2)
          
 
    def cleanup(self):
@@ -1208,6 +1208,10 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
          server.ctcp_reply(source, "TIME " + time.ctime())
 
 
+   def _on_motd(self, server, event):
+      pass
+
+
    def _generic_handler(self, server, event):
       print "Type:", event.eventtype()
       print "Source:", event.source()
@@ -1219,10 +1223,11 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
 class MessageHandler(gobject.GObject):
    __gsignals__ = { 
       'channels-changed': (gobject.SIGNAL_RUN_LAST | gobject.SIGNAL_ACTION,
-                                       gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, )),
+                           gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, )),
 
       'privmsg-ready':    (gobject.SIGNAL_RUN_LAST | gobject.SIGNAL_ACTION,
-                                       gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, gobject.TYPE_STRING))
+                           gobject.TYPE_NONE,
+                          (gobject.TYPE_PYOBJECT, gobject.TYPE_STRING, gobject.TYPE_INT))
 
    }
 
@@ -1235,6 +1240,11 @@ class MessageHandler(gobject.GObject):
    def stream_active(self):
       return self._stream_active
    
+
+   subst_keys = ("artist", "title", "album", "songname", "djname", "description", "url")
+   subst_tokens = ("%r", "%t", "%l", "%s", "%n", "%d", "%u")
+   subst = dict.fromkeys(subst_keys, "<No data>")
+
 
    def __init__(self, model, path):
       gobject.GObject.__init__(self)
@@ -1268,15 +1278,14 @@ class MessageHandler(gobject.GObject):
       pass
 
 
-   def new_metadata(self, artist, title, album, songname):
-      self.artist = artist
-      self.title = title
-      self.album = album
-      self.songname = songname
-      self.on_new_metadata(artist, title, album, songname)
+   def new_metadata(self, new_meta):
+      assert not frozenset(new_meta).difference(frozenset(self.subst_keys))
+
+      self.subst.update(new_meta)
+      self.on_new_metadata()
       
       
-   def on_new_metadata(self, artist, title, album, songname):
+   def on_new_metadata(self):
       pass
 
 
@@ -1324,55 +1333,69 @@ class MessageHandler(gobject.GObject):
          raise AttributeError("unknown property '%s'" % prop.name)
          
          
-   def issue_messages(self, filter=lambda row: True):
+   def issue_messages(self, delay_calc=lambda row: 0):
       model = self.tree_row_ref.get_model()
       iter = model.get_iter(self.tree_row_ref.get_path())
       iter = model.iter_children(iter)
       while iter is not None:
-         row = model[model.get_path(iter)]
-         if filter(row):
-            targets = [x.split("!")[0] for x in row.channels.split(",")]
-            table = [("%%", "%")] + zip(("%r", "%t", "%l", "%s"), (
-                  self.artist, self.title, self.album, self.songname))
-            message = string_multireplace(row.message, table)
-            self.emit("privmsg-ready", targets, message)
+         path = model.get_path(iter)
+         if model.path_is_active(path):
+            row = model[path]
+            delay_s = delay_calc(row)
+            if delay_s is not None:
+               targets = [x.split("!")[0] for x in row.channels.split(",")]
+               table = [("%%", "%")] + zip(self.subst_tokens, (
+                                    self.subst[x] for x in self.subst_keys))
+               message = string_multireplace(row.message, table)
+               self.emit("privmsg-ready", targets, message, delay_s)
         
          iter = model.iter_next(iter)
 
 
 
 class MessageHandlerForType_3(MessageHandler):
-   def __init__(self, model, path):
-      MessageHandler.__init__(self, model, path)
-
-
-   def on_new_metadata(self, *args):
-      self.issue_messages()
+   def on_new_metadata(self):
+      if self.stream_active:
+         self.issue_messages(lambda row: row.delay)
 
 
 
 class MessageHandlerForType_5(MessageHandler):
-   def __init__(self, model, path):
-      MessageHandler.__init__(self, model, path)
-
-
+   def on_stream_active(self):
+      self._timeout_id = gobject.timeout_add(500, self._timeout)
+      
+      
+   def on_stream_inactive(self):
+      gobject.source_remove(self._timeout_id)
+      
+      
+   @threadslock
+   def _timeout(self):
+      self.issue_messages(partial(self._delay_calc, the_time=int(time.time())))
+      return True
+      
+      
+   def _delay_calc(self, row, the_time):
+      """Returns either a delay of 0 or suppression value None."""
+      
+      issue = (the_time - row.offset) // row.interval
+      if issue > int(row.issue or 0):
+         row.issue = str(issue)
+         return 0
+         
+         
+   def cleanup(self):
+      if self.stream_active:
+         gobject.source_remove(self._timeout_id)
 
 
 
 class MessageHandlerForType_7(MessageHandler):
-   def __init__(self, model, path):
-      MessageHandler.__init__(self, model, path)
-
-
    def on_stream_active(self):
       self.issue_messages()
 
 
 
 class MessageHandlerForType_9(MessageHandler):
-   def __init__(self, model, path):
-      MessageHandler.__init__(self, model, path)
-
-
    def on_stream_inactive(self):
       self.issue_messages()

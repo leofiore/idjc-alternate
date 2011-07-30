@@ -2419,9 +2419,16 @@ class SourceClientGui:
       if self.receive() == "succeeded":
          print "updated song metadata successfully"
 
+      common = {"artist": artist, "title": title, "album": album, "songname": songname}
       for tab in self.streamtabframe.tabs:         # Update the custom metadata on all stream tabs.
          tab.metadata_update.clicked()
-         tab.ircpane.connections_controller.new_metadata(artist, title, album, songname)
+         ircmetadata = {"djname": tab.dj_name_entry.get_text(),
+                        "description": tab.description_entry.get_text(),
+                        "url": tab.listen_url_entry.get_text()
+         }
+         ircmetadata.update(common)
+
+         tab.ircpane.connections_controller.new_metadata(ircmetadata)
       
    def source_client_open(self):
       try:
