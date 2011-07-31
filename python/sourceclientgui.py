@@ -1381,10 +1381,14 @@ class StreamTab(Tab):
          url = "http://" + urllib.quote(srv.host) + ":" + str(srv.port) + "/admin/killsource?mount=" + urllib.quote(srv.mount)
          auth_handler.add_password("Icecast2 Server", srv.host + ":" + str(srv.port), srv.login, srv.password)
          def check_reply(reply):
-            elem = xml.etree.ElementTree.fromstring(reply)
-            rslt = "succeeded" if elem.findtext("return") == "1" else "failed"
-            print "kick %s: %s" % (rslt, elem.findtext("message"))
-            return rslt == "succeeded"
+            try:
+               elem = xml.etree.ElementTree.fromstring(reply)
+            except xml.etree.ElementTree.ParseError:
+               return False
+            else:
+               rslt = "succeeded" if elem.findtext("return") == "1" else "failed"
+               print "kick %s: %s" % (rslt, elem.findtext("message"))
+               return rslt == "succeeded"
 
       elif mode == 2:
          password = self.admin_password_entry.get_text().strip() or srv.password
