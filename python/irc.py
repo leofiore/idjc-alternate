@@ -45,7 +45,6 @@ from .ln_text import ln
 pm = ProfileManager()
 
 
-
 XChat_colour = {
    0:  0xCCCCCCFF,
    1:  0x000000FF,
@@ -66,8 +65,10 @@ XChat_colour = {
 }
 
 
-
 message_categories = ("Announce", "Timer", "On up", "On down")
+
+
+ASCII_C0 = "".join(chr(x) for x in range(32))
 
 
 
@@ -319,7 +320,7 @@ class EditDialogMixin(object):
 
 
 
-server_port_adj = gtk.Adjustment(6767.0, 0.0, 65535.0, 1.0, 10.0)
+server_port_adj = gtk.Adjustment(6667.0, 0.0, 65535.0, 1.0, 10.0)
 
 
 
@@ -1166,14 +1167,56 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       while iter is not None:
          model.row_changed(model.get_path(iter), iter)
          iter = model.iter_next(iter)
+      row = model[path]
       model.row_changed_block()
-      model[path].nick = event.target()
+      row.nick = event.target()
       model.row_changed_unblock()
+      
+      target = row.nick1
+      nspw = row.nickserv
+      if event.target() != target and nspw:
+         self._nick_recover(server, target, nspw)
+         
 
+   def _nick_recover(self, server, target, nspw):
+      print "Will issue recover and release commands to NickServ"
+      for i, (func, args) in enumerate((
+            (server.privmsg, ("NickServ", "RECOVER %s %s" % (target, nspw))),
+            (server.privmsg, ("NickServ", "RELEASE %s %s" % (target, nspw))),
+            (server.nick, (target,))), start=1):
+         server.execute_delayed(i, func, args)
+
+
+   def _on_privnotice(self, server, event):
+      source = event.source()
+      if source is not None:
+         source = source.split("!")[0]
+         
+         print "-%s- %s" % (source, event.arguments()[0])
+         if source == "NickServ!services":
+            gtk.gdk.threads_enter()
+            nspw = self.get_model()[self.get_path()].nickserv
+            gtk.gdk.threads_leave()
+
+            if "NickServ IDENTIFY" in event.arguments()[0] and nspw:
+               server.privmsg("NickServ", "IDENTIFY %s" % nspw)
+               print "Issued IDENTIFY command to NickServ"
+               self._ui_set_nick(event.target())
+            elif "Guest" in event.arguments()[0]:
+               newnick = event.arguments()[0].split()[-1].strip(ASCII_C0)
+               self._ui_set_nick(newnick)
+               if nspw:
+                  self._nick_recover(server, event.target(), nspw)
+            else:
+               self._ui_set_nick(event.target())
+      else:
+         self._generic_handler(server, event)
+      
 
    def _on_disconnect(self, server, event):
       self._have_welcome = False
       self._ui_set_nick("")
+      print event.target(), "disconnected"
 
       
    def _on_nicknameinuse(self, server, event):
@@ -1200,12 +1243,25 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
    def _on_ctcp(self, server, event):
       source = event.source().split("!")[0]
       args = event.arguments()
+      reply = partial(server.ctcp_reply, source)
       
-      if args == ["VERSION"]:
-         server.ctcp_reply(source, "VERSION %s %s (python-irclib)" % (
+      if args == ["CLIENTINFO"]:
+         reply("CLIENTINFO VERSION TIME SOURCE PING CLIENTINFO")
+      
+      elif args == ["VERSION"]:
+         reply("VERSION %s %s (python-irclib)" % (
                         FGlobs.package_name, FGlobs.package_version))
       elif args == ["TIME"]:
-         server.ctcp_reply(source, "TIME " + time.ctime())
+         reply("TIME " + time.ctime())
+         
+      elif args == ["SOURCE"]:
+         reply("SOURCE http://www.sourceforge.net/projects/idjc")
+         
+      elif args[0] == "PING":
+         reply(" ".join(args))
+         
+      else:
+         print "CTCP from", source, args
 
 
    def _on_motd(self, server, event):
