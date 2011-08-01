@@ -37,7 +37,10 @@ except ImportError:
 
 from idjc import FGlobs
 from idjc.prelims import ProfileManager
-from .gtkstuff import DefaultEntry, NamedTreeRowReference, threadslock
+from .gtkstuff import DefaultEntry
+from .gtkstuff import NamedTreeRowReference
+from .gtkstuff import ConfirmationDialog
+from .gtkstuff import threadslock
 from .freefunctions import string_multireplace
 from .ln_text import ln
 
@@ -319,6 +322,12 @@ class EditDialogMixin(object):
       bb.add(self.delete)
 
 
+   def delete_confirmation(self, deleter):
+      """Override in subclass to install a confirmation dialog."""
+
+      return deleter
+
+
 
 server_port_adj = gtk.Adjustment(6667.0, 0.0, 65535.0, 1.0, 10.0)
 
@@ -336,7 +345,7 @@ class ServerDialog(gtk.Dialog):
       self.hostname = gtk.Entry()
       self.port = gtk.SpinButton(server_port_adj)
       self.ssl = gtk.CheckButton("SSL")
-      self.username = DefaultEntry("Nobody")
+      self.username = gtk.Entry()
       self.password = gtk.Entry()
       self.password.set_visibility(False)
       self.nick1 = gtk.Entry()
@@ -389,6 +398,18 @@ class EditServerDialog(ServerDialog, EditDialogMixin):
    def __init__(self, orig_data):
       ServerDialog.__init__(self)
       EditDialogMixin.__init__(self, orig_data)
+
+
+   def delete_confirmation(self, deleter):
+      def inner(w):
+         cd = ConfirmationDialog("", 
+         "<span weight='bold' size='12000'>Permanently delete this server?</span>\n\n"
+         "This action will also erase all of its associated messages.", markup=True)
+         cd.set_transient_for(self)
+         cd.ok.connect("clicked", deleter)
+         cd.show_all()
+
+      return inner
       
        
    def from_tuple(self, orig_data):
@@ -559,9 +580,11 @@ class EditTimerMessageDialog(TimerMessageDialog, EditDialogMixin):
 
 
 
-def iteminfo(f):
-   """IRCPane function decorator for new/edit callbacks."""
-
+def glue(f):
+   """IRCPane function decorator for new/edit button callbacks.
+   
+   Provides item infrormation and wires up the edit dialogs.
+   """
    
    @wraps(f)
    def inner(self, widget):
@@ -582,14 +605,15 @@ def iteminfo(f):
             d.ok.connect("clicked", lambda w: cb(d, model, _iter, *args, **kwds))
             
             if hasattr(d, "delete"):
+               @d.delete_confirmation
                def delete(w):
                   iter_parent = model.iter_parent(_iter)
                   self._treeview.get_selection().select_iter(iter_parent)
                   model.remove(_iter)
+                  d.destroy()
                   
                d.delete.connect("clicked", delete)
-               d.delete.connect_after("clicked", lambda w: d.destroy())
-            
+
             d.show_all()
 
          return f(self, model.get_value(_iter, 0), model, _iter, dialog)
@@ -861,7 +885,7 @@ class IRCPane(gtk.VBox):
       cell.props.text = text
 
 
-   @iteminfo
+   @glue
    def _on_new(self, mode, model, iter, dialog):
       if mode == 0:
          dialog(ServerDialog(), self._add_server)
@@ -881,7 +905,7 @@ class IRCPane(gtk.VBox):
             print "unknown message category with numerical code,", mode
     
    
-   @iteminfo
+   @glue
    def _on_edit(self, mode, model, iter, dialog):
       if mode == 1:
          dialog(EditServerDialog(tuple(model[model.get_path(iter)])[2:13]),
