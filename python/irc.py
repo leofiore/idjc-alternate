@@ -976,6 +976,7 @@ class ConnectionsController(list):
          model.connect_after("row-changed", self._on_row_changed)
          
       list.__init__(self)
+      self._stream_active = False
     
     
    def cleanup(self):
@@ -983,9 +984,11 @@ class ConnectionsController(list):
          each.cleanup()
     
 
-   def set_stream_active(self, active):
+   def set_stream_active(self, stream_active):
+      self._stream_active = stream_active
+
       for each in self:
-         each.set_stream_active(active)
+         each.set_stream_active(stream_active)
       
       
    def new_metadata(self, new_meta):
@@ -995,7 +998,7 @@ class ConnectionsController(list):
 
    def _on_row_inserted(self, model, path, iter):
       if model.get_value(iter, 0) == 1:
-         self.append(IRCConnection(model, path))
+         self.append(IRCConnection(model, path, self._stream_active))
 
 
    def _on_row_deleted(self, model, path):
@@ -1016,14 +1019,16 @@ class ConnectionsController(list):
 
 
 class IRCConnection(gtk.TreeRowReference, threading.Thread):
-   def __init__(self, model, path):
+   def __init__(self, model, path, stream_active):
       gtk.TreeRowReference.__init__(self, model, path)
       threading.Thread.__init__(self)
       self._hooks = []
       self._queue = []
+      self._played = []
       self._message_handlers = []
       self._keepalive = True
       self._have_welcome = False
+      self._stream_active = stream_active
       self.irc = irclib.IRC()
       self.server = self.irc.server()
       self.start()
@@ -1032,12 +1037,17 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       self._on_ui_row_changed(model, path, model.get_iter(path))
 
 
-   def set_stream_active(self, active):
+   def set_stream_active(self, stream_active):
+      self._stream_active = stream_active
       for each in self._message_handlers:
-         each.set_stream_active(active)
-   
+         each.set_stream_active(stream_active)
+
 
    def new_metadata(self, new_meta):
+      if self._stream_active:
+         self._played.insert(0, (new_meta["songname"], time.time()))
+         del self._played[10:]
+
       for each in self._message_handlers:
          each.new_metadata(new_meta)
 
@@ -1045,7 +1055,7 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
    def _on_row_inserted(self, model, path, iter):
       if path[:-1] == self.get_path():
          type = model[path].type
-         mh = globals()["MessageHandlerForType_" + str(type + 1)](model, path)
+         mh = globals()["MessageHandlerForType_" + str(type + 1)](model, path, self._stream_active)
          mh.connect("channels-changed", self._on_channels_changed)
          mh.connect("privmsg-ready", self._on_privmsg_ready)
          self._message_handlers.append(mh)
@@ -1145,21 +1155,29 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
          
 
    def cleanup(self):
+      def deferred():
+         try:
+            self.server.disconnect()
+         except irclib.ServerConnectionError, e:
+            print >>sys.stderr, str(e)
+      self._queue.append(deferred)
+      
       for each in self._message_handlers:
          each.cleanup()
       for obj, handler_id in self._hooks:
          obj.disconnect(handler_id)
-      self._keepalive = False
+
+      self.server.add_global_handler("disconnect", self.thread_purge_on_disconnect)
+      if not self.server.is_connected():
+         self._keepalive = False
       self.join(1.0)
       if self.is_alive():
-         print "Problem shutting down IRC connection."
          self.server.close()
-         self.join(0.5)
-         if self.is_alive():
-            print "Failed to shut down IRC connection thread. Giving up."
-         else:
-            print "IRC connection finally shut down."
 
+
+   def thread_purge_on_disconnect(self, server, event):
+      self._keepalive = False
+      
 
    @threadslock
    def _ui_set_nick(self, nickname):
@@ -1183,6 +1201,7 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
 
    @threadslock
    def _on_welcome(self, server, event):
+      print "Got IRC welcome", event.source()
       self._have_welcome = True
       self._channels_invalidate()
       model = self.get_model()
@@ -1240,7 +1259,7 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
    def _on_disconnect(self, server, event):
       self._have_welcome = False
       self._ui_set_nick("")
-      print event.target(), "disconnected"
+      print event.source(), "disconnected"
 
       
    def _on_nicknameinuse(self, server, event):
@@ -1261,7 +1280,6 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
 
    def _on_join(self, server, event):
       print "Channel joined", event.target()
-      print event.target()
 
 
    def _on_ctcp(self, server, event):
@@ -1270,7 +1288,7 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       reply = partial(server.ctcp_reply, source)
       
       if args == ["CLIENTINFO"]:
-         reply("CLIENTINFO VERSION TIME SOURCE PING CLIENTINFO")
+         reply("CLIENTINFO VERSION TIME SOURCE PING ACTION CLIENTINFO PLAYED STREAMSTATUS KILLSTREAM")
       
       elif args == ["VERSION"]:
          reply("VERSION %s %s (python-irclib)" % (
@@ -1284,8 +1302,38 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
       elif args[0] == "PING":
          reply(" ".join(args))
          
+      elif args == ["PLAYED"]:
+         t = time.time()
+         gtk.gdk.threads_enter()
+         show = [x for x in self._played if t - x[1] < 5400.0]
+         gtk.gdk.threads_leave()
+
+         for i, each in enumerate(show, start=1):
+            age = int((t - each[1]) // 60)
+            if age == 1:
+               message = "PLAYED \x0304%s\x0f, \x0306%d minute ago\x0f."
+            else:
+               message = "PLAYED \x0304%s\x0f, \x0306%d minutes ago\x0f."
+            server.execute_delayed(i, reply, (message %
+                                          (each[0], age),))
+
+         if not show:
+            reply("PLAYED Nothing recent to report.")
+         else:
+            server.execute_delayed(i + 1, reply, ("PLAYED End of list.",))
+            
+      elif args == ["STREAMSTATUS"]:
+         reply("STREAMSTATUS The stream is %s." % ("up" if self._stream_active else "down"))
+
+      elif args == ["KILLSTREAM"]:
+         reply("KILLSTREAM This feature was added as a joke.")
+
+      elif args == ["ACTION"]:
+         pass
+
       else:
-         print "CTCP from", source, args
+         pass
+         #print "CTCP from", source, args
 
 
    def _on_motd(self, server, event):
@@ -1293,6 +1341,7 @@ class IRCConnection(gtk.TreeRowReference, threading.Thread):
 
 
    def _generic_handler(self, server, event):
+      return
       print "Type:", event.eventtype()
       print "Source:", event.source()
       print "Target:", event.target()
@@ -1326,21 +1375,21 @@ class MessageHandler(gobject.GObject):
    subst = dict.fromkeys(subst_keys, "<No data>")
 
 
-   def __init__(self, model, path):
+   def __init__(self, model, path, stream_active):
       gobject.GObject.__init__(self)
       self.tree_row_ref = gtk.TreeRowReference(model, path)
 
       self._channels = frozenset()
-      self._stream_active = False
+      self._stream_active = stream_active
       model.connect("row-inserted", self.channels_evaluate)
       model.connect("row-deleted", self.channels_evaluate)
       model.connect_after("row-changed", self.channels_evaluate)
 
 
-   def set_stream_active(self, active):
-      if self._stream_active != active:
-         self._stream_active = active
-         if active:
+   def set_stream_active(self, stream_active):
+      if self._stream_active != stream_active:
+         self._stream_active = stream_active
+         if stream_active:
             self.on_stream_active()
          else:
             self.on_stream_inactive()
