@@ -970,6 +970,50 @@ class idjc_shutdown_dialog:
             label.show()
       dialog.show()
 
+
+class WindowSizeTracker(object):
+   """This class will monitor the un-maximized size of a window."""
+
+
+   def __init__(self, window, tracking=True):
+      self._is_tracking = tracking
+      self._x = self._y = 100
+      self._max = False
+      window.connect("configure-event", self._on_configure_event)
+      window.connect("window-state-event", self._on_window_state_event)
+      
+      
+   def set_tracking(self, tracking):
+      self._is_tracking = tracking
+      
+      
+   def get_tracking(self):
+      return self._is_tracking
+
+
+   def get_x(self):
+      return self._x
+
+
+   def get_y(self):
+      return self._y
+
+
+   def get_max(self):
+      return self._max
+
+
+   def _on_configure_event(self, widget, event):
+      if self._is_tracking and not self._max:
+         self._x = event.width
+         self._y = event.height
+
+
+   def _on_window_state_event(self, widget, event): 
+      if self._is_tracking:
+         self._max = event.new_window_state & gtk.gdk.WINDOW_STATE_MAXIMIZED != 0
+
+
 class MainWindow:
    def send_new_mixer_stats(self):
 
@@ -1183,21 +1227,46 @@ class MainWindow:
       if data == "Features":
          if widget.get_active():
             self.simplemixer = False
+            if self.min_wst.get_max():
+               self.window.unmaximize()
+            self.min_wst.set_tracking(False)
             self.window.forall(self.ui_detail_leveller(5))
-            self.window.resize(self.fullwinx, self.fullwiny)
-            self.send_new_mixer_stats()
-            for each in (self.player_left, self.player_right):
-               each.pl_mode.emit("changed")
+            self.window.resize(self.full_wst.get_x(), self.full_wst.get_y())
+            # The code is split here in order to supply the window manager
+            # with the unmaximized window at size before any possible
+            # maximization.
+            @threadslock
+            def therest(self):
+               self.full_wst.set_tracking(True)
+               if self.full_wst.get_max():
+                  self.window.maximize()
+               else:
+                  self.window.unmaximize()
+               self.send_new_mixer_stats()
+               for each in (self.player_left, self.player_right):
+                  each.pl_mode.emit("changed")
+            gobject.idle_add(therest, self)
          else:
             self.simplemixer = True
+            if self.full_wst.get_max():
+               self.window.unmaximize()
+            self.full_wst.set_tracking(False)
             self.player_right.stop.clicked()
             self.jingles.window.hide()
             self.crossadj.set_value(0)
             self.crossadj.value_changed()
             self.window.forall(self.ui_detail_leveller(0))
-            self.window.resize(self.minwinx, self.minwiny)
-            for each in (self.player_left, self.player_right):
-               each.pl_delay.set_sensitive(False)
+            self.window.resize(self.min_wst.get_x(), self.min_wst.get_y())
+            @threadslock
+            def therest(self):
+               self.min_wst.set_tracking(True)
+               if self.min_wst.get_max():
+                  self.window.maximize()
+               else:
+                  self.window.unmaximize()
+               for each in (self.player_left, self.player_right):
+                  each.pl_delay.set_sensitive(False)
+            gobject.idle_add(therest, self)
       
       if data == "Advance":
          if self.crossfade.get_value() < 50:
@@ -1838,12 +1907,6 @@ class MainWindow:
          self.player_left.reselect_cursor_please = True
       if self.player_right.is_playing:
          self.player_right.reselect_cursor_please = True
-      if not self.simplemixer:
-         self.fullwinx.set_value(event.width)
-         self.fullwiny.set_value(event.height)
-      else:
-         self.minwinx.set_value(event.width)
-         self.minwiny.set_value(event.height)
          
    def menu_activate(self, widget, event):
       if event.type == gtk.gdk.BUTTON_PRESS and event.button == 3:
@@ -1983,7 +2046,6 @@ class MainWindow:
       self.window.set_border_width(8)
       self.window.connect("delete_event",self.delete_event)
       self.tooltips = tooltips.Tooltips()
-
       self.hbox10 = gtk.HBox(False)
       self.hbox10.set_border_width(2)
       self.hbox10.set_spacing(7)
@@ -2743,10 +2805,10 @@ class MainWindow:
       self.player_right.runout = int_object(0)
       self.metadata_left_ctrl = int_object(0)
       self.metadata_right_ctrl = int_object(0)
-      self.fullwinx = int_object(1)
-      self.fullwiny = int_object(1)
-      self.minwinx = int_object(1)
-      self.minwiny = int_object(1)
+
+      self.full_wst = WindowSizeTracker(self.window, True)
+      self.min_wst = WindowSizeTracker(self.window, False)
+
       self.in_vu_timeout = False
       self.vucounter = 0
       self.session_filename = pm.basedir / "main_session"
@@ -2797,9 +2859,10 @@ class MainWindow:
       
       signal.signal(signal.SIGINT, self.destroy)
       if not self.simplemixer:
-         self.window.resize(self.fullwinx, self.fullwiny)
+         tracker = self.full_wst
       else:
-         self.window.resize(self.minwinx, self.minwiny)
+         tracker = self.min_wst
+      self.window.resize(tracker.get_x(), tracker.get_y())
       self.window.connect("configure_event", self.configure_event)
       self.jingles.window.resize(self.jingles.jingleswinx, self.jingles.jingleswiny)
 

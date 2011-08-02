@@ -1897,10 +1897,6 @@ class mixprefs:
          
       self.valuesdict = {
          "interval_vol"  : self.parent.jingles.interadj,
-         "fullwinx"      : self.parent.fullwinx,
-         "fullwiny"      : self.parent.fullwiny,
-         "minwinx"       : self.parent.minwinx,
-         "minwiny"       : self.parent.minwiny,
          "jingleswinx"   : self.parent.jingles.jingleswinx,
          "jingleswiny"   : self.parent.jingles.jingleswiny,
          "prefswinx"     : self.winx,
