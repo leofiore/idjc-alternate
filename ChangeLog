@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.6 *
 
+GUI remembers previous window maximized state as well as the unmaximised size.
+
 Replaced XChat plugin with python-irclib based integrated IRC.
 
 New profile manager.

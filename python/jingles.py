@@ -28,6 +28,7 @@ import gtk
 
 from idjc import *
 from .freefunctions import *
+from .gtkstuff import WindowSizeTracker
 from .ln_text import ln
 from .prelims import *
 
@@ -319,11 +320,7 @@ class Jingles(object):
                print "The interlude file is missing from the list."
             print "Shutting down the interlude player"
             self.stop_interlude_player()
-      
-   def configure_event(self, widget, event):
-      self.jingleswinx.set_value(event.width)
-      self.jingleswiny.set_value(event.height)
-      
+            
    def trigger_index(self, index):
       if index == -1:
          if self.playing:
@@ -348,6 +345,7 @@ class Jingles(object):
       self.window.add_events(gtk.gdk.KEY_PRESS_MASK)
       self.window.connect("key-press-event", parent.cb_key_capture)
       self.window.connect("key-release-event", parent.cb_key_capture)
+      self.wst = WindowSizeTracker(self.window)
 
       hbox = gtk.HBox()
       hbox.set_spacing(8)
@@ -539,7 +537,4 @@ class Jingles(object):
       self.interlude_song= ""
       self.interlude_playing = False
       self.load_jingles()
-      self.jingleswinx = int_object(1)
-      self.jingleswiny = int_object(1)
-      self.window.connect("configure_event", self.configure_event)
       self.interlude_player_track = ""

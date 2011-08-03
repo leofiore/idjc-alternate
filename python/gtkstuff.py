@@ -17,6 +17,7 @@
 
 
 import os
+import json
 from abc import ABCMeta, abstractmethod
 
 import gobject
@@ -332,3 +333,70 @@ class NamedTreeRowReference(object):
 
    def __setattr__(self, name, data):
       self._tree_row_ref[self._index_for_name(name)] = data
+
+
+
+class WindowSizeTracker(object):
+   """This class will monitor the un-maximized size of a window."""
+
+
+   def __init__(self, window, tracking=True):
+      self._window = window
+      self._is_tracking = tracking
+      self._x = self._y = 100
+      self._max = False
+      window.connect("configure-event", self._on_configure_event)
+      window.connect("window-state-event", self._on_window_state_event)
+      
+      
+   def set_tracking(self, tracking):
+      self._is_tracking = tracking
+      
+      
+   def get_tracking(self):
+      return self._is_tracking
+
+
+   def get_x(self):
+      return self._x
+
+
+   def get_y(self):
+      return self._y
+
+
+   def get_max(self):
+      return self._max
+
+
+   def get_text(self):
+      """Marshalling function for save settings."""
+      
+      return json.dumps((self._x, self._y, self._max))
+      
+      
+   def set_text(self, s):
+      """Unmarshalling function for load settings."""
+      
+      try:
+         self._x, self._y, self._max = json.loads(s)
+      except StandardError:
+         pass
+
+
+   def apply(self):
+      self._window.unmaximize()
+      self._window.resize(self._x, self._y)
+      if self._max:
+         gobject.idle_add(threadslock(self._window.maximize))
+      
+
+   def _on_configure_event(self, widget, event):
+      if self._is_tracking and not self._max:
+         self._x = event.width
+         self._y = event.height
+
+
+   def _on_window_state_event(self, widget, event): 
+      if self._is_tracking:
+         self._max = event.new_window_state & gtk.gdk.WINDOW_STATE_MAXIMIZED != 0

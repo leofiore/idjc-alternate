@@ -29,6 +29,7 @@ from . import p3db
 from . import midicontrols
 from .ln_text import ln
 from .freefunctions import int_object
+from .gtkstuff import WindowSizeTracker
 from .prelims import ProfileManager
 from .utils import PathStr
 
@@ -876,22 +877,15 @@ class mixprefs:
       else:         
          left.treeview.remove_column(left.rgtvcolumn)
          right.treeview.remove_column(right.rgtvcolumn)
-      
-   def cb_configure_event(self, window, event):
-         self.winx.set_value(event.width)
-         self.winy.set_value(event.height)
-         
+               
    def cb_realize(self, window):
-      window.resize(self.winx, self.winy)
+      self.wst.apply()
          
    def __init__(self, parent):
       self.parent = parent
       self.parent.prefs_window = self
       self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
       self.window.set_size_request(-1, 480)
-      self.winx = int_object(1)
-      self.winy = int_object(1)      
-      self.window.connect("configure-event", self.cb_configure_event)
       self.window.connect("realize", self.cb_realize)
       self.parent.window_group.add_window(self.window)
       self.window.set_title(ln.prefs_window + pm.title_extra)
@@ -901,6 +895,7 @@ class mixprefs:
       self.window.set_destroy_with_parent(True)
       self.notebook = gtk.Notebook()
       self.window.add(self.notebook)
+      self.wst = WindowSizeTracker(self.window)
 
       # General tab
       
@@ -1897,10 +1892,6 @@ class mixprefs:
          
       self.valuesdict = {
          "interval_vol"  : self.parent.jingles.interadj,
-         "jingleswinx"   : self.parent.jingles.jingleswinx,
-         "jingleswiny"   : self.parent.jingles.jingleswiny,
-         "prefswinx"     : self.winx,
-         "prefswiny"     : self.winy,
          "passspeed"     : self.parent.passspeed_adj,
          "normboost"     : self.normboost_adj,
          "normceiling"   : self.normceiling_adj,
@@ -1929,6 +1920,10 @@ class mixprefs:
          "et_auxon"      : self.aux_on_event,
          "et_auxoff"     : self.aux_off_event,
          "con_delays"    : self.recon_config.csl,
+         "main_full_wst" : self.parent.full_wst,
+         "main_min_wst"  : self.parent.min_wst,
+         "jingles_wst"   : self.parent.jingles.wst,
+         "prefs_wst"     : self.wst,
          }
 
       for mic_control in mic_controls:

@@ -39,7 +39,7 @@ import gobject
 from idjc import FGlobs, PGlobs
 from .ln_text import ln
 from .freefunctions import int_object, string_multireplace
-from .gtkstuff import DefaultEntry, threadslock, HistoryEntry
+from .gtkstuff import DefaultEntry, threadslock, HistoryEntry, WindowSizeTracker
 from .dialogs import *
 
 from .prelims import ProfileManager
@@ -2641,11 +2641,9 @@ class SourceClientGui:
          print "failed to open serverdata file"
 
 
-   def cb_configure_event(self, widget, event):
-      self.win_x.set_value(event.width)
-      self.win_y.set_value(event.height)
    def cb_after_realize(self, widget):
-      widget.resize(int(self.win_x), 1)
+      self.wst.apply()
+      #widget.resize(int(self.win_x), 1)
       self.streamtabframe.connect_group.grab_focus()
       
    def cb_stream_details_expand(self, expander, param_spec, next_expander, sw):
@@ -2656,7 +2654,7 @@ class SourceClientGui:
       
       if expander.get_expanded() == next_expander.get_expanded():
          if not expander.get_expanded():
-            self.window.resize((int(self.win_x)), 1)
+            self.window.resize((self.wst.get_x()), 1)
          else:
             pass
       else:
@@ -2669,7 +2667,7 @@ class SourceClientGui:
          frame.hide()
       
       if expander.get_expanded() == next_expander.get_expanded():
-         self.window.resize((int(self.win_x)), 1)
+         self.window.resize((self.wst.get_x()), 1)
       else:
          next_expander.set_expanded(expander.get_expanded())
       
@@ -2683,8 +2681,6 @@ class SourceClientGui:
    def __init__(self, parent):
       self.parent = parent
       parent.server_window = self
-      self.win_x = int_object(100)
-      self.win_y = int_object(100)
       self.source_client_crash_count = 0
       self.source_client_open()
       self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -2693,9 +2689,9 @@ class SourceClientGui:
       self.window.set_destroy_with_parent(True)
       self.window.set_border_width(11)
       self.window.set_resizable(True)
-      self.window.connect("configure_event", self.cb_configure_event)
       self.window.connect_after("realize", self.cb_after_realize)
       self.window.connect("delete_event", self.cb_delete_event)
+      self.wst = WindowSizeTracker(self.window)
       vbox = gtk.VBox()
       vbox.set_spacing(10)
       self.window.add(vbox)
@@ -2729,8 +2725,7 @@ class SourceClientGui:
       self.tabs = (self, )                      #
       self.numeric_id = 0                       # pretend to be a tabframe and its tab for save/load purposes
       self.tab_type = "server_window"           #
-      self.objects = {  "width" : (self.win_x, "value"),
-                        "height": (self.win_y, "value"),
+      self.objects = {  "wst"   : (self.wst, "text"),
                         "streamer_page": (self.streamtabframe.notebook, "notebookpage"),
                         "recorder_page": (self.recordtabframe.notebook, "notebookpage"),
                         "controls_shown": (self.streamtabframe.tabs[0].ic_expander, "expanded") }

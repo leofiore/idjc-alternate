@@ -42,7 +42,7 @@ from .preferences import *
 from .jingles import *
 from .freefunctions import int_object
 from .freefunctions import rich_safe
-from .gtkstuff import threadslock
+from .gtkstuff import threadslock, WindowSizeTracker
 from . import midicontrols
 from . import tooltips
 from . import p3db
@@ -971,49 +971,6 @@ class idjc_shutdown_dialog:
       dialog.show()
 
 
-class WindowSizeTracker(object):
-   """This class will monitor the un-maximized size of a window."""
-
-
-   def __init__(self, window, tracking=True):
-      self._is_tracking = tracking
-      self._x = self._y = 100
-      self._max = False
-      window.connect("configure-event", self._on_configure_event)
-      window.connect("window-state-event", self._on_window_state_event)
-      
-      
-   def set_tracking(self, tracking):
-      self._is_tracking = tracking
-      
-      
-   def get_tracking(self):
-      return self._is_tracking
-
-
-   def get_x(self):
-      return self._x
-
-
-   def get_y(self):
-      return self._y
-
-
-   def get_max(self):
-      return self._max
-
-
-   def _on_configure_event(self, widget, event):
-      if self._is_tracking and not self._max:
-         self._x = event.width
-         self._y = event.height
-
-
-   def _on_window_state_event(self, widget, event): 
-      if self._is_tracking:
-         self._max = event.new_window_state & gtk.gdk.WINDOW_STATE_MAXIMIZED != 0
-
-
 class MainWindow:
    def send_new_mixer_stats(self):
 
@@ -1227,47 +1184,25 @@ class MainWindow:
       if data == "Features":
          if widget.get_active():
             self.simplemixer = False
-            if self.min_wst.get_max():
-               self.window.unmaximize()
             self.min_wst.set_tracking(False)
             self.window.forall(self.ui_detail_leveller(5))
-            self.window.resize(self.full_wst.get_x(), self.full_wst.get_y())
-            # The code is split here in order to supply the window manager
-            # with the unmaximized window at size before any possible
-            # maximization.
-            @threadslock
-            def therest(self):
-               self.full_wst.set_tracking(True)
-               if self.full_wst.get_max():
-                  self.window.maximize()
-               else:
-                  self.window.unmaximize()
-               self.send_new_mixer_stats()
-               for each in (self.player_left, self.player_right):
-                  each.pl_mode.emit("changed")
-            gobject.idle_add(therest, self)
+            self.send_new_mixer_stats()
+            for each in (self.player_left, self.player_right):
+               each.pl_mode.emit("changed")
+            self.full_wst.apply()
+            self.full_wst.set_tracking(True)
          else:
             self.simplemixer = True
-            if self.full_wst.get_max():
-               self.window.unmaximize()
             self.full_wst.set_tracking(False)
             self.player_right.stop.clicked()
             self.jingles.window.hide()
             self.crossadj.set_value(0)
             self.crossadj.value_changed()
             self.window.forall(self.ui_detail_leveller(0))
-            self.window.resize(self.min_wst.get_x(), self.min_wst.get_y())
-            @threadslock
-            def therest(self):
-               self.min_wst.set_tracking(True)
-               if self.min_wst.get_max():
-                  self.window.maximize()
-               else:
-                  self.window.unmaximize()
-               for each in (self.player_left, self.player_right):
-                  each.pl_delay.set_sensitive(False)
-            gobject.idle_add(therest, self)
-      
+            for each in (self.player_left, self.player_right):
+               each.pl_delay.set_sensitive(False)
+            self.min_wst.apply()
+            self.min_wst.set_tracking(True)
       if data == "Advance":
          if self.crossfade.get_value() < 50:
             self.player_left.advance()
@@ -2858,13 +2793,9 @@ class MainWindow:
       self.statstimeout = gobject.timeout_add(100, self.stats_update)
       
       signal.signal(signal.SIGINT, self.destroy)
-      if not self.simplemixer:
-         tracker = self.full_wst
-      else:
-         tracker = self.min_wst
-      self.window.resize(tracker.get_x(), tracker.get_y())
+      (self.full_wst, self.min_wst)[bool(self.simplemixer)].apply()
       self.window.connect("configure_event", self.configure_event)
-      self.jingles.window.resize(self.jingles.jingleswinx, self.jingles.jingleswiny)
+      self.jingles.wst.apply()
 
       if self.prefs_window.restore_session_option.get_active():
          print "Restoring previous session"
