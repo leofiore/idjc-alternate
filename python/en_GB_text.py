@@ -520,6 +520,8 @@ format_info_bar_tip = "Information about how the encoder is currently configured
 
 formats = " Supported Media Formats "
 
+from_the_album = "From the album, %s"
+
 from_here = "From Here"
 
 fully_featured = "Fully Featured"

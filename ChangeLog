@@ -2,6 +2,8 @@
 
 * Changes in version 0.8.6 *
 
+Mouseover popup of the main media players now indicates the album if that metadata is available.
+
 GUI remembers previous window maximized state as well as the unmaximised size.
 
 Replaced XChat plugin with python-irclib based integrated IRC.

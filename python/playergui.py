@@ -3288,9 +3288,17 @@ class IDJC_Media_Player:
                label1 = gtk.Label(ln.popupwindowplaying)
             vbox.add(label1)
             label1.show()
+            if self.album:
+               blank = gtk.Label("")
+               vbox.add(blank)
+               blank.show()
             label2 = gtk.Label(tracktitle)
             vbox.add(label2)
             label2.show()
+            if self.album:
+               label3 = gtk.Label(ln.from_the_album % self.album)
+               vbox.add(label3)
+               label3.show()
             blank = gtk.Label("")
             vbox.add(blank)
             blank.show()
