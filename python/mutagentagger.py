@@ -38,6 +38,12 @@ from mutagen.asf import ASF, ASFUnicodeAttribute
 from idjc import FGlobs
 from .freefunctions import *
 from .ln_text import ln
+from idjc.prelims import ProfileManager
+
+
+pm = ProfileManager()
+
+
 
 def set_tip(*args):
    """Dummy tooltips setter."""
