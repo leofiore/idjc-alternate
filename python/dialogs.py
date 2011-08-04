@@ -23,7 +23,11 @@ import gtk
 import pango
 
 from idjc import FGlobs
-from .ln_text import ln
+
+
+# Temporary translation code enabler.
+def _(s):
+   return s
 
 
 # A mutually exclusive list of dialogs so that only one can be on screen at a time
@@ -160,7 +164,7 @@ class ReconnectionDialog(gtk.Dialog):
       remaining = self.remaining
       self.remaining = int(self.event_time - time.time())
       if self.remaining != remaining:
-         self.label2.set_text(ln.reconnection_text_2 % self.remaining)
+         self.label2.set_text(_('Automatic reconnect in %d seconds.') % self.remaining)
          if self.remaining == 0:
             self.hide()
             while gtk.events_pending():
@@ -207,9 +211,9 @@ class ReconnectionDialog(gtk.Dialog):
       self.event_time = time.time() + self.remaining
       self.update_countdown_text()
       if self.limited_delays:
-         self.label3.set_text(ln.reconnection_text_3 % (self.trycount, len(self.td) - 1))
+         self.label3.set_text(_('Try %d of %d.') % (self.trycount, len(self.td) - 1))
       else:
-         self.label3.set_text(ln.reconnection_text_3b % self.trycount)
+         self.label3.set_text(_('Try %d.') % self.trycount)
       if self.config.visible.get_active():
          self.present()
       else:
@@ -232,7 +236,7 @@ class ReconnectionDialog(gtk.Dialog):
 
    def __init__(self, tab):
       self.tab = tab
-      gtk.Dialog.__init__(self, ln.connection_lost, None, gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, ln.try_now, gtk.RESPONSE_OK))
+      gtk.Dialog.__init__(self, _('Connection Lost'), None, gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, _('Try Now'), gtk.RESPONSE_OK))
       self.set_resizable(False)
       
       self.vb = gtk.VBox() # bug workaround
@@ -244,9 +248,9 @@ class ReconnectionDialog(gtk.Dialog):
       self.connect("delete-event", self.cb_delete)
       self.connect("response", self.cb_response)
       
-      self.label1 = gtk.Label(ln.reconnection_text_1 % (tab.numeric_id + 1))
-      self.label2 = gtk.Label(ln.reconnection_text_2 % self.td[1])
-      self.label3 = gtk.Label(ln.reconnection_text_3 % (1, len(self.td) - 1))
+      self.label1 = gtk.Label(_('The connection to the server in tab %s has failed.') % (tab.numeric_id + 1))
+      self.label2 = gtk.Label(_('Automatic reconnect in %d seconds.') % self.td[1])
+      self.label3 = gtk.Label(_('Try %d of %d.') % (1, len(self.td) - 1))
       for each in (self.label1, self.label2, self.label3):
          attrlist = pango.AttrList()
          attrlist.insert(pango.AttrSize(12500, 0, len(each.get_text())))

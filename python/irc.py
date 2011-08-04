@@ -42,7 +42,11 @@ from .gtkstuff import NamedTreeRowReference
 from .gtkstuff import ConfirmationDialog
 from .gtkstuff import threadslock
 from .freefunctions import string_multireplace
-from .ln_text import ln
+
+
+# Temporary translation code enabler.
+def _(s):
+   return s
 
 
 pm = ProfileManager()
@@ -114,7 +118,7 @@ class IRCEntry(gtk.Entry):
 
 
    def _popup_menu_populate(self, entry, menu):
-      menuitem = gtk.MenuItem(ln.insert_attribute_or_colour_code)
+      menuitem = gtk.MenuItem(_('Insert Attribute or Colour Code'))
       menu.append(menuitem)
       submenu = gtk.Menu()
       menuitem.set_submenu(submenu)
@@ -132,15 +136,15 @@ class IRCEntry(gtk.Entry):
             submenu.append(mi)
             mi.show()
 
-      sub(zip((ln.artist, ln.title, ln.album, ln.songname, ln.dj_name_popup,
-                                 ln.description_popup, ln.listen_url_popup),
+      sub(zip((_('Artist'), _('Title'), _('Album'), _('Song name'), _('DJ name'),
+                                 _('Description'), _('Listen URL')),
                                  (u"%r", u"%t", u"%l", u"%s", u"%n", u"%d", u"%u")))
 
       s = gtk.SeparatorMenuItem()
       submenu.append(s)
       s.show()
       
-      sub(zip((ln.irc_bold, ln.irc_underline, ln.irc_normal), (u"\u0002", u"\u001F", u"\u000F")))
+      sub(zip((_('<b>Bold</b>'), _('<u>Underline</u>'), _('Normal')), (u"\u0002", u"\u001F", u"\u000F")))
       
       for each in ("0-7", "8-15"):
          mi = gtk.MenuItem(" ".join(("Colours", each)))
@@ -227,10 +231,10 @@ class IRCView(gtk.TextView):
       ))
 
 
-   readable_equiv = (("%r", ln.artist_ircview), ("%t", ln.title_ircview),
-      ("%l", ln.album_ircview), ("%s", ln.songname_ircview),
-      ("%n", ln.dj_name_ircview), ("%d", ln.description_ircview),
-      ("%u", ln.listen_url_ircview))
+   readable_equiv = (("%r", _('<Artist>')), ("%t", _('<Title>')),
+      ("%l", _('<Album>')), ("%s", _('<Song name>')),
+      ("%n", _('<DJ name>')), ("%d", _('<Description>')),
+      ("%u", _('<Listen URL>')))
 
 
    def __init__(self):

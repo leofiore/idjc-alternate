@@ -27,7 +27,11 @@ import gtk
 
 from idjc import FGlobs
 from .gtkstuff import threadslock, DefaultEntry, LEDDict
-from .ln_text import ln
+
+
+# Temporary translation code enabler.
+def _(s):
+   return s
 
 
 try:
@@ -154,7 +158,7 @@ class MediaPane(gtk.Frame):
    @staticmethod
    def cell_show_unknown(column, renderer, model, iter, cell):
       if model.get_value(iter, cell) == "":
-         renderer.set_property("text", ln.dbunknown)
+         renderer.set_property("text", _('<unknown>'))
    
    @staticmethod
    def cell_secs_to_h_m_s(column, renderer, model, iter, cell):
@@ -335,13 +339,13 @@ class MediaPane(gtk.Frame):
       buttonbox.add(self.tree_update)
       self.tree_update.show()
       
-      self.tree_expand = gtk.Button(ln.dbexpand, None, True)
+      self.tree_expand = gtk.Button(_('_Expand'), None, True)
       image = gtk.image_new_from_stock(gtk.STOCK_ADD, gtk.ICON_SIZE_BUTTON)
       self.tree_expand.set_image(image)
       buttonbox.add(self.tree_expand)
       self.tree_expand.show()
       
-      self.tree_collapse = gtk.Button(ln.dbcollapse, None, True)
+      self.tree_collapse = gtk.Button(_('_Collapse'), None, True)
       image = gtk.image_new_from_stock(gtk.STOCK_REMOVE, gtk.ICON_SIZE_BUTTON)
       self.tree_collapse.set_image(image)
       buttonbox.add(self.tree_collapse)
@@ -349,7 +353,7 @@ class MediaPane(gtk.Frame):
       
       buttonbox.show()
       
-      self.treeview, self.treescroll, self.treealt = makeview(self.notebook, ln.media_tree, buttonbox)
+      self.treeview, self.treescroll, self.treealt = makeview(self.notebook, _('Tree'), buttonbox)
       self.treeview.set_enable_tree_lines(True)
       self.treeview.set_rubber_banding(True)
       treeselection = self.treeview.get_selection()
@@ -361,12 +365,12 @@ class MediaPane(gtk.Frame):
       self.treestore = gtk.TreeStore(int, str, int, int, int, str, str)
       self.treeview.set_model(self.treestore)
       self.treecols = makecolumns(self.treeview, (
-            ("%s - %s - %s" % (ln.dbartist, ln.dbalbum, ln.dbtitle), 1, self.cell_show_unknown, 180),
-            (ln.dbtrack, 2, self.cell_ralign, -1),
-            (ln.dbduration, 3, self.cond_cell_secs_to_h_m_s, -1),
-            (ln.dbbitrate, 4, self.cell_ralign, -1),
-            (ln.dbfilename, 5, None, 100),
-            (ln.dbpath, 6, None, -1),
+            ("%s - %s - %s" % (_('Artist'), _('Album'), _('Title')), 1, self.cell_show_unknown, 180),
+            (_('Track'), 2, self.cell_ralign, -1),
+            (_('Duration'), 3, self.cond_cell_secs_to_h_m_s, -1),
+            (_('Bitrate'), 4, self.cell_ralign, -1),
+            (_('Filename'), 5, None, 100),
+            (_('Path'), 6, None, -1),
             ))
       
       self.treeview.enable_model_drag_source(gtk.gdk.BUTTON1_MASK, self.sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
@@ -376,7 +380,7 @@ class MediaPane(gtk.Frame):
       vbox = gtk.VBox()
       vbox.set_border_width(20)
       vbox.set_spacing(20)
-      label = gtk.Label(ln.populating)
+      label = gtk.Label(_('Populating'))
       vbox.pack_start(label, False, False, 0)
       self.tree_pb = gtk.ProgressBar()
       vbox.pack_start(self.tree_pb, False, False, 0)
@@ -386,7 +390,7 @@ class MediaPane(gtk.Frame):
       self.tree_idle = None
       
       # flat gui
-      filterframe = gtk.Frame(ln.dbfilters)
+      filterframe = gtk.Frame(_(' Filters '))
       filterframe.set_shadow_type(gtk.SHADOW_OUT)
       filterframe.set_border_width(1)
       filterframe.set_label_align(0.5, 0.5)
@@ -400,7 +404,7 @@ class MediaPane(gtk.Frame):
       fuzzyhbox = gtk.HBox()
       filtervbox.pack_start(fuzzyhbox, False, False, 0)
       fuzzyhbox.show()
-      fuzzylabel = gtk.Label(ln.dbfuzzysearch)
+      fuzzylabel = gtk.Label(_('Fuzzy Search'))
       fuzzyhbox.pack_start(fuzzylabel, False, False, 0)
       fuzzylabel.show()
       self.fuzzyentry = gtk.Entry()
@@ -411,7 +415,7 @@ class MediaPane(gtk.Frame):
       wherehbox = gtk.HBox()
       filtervbox.pack_start(wherehbox, False, False, 0)
       wherehbox.show()
-      wherelabel = gtk.Label(ln.dbwhere)
+      wherelabel = gtk.Label(_('WHERE'))
       wherehbox.pack_start(wherelabel, False, False, 0)
       wherelabel.show()
       self.whereentry = gtk.Entry()
@@ -426,7 +430,7 @@ class MediaPane(gtk.Frame):
       wherehbox.pack_start(self.update, False, False, 0)
       self.update.show()
       
-      self.flatview, self.flatscroll, self.flatalt = makeview(self.notebook, ln.media_flat, filterframe)
+      self.flatview, self.flatscroll, self.flatalt = makeview(self.notebook, _('Flat'), filterframe)
       self.flatview.set_rules_hint(True)
       self.flatview.set_rubber_banding(True)
       treeselection = self.flatview.get_selection()
@@ -436,14 +440,14 @@ class MediaPane(gtk.Frame):
       self.flatview.set_model(self.flatstore)
       self.flatcols = makecolumns(self.flatview, (
             ("(%d)" % 0, 0, self.cell_ralign, -1),
-            (ln.dbartist, 2, self.cell_show_unknown, 100),
-            (ln.dbalbum, 3, self.cell_show_unknown, 100),
-            (ln.dbtrack, 4, self.cell_ralign, -1),
-            (ln.dbtitle, 5, self.cell_show_unknown, 100),
-            (ln.dbduration, 6, self.cell_secs_to_h_m_s, -1),
-            (ln.dbbitrate, 7, self.cell_ralign, -1),
-            (ln.dbfilename, 8, None, 100),
-            (ln.dbpath, 9, None, -1),
+            (_('Artist'), 2, self.cell_show_unknown, 100),
+            (_('Album'), 3, self.cell_show_unknown, 100),
+            (_('Track'), 4, self.cell_ralign, -1),
+            (_('Title'), 5, self.cell_show_unknown, 100),
+            (_('Duration'), 6, self.cell_secs_to_h_m_s, -1),
+            (_('Bitrate'), 7, self.cell_ralign, -1),
+            (_('Filename'), 8, None, 100),
+            (_('Path'), 9, None, -1),
             ))
          
       self.flatview.enable_model_drag_source(gtk.gdk.BUTTON1_MASK, self.sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
@@ -461,7 +465,7 @@ class Prefs(gtk.Frame):
       self.prokpassword.set_sensitive(sens)
       self.prok_led_image.set_from_pixbuf(self.led["green" if state else "clear"])
       if state:
-         self.main.topleftpane.activate(self.db, ln.media_viewer_title % self.prokdatabase.get_text())
+         self.main.topleftpane.activate(self.db, _(' P3 Database View (%s) ') % self.prokdatabase.get_text())
       else:
          self.main.topleftpane.deactivate()
          
@@ -515,7 +519,7 @@ class Prefs(gtk.Frame):
    def __init__(self, parent):
       gtk.Frame.__init__(self)
       self.main = parent
-      label = gtk.Label(ln.prokyon3_frame_text)
+      label = gtk.Label(_('Prokyon3 (song title) Database'))
       self.prok_led_image = gtk.Image()
       hbox = gtk.HBox()
       hbox.pack_start(label, False, False, 4)
@@ -533,7 +537,7 @@ class Prefs(gtk.Frame):
       else:
          vbox = gtk.VBox()
          vbox.set_border_width(3)
-         label = gtk.Label(ln.prokyon3_nosql)
+         label = gtk.Label(_('Python module MySQLdb required'))
          vbox.add(label)
          label.show()
          self.add(vbox)
@@ -544,27 +548,27 @@ class Prefs(gtk.Frame):
       table.set_col_spacing(0, 2)
       table.set_col_spacing(1, 10)
       table.set_col_spacing(2, 2)
-      hostlabel = self.rjustlabel(ln.prokyon3_hostname)
+      hostlabel = self.rjustlabel(_('Hostname:'))
       table.attach(hostlabel, 0, 1, 0, 1, gtk.SHRINK | gtk.FILL)
       hostlabel.show()
       self.prokhostname = DefaultEntry("localhost", True)
       table.attach(self.prokhostname, 1, 4, 0, 1)
       self.prokhostname.show()
-      userlabel = self.rjustlabel(ln.prokyon3_user)
+      userlabel = self.rjustlabel(_('User:'))
       table.attach(userlabel, 0, 1, 1, 2, gtk.SHRINK | gtk.FILL)
       userlabel.show()
       self.prokuser = DefaultEntry("prokyon", True)
       self.prokuser.set_size_request(30, -1)
       table.attach(self.prokuser, 1, 2, 1, 2)
       self.prokuser.show()
-      databaselabel = self.rjustlabel(ln.prokyon3_database)
+      databaselabel = self.rjustlabel(_('Database:'))
       table.attach(databaselabel, 2, 3, 1, 2, gtk.SHRINK | gtk.FILL)
       databaselabel.show()
       self.prokdatabase = DefaultEntry("prokyon", True)
       self.prokdatabase.set_size_request(30, -1)
       table.attach(self.prokdatabase, 3, 4, 1, 2)
       self.prokdatabase.show()
-      passwordlabel = self.rjustlabel(ln.prokyon3_password)
+      passwordlabel = self.rjustlabel(_('Password:'))
       table.attach(passwordlabel, 0, 1, 2, 3, gtk.SHRINK | gtk.FILL)
       passwordlabel.show()
       self.prokpassword = DefaultEntry("prokyon", True)
@@ -572,7 +576,7 @@ class Prefs(gtk.Frame):
       self.prokpassword.set_visibility(False)
       table.attach(self.prokpassword, 1, 2, 2, 3)
       self.prokpassword.show()
-      self.proktoggle = gtk.ToggleButton(ln.prokyon3_connect)
+      self.proktoggle = gtk.ToggleButton(_('Database Connect'))
       self.proktoggle.set_size_request(10, -1)
       self.proktoggle.connect("toggled", self.cb_proktoggle)
       table.attach(self.proktoggle, 2, 4, 2, 3)

@@ -40,6 +40,11 @@ from ..utils import Singleton
 from ..utils import PathStr
 
 
+# Temporary translation code enabler.
+def _(s):
+   return s
+
+
 # The name of the default profile.
 default = "default"
 

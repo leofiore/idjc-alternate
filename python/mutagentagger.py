@@ -37,8 +37,12 @@ from mutagen.asf import ASF, ASFUnicodeAttribute
 
 from idjc import FGlobs
 from .freefunctions import *
-from .ln_text import ln
 from idjc.prelims import ProfileManager
+
+
+# Temporary translation code enabler.
+def _(s):
+   return s
 
 
 pm = ProfileManager()
@@ -208,9 +212,9 @@ class WMATagger(MutagenTagger):
 class ID3Tagger(MutagenTagger):
    """ID3 tagging with Mutagen."""
    
-   primary_data = (("TIT2", ln.id3title), ("TPE1", ln.id3artist),
-                   ("TALB", ln.id3album), ("TRCK", ln.id3track),
-                   ("TCON", ln.id3genre), ("TDRC", ln.id3recorddate))
+   primary_data = (("TIT2", _('title')), ("TPE1", _('artist')),
+                   ("TALB", _('album')), ("TRCK", _('track/total')),
+                   ("TCON", _('genre')), ("TDRC", _('record date')))
    
    def save_tag(self):
       """Updates the tag with the GUI data."""
@@ -345,9 +349,9 @@ class ID3Tagger(MutagenTagger):
       hbox.show_all()
       
       self.tag_frame = FreeTagFrame()
-      set_tip(self.tag_frame, ln.id3freeform)
+      set_tip(self.tag_frame, _('Add any other ID3 text frames here.\ne.g. TIT2:Alternate Title\nThis will be appended onto the main TIT2 tag.\n\nEnter user defined text frames like this:\nTXXX:foo=bar\n\nFor more information visit www.id3.org.'))
       self.tag_frame.set_border_width(5)
-      self.tag_frame.set_label(ln.id3textframes)
+      self.tag_frame.set_label(_(' Additional Text Frames '))
       self.add(self.tag_frame)
       self.tag_frame.show()
 
@@ -355,9 +359,9 @@ class ID3Tagger(MutagenTagger):
 class MP4Tagger(MutagenTagger):
    """MP4 tagging with Mutagen."""
    
-   primary_data = (("\xa9nam", ln.mp4title), ("\xa9ART", ln.mp4artist),
-                   ("\xa9alb", ln.mp4album), ("trkn", ln.mp4track),
-                   ("\xa9gen", ln.mp4genre), ("\xa9day", ln.mp4year))
+   primary_data = (("\xa9nam", _('Title')), ("\xa9ART", _('Artist')),
+                   ("\xa9alb", _('Album')), ("trkn", _('Track')),
+                   ("\xa9gen", _('Genre')), ("\xa9day", _('Year')))
    
    def save_tag(self):
       """Updates the tag with the GUI data."""
@@ -653,7 +657,7 @@ class MutagenGUI:
       if idjcroot is not None:
          idjcroot.window_group.add_window(self.window)
       self.window.set_size_request(550, 450)
-      self.window.set_title(ln.tagger_window_title + pm.title_extra)
+      self.window.set_title(_('IDJC Tagger') + pm.title_extra)
       self.window.set_destroy_with_parent(True)
       self.window.set_border_width(9)
       self.window.set_resizable(True)
@@ -665,11 +669,11 @@ class MutagenGUI:
       label = gtk.Label()
       if idjcroot:
          if encoding is not None:
-            label.set_markup(u"<b>" + ln.tagger_filename.decode("utf-8") + u" " + rich_safe(unicode(os.path.split(pathname)[1], encoding).encode("utf-8", "replace")) + u"</b>")
+            label.set_markup(u"<b>" + _('Filename:').decode("utf-8") + u" " + rich_safe(unicode(os.path.split(pathname)[1], encoding).encode("utf-8", "replace")) + u"</b>")
          else:
-            label.set_markup(u"<b>" + ln.tagger_filename.decode("utf-8") + u" " + rich_safe(os.path.split(pathname)[1]).encode("utf-8", "replace") + u"</b>")
+            label.set_markup(u"<b>" + _('Filename:').decode("utf-8") + u" " + rich_safe(os.path.split(pathname)[1]).encode("utf-8", "replace") + u"</b>")
       else:
-         label.set_markup(u"<b>" + ln.tagger_filename.decode("utf-8") + u" " + rich_safe(unicode(os.path.split(pathname)[1], "latin1").encode("utf-8", "replace")) + u"</b>")
+         label.set_markup(u"<b>" + _('Filename:').decode("utf-8") + u" " + rich_safe(unicode(os.path.split(pathname)[1], "latin1").encode("utf-8", "replace")) + u"</b>")
       vbox.pack_start(label, False, False, 6)
       label.show()
       
@@ -732,7 +736,7 @@ class MutagenGUI:
       if self.native is not None and self.native.tag is not None:
          reload_button.connect("clicked", lambda x: self.native.load_tag())
          apply_button.connect("clicked", lambda x: self.native.save_tag())
-         label = gtk.Label(ln.native + " (" + self.ext2name[extension] + ")")
+         label = gtk.Label(_('Native') + " (" + self.ext2name[extension] + ")")
          notebook.append_page(self.native, label)
          self.native.show()
       

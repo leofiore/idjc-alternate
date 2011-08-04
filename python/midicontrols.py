@@ -27,10 +27,14 @@ import gtk
 import pango
 
 from idjc import FGlobs, PGlobs
-from .ln_text import ln
 from .freefunctions import *
 from .gtkstuff import threadslock
 from .prelims import ProfileManager
+
+
+# Temporary translation code enabler.
+def _(s):
+   return s
 
 
 pm = ProfileManager()
@@ -1177,7 +1181,7 @@ class BindingEditor(gtk.Dialog):
     def __init__(self, owner):
         self.owner= owner
         gtk.Dialog.__init__(self,
-            ln.binding_title, owner.owner.owner.prefs_window.window,
+            _('Edit control binding'), owner.owner.owner.prefs_window.window,
             gtk.DIALOG_DESTROY_WITH_PARENT | gtk.DIALOG_NO_SEPARATOR | gtk.DIALOG_MODAL,
             (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OK, gtk.RESPONSE_OK)
         )
@@ -1190,15 +1194,15 @@ class BindingEditor(gtk.Dialog):
 
         # Input editing
         #
-        self.learn_button= gtk.ToggleButton(ln.binding_learn)
+        self.learn_button= gtk.ToggleButton(_('Listen for input...'))
         self.learn_button.connect('toggled', self.on_learn_toggled)
         self.learn_timer= None
 
         self.source_field= LookupComboBox(Binding.SOURCES, self.control_sources, self.owner.source_icons)
         self.source_field.connect('changed', self.on_source_changed)
-        self.source_label= gtk.Label(ln.binding_source)
+        self.source_label= gtk.Label(_('Source'))
 
-        self.channel_label= gtk.Label(ln.binding_channel_midi)
+        self.channel_label= gtk.Label(_('Channel'))
         self.channel_field= ModifierSpinButton(ChannelAdjustment())
 
         self.control_label= gtk.Label(self.binding_controls['c'])
@@ -1213,19 +1217,19 @@ class BindingEditor(gtk.Dialog):
         )
         self.method_field.connect('changed', self.on_method_changed)
 
-        self.mode_label= gtk.Label(ln.binding_mode)
+        self.mode_label= gtk.Label(_('Interaction'))
         self.mode_field= LookupComboBox(Binding.MODES, self.control_modes)
         self.mode_field.connect('changed', self.on_mode_changed)
 
-        self.target_label= gtk.Label(ln.binding_target)
+        self.target_label= gtk.Label(_('On target'))
         self.target_field= CustomSpinButton(TargetAdjustment('p'))
 
         self.value_label= gtk.Label(self.binding_values[Binding.MODE_SET])
         self.value_field_scale= ValueSnapHScale(0, -127, 127)
         dummy= ValueSnapHScale(0, -127, 127)
-        self.value_field_invert= gtk.CheckButton(ln.inverted_value)
-        self.value_field_pulse_noinvert= gtk.RadioButton(None, ln.pulse_on_press)
-        self.value_field_pulse_inverted=gtk.RadioButton(self.value_field_pulse_noinvert, ln.pulse_on_release)
+        self.value_field_invert= gtk.CheckButton(_('Reversed'))
+        self.value_field_pulse_noinvert= gtk.RadioButton(None, _('Pressed'))
+        self.value_field_pulse_inverted=gtk.RadioButton(self.value_field_pulse_noinvert, _('Released'))
 
         # Layout
         #
@@ -1252,11 +1256,11 @@ class BindingEditor(gtk.Dialog):
         input_pane.pack_start(row2, False, False)
         input_pane.pack_start(row3, False, False)
         input_pane.show_all()
-        input_frame= gtk.Frame(ln.binding_input)
+        input_frame= gtk.Frame(_(' Input '))
         input_frame.set_border_width(4)
         input_frame.add(input_pane)
         input_pane.show()
-        set_tip(input_pane, ln.binding_input_tip)
+        set_tip(input_pane, _("No binding would be complete without an input. In this case a press of a keyboard key or an event from a midi device.\n\nInput selection can be done manually or with the help of the 'Listen for input' option."))
 
         self.value_field_pulsebox= gtk.HBox()
         self.value_field_pulsebox.pack_start(self.value_field_pulse_noinvert)
@@ -1287,11 +1291,11 @@ class BindingEditor(gtk.Dialog):
         action_pane.pack_start(row2, False, False)
         action_pane.pack_start(row3, False, False)
         action_pane.show_all()
-        action_frame= gtk.Frame(ln.binding_action)
+        action_frame= gtk.Frame(_(' Action '))
         action_frame.set_border_width(4)
         action_frame.add(action_pane)
         action_pane.show()
-        set_tip(action_pane, ln.binding_action_tip)
+        set_tip(action_pane, _("The top option tersely describes a user interface feature of which there may be multiples - see 'On target' for how to select those.\n\n'Interaction' describes how the control input will be used:\n'Direct fader/held button' tracks the input state at all times. Useful if you want a push to talk button or to track directly the position of a a midi fader.\n\n'One-shot/toggle button' acts like a trigger, activating on button presses with releases doing nothing.\n\n'Set value' This allows setting specific values like fader positions or setting a state fully on/off where no between values are allowed.\n\n'Adjust by' A single press will reduce or increase a value, e.g. a fader position will move by a certain amount.\n\nOnly a subset of interaction options may be available to perform a specific action as others might not make any sense."))
 
         hbox= gtk.HBox(True, spacing= 4)
         hbox.pack_start(input_frame)
@@ -1347,10 +1351,10 @@ class BindingEditor(gtk.Dialog):
     #
     def on_learn_toggled(self, *_):
         if self.learn_button.get_active():
-            self.learn_button.set_label(ln.binding_learn_on)
+            self.learn_button.set_label(_('Listening for input'))
             self.owner.owner.learner= self
         else:
-            self.learn_button.set_label(ln.binding_learn)
+            self.learn_button.set_label(_('Listen for input...'))
             self.owner.owner.learner= None
 
     def learn(self, input):
@@ -1366,10 +1370,10 @@ class BindingEditor(gtk.Dialog):
         s= self.source_field.get_value()
 
         if s==Binding.SOURCE_KEYBOARD:
-            self.channel_label.set_text(ln.binding_channel_key)
+            self.channel_label.set_text(_('Shifting'))
             self.channel_field.set_adjustment(ModifierAdjustment())
         else:
-            self.channel_label.set_text(ln.binding_channel_midi)
+            self.channel_label.set_text(_('Channel'))
             self.channel_field.set_adjustment(ChannelAdjustment())
 
         self.control_label.set_text(self.binding_controls[s])
@@ -1551,7 +1555,7 @@ class SingularAdjustment(CustomAdjustment):
     def read_input(self, text):
         return 0.0
     def write_output(self, value):
-        return ln.control_target_singular
+        return _('Singular control')
         
 # SpinButton that can translate its underlying adjustment values to GTK shift
 # key modifier flags, when a ModifierAdjustment is used.
@@ -1589,7 +1593,7 @@ class ControlsUI(gtk.VBox):
 
         # Control list
         #
-        column_input= gtk.TreeViewColumn(ln.ctrltab_column_input)
+        column_input= gtk.TreeViewColumn(_('Input'))
         column_input.set_expand(True)
         cricon= gtk.CellRendererPixbuf()
         crtext= gtk.CellRendererText()
@@ -1602,14 +1606,14 @@ class ControlsUI(gtk.VBox):
         craction= gtk.CellRendererText()
         crmodifier= gtk.CellRendererText()
         crmodifier.props.xalign= 1.0
-        column_action= gtk.TreeViewColumn(ln.ctrltab_column_action)
+        column_action= gtk.TreeViewColumn(_('Action'))
         column_action.pack_start(craction, True)
         column_action.pack_start(crmodifier, False)
         column_action.set_attributes(craction, text= 5)
         column_action.set_attributes(crmodifier, text= 6)
         column_action.set_sort_column_id(1)
         column_action.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
-        column_target= gtk.TreeViewColumn(ln.ctrltab_column_target, gtk.CellRendererText(), text= 7)
+        column_target= gtk.TreeViewColumn(_('Target'), gtk.CellRendererText(), text= 7)
         column_target.set_sort_column_id(2)
 
         model= BindingListModel(self)
@@ -1631,9 +1635,9 @@ class ControlsUI(gtk.VBox):
 
         # New/Edit/Remove buttons
         #
-        self.new_button= gtk.Button(ln.ctrltab_button_new)
-        self.remove_button= gtk.Button(ln.ctrltab_button_remove)
-        self.edit_button= gtk.Button(ln.ctrltab_button_edit)
+        self.new_button= gtk.Button(_('New'))
+        self.remove_button= gtk.Button(_('Remove'))
+        self.edit_button= gtk.Button(_('Edit'))
         self.new_button.connect('clicked', self.on_new)
         self.remove_button.connect('clicked', self.on_remove)
         self.edit_button.connect('clicked', self.on_edit)

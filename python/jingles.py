@@ -29,8 +29,12 @@ import gtk
 from idjc import *
 from .freefunctions import *
 from .gtkstuff import WindowSizeTracker
-from .ln_text import ln
 from .prelims import *
+
+
+# Temporary translation code enabler.
+def _(s):
+   return s
 
 
 pm = ProfileManager()
@@ -338,7 +342,7 @@ class Jingles(object):
       self.parent = parent
       self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
       self.parent.window_group.add_window(self.window)
-      self.window.set_title(ln.jingles_window + pm.title_extra)
+      self.window.set_title(_('IDJC Jingles') + pm.title_extra)
       self.window.set_destroy_with_parent(True)
       self.window.set_border_width(8)
       self.window.connect("delete_event", self.delete_event)
@@ -372,7 +376,7 @@ class Jingles(object):
       self.vboxvol.pack_start(self.deckvol, True, True, 0)
       self.deckvol.show()
       self.vboxvol.show()
-      parent.tooltips.set_tip(self.deckvol, ln.jingles_volume_tip)
+      parent.tooltips.set_tip(self.deckvol, _('This adjusts the volume level of the jingles player.'))
                 
            # A vertical box for our second volume control
       self.vboxinter = gtk.VBox()
@@ -398,7 +402,7 @@ class Jingles(object):
       self.vboxinter.pack_start(self.intervol, True, True, 0)
       self.intervol.show()
       self.vboxinter.show()
-      parent.tooltips.set_tip(self.intervol, ln.wet_voice_volume_tip)
+      parent.tooltips.set_tip(self.intervol, _("This adjusts the volume level of the music that plays whenever the other media players are not active. It is only audible to the DJ when 'Monitor Mix' in the main application window is set to 'Stream'."))
                 
       vbox = gtk.VBox()
       vbox.set_spacing(6)
@@ -438,13 +442,13 @@ class Jingles(object):
       self.treeview.show()
       vbox.pack_start(scrolllist, True, True, 1)
       scrolllist.show()
-      parent.tooltips.set_tip(scrolllist, ln.jingles_playlist_tip)
+      parent.tooltips.set_tip(scrolllist, _('The jingles playlist. To add files here you can do so from one of the main media players by using the right click menu and selecting Add To Jingles from the Item submenu.'))
       
       hbox = gtk.HBox()
       hbox.set_spacing(4)
       hbox.set_border_width(0)
       
-      label = gtk.Label(ln.sequence)
+      label = gtk.Label(_('Sequence:'))
       hbox.pack_start(label, False, False, 0)
       label.show()
       
@@ -453,7 +457,7 @@ class Jingles(object):
       self.entry.set_width_chars(10)
       hbox.pack_start(self.entry, True, True, 0)
       self.entry.show()
-      parent.tooltips.set_tip(self.entry, ln.jingles_entry_tip)
+      parent.tooltips.set_tip(self.entry, _('Specify a multiple jingles play order by adding the corresponding index number to a comma separated list here. Alternatively just double click the entries in the playlist that you want to add.'))
       
       vbox.pack_start(hbox, False, False, 0)
       hbox.show()
@@ -477,7 +481,7 @@ class Jingles(object):
       self.play.connect("toggled", self.callback, "Play")
       hbox.pack_start(self.play, True, True, 0)
       self.play.show()
-      parent.tooltips.set_tip(self.play, ln.play_jingles_tip)
+      parent.tooltips.set_tip(self.play, _('Play the jingles sequence specified above or if none is specified play the jingle highlighted in the playlist. The volume level of the main media players will be reduced somewhat for the duration.'))
       
       pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
                         FGlobs.pkgdatadir / "play3.png", 14, 14)
@@ -490,7 +494,7 @@ class Jingles(object):
       self.play_ex.connect("toggled", self.callback, "PlayEx")
       hbox.pack_start(self.play_ex, True, True, 0)
       self.play_ex.show()
-      parent.tooltips.set_tip(self.play_ex, ln.playex_jingles_tip)
+      parent.tooltips.set_tip(self.play_ex, _('This button works the same as the button to the left does except that the sound level of all the other media players is fully reduced.'))
       
       image = gtk.image_new_from_file(FGlobs.pkgdatadir / "stop.png")
       self.stop = gtk.Button()
@@ -500,7 +504,7 @@ class Jingles(object):
       self.stop.connect("clicked", self.callback, "Stop")
       hbox.pack_start(self.stop, True, True, 0)
       self.stop.show()
-      parent.tooltips.set_tip(self.stop, ln.stop_jingles_tip)
+      parent.tooltips.set_tip(self.stop, _('Stop playing jingles.'))
       
       pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
                            FGlobs.pkgdatadir / "interlude.png", 49, 21)
@@ -511,13 +515,13 @@ class Jingles(object):
       image.show()
       hbox.pack_start(self.interlude, True, True, 0)
       self.interlude.show()
-      parent.tooltips.set_tip(self.interlude, ln.wet_voice_player_tip)
+      parent.tooltips.set_tip(self.interlude, _("When you click this button the jingle or track selected in the playlist will be looped continuously and will be audible during moments when the main media players are not active. The 'Monitor Mix' feature needs to be set to 'Stream' if you want to be able to hear it."))
       
       self.refresh = gtk.Button(None, gtk.STOCK_REFRESH)
       self.refresh.connect("clicked", self.callback, "Refresh")
       hbox.pack_start(self.refresh, True, True, 0)
       self.refresh.show()
-      parent.tooltips.set_tip(self.refresh, ln.refresh_jingles_tip)
+      parent.tooltips.set_tip(self.refresh, _("Cause the playlist to be refreshed. This is for when items have been added or removed from the jingles playlist folder located at '~/.idjc/profiles/[active profile]/jingles'."))
       
       frame.add(hbox)
       hbox.show()

@@ -16,9 +16,9 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 
 
-import pygtk
-pygtk.require('2.0')
 import gtk
+
+
 
 class Tooltips:
 

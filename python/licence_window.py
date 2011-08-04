@@ -22,7 +22,6 @@ __all__ = ['LicenceWindow']
 import gtk
 
 from idjc import FGlobs
-from .ln_text import ln
 
 
 class LicenceWindow(gtk.ScrolledWindow):

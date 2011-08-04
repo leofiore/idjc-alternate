@@ -35,7 +35,6 @@ import cairo
 import pango
 
 from idjc import FGlobs, PGlobs
-from .ln_text import ln
 from .playergui import *
 from .sourceclientgui import *
 from .preferences import *
@@ -47,6 +46,11 @@ from . import midicontrols
 from . import tooltips
 from . import p3db
 from .prelims import *
+
+
+# Temporary translation code enabler.
+def _(s):
+   return s
 
 
 args = ArgumentParserImplementation().parse_args()
@@ -208,7 +212,7 @@ class MicOpener(gtk.HBox):
          self.force_all_on(True)
             
       if not self.mic2button:
-         l = gtk.Label(ln.no_microphones)
+         l = gtk.Label(_('No Microphones'))
          l.set_sensitive(False) # It just looks better that way.
          self.add(l)
          l.show()
@@ -510,7 +514,7 @@ def make_stream_meter_unit(text, meters, tooltips):
       meter.show()
       hbox.pack_start(vbox, True, True, 0)
       vbox.show()
-   tooltips.set_tip(frame, ln.streams_tip)
+   tooltips.set_tip(frame, _('This indicates the state of the various streams. Flashing means stream packets are being discarded because of network congestion. Partial red means the send buffer is partially full indicating difficulty communicating with the server. Green means everything is okay.'))
    
    frame = gtk.Frame()              # for the listener count
    frame.set_label_align(0.5, 0.5)
@@ -528,7 +532,7 @@ def make_stream_meter_unit(text, meters, tooltips):
    connections.show()
    outer_vbox.pack_start(frame, False, False, 0)
    frame.show()
-   tooltips.set_tip(frame, ln.listener_indicator_tip)
+   tooltips.set_tip(frame, _('The combined total number of listeners in all server tabs.'))
    
    return outer_vbox, connections
  
@@ -888,9 +892,9 @@ class RecIndicator(gtk.HBox):
 class RecordingPanel(gtk.VBox):
    def __init__(self, howmany):
       gtk.VBox.__init__(self)
-      label = gtk.Label(ln.record)
+      label = gtk.Label(_(' Record '))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, len(ln.record)))
+      attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, len(_(' Record '))))
       label.set_attributes(attrlist)
       self.pack_start(label)
       label.show()
@@ -935,7 +939,7 @@ class idjc_shutdown_dialog:
       dialog.destroy()
 
    def __init__(self, window_group = None, actionyes = None, actionno = None, additional_text = None):
-      dialog = gtk.Dialog(ln.idjc_shutdown, None, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_QUIT, gtk.RESPONSE_OK))
+      dialog = gtk.Dialog(_('IDJC Shutdown'), None, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_QUIT, gtk.RESPONSE_OK))
       if window_group is not None:
          window_group.add_window(dialog)
       dialog.set_icon_from_file(FGlobs.pkgdatadir / "icon.png")
@@ -1519,10 +1523,10 @@ class MainWindow:
 
    def delete_event(self, widget, event, data=None):
       if self.server_window.is_streaming:
-         idjc_shutdown_dialog(self.window_group, self.destroy, None, (ln.is_streaming, ln.question_quit))
+         idjc_shutdown_dialog(self.window_group, self.destroy, None, (_('IDJC is currently streaming.'), _('Do you really want to quit?')))
          return True
       elif self.server_window.is_recording:
-         idjc_shutdown_dialog(self.window_group, self.destroy, None, (ln.is_recording, ln.question_quit))
+         idjc_shutdown_dialog(self.window_group, self.destroy, None, (_('IDJC is currently recording.'), _('Do you really want to quit?')))
          return True
       self.destroy()
       return False
@@ -1828,7 +1832,7 @@ class MainWindow:
       menusep = gtk.SeparatorMenuItem()
       menu.append(menusep)
       menusep.show()
-      menuitem = gtk.MenuItem(ln.track_history_clear)
+      menuitem = gtk.MenuItem(_('Remove Contents'))
       menuitem.connect_object("activate", gtk.Button.clicked, self.history_clear)
       menu.append(menuitem)
       menuitem.show()
@@ -1949,8 +1953,8 @@ class MainWindow:
       while rply[:6] != "IDJC: ":
          if rply == "":
             print "mixer crashed"
-            message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, ln.mixer_crash)
-            message_dialog.set_title(ln.idjc_launch_failed + pm.title_extra)
+            message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, _('The mixer module crashed during initialisation.'))
+            message_dialog.set_title(_('IDJC Launch Failed') + pm.title_extra)
             message_dialog.run()
             message_dialog.destroy()
             raise self.initfailed()
@@ -1962,8 +1966,8 @@ class MainWindow:
          self.mixer_write("ACTN=sync\nend\n", True)
          self.mixer_read()
       else:
-         message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, ln.jack_connection_failed)
-         message_dialog.set_title(ln.idjc_launch_failed + pm.title_extra)
+         message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, _('The JACK sound server needs to be running in order to run IDJC.\nIn order to manually start it try something like:\n\n        $ jackd -d alsa -r 44100 -p 2048\n\nIf you would like JACK to start automatically with your user specified parameters try something like this, which will create a file called .jackdrc in your home directory:\n\n        $ echo "/usr/bin/jackd -d alsa -r 44100" > ~/.jackdrc\n\nIf you have already done this it is possible another application or non-JACK sound server is using the sound card.\n\nPossible remedies would be to close the other audio app or configure the sound server to go into suspend mode after a brief amount of idle time.\n\nIf you are trying to connect to a named jack server, either set the environment variable JACK_DEFAULT_SERVER to that name or launch IDJC with the -j jackservername option. For example:\n\n         $ jackd -n xyzzy -d alsa -r 44100 -p 2048 &\n         $ idjc -p profilename -j xyzzy\n\nIf you are trying to open multiple instances of IDJC use the -e command line switch.'))
+         message_dialog.set_title(_('IDJC Launch Failed') + pm.title_extra)
          message_dialog.run()
          message_dialog.destroy()
          raise self.initfailed()
@@ -2032,29 +2036,29 @@ class MainWindow:
       # add a playlist button to open the playlist window
       wbsg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       
-      self.prefs_button = gtk.Button(ln.prefs_button)
+      self.prefs_button = gtk.Button(_('Prefs'))
       wbsg.add_widget(self.prefs_button)
       self.prefs_button.connect("clicked", self.callback, "Prefs")
       self.hbox10.pack_start(self.prefs_button, True, True, 0)
       self.prefs_button.show()
-      self.tooltips.set_tip(self.prefs_button, ln.prefs_window_open_tip)
+      self.tooltips.set_tip(self.prefs_button, _('Open the preferences window.'))
       
       # add a server button to open the output window
-      self.server_button = gtk.Button(ln.output_button)
+      self.server_button = gtk.Button(_('Output'))
       wbsg.add_widget(self.server_button)
       self.server_button.connect("clicked", self.callback, "Server")
       self.hbox10.pack_start(self.server_button, True, True, 0)
       self.server_button.show()
-      self.tooltips.set_tip(self.server_button, ln.output_window_open_tip)
+      self.tooltips.set_tip(self.server_button, _('Open the output window.'))
       
       # add a jingles button to open the jingles window
-      self.jingles_button = gtk.Button(ln.jingles_button)
+      self.jingles_button = gtk.Button(_('Jingles'))
       self.jingles_button.viewlevels = (5,)
       wbsg.add_widget(self.jingles_button)
       self.jingles_button.connect("clicked", self.callback, "Jingles")
       self.hbox10.pack_start(self.jingles_button, True, True, 0)
       self.jingles_button.show()
-      self.tooltips.set_tip(self.jingles_button, ln.jingles_window_open_tip)
+      self.tooltips.set_tip(self.jingles_button, _('Open the jingles player window.'))
       
       sep = gtk.VSeparator()
       self.hbox10.pack_start(sep, False, False, 5)
@@ -2075,7 +2079,7 @@ class MainWindow:
       self.greenphone.connect("toggled", self.cb_toggle, "Greenphone")
       phonebox.pack_start(self.greenphone)
       self.greenphone.show()
-      self.tooltips.set_tip(self.greenphone, ln.green_phone_tip)
+      self.tooltips.set_tip(self.greenphone, _('Mix voice over IP audio to the output stream.'))
 
       pixbuf5 = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "redphone.png")
       pixbuf5 = pixbuf5.scale_simple(25, 20, gtk.gdk.INTERP_BILINEAR)
@@ -2087,7 +2091,7 @@ class MainWindow:
       self.redphone.connect("toggled", self.cb_toggle, "Redphone")
       phonebox.pack_start(self.redphone)
       self.redphone.show()
-      self.tooltips.set_tip(self.redphone, ln.red_phone_tip)
+      self.tooltips.set_tip(self.redphone, _('Mix voice over IP audio to the DJ only.'))
  
       self.hbox10.pack_start(phonebox)
       phonebox.show()
@@ -2103,7 +2107,7 @@ class MainWindow:
       self.aux_select.connect("toggled", self.cb_toggle, "Aux Open")
       self.hbox10.pack_start(self.aux_select)
       self.aux_select.show()
-      self.tooltips.set_tip(self.aux_select, ln.aux_toggle_tip)
+      self.tooltips.set_tip(self.aux_select, _('Mix auxiliary audio to the output stream. See also Prefs->JACK Ports Aux L and Aux R.'))
       
       # microphone open/unmute dynamic widget cluster thingy
       self.mic_opener = MicOpener(self, self.flash_test)
@@ -2122,7 +2126,7 @@ class MainWindow:
       self.advance.connect("clicked", self.callback, "Advance")
       self.hbox10.pack_end(self.advance)
       self.advance.show()
-      self.tooltips.set_tip(self.advance, ln.advance_tip)
+      self.tooltips.set_tip(self.advance, _('This button either starts the currently highlighted track playing or stops the currently playing one and highlights the next track.'))
       
       # we are done messing with hbox7 so lets show it
       self.hbox7.show()
@@ -2168,7 +2172,7 @@ class MainWindow:
       self.deckvol.set_inverted(True)
       hboxvol.pack_start(self.deckvol, False, False, 6)
       self.deckvol.show()
-      self.tooltips.set_tip(self.deckvol, ln.common_volume_control_tip)
+      self.tooltips.set_tip(self.deckvol, _('The volume control shared by both music players.'))
 
       # Secondary volume controller, visible when using separate player volumes
       self.deck2adj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 6.0)
@@ -2178,7 +2182,7 @@ class MainWindow:
       self.deck2vol.set_draw_value(False)
       self.deck2vol.set_inverted(True)
       hboxvol.pack_start(self.deck2vol, False, False, 0)
-      self.tooltips.set_tip(self.deck2vol, ln.right_volume_control_tip)
+      self.tooltips.set_tip(self.deck2vol, _('The volume control for the right music player.'))
 
       self.spacerbox = gtk.VBox()
       self.spacerbox.set_size_request(1, 5)
@@ -2197,7 +2201,7 @@ class MainWindow:
       self.mixback.set_draw_value(False)
       self.mixback.set_inverted(True)
       self.vboxvol.pack_start(self.mixback, True, True, 0)
-      self.tooltips.set_tip(self.mixback, ln.voip_mixback_volume_control_tip)
+      self.tooltips.set_tip(self.mixback, _('The stream volume level to send to the voice over IP connection.'))
       
       self.vboxvol.show()
       
@@ -2222,7 +2226,7 @@ class MainWindow:
       # A track history window to help with announcements
 
       history_expander_hbox = gtk.HBox()
-      self.history_expander = gtk.expander_new_with_mnemonic(ln.tracks_played)
+      self.history_expander = gtk.expander_new_with_mnemonic(_('Tracks Played'))
       history_expander_hbox.pack_start(self.history_expander, True, True, 6)
       self.history_expander.connect("notify::expanded", self.expandercallback)
       self.history_expander.show()
@@ -2248,7 +2252,7 @@ class MainWindow:
       self.history_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
       
       history_clear_box = gtk.HBox()
-      self.history_clear = gtk.Button(" " + ln.track_history_clear + " ")
+      self.history_clear = gtk.Button(" " + _('Remove Contents') + " ")
       self.history_clear.connect("clicked", self.callback, "Clear History") 
       history_clear_box.pack_start(self.history_clear, True, False, 0)
       self.history_clear.show()
@@ -2292,9 +2296,9 @@ class MainWindow:
       sg3 = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
             
       smvbox = gtk.VBox()
-      label = gtk.Label(ln.monitor)
+      label = gtk.Label(_('Monitor Mix'))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(8000, 0, len(ln.monitor)))
+      attrlist.insert(pango.AttrSize(8000, 0, len(_('Monitor Mix'))))
       label.set_attributes(attrlist)
       smvbox.add(label)
       label.show()
@@ -2302,10 +2306,10 @@ class MainWindow:
       frame = gtk.Frame()
       frame.set_shadow_type(gtk.SHADOW_NONE)
       smhbox = gtk.HBox()
-      self.listen_dj = gtk.RadioButton(None, ln.monitor_dj)
+      self.listen_dj = gtk.RadioButton(None, _('DJ'))
       smhbox.add(self.listen_dj)
       self.listen_dj.show()
-      self.listen_stream = gtk.RadioButton(self.listen_dj, ln.monitor_stream)
+      self.listen_stream = gtk.RadioButton(self.listen_dj, _('Stream'))
       smhbox.add(self.listen_stream)
       self.listen_stream.show()
       frame.add(smhbox)
@@ -2315,7 +2319,7 @@ class MainWindow:
       sg3.add_widget(frame)
       
       self.listen_stream.connect("toggled", self.cb_toggle, "stream-mon")
-      self.tooltips.set_tip(smvbox, ln.stream_mon_tip)
+      self.tooltips.set_tip(smvbox, _("In IDJC there are are two audio paths and this 'Monitor Mix' control toggles between them. When 'Stream' is active you can hear what the listeners are hearing including the effects of the crossfader. 'Monitor Mix' needs to be set to 'DJ' in order to make proper use of the VOIP features."))
       
       cross_sizegroup.add_widget(smhbox)
       self.crossbox.pack_start(smvbox, False, False, 0)
@@ -2323,22 +2327,22 @@ class MainWindow:
 
       # metadata source selector combo box
       mvbox = gtk.VBox()
-      label = gtk.Label(ln.metadata_source_label)
+      label = gtk.Label(_('Metadata Source'))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(8000, 0, len(ln.metadata_source_label)))
+      attrlist.insert(pango.AttrSize(8000, 0, len(_('Metadata Source'))))
       label.set_attributes(attrlist)
       mvbox.add(label)
       label.show()
       self.metadata_source = gtk.combo_box_new_text()
-      self.metadata_source.append_text(ln.metadata_source_left_deck)
-      self.metadata_source.append_text(ln.metadata_source_right_deck)
-      self.metadata_source.append_text(ln.metadata_source_last_played)
-      self.metadata_source.append_text(ln.metadata_source_crossfader)
-      self.metadata_source.append_text(ln.metadata_source_none)
+      self.metadata_source.append_text(_('Left Player'))
+      self.metadata_source.append_text(_('Right Player'))
+      self.metadata_source.append_text(_('Last Played'))
+      self.metadata_source.append_text(_('Crossfader'))
+      self.metadata_source.append_text(_('None'))
       self.metadata_source.set_active(3)
       cross_sizegroup.add_widget(self.metadata_source)
       self.metadata_source.connect("changed", self.cb_metadata_source)
-      self.tooltips.set_tip(self.metadata_source, ln.metadata_source_tip)
+      self.tooltips.set_tip(self.metadata_source, _('Select which Deck is responsible for the metadata on the stream.'))
       mvbox.add(self.metadata_source)
       self.metadata_source.show()
       self.crossbox.pack_start(mvbox, False, False, 0)
@@ -2347,9 +2351,9 @@ class MainWindow:
       sg3.add_widget(self.metadata_source)
       
       plvbox = gtk.VBox()
-      label = gtk.Label(ln.l)
+      label = gtk.Label(_('L'))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(8000, 0, len(ln.l)))
+      attrlist.insert(pango.AttrSize(8000, 0, len(_('L'))))
       label.set_attributes(attrlist)
       plvbox.add(label)
       label.show()
@@ -2358,15 +2362,15 @@ class MainWindow:
       self.passleft.show()
       self.crossbox.pack_start(plvbox, False, False, 0)
       plvbox.show()
-      self.tooltips.set_tip(plvbox, ln.cross_left_tip)
+      self.tooltips.set_tip(plvbox, _('Move the crossfader fully left.'))
       sg3.add_widget(self.passleft)
       
       self.crossadj = gtk.Adjustment(0.0, 0.0, 100.0, 1.0, 3.0, 0.0)
       self.crossadj.connect("value_changed", self.cb_crossfade)      
       cvbox = gtk.VBox()
-      label = gtk.Label(ln.crossfader)
+      label = gtk.Label(_('Crossfader'))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(8000, 0, len(ln.crossfader)))
+      attrlist.insert(pango.AttrSize(8000, 0, len(_('Crossfader'))))
       label.set_attributes(attrlist)
       cvbox.add(label)
       label.show()
@@ -2378,12 +2382,12 @@ class MainWindow:
       self.crossbox.pack_start(cvbox, True, True, 0)
       cvbox.show()
       self.vbox6.pack_start(self.outercrossbox, False, False, 2)
-      self.tooltips.set_tip(cvbox, ln.crossfader_tip)
+      self.tooltips.set_tip(cvbox, _('The crossfader.'))
 
       prvbox = gtk.VBox()
-      label = gtk.Label(ln.r)
+      label = gtk.Label(_('R'))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(8000, 0, len(ln.r)))
+      attrlist.insert(pango.AttrSize(8000, 0, len(_('R'))))
       label.set_attributes(attrlist)
       prvbox.add(label)
       label.show()
@@ -2392,7 +2396,7 @@ class MainWindow:
       self.passright.show()
       self.crossbox.pack_start(prvbox, False, False, 0)
       prvbox.show()
-      self.tooltips.set_tip(prvbox, ln.cross_right_tip)
+      self.tooltips.set_tip(prvbox, _('Move the crossfader fully right.'))
       sg3.add_widget(self.passright)
       
       patternbox = gtk.HBox()
@@ -2400,9 +2404,9 @@ class MainWindow:
       sg4 = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
       
       passbox = gtk.VBox()
-      label = gtk.Label(ln.middle)
+      label = gtk.Label(_('Middle'))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(8000, 0, len(ln.middle)))
+      attrlist.insert(pango.AttrSize(8000, 0, len(_('Middle'))))
       label.set_attributes(attrlist)
       label.show()
       passbox.add(label)
@@ -2417,18 +2421,18 @@ class MainWindow:
       sg4.add_widget(self.passmidleft)
       passhbox.pack_start(self.passmidleft, False, False, 0)
       self.passmidleft.show()
-      self.tooltips.set_tip(self.passmidleft, ln.cross_middle_tip)
+      self.tooltips.set_tip(self.passmidleft, _('Move the crossfader to the middle of its range of travel.'))
       
       self.passmidright = make_arrow_button(self, gtk.ARROW_UP, gtk.SHADOW_NONE, "cfmmidr")
       passhbox.pack_start(self.passmidright, False, False, 0)
       self.passmidright.show()
-      self.tooltips.set_tip(self.passmidright, ln.cross_middle_tip)
+      self.tooltips.set_tip(self.passmidright, _('Move the crossfader to the middle of its range of travel.'))
       sg4.add_widget(self.passmidright)
       
       pvbox = gtk.VBox()
-      label = gtk.Label(ln.response)
+      label = gtk.Label(_('Response'))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(8000, 0, len(ln.response)))
+      attrlist.insert(pango.AttrSize(8000, 0, len(_('Response'))))
       label.set_attributes(attrlist)
       pvbox.add(label)
       label.show()
@@ -2447,7 +2451,7 @@ class MainWindow:
       cross_sizegroup2.add_widget(patternbox)
       self.crosspattern.set_active(0)
       self.crosspattern.connect("changed", self.cb_crosspattern)
-      self.tooltips.set_tip(self.crosspattern, ln.cross_pattern_tip)
+      self.tooltips.set_tip(self.crosspattern, _('This selects the response curve of the crossfader.\n\nThe mid-point attenuations are -3dB, 0dB, and -22dB respectively.'))
       patternbox.pack_start(pvbox, True, True, 0)
       pvbox.show()
       
@@ -2458,9 +2462,9 @@ class MainWindow:
       passbox.set_spacing(2)
       
       tvbox = gtk.VBox()
-      label = gtk.Label(ln.time)
+      label = gtk.Label(_('Time'))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(8000, 0, len(ln.time)))
+      attrlist.insert(pango.AttrSize(8000, 0, len(_('Time'))))
       label.set_attributes(attrlist)
       tvbox.add(label)
       label.show()
@@ -2477,15 +2481,15 @@ class MainWindow:
       hs.show()
       tvbox.pack_start(psvbox, False, False, 0)
       psvbox.show()
-      self.tooltips.set_tip(tvbox, ln.pass_speed_tip)
+      self.tooltips.set_tip(tvbox, _('The time in seconds that the crossfader will take to automatically pass across when the button to the right is clicked.'))
       passbox.pack_start(tvbox, False, False, 0)
       tvbox.show()
       sg4.add_widget(psvbox)
       
       pvbox = gtk.VBox()
-      label = gtk.Label(ln.crosspass)
+      label = gtk.Label(_('Pass'))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(8000, 0, len(ln.crosspass)))
+      attrlist.insert(pango.AttrSize(8000, 0, len(_('Pass'))))
       label.set_attributes(attrlist)
       pvbox.add(label)
       label.show()
@@ -2498,7 +2502,7 @@ class MainWindow:
       self.passbutton.connect("clicked", self.callback, "pass-crossfader")
       pvbox.add(self.passbutton)
       self.passbutton.show()
-      self.tooltips.set_tip(pvbox, ln.pass_button_tip)
+      self.tooltips.set_tip(pvbox, _('This button causes the crossfader to move to the opposite side at a speed determined by the speed selector to the left.'))
       passbox.pack_start(pvbox, True, True, 0)
       pvbox.show()
       sg4.add_widget(self.passbutton)
@@ -2537,16 +2541,16 @@ class MainWindow:
       
       self.str_l_peak = peakholdmeter()
       self.str_r_peak = peakholdmeter() 
-      self.stream_peak_box = make_meter_unit(ln.str_peak, self.str_l_peak, self.str_r_peak)
+      self.stream_peak_box = make_meter_unit(_('Str Peak'), self.str_l_peak, self.str_r_peak)
       self.streammeterbox.pack_start(self.stream_peak_box)
       self.stream_peak_box.show()
-      self.tooltips.set_tip(self.stream_peak_box, ln.stream_peak_meter_tip)
+      self.tooltips.set_tip(self.stream_peak_box, _('A peak hold meter indicating the signal strength of the stream audio.'))
 
       sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       self.stream_indicator = []
       for i in range(PGlobs.num_streamers):
          self.stream_indicator.append(StreamMeter(1, 100))
-      self.stream_indicator_box, self.listener_indicator = make_stream_meter_unit(ln.streams, self.stream_indicator, self.tooltips)
+      self.stream_indicator_box, self.listener_indicator = make_stream_meter_unit(_('Streams'), self.stream_indicator, self.tooltips)
       self.streammeterbox.pack_start(self.stream_indicator_box, False, False, 0)
       self.stream_indicator_box.show()
       sg.add_widget(self.stream_indicator_box)
@@ -2558,10 +2562,10 @@ class MainWindow:
 
       self.str_l_rms_vu = vumeter()
       self.str_r_rms_vu = vumeter()
-      stream_vu_box = make_meter_unit(ln.str_vu, self.str_l_rms_vu, self.str_r_rms_vu)
+      stream_vu_box = make_meter_unit(_('Str VU'), self.str_l_rms_vu, self.str_r_rms_vu)
       self.streammeterbox.pack_start(stream_vu_box)
       stream_vu_box.show()
-      self.tooltips.set_tip(stream_vu_box, ln.stream_vu_meter_tip)
+      self.tooltips.set_tip(stream_vu_box, _('A VU meter for the stream audio.'))
        
       self.mic_meters = [MicMeter("Mic ", i) for i in range(1, PGlobs.num_micpairs * 2 + 1)]
       if len(self.mic_meters) <= 4:
@@ -2579,7 +2583,7 @@ class MainWindow:
             table.attach(meter, col, col + 1, row, row + 1)
             meter.show()
       
-      self.tooltips.set_tip(self.micmeterbox, ln.mic_meter_tip)
+      self.tooltips.set_tip(self.micmeterbox, _('A peak hold meter indicating the microphone signal strength and a meter indicating attenuation levels in the microphone signal processing system. Green indicates attenuation from the noise gate, yellow from the de-esser, red from the limiter.'))
 
       # Main window context menu
       self.app_menu = gtk.Menu()
@@ -2645,20 +2649,20 @@ class MainWindow:
       menu_str_meters = gtk.CheckMenuItem()
       menu_str_meters.show()
       view_menu.append(menu_str_meters)
-      self.str_meters_action = gtk.ToggleAction(None, ln.show_stream_meters, None, None)
+      self.str_meters_action = gtk.ToggleAction(None, _('Stream Audio Levels And Connections'), None, None)
       self.str_meters_action.connect_proxy(menu_str_meters)
 
       menu_mic_meters = gtk.CheckMenuItem()
       menu_mic_meters.show()
       view_menu.append(menu_mic_meters)
-      self.mic_meters_action = gtk.ToggleAction(None, ln.show_microphone_meters, None, None)
+      self.mic_meters_action = gtk.ToggleAction(None, _('Microphone Meters'), None, None)
       self.mic_meters_action.connect_proxy(menu_mic_meters)
       
       sep = gtk.SeparatorMenuItem()
       sep.show()
       view_menu.append(sep)
       
-      self.menu_feature_set = gtk.CheckMenuItem(ln.fully_featured)
+      self.menu_feature_set = gtk.CheckMenuItem(_('Fully Featured'))
       self.menu_feature_set.set_active(True)
       self.menu_feature_set.connect("activate", self.callback, "Features")
       self.menu_feature_set.show()
@@ -2668,17 +2672,17 @@ class MainWindow:
       sep.show()
       view_menu.append(sep)
       
-      menu_prefs = gtk.MenuItem(ln.prefs_button)
+      menu_prefs = gtk.MenuItem(_('Prefs'))
       menu_prefs.connect("activate", self.callback, "Prefs")
       menu_prefs.show()
       view_menu.append(menu_prefs)
       
-      menu_server = gtk.MenuItem(ln.output_button)
+      menu_server = gtk.MenuItem(_('Output'))
       menu_server.connect("activate", self.callback, "Server")
       menu_server.show()
       view_menu.append(menu_server)
       
-      menu_jingles = gtk.MenuItem(ln.jingles_button)
+      menu_jingles = gtk.MenuItem(_('Jingles'))
       menu_jingles.connect("activate", self.callback, "Jingles")
       menu_jingles.show()
       view_menu.append(menu_jingles)
@@ -2686,7 +2690,7 @@ class MainWindow:
       # menu for closing prefs, server, jingles
 
       self.close_menu = gtk.Menu()
-      close_menu_item = gtk.MenuItem(ln.window_close)
+      close_menu_item = gtk.MenuItem(_('Close'))
       self.close_menu.add(close_menu_item)
       self.close_menu.show()
       close_menu_item.show()

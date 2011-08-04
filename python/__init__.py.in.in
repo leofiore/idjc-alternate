@@ -31,6 +31,11 @@ from .utils import PolicedAttributes
 from .utils import PathStr
 
 
+# Temporary translation code enabler.
+def _(s):
+   return s
+
+
 
 class FGlobs(object):
    """Namespace class of variables which cannot be altered.
@@ -71,8 +76,8 @@ class PGlobs(object):
    app_longform = "Internet DJ Console"
    default_icon = FGlobs.pkgdatadir / "icon.png"
    profile_dialog_refusal_pathname = config_dir / "profile_dialog_refusal"
-   copyright = "Copyright 2005-2011 Stephen Fairchild and others."
-   license = "Released under the GNU General Public License V2.0 or later."
+   copyright = _("Copyright 2005-2011 Stephen Fairchild and others.")
+   license = _("Released under the GNU General Public License V2.0 or later.")
    num_micpairs = 2
    num_streamers = 6
    num_encoders = 6
