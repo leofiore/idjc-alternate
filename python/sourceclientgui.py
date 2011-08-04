@@ -43,7 +43,15 @@ from .gtkstuff import DefaultEntry, threadslock, HistoryEntry, WindowSizeTracker
 from .dialogs import *
 
 from .prelims import ProfileManager
+
+
 pm = ProfileManager()
+
+
+# Temporary translation code enabler.
+def _(s):
+   return s
+   
 
 
 ENCODER_START=1; ENCODER_STOP=0                                 # start_stop_encoder constants
@@ -1629,7 +1637,7 @@ class StreamTab(Tab):
          mp3_pane.set_border_width(10)
       else:
          mp3_pane = gtk.VBox(True)
-         for line in ln.no_mp3_stream_available:
+         for line in ln.no_mp3_stream_available.splitlines():
             label = gtk.Label(line)
             mp3_pane.add(label)
             label.show()
@@ -1695,7 +1703,8 @@ class StreamTab(Tab):
       self.flacmetadata.set_active(True)
       set_tip(self.flacmetadata, ln.flacmetadata_tip)
       
-      self.flac16bit, self.flac20bit, self.flac24bit = self.make_radio_with_text(ln.flac_bitrates)
+      flac_bitrates = (ln.x_bitdepth % x for x in (16, 20, 24))
+      self.flac16bit, self.flac20bit, self.flac24bit = self.make_radio_with_text(flac_bitrates)
       set_tip(self.flac16bit, ln.flac16_tip)
       set_tip(self.flac20bit, ln.flac20_tip)
       set_tip(self.flac24bit, ln.flac24_tip)
@@ -1708,7 +1717,9 @@ class StreamTab(Tab):
       
       # Speex subtab contents
       self.speex_mode = gtk.combo_box_new_text()
-      for each in ln.speex_modes:
+      # The Speex audio codec has specific modes that are user selectable (dropdown list text).
+      speex_modes = (_('Ultra Wide Band'), _('Wide Band'), _('Narrow Band'))
+      for each in speex_modes:
          self.speex_mode.append_text(each)
       self.speex_mode.set_active(0)
       self.speex_stereo = gtk.CheckButton(ln.stereo)

@@ -55,6 +55,12 @@ from .prelims import *
 pm = ProfileManager()
 
 
+# Temporary translation code enabler.
+def _(s):
+   return s
+
+
+
 # Suppress warning when None is placed in a ListStore element where some kind of GObject should go. 
 warnings.filterwarnings("ignore", r"g_object_set_qdata: assertion `G_IS_OBJECT \(object\)' failed")
 # Suppress warning when drag 'n dropping tracks to an empty playlist window.
@@ -745,6 +751,11 @@ class CueSheet(object):
 
        
 class IDJC_Media_Player:
+   playlisttype_extension = tuple(zip(
+      # File format selection items from a list (user can pick only one).
+      (_('By Extension'), _('M3U playlist'), _('XSPF playlist'), _('PLS playlist')),
+      ('', 'm3u', 'xspf', 'pls'),))
+   
    def make_cuesheet_playlist_entry(self, cue_pathname):
       cuesheet_liststore = CueSheetListStore()
       try:
@@ -2075,7 +2086,7 @@ class IDJC_Media_Player:
      
    def plfile_new_savetype(self, widget):
       self.plsave_filetype = self.pltreeview.get_selection().get_selected_rows()[1][0][0]
-      self.expander.set_label(ln.playlisttype_expander + "(" +  ln.playlisttype_extension[self.plsave_filetype][0] + ")")
+      self.expander.set_label(ln.playlisttype_expander + "(" +  self.playlisttype_extension[self.plsave_filetype][0] + ")")
 
    def plfile_response(self, dialog, response_id):
       self.plsave_filtertype = dialog.get_filter()
@@ -2786,7 +2797,7 @@ class IDJC_Media_Player:
             
             self.plframe = gtk.Frame()
             self.plliststore = gtk.ListStore(str, str)
-            for row in ln.playlisttype_extension:
+            for row in self.playlisttype_extension:
                self.plliststore.append(row)
             self.pltreeview = gtk.TreeView(self.plliststore)
             self.plframe.add(self.pltreeview)

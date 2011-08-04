@@ -168,7 +168,7 @@ auto_start_recorder_tip = "Have a recorder start automatically when a radio serv
 
 auto_tip = "Use default jack audio routing"
 
-autoshutdown = ('An automatic server disconnection occurred.', 'Disconnection was caused by a timer.')
+autoshutdown = 'A timer triggered an automatic server disconnection.'
 
 aux_off_tip = "Each time the auxiliary input is turned off run the commands to the right."
 
@@ -366,8 +366,6 @@ description_tip = "A description of your radio station."
 
 digiprogress_tip = "Left click toggles between showing the amount of time elapsed or remaining on the current track being played."
 
-discon_warn = ('You will be automatically disconnected from', 'the server one minute from now.')
-
 disconnected = "IDJC Disconnected"
 
 disconnected_history = "disconnected from server"
@@ -502,7 +500,7 @@ flac20_tip = "Ideal for very high quality streaming or recording although not as
 
 flac24_tip = "The highest quality audio format available within IDJC. Recommended for pre-recording."
 
-flac_bitrates = ('16 Bit', '20 Bit', '24 Bit')
+x_bitdepth = "%d Bit"
 
 flac_streamtab_tip = "This chooses the OggFLAC format for streaming and recording."
 
@@ -932,7 +930,7 @@ no_microphones = "No Microphones"
 
 no_more_ask = "Don't ask again"
 
-no_mp3_stream_available = ('To enable MP3 streaming', 'install the package named', "'libmp3lame'", 'and restart IDJC.')
+no_mp3_stream_available = """To enable MP3 streaming\ninstall the package named\n'libmp3lame'\n and restart IDJC."""
 
 no_mp3_stream_available_tip = """Installing libmp3lame will allow you to stream the MP3 format to Shoutcast servers. Currently only Ogg streaming to Icecast servers is possible."""
 
@@ -1054,8 +1052,6 @@ playlistfilter_supported = "Playlist types (*.m3u, *.xspf, *.pls)"
 
 playlisttype_expander = "Select File Type "
 
-playlisttype_extension = (('By Extension', ''), ('M3U playlist', 'm3u'), ('XSPF playlist', 'xspf'), ('PLS playlist', 'pls'))
-
 playlisttype_header1 = "File Type"
 
 playlisttype_header2 = "Extension"
@@ -1147,8 +1143,6 @@ The 'delays of' control consists of a comma separated list of time delays for th
 You also have the option to attempt reconnection when the stream buffer becomes full. Use this option if waiting out the congestion is not helpful."""
 
 reconnected = "IDJC Reconnected"
-
-reconnected_additional = ('Automatically reconnected to the server', 'after the server module crashed')
 
 reconnection_text_1 = "The connection to the server in tab %s has failed."
 
@@ -1274,11 +1268,6 @@ server_type_shoutcast = "Shoutcast"
 
 server_type_tip = "IDJC can connect to both Icecast and Shoutcast servers. For connection to be successful you need to specify the type of server that you wish to connect to. Also note, you can specify a relay here for the purpose of stats collection. If a master has already been added to the list above you can't add another one - to stream to more than one server use a different stream tab instead."
 
-server_type_codes = ("I2M", "SM", "I2R", "SR")
-
-server_type_labels = ("Icecast 2 Master", "Shoutcast Master",
-                      "Icecast 2 Stats/Relay", "Shoutcast Stats/Relay")
-
 songname = "Song name"
 
 songname_ircview = "<Song name>"
@@ -1328,8 +1317,6 @@ speex_metadata_tip = "Sending metadata may cause listener clients to misbehave w
 speex_mode = "Mode"
 
 speex_mode_tip = "This is the audio bandwidth selector. Ultra Wide Band has a bandwidth of 16kHz; Wide Band, 8kHz; Narrow Band, 4kHz. The samplerate is twice the value of the selected bandwidth consequently all settings in the samplerate pane to the left will be disregarded apart from the resample quality setting."
-
-speex_modes = ('Ultra Wide Band', 'Wide Band', 'Narrow Band')
 
 speex_quality = "Quality"
 
@@ -1469,15 +1456,11 @@ time = "Time"
 
 timer = "Timer:"
 
-timed_out = ('Automatically disconnected from the server,', 'after the connection timed out.')
-
 title = "Title"
 
 title_ircview = "<Title>"
 
 to_here = "To Here"
-
-to_install_lame = ('LAME needs to be installed', 'in order to stream or record', 'in mp3 format.')
 
 track_announcer = "Track Announcer"
 
@@ -1572,109 +1555,7 @@ irc_colours = "Colours"
 dual_volume = "Separate left/right volume faders"
 dual_volume_tip = "Tick this option to use an independent volume fader for the left and right music players."
 
-control_sources= {
-    'c': 'MIDI control',
-    'n': 'MIDI note',
-    'p': 'MIDI pitch-wheel',
-    'k': 'Keyboard press',
-    'x': 'XChat command'
-}
-control_modes= {
-    'd': 'Direct fader/held button',
-    'p': 'One-shot/toggle button',
-    's': 'Set value',
-    'a': 'Alter value'
-}
-
 control_target_singular= 'Singular control'
-
-control_targets= {
-    'p': 'Player',
-    'm': 'Mic',
-    'k': 'Jingle',
-    's': 'Stream',
-    'r': 'Recorder'
-}
-control_targets_players= (
-    'Left player',
-    'Right player',
-    'Focused player',
-    "Fadered player",
-)
-control_method_groups= {
-    'c': 'Preferences',
-    'p': 'Player',
-    'x': 'Both players',
-    'm': 'Microphone',
-    'v': 'VoIP channel',
-    'a': 'Aux channel',
-    'k': 'Single jingle',
-    'j': 'Jingle player',
-    's': 'Stream',
-    'r': 'Stream recorder',
-}
-control_methods= {
-    'c_tips': 'Prefs enable tooltips',
-
-    'p_pp': 'Player play/pause',
-    'p_stop': 'Player stop',
-    'p_advance': 'Player advance',
-    'p_prev': 'Player play previous',
-    'p_next': 'Player play next',
-    'p_sfire': 'Player play selected from start',
-    'p_sprev': 'Player select previous',
-    'p_snext': 'Player select next',
-    'p_stream': 'Player stream output enable',
-    'p_listen': 'Player DJ output enable',
-    'p_prep': 'Player DJ-only switch',
-    'p_vol': 'Player set volume',
-    'p_gain': 'Player set gain',
-    'p_pan': 'Player set balance',
-    'p_pitch': 'Player set pitchbend',
-
-    'p_tag': 'Playlist edit tags',
-    'p_istop': 'Playlist insert stop',
-    'p_ianno': 'Playlist insert announce',
-    'p_itrans': 'Playlist insert transfer',
-    'p_ifade': 'Playlist insert crossfade',
-    'p_ipitch': 'Playlist insert pitchunbend',
-    'p_igotop': 'Playlist insert jump to top',
-
-    'x_fade': 'Players set crossfade',
-    'x_pass': 'Players pass crossfade',
-    'x_focus': 'Players set focus',
-    'x_pitch': 'Players show pitchbend',
-
-    'm_on': 'Mic output enable',
-    'm_vol': 'Mic set volume',
-    'm_gain': 'Mic set gain',
-    'm_pan': 'Mic set balance',
-
-    'v_on': 'VoIP output enable',
-    'v_prep': 'VoIP DJ-only switch',
-    'v_vol': 'VoIP set volume',
-    'v_gain': 'VoIP set gain',
-    'v_pan': 'VoIP set balance',
-
-    'a_on': 'Aux output enable',
-    'a_vol': 'Aux set volume',
-    'a_gain': 'Aux set gain',
-    'a_pan': 'Aux set balance',
-
-    'k_fire': 'Jingle play from start',
-
-    'j_ps': 'Jingles play/stop',
-    'j_playex': 'Jingles play exclusive',
-    'j_sprev': 'Jingles select previous',
-    'j_snext': 'Jingles select next',
-    'j_sfire': 'Jingles play selected from start',
-    'j_vol': 'Jingles set jingles volume',
-    'j_ivol': 'Jingles set interlude volume',
-
-    's_on': 'Stream set connected',
-
-    'r_on': 'Recorder set recording',
-}
 
 pulse_on_press= 'Pressed'
 pulse_on_release= 'Released'
@@ -1697,21 +1578,9 @@ binding_learn_on= 'Listening for input'
 binding_source= 'Source'
 binding_channel_midi= 'Channel'
 binding_channel_key= 'Shifting'
-binding_controls= {
-    'c': 'Control',
-    'n': 'Note',
-    'p': 'Control',
-    'k': 'Key',
-}
 
 binding_mode= 'Interaction'
 binding_target= 'On target'
-binding_values= {
-    'd': 'Use value', 
-    'p': 'Act if', 
-    's': 'Set to',
-    'a': 'Adjust by',
-}
 
 inverted_value= 'Reversed'
 

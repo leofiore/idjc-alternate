@@ -65,12 +65,7 @@ class xx_XX(object):
 class en_GB(xx_XX):
    _load = True
 
-class en_US(en_GB):
-   _load = True
 
-class de_DE(en_GB):
-   _load = True
-   
 def _set():               # choose which translation to use
    lev = os.getenv("LANG")
    try:
@@ -79,8 +74,8 @@ def _set():               # choose which translation to use
       if lev[2] != "_":
          raise IndexError
    except (IndexError,TypeError):
-      print "Selecting language en_US. Change environment variable LANG to override."
-      lev = "en_US"
+      print "Selecting language en_GB. Change environment variable LANG to override."
+      lev = "en_GB"
    else:
       lev = "_".join((language, country))
    
@@ -93,8 +88,8 @@ def _set():               # choose which translation to use
             lev = each
             break
       else:
-         print "Could not find a suitable language match - will use en_US"
-         lev = "en_US"
+         print "Could not find a suitable language match - will use en_GB"
+         lev = "en_GB"
 
    # find the class whose name matches the lev variable and instantiate it
    return getattr(gns, lev)()

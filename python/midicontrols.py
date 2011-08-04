@@ -36,6 +36,87 @@ from .prelims import ProfileManager
 pm = ProfileManager()
 
 
+
+control_methods= {
+    'c_tips': 'Prefs enable tooltips',
+
+    'p_pp': 'Player play/pause',
+    'p_stop': 'Player stop',
+    'p_advance': 'Player advance',
+    'p_prev': 'Player play previous',
+    'p_next': 'Player play next',
+    'p_sfire': 'Player play selected from start',
+    'p_sprev': 'Player select previous',
+    'p_snext': 'Player select next',
+    'p_stream': 'Player stream output enable',
+    'p_listen': 'Player DJ output enable',
+    'p_prep': 'Player DJ-only switch',
+    'p_vol': 'Player set volume',
+    'p_gain': 'Player set gain',
+    'p_pan': 'Player set balance',
+    'p_pitch': 'Player set pitchbend',
+
+    'p_tag': 'Playlist edit tags',
+    'p_istop': 'Playlist insert stop',
+    'p_ianno': 'Playlist insert announce',
+    'p_itrans': 'Playlist insert transfer',
+    'p_ifade': 'Playlist insert crossfade',
+    'p_ipitch': 'Playlist insert pitchunbend',
+    'p_igotop': 'Playlist insert jump to top',
+
+    'x_fade': 'Players set crossfade',
+    'x_pass': 'Players pass crossfade',
+    'x_focus': 'Players set focus',
+    'x_pitch': 'Players show pitchbend',
+
+    'm_on': 'Mic output enable',
+    'm_vol': 'Mic set volume',
+    'm_gain': 'Mic set gain',
+    'm_pan': 'Mic set balance',
+
+    'v_on': 'VoIP output enable',
+    'v_prep': 'VoIP DJ-only switch',
+    'v_vol': 'VoIP set volume',
+    'v_gain': 'VoIP set gain',
+    'v_pan': 'VoIP set balance',
+
+    'a_on': 'Aux output enable',
+    'a_vol': 'Aux set volume',
+    'a_gain': 'Aux set gain',
+    'a_pan': 'Aux set balance',
+
+    'k_fire': 'Jingle play from start',
+
+    'j_ps': 'Jingles play/stop',
+    'j_playex': 'Jingles play exclusive',
+    'j_sprev': 'Jingles select previous',
+    'j_snext': 'Jingles select next',
+    'j_sfire': 'Jingles play selected from start',
+    'j_vol': 'Jingles set jingles volume',
+    'j_ivol': 'Jingles set interlude volume',
+
+    's_on': 'Stream set connected',
+
+    'r_on': 'Recorder set recording',
+}
+
+control_targets= {
+    'p': 'Player',
+    'm': 'Mic',
+    'k': 'Jingle',
+    's': 'Stream',
+    'r': 'Recorder'
+}
+
+control_targets_players= (
+    'Left player',
+    'Right player',
+    'Focused player',
+    "Fadered player",
+)
+
+
+
 class Binding(tuple):
     """Immutable value type representing an input bound to an action.
 
@@ -200,7 +281,7 @@ class Binding(tuple):
     def action_str(self):
         """Get user-facing representation of action/mode/value
         """
-        return ln.control_methods[self.method]
+        return control_methods[self.method]
         
     @property
     def modifier_str(self):
@@ -229,9 +310,9 @@ class Binding(tuple):
         """
         group= self.method[0]
         if group=='p':
-            return ln.control_targets_players[self.target]
-        if group in ln.control_targets:
-            return '%s %d' % (ln.control_targets[group], self.target+1)
+            return control_targets_players[self.target]
+        if group in control_targets:
+            return '%s %d' % (control_targets[group], self.target+1)
         return ''
 
     # Display helpers used by the _str methods and also SpinButtons
@@ -1050,6 +1131,49 @@ class CustomAdjustment(gtk.Adjustment):
 # Binding editor popup _______________________________________________________
 
 class BindingEditor(gtk.Dialog):
+    binding_values= {
+        'd': 'Use value', 
+        'p': 'Act if', 
+        's': 'Set to',
+        'a': 'Adjust by',
+    }
+
+    binding_controls= {
+        'c': 'Control',
+        'n': 'Note',
+        'p': 'Control',
+        'k': 'Key',
+    }
+   
+    control_method_groups= {
+        'c': 'Preferences',
+        'p': 'Player',
+        'x': 'Both players',
+        'm': 'Microphone',
+        'v': 'VoIP channel',
+        'a': 'Aux channel',
+        'k': 'Single jingle',
+        'j': 'Jingle player',
+        's': 'Stream',
+        'r': 'Stream recorder',
+    }   
+   
+    control_modes= {
+        'd': 'Direct fader/held button',
+        'p': 'One-shot/toggle button',
+        's': 'Set value',
+        'a': 'Alter value'
+    }  
+
+    control_sources= {
+        'c': 'MIDI control',
+        'n': 'MIDI note',
+        'p': 'MIDI pitch-wheel',
+        'k': 'Keyboard press',
+        'x': 'XChat command'
+    }
+   
+   
     def __init__(self, owner):
         self.owner= owner
         gtk.Dialog.__init__(self,
@@ -1070,33 +1194,33 @@ class BindingEditor(gtk.Dialog):
         self.learn_button.connect('toggled', self.on_learn_toggled)
         self.learn_timer= None
 
-        self.source_field= LookupComboBox(Binding.SOURCES, ln.control_sources, self.owner.source_icons)
+        self.source_field= LookupComboBox(Binding.SOURCES, self.control_sources, self.owner.source_icons)
         self.source_field.connect('changed', self.on_source_changed)
         self.source_label= gtk.Label(ln.binding_source)
 
         self.channel_label= gtk.Label(ln.binding_channel_midi)
         self.channel_field= ModifierSpinButton(ChannelAdjustment())
 
-        self.control_label= gtk.Label(ln.binding_controls['c'])
+        self.control_label= gtk.Label(self.binding_controls['c'])
         self.control_field= CustomSpinButton(gtk.Adjustment(0, 0, 127, 1))
 
         # Control editing
         #
         self.method_field= GroupedComboBox(
-            Binding.METHOD_GROUPS, ln.control_method_groups,
-            Binding.METHODS, ln.control_methods,
+            Binding.METHOD_GROUPS, self.control_method_groups,
+            Binding.METHODS, control_methods,
             [m[0] for m in Binding.METHODS]
         )
         self.method_field.connect('changed', self.on_method_changed)
 
         self.mode_label= gtk.Label(ln.binding_mode)
-        self.mode_field= LookupComboBox(Binding.MODES, ln.control_modes)
+        self.mode_field= LookupComboBox(Binding.MODES, self.control_modes)
         self.mode_field.connect('changed', self.on_mode_changed)
 
         self.target_label= gtk.Label(ln.binding_target)
         self.target_field= CustomSpinButton(TargetAdjustment('p'))
 
-        self.value_label= gtk.Label(ln.binding_values[Binding.MODE_SET])
+        self.value_label= gtk.Label(self.binding_values[Binding.MODE_SET])
         self.value_field_scale= ValueSnapHScale(0, -127, 127)
         dummy= ValueSnapHScale(0, -127, 127)
         self.value_field_invert= gtk.CheckButton(ln.inverted_value)
@@ -1248,7 +1372,7 @@ class BindingEditor(gtk.Dialog):
             self.channel_label.set_text(ln.binding_channel_midi)
             self.channel_field.set_adjustment(ChannelAdjustment())
 
-        self.control_label.set_text(ln.binding_controls[s])
+        self.control_label.set_text(self.binding_controls[s])
         if s==Binding.SOURCE_KEYBOARD:
             self.control_field.set_adjustment(KeyAdjustment())
         elif s==Binding.SOURCE_NOTE:
@@ -1286,7 +1410,7 @@ class BindingEditor(gtk.Dialog):
 
     def on_mode_changed(self, *_):
         mode= self.mode_field.get_value()
-        self.value_label.set_text(ln.binding_values[mode])
+        self.value_label.set_text(self.binding_values[mode])
 
         self.value_field_pulsebox.hide()
         self.value_field_scale.hide()
@@ -1410,9 +1534,9 @@ class PlayerAdjustment(CustomAdjustment):
     def __init__(self, value= 0):
         CustomAdjustment.__init__(self, value, 0, 3, 1)
     def read_input(self, text):
-        return ln.control_targets_players.index(text)
+        return control_targets_players.index(text)
     def write_output(self, value):
-        return ln.control_targets_players[max(min(int(value), 3), 0)]
+        return control_targets_players[max(min(int(value), 3), 0)]
 class TargetAdjustment(CustomAdjustment):
     def __init__(self, group, value= 0):
         CustomAdjustment.__init__(self, value, 0, {'p': 3, 'm': 3, 'k': 99, 's': 5, 'r': 1}[group], 1)
@@ -1420,7 +1544,7 @@ class TargetAdjustment(CustomAdjustment):
     def read_input(self, text):
         return int(text.rsplit(' ', 1)[-1])-1
     def write_output(self, value):
-        return '%s %d' % (ln.control_targets[self._group], value+1)
+        return '%s %d' % (control_targets[self._group], value+1)
 class SingularAdjustment(CustomAdjustment):
     def __init__(self, value= 0):
         CustomAdjustment.__init__(self)
