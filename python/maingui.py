@@ -49,7 +49,7 @@ from .prelims import *
 
 
 import gettext
-t = gettext.translation(FGlobs.package_name, fallback=True)
+t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
 
 

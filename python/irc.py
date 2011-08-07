@@ -45,7 +45,7 @@ from .freefunctions import string_multireplace
 
 
 import gettext
-t = gettext.translation(FGlobs.package_name, fallback=True)
+t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
 
 

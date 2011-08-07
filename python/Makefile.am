@@ -9,7 +9,7 @@ dist_noinst_PYTHON=__init__.py.in.in
 all: __init__.py
 
 __init__.py: __init__.py.in
-	sed -e 's|$${pkgdatadir}|${pkgdatadir}|' -e 's|$${exec_prefix}|${exec_prefix}|' $? >$@
+	sed -e 's|$${pkgdatadir}|${pkgdatadir}|' -e 's|$${exec_prefix}|${exec_prefix}|' -e 's|$${prefix}|${prefix}|' $? >$@
 
 .PHONY: __init__.py $pkgpython_PYTHON
 

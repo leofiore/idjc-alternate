@@ -43,6 +43,7 @@ class FGlobs(object):
     
    libexecdir = PathStr("""@libexecdir@""")
    pkgdatadir = PathStr("""${pkgdatadir}""")
+   localedir = PathStr("""@localedir@""")
    avformat = @HAVE_AVFORMAT@
    avcodec = @HAVE_AVCODEC@
    flacenabled = @HAVE_FLAC@
@@ -55,7 +56,7 @@ class FGlobs(object):
 
 
 import gettext
-t = gettext.translation(FGlobs.package_name, fallback=True)
+t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
 
 
