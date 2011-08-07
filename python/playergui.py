@@ -51,10 +51,9 @@ from .gtkstuff import threadslock
 from .prelims import *
 
 
-# Temporary translation code enabler.
-def _(s):
-   return s
-
+import gettext
+t = gettext.translation(FGlobs.package_name, fallback=True)
+_ = t.gettext
 
 
 pm = ProfileManager()
@@ -3293,10 +3292,7 @@ class IDJC_Media_Player:
          hours, minutes = divmod(duration, 60)
          hms = hours and "%d:%02d:%02d" % (hours, minutes, seconds) or "%d:%02d" % (minutes, seconds)
          if tracknum:
-            try:
-               label1 = gtk.Label(_('Playing track %d of %d') % (tracknum, trackscount))
-            except:
-               label1 = gtk.Label(_('Playing track %d of %d'))
+            label1 = gtk.Label(_('Playing track {0} of {1}').format(tracknum, trackscount))
             vbox.add(label1)
             label1.show()
             if self.album:
@@ -3314,10 +3310,7 @@ class IDJC_Media_Player:
             vbox.add(blank)
             blank.show()
          else:
-            try:
-               label3 = gtk.Label(_('Total number of tracks %d') % trackscount)
-            except:
-               label3 = gtk.Label(_('Total number of tracks %d'))
+            label3 = gtk.Label(_('Total number of tracks %d') % trackscount)
             vbox.add(label3)
             label3.show()
          try:

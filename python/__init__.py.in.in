@@ -31,12 +31,6 @@ from .utils import PolicedAttributes
 from .utils import PathStr
 
 
-# Temporary translation code enabler.
-def _(s):
-   return s
-
-
-
 class FGlobs(object):
    """Namespace class of variables which cannot be altered.
    
@@ -57,6 +51,12 @@ class FGlobs(object):
    package_name = """@PACKAGE_NAME@"""
    package_version = """@PACKAGE_VERSION@"""
    enh_libshout = @ENH_SHOUT@
+
+
+
+import gettext
+t = gettext.translation(FGlobs.package_name, fallback=True)
+_ = t.gettext
 
 
 
@@ -82,7 +82,7 @@ class PGlobs(object):
    num_streamers = 6
    num_encoders = 6
    num_recorders = 2
-   
+
 
 
 def main():

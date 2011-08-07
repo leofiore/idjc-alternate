@@ -1,6 +1,6 @@
-	***   Changelog for Internet DJ Console.  Most recent changes first.   ***
-
 * Changes in version 0.8.6 *
+
+Added GNU gettext i18n.
 
 Mouseover popup of the main media players now indicates the album if that metadata is available.
 

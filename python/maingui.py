@@ -48,9 +48,9 @@ from . import p3db
 from .prelims import *
 
 
-# Temporary translation code enabler.
-def _(s):
-   return s
+import gettext
+t = gettext.translation(FGlobs.package_name, fallback=True)
+_ = t.gettext
 
 
 args = ArgumentParserImplementation().parse_args()

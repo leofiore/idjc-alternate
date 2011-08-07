@@ -17,7 +17,6 @@
 #   along with this program in the file entitled COPYING.
 #   If not, see <http://www.gnu.org/licenses/>.
 
-
 import locale
 locale.setlocale(locale.LC_ALL, "")
 

@@ -44,13 +44,12 @@ from .dialogs import *
 from .prelims import ProfileManager
 
 
+import gettext
+t = gettext.translation(FGlobs.package_name, fallback=True)
+_ = t.gettext
+
+
 pm = ProfileManager()
-
-
-# Temporary translation code enabler.
-def _(s):
-   return s
-   
 
 
 ENCODER_START=1; ENCODER_STOP=0                                 # start_stop_encoder constants

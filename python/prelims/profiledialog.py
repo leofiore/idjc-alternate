@@ -42,9 +42,10 @@ from ..gtkstuff import CellRendererTime
 from ..gtkstuff import threadslock
 
 
-# Temporary translation code enabler.
-def _(s):
-   return s
+import gettext
+t = gettext.translation(FGlobs.package_name, fallback=True)
+_ = t.gettext
+
 
 
 gtk.window_set_default_icon_from_file(PGlobs.default_icon)

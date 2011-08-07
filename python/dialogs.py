@@ -25,9 +25,10 @@ import pango
 from idjc import FGlobs
 
 
-# Temporary translation code enabler.
-def _(s):
-   return s
+import gettext
+t = gettext.translation(FGlobs.package_name, fallback=True)
+_ = t.gettext
+
 
 
 # A mutually exclusive list of dialogs so that only one can be on screen at a time
@@ -211,7 +212,9 @@ class ReconnectionDialog(gtk.Dialog):
       self.event_time = time.time() + self.remaining
       self.update_countdown_text()
       if self.limited_delays:
-         self.label3.set_text(_('Try %d of %d.') % (self.trycount, len(self.td) - 1))
+         # Read as: attempt number x of y total possible attempts.
+         text = _('Try {0} of {1}.')
+         self.label3.set_text(text.format(self.trycount, len(self.td) - 1))
       else:
          self.label3.set_text(_('Try %d.') % self.trycount)
       if self.config.visible.get_active():
@@ -250,7 +253,8 @@ class ReconnectionDialog(gtk.Dialog):
       
       self.label1 = gtk.Label(_('The connection to the server in tab %s has failed.') % (tab.numeric_id + 1))
       self.label2 = gtk.Label(_('Automatic reconnect in %d seconds.') % self.td[1])
-      self.label3 = gtk.Label(_('Try %d of %d.') % (1, len(self.td) - 1))
+      text = _('Try {0} of {1}.')
+      self.label3 = gtk.Label(text.format(1, len(self.td) - 1))
       for each in (self.label1, self.label2, self.label3):
          attrlist = pango.AttrList()
          attrlist.insert(pango.AttrSize(12500, 0, len(each.get_text())))

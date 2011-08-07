@@ -1,4 +1,4 @@
-SUBDIRS = ${MAYBE_LIBSHOUT} c python artwork Man doc
+SUBDIRS = po ${MAYBE_LIBSHOUT} c python artwork Man doc
 DISTDIRS = libshout
 
 nodist_bin_SCRIPTS=idjc idjcctrl
@@ -43,3 +43,7 @@ sfpublish:
 	curl --retry 3 --connect-timeout 10 -T ${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz -n sftp://frs.sourceforge.net/home/frs/project/i/id/idjc/idjc/0.8/
 
 .PHONY: dtdist sfpublish idjc idjc.desktop
+
+ACLOCAL_AMFLAGS = -I m4
+
+EXTRA_DIST = m4/ChangeLog  config.rpath m4/ChangeLog

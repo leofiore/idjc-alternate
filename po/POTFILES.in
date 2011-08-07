@@ -1,0 +1,16 @@
+# List of source files which contain translatable strings.
+
+python/prelims/__init__.py
+python/prelims/profiledialog.py
+python/dialogs.py
+python/__init__.py.in.in
+python/irc.py
+python/jingles.py
+python/licence_window.py
+python/maingui.py
+python/midicontrols.py
+python/mutagentagger.py
+python/p3db.py
+python/playergui.py
+python/preferences.py
+python/sourceclientgui.py

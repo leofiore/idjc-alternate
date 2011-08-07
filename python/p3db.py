@@ -29,9 +29,9 @@ from idjc import FGlobs
 from .gtkstuff import threadslock, DefaultEntry, LEDDict
 
 
-# Temporary translation code enabler.
-def _(s):
-   return s
+import gettext
+t = gettext.translation(FGlobs.package_name, fallback=True)
+_ = t.gettext
 
 
 try:

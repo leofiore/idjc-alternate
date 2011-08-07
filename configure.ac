@@ -15,6 +15,10 @@ AM_PATH_PYTHON([2.7])
 # Checks for programs.
 AM_PROG_CC_C_O
 
+# Cause autoconfiguration to look for an external libintl.
+AM_GNU_GETTEXT([external])
+AM_GNU_GETTEXT_VERSION([0.18.1])
+
 # We need libjack in order to compile.
 PKG_CHECK_MODULES(LIBJACK, [jack >= 0.98.0])
 AC_CHECK_LIB([jack],[jack_set_info_function],[AC_DEFINE(HAVE_JACK_SET_INFO_FUNCTION, 1, [set for presence of])], [])
@@ -210,6 +214,7 @@ if test x$DYNAMIC = "x1" ; then
 fi
 
 AC_CONFIG_FILES([Makefile
+                  po/Makefile.in
                   c/Makefile
                   python/Makefile
                   python/prelims/Makefile
