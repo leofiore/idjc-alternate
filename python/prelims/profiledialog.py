@@ -91,7 +91,8 @@ class IconChooserButton(gtk.Button):
          disp = glib.filename_display_name(f)
          pb = gtk.gdk.pixbuf_new_from_file_at_size(f, 16, 16)
       except (glib.GError, TypeError):
-         self._label.set_text("(None)")
+         # TC: Text reads as /path/to/file.ext or this when no file is chosen.
+         self._label.set_text(_("(None)"))
          self._image.clear()
          self._filename = None
       else:
@@ -128,7 +129,8 @@ class IconPreviewFileChooserDialog(gtk.FileChooserDialog):
    def __init__(self, *args, **kwds):
       gtk.FileChooserDialog.__init__(self, *args, **kwds)
       filefilter = gtk.FileFilter()
-      filefilter.set_name("Supported Image Formats")
+      # TC: the file filter text of a file chooser dialog.
+      filefilter.set_name(_("Supported Image Formats"))
       filefilter.add_pixbuf_formats()
       self.add_filter(filefilter)
 
@@ -197,12 +199,15 @@ class NewProfileDialog(gtk.Dialog):
       
       if row is not None:
          if edit:
-            title = "Edit profile %s"
+            # TC: data entry dialog window title text. %s = profile name
+            title = _("Edit profile %s")
          else:
-            title = "New profile based upon %s"
+            # TC: data entry dialog window title text. %s = profile name
+            title = _("New profile based upon %s")
          title %= row[1]
       else:
-         title = "New profile details"
+         # TC: data entry dialog window title text.
+         title = _("New profile details")
       self.set_title(title + title_extra)
 
       hbox = gtk.HBox()
@@ -220,7 +225,15 @@ class NewProfileDialog(gtk.Dialog):
       table.set_col_spacing(0, 6)
       hbox.pack_start(table)
 
-      labels = ("Profile name:", "Icon:", "Nickname:", "Description:")
+      labels = (
+            # TC: data entry dialog label text.
+            "Profile name",
+            # TC: data entry dialog label text.
+            "Icon",
+            # TC: data entry dialog label text.
+            "Nickname",
+            # TC: data entry dialog label text.
+            "Description")
       names = ("profile_entry", "icon_button", "nickname_entry",
                                           "description_entry")
       widgets = (ProfileEntry(), IconChooserButton(self._icon_dialog),
@@ -228,7 +241,7 @@ class NewProfileDialog(gtk.Dialog):
 
       for i, (label, name, widget) in enumerate(zip(labels, names, widgets)):
          label = gtk.Label(label)
-         label.set_alignment(1.0, 0.0)
+         label.set_alignment(1.0, 0.5)
          table.attach(label, 0, 1, i, i + 1, gtk.SHRINK | gtk.FILL)
 
          table.attach(widget, 1, 2, i, i + 1, yoptions=gtk.SHRINK)
@@ -331,7 +344,8 @@ class ProfileDialog(gtk.Dialog):
       self._olddata = ()
       self._title_extra = ""
 
-      gtk.Dialog.__init__(self, "IDJC Profile Manager")
+      # TC: profile dialog window title text.
+      gtk.Dialog.__init__(self, _("IDJC Profile Manager"))
       self.set_size_request(500, 300)
       self.set_border_width(6)
       w = gtk.ScrolledWindow()
@@ -353,23 +367,27 @@ class ProfileDialog(gtk.Dialog):
       time_rend = CellRendererTime()
       strrend_ellip = gtk.CellRendererText()
       strrend_ellip.set_property("ellipsize", pango.ELLIPSIZE_END)
-      c1 = gtk.TreeViewColumn("Profile")
+      # TC: column heading. The available profile names appears below.
+      c1 = gtk.TreeViewColumn(_("Profile"))
       c1.pack_start(pbrend, expand=False)
       c1.pack_start(strrend)
       c1.add_attribute(pbrend, "pixbuf", 0)
       c1.add_attribute(strrend, "text", 1)
       c1.set_spacing(2)
       self.treeview.append_column(c1)
-      c2 = gtk.TreeViewColumn("Nickname")
+      # TC: column heading. The profile nicknames. Non latin characters supported.
+      c2 = gtk.TreeViewColumn(_("Nickname"))
       c2.pack_start(strrend)
       c2.add_attribute(strrend, "text", 5)
       self.treeview.append_column(c2)
-      c3 = gtk.TreeViewColumn("Description")
+      # TC: column heading.
+      c3 = gtk.TreeViewColumn(_("Description"))
       c3.pack_start(strrend_ellip)
       c3.add_attribute(strrend_ellip, "text", 2)
       c3.set_expand(True)
       self.treeview.append_column(c3)
-      c4 = gtk.TreeViewColumn("Up-time")
+      # TC: column heading. The time a particular profile has been running.
+      c4 = gtk.TreeViewColumn(_("Up-time"))
       c4.pack_start(ledrend)
       c4.pack_start(time_rend)
       c4.add_attribute(ledrend, "active", 3)
@@ -438,14 +456,11 @@ class ProfileDialog(gtk.Dialog):
             self._update_data()
 
          if signal == "delete":
-            message = "<span weight='bold' size='12000'>Delete profile: %s?</span>" % self._highlighted
             if self._highlighted == self._default:
-               message += "\n\nThis profile is protected and will" \
-               " be recreated with initial settings." \
-               "\n\nThis action cannot be undone."
+               message = _("<span weight='bold' size='12000'>Delete the data of profile '%s'?</span>\n\nThe profile will remain available with initial settings.")
             else:
-               message += "\n\nData in deleted profiles cannot be recovered."
-            conf = ConfirmationDialog("", message, markup=True)
+               message = _("<span weight='bold' size='12000'>Delete profile '%s' and all its data?</span>\n\nThe data of deleted profiles cannot be recovered.")
+            conf = ConfirmationDialog("", message % self._highlighted, markup=True)
             conf.set_transient_for(self)
             conf.ok.connect("clicked", lambda w: commands())
             conf.show_all()
