@@ -25,6 +25,7 @@ import sys
 import string
 import re
 import pango
+import gettext
 
 import gtk
 import mutagen
@@ -37,22 +38,16 @@ from mutagen.asf import ASF, ASFUnicodeAttribute
 
 from idjc import FGlobs
 from .freefunctions import *
+from .tooltips import main_tips
 from idjc.prelims import ProfileManager
 
 
-import gettext
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
 
-
 pm = ProfileManager()
+set_tip = main_tips.set_tip
 
-
-
-def set_tip(*args):
-   """Dummy tooltips setter."""
-   
-   pass
 
 
 class LeftLabel(gtk.HBox):
@@ -64,12 +59,14 @@ class LeftLabel(gtk.HBox):
       self.pack_start(self.label, False, False, 0)
 
 
+
 class RightLabel(gtk.HBox):
    """Use in place of gtk.Label where right justification is needed."""
    
    def __init__(self, text):
       gtk.HBox.__init__(self)
       self.pack_end(gtk.Label(text), False, False, 0)
+
 
 
 class FreeTagFrame(gtk.Frame):
@@ -88,12 +85,15 @@ class FreeTagFrame(gtk.Frame):
       tv.show()
 
 
+
 class MutagenTagger(gtk.VBox):
    """Base class for ID3Tagger and NativeTagger."""
    
    def __init__(self, pathname):
       gtk.VBox.__init__(self)
       self.pathname = pathname
+
+
 
 class WMATagger(MutagenTagger):
    """Handles tagging of WMA files"""
@@ -141,6 +141,7 @@ class WMATagger(MutagenTagger):
                   except KeyError:
                      print "Unacceptable key", key
       tag.save()
+
    
    def load_tag(self):
       """(re)Writes the tag data to the GUI."""
@@ -169,6 +170,7 @@ class WMATagger(MutagenTagger):
                additional.append(key.encode("utf-8") + "=" + unicode(val).encode("utf-8"))
       
       self.tag_frame.tb.set_text("\n".join(additional))
+
    
    def __init__(self, pathname):
       MutagenTagger.__init__(self, pathname)
@@ -209,12 +211,14 @@ class WMATagger(MutagenTagger):
             self.text_set.append(key)
 
 
+
 class ID3Tagger(MutagenTagger):
    """ID3 tagging with Mutagen."""
    
    primary_data = (("TIT2", _('title')), ("TPE1", _('artist')),
                    ("TALB", _('album')), ("TRCK", _('track/total')),
                    ("TCON", _('genre')), ("TDRC", _('record date')))
+
    
    def save_tag(self):
       """Updates the tag with the GUI data."""
@@ -274,6 +278,7 @@ class ID3Tagger(MutagenTagger):
                val_list.append(val)
 
       tag.save()
+
             
    def load_tag(self):
       """(re)Writes the tag data to the GUI."""
@@ -304,6 +309,7 @@ class ID3Tagger(MutagenTagger):
                additional.append(fid + sep + text.encode("utf-8"))
             
       self.tag_frame.tb.set_text("\n".join(additional))
+
       
    def __init__(self, pathname, force=False):
       MutagenTagger.__init__(self, pathname)
@@ -356,6 +362,7 @@ class ID3Tagger(MutagenTagger):
       self.tag_frame.show()
 
 
+
 class MP4Tagger(MutagenTagger):
    """MP4 tagging with Mutagen."""
    
@@ -396,6 +403,7 @@ class MP4Tagger(MutagenTagger):
                pass
 
       tag.save()
+
             
    def load_tag(self):
       """(re)Writes the tag data to the GUI."""
@@ -415,6 +423,7 @@ class MP4Tagger(MutagenTagger):
                   entry.set_text(str(frame[0]))
             else:
                entry.set_text(frame)
+
           
    def __init__(self, pathname):
       MutagenTagger.__init__(self, pathname)
@@ -444,10 +453,12 @@ class MP4Tagger(MutagenTagger):
       hbox.show_all()
 
 
+
 class NativeTagger(MutagenTagger):
    """Native format tagging with Mutagen. Mostly FLAC and Ogg."""
    
    blacklist = "coverart", "metadata_block_picture"
+
    
    def save_tag(self):
       """Updates the tag with the GUI data."""
@@ -479,6 +490,7 @@ class NativeTagger(MutagenTagger):
                      print "Unacceptable key", key
    
       tag.save() 
+
    
    def load_tag(self):
       """(re)Writes the tag data to the GUI."""
@@ -504,6 +516,7 @@ class NativeTagger(MutagenTagger):
             
       self.tag_frame.tb.set_text("\n".join(lines))
    
+
    def __init__(self, pathname, ext):
       MutagenTagger.__init__(self, pathname)
       self.tag = mutagen.File(pathname)
@@ -517,10 +530,12 @@ class NativeTagger(MutagenTagger):
       self.tag_frame.show()
 
 
+
 class ApeTagger(MutagenTagger):
    """APEv2 tagging with Mutagen."""
    
    opener = {"ape": MonkeysAudio, "mpc": Musepack }
+
    
    def save_tag(self):
       """Updates the tag with the GUI data."""
@@ -552,6 +567,7 @@ class ApeTagger(MutagenTagger):
                      print "Unacceptable key", key
    
       tag.save() 
+
    
    def load_tag(self):
       """(re)Writes the tag data to the GUI."""
@@ -576,6 +592,7 @@ class ApeTagger(MutagenTagger):
                lines.append(key + "=" + val.encode("utf-8"))
             
       self.tag_frame.tb.set_text("\n".join(lines))
+
    
    def __init__(self, pathname, extension):
       MutagenTagger.__init__(self, pathname)
@@ -608,19 +625,23 @@ class ApeTagger(MutagenTagger):
       self.tag_frame.show()
 
 
+
 class MutagenGUI:
    ext2name = { "mp3": "ID3", "mp4": "MP4", "m4a": "MP4", "spx": "Speex",
                "flac": "FLAC", "ogg": "Ogg Vorbis", "oga": "XIPH Ogg audio",
                "m4b": "MP4", "m4p": "MP4", "wma": "Windows Media Audio" }
+
    
    def destroy_and_quit(self, widget, data = None):
       gtk.main_quit()
       sys.exit(0)
+
    
    def update_playlists(self, pathname, idjcroot):
       newplaylistdata = idjcroot.player_left.get_media_metadata(pathname)
       idjcroot.player_left.update_playlist(newplaylistdata)
       idjcroot.player_right.update_playlist(newplaylistdata)
+
    
    @staticmethod
    def is_supported(pathname):
@@ -638,6 +659,7 @@ class MutagenGUI:
          return False
       else:
          return extension
+
    
    def __init__(self, pathname, encoding, idjcroot = None):
       if not pathname:
@@ -648,10 +670,6 @@ class MutagenGUI:
       if extension == False:
          print "Tagger file extension", extension, "not supported."
          return
-      
-      global set_tip
-      if idjcroot:
-         set_tip = idjcroot.tooltips.set_tip
       
       self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
       if idjcroot is not None:

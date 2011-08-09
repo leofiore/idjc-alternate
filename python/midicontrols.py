@@ -21,6 +21,7 @@ import re
 import os.path
 import time
 import collections
+import gettext
 
 import gobject
 import gtk
@@ -30,14 +31,14 @@ from idjc import FGlobs, PGlobs
 from .freefunctions import *
 from .gtkstuff import threadslock
 from .prelims import ProfileManager
+from .tooltips import main_tips
 
 
-import gettext
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
 
-
 pm = ProfileManager()
+set_tip = main_tips.set_tip
 
 
 
@@ -1190,7 +1191,6 @@ class BindingEditor(gtk.Dialog):
         self.connect('delete_event', self.on_delete)
         self.connect('close', self.on_close)
         self.connect("key-press-event", self.on_key)
-        set_tip= owner.owner.owner.tooltips.set_tip
 
         # Input editing
         #

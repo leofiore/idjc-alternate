@@ -27,6 +27,7 @@ import signal
 import re
 import xml.dom.minidom as mdom
 import warnings
+import gettext
 from stat import *
 from collections import deque, namedtuple, defaultdict
 from functools import partial
@@ -49,15 +50,14 @@ from .mutagentagger import *
 from .freefunctions import *
 from .gtkstuff import threadslock
 from .prelims import *
+from .tooltips import main_tips
 
 
-import gettext
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
 
-
 pm = ProfileManager()
-
+set_tip = main_tips.set_tip
 
 
 # Suppress warning when None is placed in a ListStore element where some kind of GObject should go. 
@@ -301,7 +301,6 @@ class ExternalPL(gtk.Frame):
    
    def __init__(self, player):
       self.player = player
-      tooltips = player.parent.tooltips
       gtk.Frame.__init__(self, " " + _('External Playlist') + " ")
       self.set_border_width(4)
       hbox = gtk.HBox()
@@ -333,9 +332,9 @@ class ExternalPL(gtk.Frame):
       self.directorychooser.connect("selection-changed", self.cb_newselection, self.radio_directory)
       
       fbox = self.make_line(self.radio_file, self.filechooser)
-      tooltips.set_tip(fbox, _('Choose a playlist file.'))
+      set_tip(fbox, _('Choose a playlist file.'))
       dbox = self.make_line(self.radio_directory, self.directorychooser)
-      tooltips.set_tip(dbox, _('Choose a folder/directory of music.'))
+      set_tip(dbox, _('Choose a folder/directory of music.'))
       
       self.vbox.pack_start(fbox, True, True, 0)
       self.vbox.pack_start(dbox, True, True, 0)
@@ -3354,7 +3353,7 @@ class IDJC_Media_Player:
       self.digiprogress.connect("button_press_event", self.cb_event, "DigitalProgressPress")
       self.progressbox.pack_start(self.digiprogress, False, False, 1)
       self.digiprogress.show()
-      parent.tooltips.set_tip(self.digiprogress, _('Left click toggles between showing the amount of time elapsed or remaining on the current track being played.'))
+      set_tip(self.digiprogress, _('Left click toggles between showing the amount of time elapsed or remaining on the current track being played.'))
       
       # The play progress bar and "needle shifter"
       self.progressadj = gtk.Adjustment(0.0, 0.0, 100.0, 0.1, 1.0, 0.0)
@@ -3368,7 +3367,7 @@ class IDJC_Media_Player:
       self.progressbar.connect("button_release_event", self.cb_event, "ProgressRelease")
       self.progressbox.pack_start(self.progressbar, True, True, 0)
       self.progressbar.show()
-      parent.tooltips.set_tip(self.progressbar, _('This slider acts as both a play progress indicator and as a means for seeking within the currently playing track.'))
+      set_tip(self.progressbar, _('This slider acts as both a play progress indicator and as a means for seeking within the currently playing track.'))
       
       # Finished filling the progress box so lets show it.
       self.progressbox.show()
@@ -3469,7 +3468,7 @@ class IDJC_Media_Player:
       self.pl_statusbar.set_has_resize_grip(False)
       plvbox.pack_start(self.pl_statusbar, False, False, 0)
       self.pl_statusbar.show()
-      parent.tooltips.set_tip(self.pl_statusbar, _("'Block size' indicates the amount of time that it will take to play from the currently selected track to the next stop.\n'Remaining' is the amount of time until the next stop.\n'Finish' Is the computed time when the tracks will have finished playing."))
+      set_tip(self.pl_statusbar, _("'Block size' indicates the amount of time that it will take to play from the currently selected track to the next stop.\n'Remaining' is the amount of time until the next stop.\n'Finish' Is the computed time when the tracks will have finished playing."))
 
       pbox.pack_start(plframe, True, True, 0) 
       
@@ -3489,7 +3488,7 @@ class IDJC_Media_Player:
       self.pbspeedbar.set_draw_value(False)
       self.pbspeedbox.pack_start(self.pbspeedbar, True, True, 0)
       self.pbspeedbar.show()
-      parent.tooltips.set_tip(self.pbspeedbar, _('This adjusts the playback speed anywhere from 25% to 400%.'))
+      set_tip(self.pbspeedbar, _('This adjusts the playback speed anywhere from 25% to 400%.'))
       
       self.pbspeedzerobutton = gtk.Button()
       self.pbspeedzerobutton.connect("clicked", self.callback, "pbspeedzero")
@@ -3501,7 +3500,7 @@ class IDJC_Media_Player:
       self.pbspeedzerobutton.add(image)
       self.pbspeedbox.pack_start(self.pbspeedzerobutton, False, False, 1)
       self.pbspeedzerobutton.show()
-      parent.tooltips.set_tip(self.pbspeedzerobutton, _('This sets the playback speed back to normal.'))
+      set_tip(self.pbspeedzerobutton, _('This sets the playback speed back to normal.'))
       
       # The box for the mute widgets.
       self.hbox2 = gtk.HBox(False, 0)
@@ -3522,7 +3521,7 @@ class IDJC_Media_Player:
       self.prev.connect("clicked", self.callback, "Prev")
       self.hbox1.add(self.prev)
       self.prev.show()
-      parent.tooltips.set_tip(self.prev, _('Previous track.'))
+      set_tip(self.prev, _('Previous track.'))
       
       pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "play2.png")
       pixbuf = pixbuf.scale_simple(14, 14, gtk.gdk.INTERP_BILINEAR)
@@ -3534,7 +3533,7 @@ class IDJC_Media_Player:
       self.play.connect("toggled", self.cb_toggle, "Play")
       self.hbox1.add(self.play)
       self.play.show()
-      parent.tooltips.set_tip(self.play, _('Play.'))
+      set_tip(self.play, _('Play.'))
       
       image=gtk.Image()
       image.set_from_file(FGlobs.pkgdatadir / "pause.png")
@@ -3544,7 +3543,7 @@ class IDJC_Media_Player:
       self.pause.connect("toggled", self.cb_toggle, "Pause")
       self.hbox1.add(self.pause)
       self.pause.show()
-      parent.tooltips.set_tip(self.pause, _('Pause.'))
+      set_tip(self.pause, _('Pause.'))
       
       image=gtk.Image()
       image.set_from_file(FGlobs.pkgdatadir / "stop.png")
@@ -3554,7 +3553,7 @@ class IDJC_Media_Player:
       self.stop.connect("clicked", self.callback, "Stop")
       self.hbox1.add(self.stop)
       self.stop.show()
-      parent.tooltips.set_tip(self.stop, _('Stop.'))
+      set_tip(self.stop, _('Stop.'))
             
       image=gtk.Image()
       image.set_from_file(FGlobs.pkgdatadir / "next.png")
@@ -3564,7 +3563,7 @@ class IDJC_Media_Player:
       self.next.connect("clicked", self.callback, "Next")
       self.hbox1.add(self.next)
       self.next.show()
-      parent.tooltips.set_tip(self.next, _('Next track.'))
+      set_tip(self.next, _('Next track.'))
 
       pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "add3.png")
       pixbuf = pixbuf.scale_simple(14, 14, gtk.gdk.INTERP_HYPER)
@@ -3576,7 +3575,7 @@ class IDJC_Media_Player:
       self.add.connect("clicked", self.callback, "Add Files")
       self.hbox1.add(self.add)
       self.add.show()
-      parent.tooltips.set_tip(self.add, _('Add tracks to the playlist.'))
+      set_tip(self.add, _('Add tracks to the playlist.'))
       
       # hbox1 is done so it is time to show it
       self.hbox1.show()
@@ -3598,7 +3597,7 @@ class IDJC_Media_Player:
       self.pl_mode.append_text(_('Fade Over'))
       self.pl_mode.set_active(0)
       self.pl_mode.connect("changed", self.cb_playlist_mode)
-      parent.tooltips.set_tip(self.pl_mode, _("This sets the playlist mode which defines player behaviour after a track has finished playing.\n\n'Play All' is the most versatile mode since it allows the use of embeddable playlist control elements which are accessible using the right click context menu in the playlist. When no playlist controls are present the tracks are played sequentially until the end of the playlist is reached at which point the player will stop.\n\n'Loop All' causes the tracks to be played in sequence, restarting with the first track once the end of the playlist is reached.\n\n'Random' causes the tracks to be played indefinitely with the tracks selected at random.\n\n'Manual' causes the player to stop at the end of each track.\n\n'Cue Up' is similar to manual except that the next track in the playlist will also be highlighted.\n\n'External' draws it's tracks from an external playlist or directory one at a time. Useful for when you want to stream massive playlists.\n\n'Alternate' causes the next track to be cued up before starting the opposite player. The crossfader is moved over.\n\n'Fade Over' will crossfade to the other player at the end of every track."))
+      set_tip(self.pl_mode, _("This sets the playlist mode which defines player behaviour after a track has finished playing.\n\n'Play All' is the most versatile mode since it allows the use of embeddable playlist control elements which are accessible using the right click context menu in the playlist. When no playlist controls are present the tracks are played sequentially until the end of the playlist is reached at which point the player will stop.\n\n'Loop All' causes the tracks to be played in sequence, restarting with the first track once the end of the playlist is reached.\n\n'Random' causes the tracks to be played indefinitely with the tracks selected at random.\n\n'Manual' causes the player to stop at the end of each track.\n\n'Cue Up' is similar to manual except that the next track in the playlist will also be highlighted.\n\n'External' draws it's tracks from an external playlist or directory one at a time. Useful for when you want to stream massive playlists.\n\n'Alternate' causes the next track to be cued up before starting the opposite player. The crossfader is moved over.\n\n'Fade Over' will crossfade to the other player at the end of every track."))
       
       frame.hbox.pack_start(self.pl_mode, True, True, 0)
       self.pl_mode.show()
@@ -3613,7 +3612,7 @@ class IDJC_Media_Player:
       self.pl_delay.append_text("10")
       self.pl_delay.set_active(0)
       self.pl_delay.connect("changed", self.cb_playlist_delay)
-      parent.tooltips.set_tip(self.pl_delay, _('This controls the amount of fade between tracks.'))
+      set_tip(self.pl_delay, _('This controls the amount of fade between tracks.'))
       
       frame.hbox.pack_start(self.pl_delay, True, True, 0)
       self.pl_delay.show()
@@ -3629,14 +3628,14 @@ class IDJC_Media_Player:
       self.stream.connect("toggled", self.cb_toggle, "Stream")
       frame.hbox.pack_start(self.stream, True, True, 0)
       self.stream.show()
-      parent.tooltips.set_tip(self.stream, _('Make output from this player available for streaming.'))
+      set_tip(self.stream, _('Make output from this player available for streaming.'))
             
       self.listen = nice_listen_togglebutton(_(' DJ '))
       self.listen.set_active(True)
       self.listen.connect("toggled", self.cb_toggle, "Listen")
       frame.hbox.pack_start(self.listen, True, True, 0)
       self.listen.show()
-      parent.tooltips.set_tip(self.listen, _('Make output from this player audible to the DJ.'))
+      set_tip(self.listen, _('Make output from this player audible to the DJ.'))
       
       # hbox2 is now filled so lets show it
       self.hbox2.show()

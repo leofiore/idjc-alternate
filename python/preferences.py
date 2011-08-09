@@ -20,6 +20,7 @@ __all__ = ['mixprefs']
 
 import os
 import shutil
+import gettext
 
 import gtk
 
@@ -31,15 +32,15 @@ from .freefunctions import int_object
 from .gtkstuff import WindowSizeTracker
 from .prelims import ProfileManager
 from .utils import PathStr
+from .tooltips import main_tips
+from .tooltips import main_tips
 
 
-import gettext
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
 
-
 pm = ProfileManager()
-
+set_tip = main_tips.set_tip
 
 
 class CSLEntry(gtk.Entry):
@@ -149,7 +150,7 @@ class AGCControl(gtk.Frame):
    def widget_frame(self, widget, container, tip, modes):
       frame = gtk.Frame()
       frame.modes = modes
-      self.approot.tooltips.set_tip(frame, tip)
+      set_tip(frame, tip)
       frame.set_label_widget(widget)
       container.pack_start(frame, False, False, 0)
       frame.show()
@@ -227,7 +228,6 @@ class AGCControl(gtk.Frame):
       self.booleandict = {}
       self.textdict = {}
       gtk.Frame.__init__(self)
-      set_tip = approot.tooltips.set_tip
       hbox = gtk.HBox()
       hbox.set_spacing(3)
 
@@ -506,10 +506,10 @@ def make_entry_line(parent, item, code, hastoggle, index=None):
       
    box.show()
    
-   parent.parent.tooltips.set_tip(checkbox, _('Use default jack audio routing'))
-   parent.parent.tooltips.set_tip(setbutton, _('Reroute the audio to/from the specified port'))
-   parent.parent.tooltips.set_tip(savebutton, _('Save the audio routing so that it persists across application restarts'))
-   parent.parent.tooltips.set_tip(entry, _("Enter the name of the JACK audio port with which to bind and then click the set button to the right.\nTyping 'jack_lsp -p' in a console will give you a list of valid JACK audio ports. Note that inputs will only bind to output ports and outputs will only bind to input ports."))
+   set_tip(checkbox, _('Use default jack audio routing'))
+   set_tip(setbutton, _('Reroute the audio to/from the specified port'))
+   set_tip(savebutton, _('Save the audio routing so that it persists across application restarts'))
+   set_tip(entry, _("Enter the name of the JACK audio port with which to bind and then click the set button to the right.\nTyping 'jack_lsp -p' in a console will give you a list of valid JACK audio ports. Note that inputs will only bind to output ports and outputs will only bind to input ports."))
    
    return box, checkbox, entry, setbutton
 
@@ -543,7 +543,7 @@ class mixprefs:
          return self.checkbutton.set_active(bool)
       def cb_checkbutton(self, widget, data = None):
          self.entry.set_sensitive(widget.get_active())
-      def __init__(self, imagefile, width, height, text, default_state, crossout, tips = None, checkbutton_tip = None, entry_tip = None):
+      def __init__(self, imagefile, width, height, text, default_state, crossout, checkbutton_tip = None, entry_tip = None):
          gtk.HBox.__init__(self)
          gtk.HBox.set_spacing(self, 6)
          self.checkbutton = gtk.CheckButton()
@@ -564,11 +564,12 @@ class mixprefs:
          gtk.HBox.pack_start(self, self.entry, True, True, 0)
          self.entry.set_sensitive(default_state)
          self.entry.show()
-         if tips is not None:
-            if checkbutton_tip is not None:
-               tips.set_tip(self.checkbutton, checkbutton_tip)
-            if entry_tip is not None:
-               tips.set_tip(self.entry, entry_tip)
+
+         if checkbutton_tip is not None:
+            set_tip(self.checkbutton, checkbutton_tip)
+         if entry_tip is not None:
+            set_tip(self.entry, entry_tip)
+
    
    def send_new_normalizer_stats(self):
       r = float(self.parent.samplerate)
@@ -803,9 +804,9 @@ class mixprefs:
             self.parent.player_right.digiprogress.set_width_chars(6)
       if data == "tooltips":
          if widget.get_active():
-            parent.tooltips.enable()
+            main_tips.enable()
          else:
-            parent.tooltips.disable()
+            main_tips.disable()
             
    def meter_callback(self, widget, data):
       if data[0] == "meter":
@@ -837,7 +838,7 @@ class mixprefs:
       if widget.get_active():
          self.parent.deck2adj.set_value(self.parent.deckadj.get_value())
          self.parent.deck2vol.show()
-         self.parent.tooltips.set_tip(self.parent.deckvol, _('The volume control for the left music player.'))
+         set_tip(self.parent.deckvol, _('The volume control for the left music player.'))
       else:
          if self.parent.player_left.is_playing ^ self.parent.player_right.is_playing:
             if self.parent.player_left.is_playing:
@@ -850,7 +851,7 @@ class mixprefs:
             self.parent.deckadj.props.value += halfdelta
          
          self.parent.deck2vol.hide()
-         self.parent.tooltips.set_tip(self.parent.deckvol, _('The volume control shared by both music players.'))
+         set_tip(self.parent.deckvol, _('The volume control shared by both music players.'))
 
    def cb_twodblimit(self, widget):
       if widget.get_active():
@@ -928,13 +929,13 @@ class mixprefs:
       self.startfull.set_border_width(2)
       vbox.pack_start(self.startfull, False, False, 0)
       self.startfull.show()
-      parent.tooltips.set_tip(self.startfull, _('Indicates which mode IDJC will be in when launched.'))
+      set_tip(self.startfull, _('Indicates which mode IDJC will be in when launched.'))
       
       self.startmini = gtk.RadioButton(self.startfull, _('Start Mini'))
       self.startmini.set_border_width(2)
       vbox.pack_start(self.startmini, False, False, 0)
       self.startmini.show()
-      parent.tooltips.set_tip(self.startmini, _('Indicates which mode IDJC will be in when launched.'))
+      set_tip(self.startmini, _('Indicates which mode IDJC will be in when launched.'))
       
       vbox.show()
       hbox2 = gtk.HBox()
@@ -946,13 +947,13 @@ class mixprefs:
       self.maxi.connect("clicked", self.callback, "fully featured")
       hbox2.pack_start(self.maxi, False, False, 0)
       self.maxi.show()
-      parent.tooltips.set_tip(self.maxi, _('Run in full functionality mode which uses more CPU power.'))
+      set_tip(self.maxi, _('Run in full functionality mode which uses more CPU power.'))
       
       self.mini = gtk.Button(" " + _('Basic Streamer') + " ")
       self.mini.connect("clicked", self.callback, "basic streamer")
       hbox2.pack_start(self.mini, False, False, 0)
       self.mini.show()
-      parent.tooltips.set_tip(self.mini, _('Run in a reduced functionality mode that lowers the burden on the CPU and takes up less screen space.'))
+      set_tip(self.mini, _('Run in a reduced functionality mode that lowers the burden on the CPU and takes up less screen space.'))
       
       hbox2.show()   
       hbox.pack_start(vbox, False, False, 9)     
@@ -1054,13 +1055,13 @@ class mixprefs:
       vbox.show()
       
       self.rg_indicate = gtk.CheckButton(_('Indicate which tracks have Replay Gain values'))
-      parent.tooltips.set_tip(self.rg_indicate, _('Show a marker in the playlists next to each track.'))
+      set_tip(self.rg_indicate, _('Show a marker in the playlists next to each track.'))
       self.rg_indicate.connect("toggled", self.cb_rg_indicate)
       vbox.pack_start(self.rg_indicate, False, False, 0)
       self.rg_indicate.show()
       
       self.rg_adjust = gtk.CheckButton(_('Adjust playback volume'))
-      parent.tooltips.set_tip(self.rg_adjust, _('Effective only on newly started tracks.'))
+      set_tip(self.rg_adjust, _('Effective only on newly started tracks.'))
       vbox.pack_start(self.rg_adjust, False, False, 0)
       self.rg_adjust.show()
       
@@ -1074,7 +1075,7 @@ class mixprefs:
       label.show()
       rg_defaultgainadj = gtk.Adjustment(-8.0, -20.0, 10.0, 0.1)
       self.rg_defaultgain = gtk.SpinButton(rg_defaultgainadj, 0.0, 1)
-      parent.tooltips.set_tip(hbox, _('Set this to the typical track gain values you would expect for the programme material you are currently playing. For pop and rock music (especially modern studio recordings) this should be about a -8 or -9 and classical music much closer to zero.'))
+      set_tip(hbox, _('Set this to the typical track gain values you would expect for the programme material you are currently playing. For pop and rock music (especially modern studio recordings) this should be about a -8 or -9 and classical music much closer to zero.'))
       hbox.pack_start(self.rg_defaultgain, False, False, 0)
       self.rg_defaultgain.show()
       vbox.pack_start(hbox, False, False, 0)
@@ -1090,7 +1091,7 @@ class mixprefs:
       label.show()
       rg_boostadj = gtk.Adjustment(6.0, -5.0, 15.5, 0.5)
       self.rg_boost = gtk.SpinButton(rg_boostadj, 0.0, 1)
-      parent.tooltips.set_tip(hbox, _('For material that is generally loud it is recommended to set this between 4 and 8 dB however going too high will result in a loss of dynamic range. The Str Peak meter is a useful guide for getting this right.'))
+      set_tip(hbox, _('For material that is generally loud it is recommended to set this between 4 and 8 dB however going too high will result in a loss of dynamic range. The Str Peak meter is a useful guide for getting this right.'))
       hbox.pack_start(self.rg_boost, False, False, 0)
       self.rg_boost.show()
       vbox.pack_start(hbox, False, False, 0)
@@ -1120,58 +1121,58 @@ class mixprefs:
       vbox.pack_start(self.twodblimit, False, False, 0)
       self.twodblimit.connect("toggled", self.cb_twodblimit)
       self.twodblimit.show()
-      parent.tooltips.set_tip(self.twodblimit, _('This option may improve the audio quality at the expense of a little playback volume.'))
+      set_tip(self.twodblimit, _('This option may improve the audio quality at the expense of a little playback volume.'))
       
       self.speed_variance = gtk.CheckButton(_('Enable the main-player speed/pitch controls'))
       vbox.pack_start(self.speed_variance, False, False, 0)
       self.speed_variance.connect("toggled", self.cb_pbspeed)
       self.speed_variance.show()
-      parent.tooltips.set_tip(self.speed_variance, _('This option causes some extra widgets to appear below the playlists which allow the playback speed to be adjusted from 25% to 400% and a normal speed button.'))
+      set_tip(self.speed_variance, _('This option causes some extra widgets to appear below the playlists which allow the playback speed to be adjusted from 25% to 400% and a normal speed button.'))
 
       self.dual_volume = gtk.CheckButton(_('Separate left/right volume faders'))
       vbox.pack_start(self.dual_volume, False, False, 0)
       self.dual_volume.connect("toggled", self.cb_dual_volume)
       self.dual_volume.show()
-      parent.tooltips.set_tip(self.dual_volume, _('Tick this option to use an independent volume fader for the left and right music players.'))
+      set_tip(self.dual_volume, _('Tick this option to use an independent volume fader for the left and right music players.'))
 
       self.flash_mic = gtk.CheckButton(_('Microphone reminder - flashes the mic button icon'))
       vbox.pack_start(self.flash_mic, False)
       self.flash_mic.show()
-      parent.tooltips.set_tip(self.flash_mic, _('A reminder to turn the microphone off when a main player is active and any particular mic button is still engaged.'))
+      set_tip(self.flash_mic, _('A reminder to turn the microphone off when a main player is active and any particular mic button is still engaged.'))
       
       self.bigger_box_toggle = gtk.CheckButton(_('Enlarge the time elapsed/remaining windows'))
       vbox.pack_start(self.bigger_box_toggle, False, False, 0)
       self.bigger_box_toggle.connect("toggled", self.callback, "bigger box")
       self.bigger_box_toggle.show()
-      parent.tooltips.set_tip(self.bigger_box_toggle, _("The time elapsed/remaining windows sometimes don't appear big enough for the text that appears in them due to unusual DPI settings or the use of a different rendering engine. This option serves to fix that."))
+      set_tip(self.bigger_box_toggle, _("The time elapsed/remaining windows sometimes don't appear big enough for the text that appears in them due to unusual DPI settings or the use of a different rendering engine. This option serves to fix that."))
       
       self.djalarm = gtk.CheckButton(_('Sound an alarm when the music is due to end'))
       vbox.pack_start(self.djalarm, False, False, 0)
       self.djalarm.show()
-      parent.tooltips.set_tip(self.djalarm, _('An alarm tone alerting the DJ that dead-air is just nine seconds away.'))
+      set_tip(self.djalarm, _('An alarm tone alerting the DJ that dead-air is just nine seconds away.'))
       
       self.dither = gtk.CheckButton(_('Apply dither to MP3 and FLAC playback'))
       vbox.pack_start(self.dither, False, False, 0)
       self.dither.connect("toggled", self.cb_dither)
       self.dither.show()
-      parent.tooltips.set_tip(self.dither, _('This feature improves the sound quality a little when listening on a 24 bit sound card.'))
+      set_tip(self.dither, _('This feature improves the sound quality a little when listening on a 24 bit sound card.'))
 
       self.mp3_utf8 = gtk.CheckButton(_('Use utf-8 encoding when streaming mp3 metadata'))
       self.mp3_utf8.set_active(True)
       vbox.pack_start(self.mp3_utf8, False, False, 0)
       self.mp3_utf8.show()
-      parent.tooltips.set_tip(self.mp3_utf8, _('It is standard practice when streaming metadata in mp3 streams to use iso-8859-1 character encoding. This is unfortunate since with utf-8 practically anything can be encoded. In deciding whether to use this feature you have to consider the proportion of listener clients that will be capable of correctly decoding text encoded with utf-8.'))
+      set_tip(self.mp3_utf8, _('It is standard practice when streaming metadata in mp3 streams to use iso-8859-1 character encoding. This is unfortunate since with utf-8 practically anything can be encoded. In deciding whether to use this feature you have to consider the proportion of listener clients that will be capable of correctly decoding text encoded with utf-8.'))
       
       self.mic_aux_mutex = gtk.CheckButton(_('Make Mic and Aux buttons mutually exclusive'))
       vbox.pack_start(self.mic_aux_mutex, False, False, 0)
       self.mic_aux_mutex.show()
-      parent.tooltips.set_tip(self.mic_aux_mutex, _('This feature ensures that the microphone and auxiliary inputs can not both be on at the same time. This allows the DJ to be able to switch between the two with only one mouse click. It may be of use to those who mix a lot of external audio, or who wish to use the auxiliary input as a secondary microphone source with different audio processing.'))
+      set_tip(self.mic_aux_mutex, _('This feature ensures that the microphone and auxiliary inputs can not both be on at the same time. This allows the DJ to be able to switch between the two with only one mouse click. It may be of use to those who mix a lot of external audio, or who wish to use the auxiliary input as a secondary microphone source with different audio processing.'))
       
       self.enable_tooltips = gtk.CheckButton(_('Enable tooltips'))
       self.enable_tooltips.connect("toggled", self.callback, "tooltips")
       vbox.pack_start(self.enable_tooltips, False, False, 0)
       self.enable_tooltips.show()
-      parent.tooltips.set_tip(self.enable_tooltips, _('This, what you are currently reading, is a tooltip. This feature turns them on or off.'))
+      set_tip(self.enable_tooltips, _('This, what you are currently reading, is a tooltip. This feature turns them on or off.'))
       
       vbox.show()
 
@@ -1181,7 +1182,7 @@ class mixprefs:
       
       self.recon_config = ReconnectionDialogConfig()
       self.recon_config.set_border_width(3)
-      parent.tooltips.set_tip(self.recon_config, _("A set of controls for managing what happens when the server connection either breaks or suffers prolonged congestion.\n \nThe 'delays of' control consists of a comma separated list of time delays for the reconnection dialog. When the list is exhausted further attempts to reconnect to the server are abandoned, so three numbers denote a maximum three reconnection attempts.\n\nYou also have the option to attempt reconnection when the stream buffer becomes full. Use this option if waiting out the congestion is not helpful."))
+      set_tip(self.recon_config, _("A set of controls for managing what happens when the server connection either breaks or suffers prolonged congestion.\n \nThe 'delays of' control consists of a comma separated list of time delays for the reconnection dialog. When the list is exhausted further attempts to reconnect to the server are abandoned, so three numbers denote a maximum three reconnection attempts.\n\nYou also have the option to attempt reconnection when the stream buffer becomes full. Use this option if waiting out the congestion is not helpful."))
       outervbox.pack_start(self.recon_config, False, False, 0)
       self.recon_config.show()
       
@@ -1191,7 +1192,7 @@ class mixprefs:
       self.normalize = gtk.CheckButton(_('Stream Normaliser'))
       self.normalize.connect("toggled", self.cb_normalizer)
       frametitlebox.pack_start(self.normalize, True, False, 2)
-      parent.tooltips.set_tip(self.normalize, _("This feature is provided to make the various pieces of music that are played of a more uniform loudness level which is standard practice by 'real' radio stations. The default settings are likely to be sufficient however you may adjust them and you can compare the effect by clicking the 'Monitor Mix' 'Stream' button in the main application window which will allow you to compare the processed with the non-processed audio."))
+      set_tip(self.normalize, _("This feature is provided to make the various pieces of music that are played of a more uniform loudness level which is standard practice by 'real' radio stations. The default settings are likely to be sufficient however you may adjust them and you can compare the effect by clicking the 'Monitor Mix' 'Stream' button in the main application window which will allow you to compare the processed with the non-processed audio."))
       self.normalize.show()
       frametitlebox.show()
 
@@ -1232,7 +1233,7 @@ class mixprefs:
       label.show()
       lvbox.add(boostbox)
       boostbox.show()
-      parent.tooltips.set_tip(normboost, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
+      set_tip(normboost, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
       
       ceilingbox = gtk.HBox()
       ceilingbox.set_spacing(3)
@@ -1247,7 +1248,7 @@ class mixprefs:
       label.show()
       lvbox.add(ceilingbox)
       ceilingbox.show()
-      parent.tooltips.set_tip(normceiling, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
+      set_tip(normceiling, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
       
       defaultsbox = gtk.HBox()
       self.normdefaults = gtk.Button(_('Defaults'))
@@ -1256,7 +1257,7 @@ class mixprefs:
       self.normdefaults.show()
       mvbox.pack_start(defaultsbox, True, False, 0)
       defaultsbox.show()
-      parent.tooltips.set_tip(self.normdefaults, _('Load the recommended settings.'))
+      set_tip(self.normdefaults, _('Load the recommended settings.'))
       
       sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       
@@ -1273,7 +1274,7 @@ class mixprefs:
       label.show()
       rvbox.add(risebox)
       risebox.show()
-      parent.tooltips.set_tip(normrise, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
+      set_tip(normrise, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
       
       fallbox = gtk.HBox()
       fallbox.set_spacing(3)
@@ -1288,7 +1289,7 @@ class mixprefs:
       label.show()
       rvbox.add(fallbox)
       fallbox.show()
-      parent.tooltips.set_tip(normfall, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
+      set_tip(normfall, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
       
       aud_rs_hbox = gtk.HBox()
       
@@ -1307,7 +1308,7 @@ class mixprefs:
       dj_aud.connect("value-changed", self.cb_dj_aud)
       hbox.pack_start(dj_aud, True, False, 0)
       dj_aud.show()
-      parent.tooltips.set_tip(dj_aud, _('This adjusts the sound level of the DJ audio.'))
+      set_tip(dj_aud, _('This adjusts the sound level of the DJ audio.'))
       
       aud_rs_hbox.pack_start(frame, False, False, 0)
       frame.show()
@@ -1351,10 +1352,10 @@ class mixprefs:
       self.fastest_resample.show()
       aud_rs_hbox.pack_start(frame, True, True, 0)
       frame.show()
-      parent.tooltips.set_tip(self.best_quality_resample, _('This adjusts the quality of the audio resampling method used whenever the sample rate of the music file currently playing does not match the sample rate of the JACK sound server. Highest mode offers the best sound quality but also uses the most CPU (not recommended for systems built before 2006). Fastest mode while it uses by far the least amount of CPU should be avoided if at all possible.'))
-      parent.tooltips.set_tip(self.good_quality_resample, _('This adjusts the quality of the audio resampling method used whenever the sample rate of the music file currently playing does not match the sample rate of the JACK sound server. Highest mode offers the best sound quality but also uses the most CPU (not recommended for systems built before 2006). Fastest mode while it uses by far the least amount of CPU should be avoided if at all possible.'))
-      parent.tooltips.set_tip(self.fast_resample, _('This adjusts the quality of the audio resampling method used whenever the sample rate of the music file currently playing does not match the sample rate of the JACK sound server. Highest mode offers the best sound quality but also uses the most CPU (not recommended for systems built before 2006). Fastest mode while it uses by far the least amount of CPU should be avoided if at all possible.'))
-      parent.tooltips.set_tip(self.fastest_resample, _('This adjusts the quality of the audio resampling method used whenever the sample rate of the music file currently playing does not match the sample rate of the JACK sound server. Highest mode offers the best sound quality but also uses the most CPU (not recommended for systems built before 2006). Fastest mode while it uses by far the least amount of CPU should be avoided if at all possible.'))
+      set_tip(self.best_quality_resample, _('This adjusts the quality of the audio resampling method used whenever the sample rate of the music file currently playing does not match the sample rate of the JACK sound server. Highest mode offers the best sound quality but also uses the most CPU (not recommended for systems built before 2006). Fastest mode while it uses by far the least amount of CPU should be avoided if at all possible.'))
+      set_tip(self.good_quality_resample, _('This adjusts the quality of the audio resampling method used whenever the sample rate of the music file currently playing does not match the sample rate of the JACK sound server. Highest mode offers the best sound quality but also uses the most CPU (not recommended for systems built before 2006). Fastest mode while it uses by far the least amount of CPU should be avoided if at all possible.'))
+      set_tip(self.fast_resample, _('This adjusts the quality of the audio resampling method used whenever the sample rate of the music file currently playing does not match the sample rate of the JACK sound server. Highest mode offers the best sound quality but also uses the most CPU (not recommended for systems built before 2006). Fastest mode while it uses by far the least amount of CPU should be avoided if at all possible.'))
+      set_tip(self.fastest_resample, _('This adjusts the quality of the audio resampling method used whenever the sample rate of the music file currently playing does not match the sample rate of the JACK sound server. Highest mode offers the best sound quality but also uses the most CPU (not recommended for systems built before 2006). Fastest mode while it uses by far the least amount of CPU should be avoided if at all possible.'))
       
       outervbox.pack_start(aud_rs_hbox, False, False, 0)
       aud_rs_hbox.show()
@@ -1379,7 +1380,7 @@ class mixprefs:
       vbox.pack_start(restoresessionhbox, False, False, 0)
       restoresessionhbox.pack_start(self.restore_session_option, False, False, 0)
       self.restore_session_option.show()
-      parent.tooltips.set_tip(self.restore_session_option, _('When starting IDJC most of the main window settings will be as they were left. As an alternative you may specify below how you want the various settings to be when IDJC starts.'))
+      set_tip(self.restore_session_option, _('When starting IDJC most of the main window settings will be as they were left. As an alternative you may specify below how you want the various settings to be when IDJC starts.'))
       
       hbox = gtk.HBox()
       vbox.add(hbox)
@@ -1714,30 +1715,30 @@ class mixprefs:
       vbox.set_spacing(2)
       
       app_event_container = self.event_command_container()
-      self.appstart_event = self.event_command("icon", 20, 20, "", False, False, parent.tooltips, _('When IDJC starts run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
+      self.appstart_event = self.event_command("icon", 20, 20, "", False, False, _('When IDJC starts run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
       app_event_container.add(self.appstart_event)
       self.appstart_event.show()
-      self.appexit_event = self.event_command("icon", 20, 20, "", False, True, parent.tooltips, _('When IDJC exits run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
+      self.appexit_event = self.event_command("icon", 20, 20, "", False, True, _('When IDJC exits run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
       app_event_container.add(self.appexit_event)
       self.appexit_event.show()
       vbox.pack_start(app_event_container, False, False, 0)
       app_event_container.show()
       
       mic_event_container = self.event_command_container()
-      self.mic_on_event = self.event_command("mic4", 20, 20, "", False, False, parent.tooltips, _('Each time the microphone is turned on run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
+      self.mic_on_event = self.event_command("mic4", 20, 20, "", False, False, _('Each time the microphone is turned on run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
       mic_event_container.add(self.mic_on_event)
       self.mic_on_event.show()
-      self.mic_off_event = self.event_command("mic4", 20, 20, "", False, True, parent.tooltips, _('Each time the microphone is turned off run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
+      self.mic_off_event = self.event_command("mic4", 20, 20, "", False, True, _('Each time the microphone is turned off run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
       mic_event_container.add(self.mic_off_event)
       self.mic_off_event.show()
       vbox.pack_start(mic_event_container, False, False, 0)
       mic_event_container.show()
       
       aux_event_container = self.event_command_container()
-      self.aux_on_event = self.event_command("jack2", 20, 20, "", False, False, parent.tooltips, _('Each time the auxiliary input is turned on run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
+      self.aux_on_event = self.event_command("jack2", 20, 20, "", False, False, _('Each time the auxiliary input is turned on run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
       aux_event_container.add(self.aux_on_event)
       self.aux_on_event.show()
-      self.aux_off_event = self.event_command("jack2", 20, 20, "", False, True, parent.tooltips, _('Each time the auxiliary input is turned off run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
+      self.aux_off_event = self.event_command("jack2", 20, 20, "", False, True, _('Each time the auxiliary input is turned off run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
       aux_event_container.add(self.aux_off_event)
       self.aux_off_event.show()
       vbox.pack_start(aux_event_container, False, False, 0)
@@ -1878,7 +1879,7 @@ class mixprefs:
          "dual_volume"   : self.dual_volume,
          "twodblimit"    : self.twodblimit,
          "showtips"      : self.enable_tooltips,
-         "mp3utf8"           : self.mp3_utf8,
+         "mp3utf8"       : self.mp3_utf8,
          "silencekiller" : self.silence_killer,
          "bonuskiller"   : self.bonus_killer,
          "unlimretries"  : self.recon_config.unlimited_retries,

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: idjc 0.8.6_development\n"
 "Report-Msgid-Bugs-To: putidjcinthesubjectline@bethere.co.uk\n"
-"POT-Creation-Date: 2011-08-07 19:01+0100\n"
+"POT-Creation-Date: 2011-08-08 22:33+0100\n"
 "PO-Revision-Date: 2011-08-07 19:09+0100\n"
 "Last-Translator: <putidjcinthesubjectline@bethere.co.uk>\n"
 "Language-Team: English (British)\n"
@@ -19,32 +19,17 @@ msgstr ""
 "X-Language: en_GB\n"
 "X-Source-Language: en_GB\n"
 
-#: python/dialogs.py:168 python/dialogs.py:255
+#: python/dialogs.py:224
 #, python-format
-msgid "Automatic reconnect in %d seconds."
-msgstr "Automatic reconnect in %d seconds."
+msgid "This is attempt number %d. There is no retry limit."
+msgstr ""
 
-#: python/dialogs.py:216 python/dialogs.py:256
-msgid "Try {0} of {1}."
-msgstr "Try {0} of {1}."
-
-#: python/dialogs.py:219
-#, python-format
-msgid "Try %d."
-msgstr "Try %d."
-
-#: python/dialogs.py:242
-msgid "Connection Lost"
-msgstr "Connection Lost"
-
-#: python/dialogs.py:242
-msgid "Try Now"
+#. TC: Dialog button label _ preceeds accelerator key.
+#. TC: Whatever accelerator is chosen for "Retry Now" must not clash with that of the Cancel button.
+#: python/dialogs.py:249
+#, fuzzy
+msgid "_Retry Now"
 msgstr "Try Now"
-
-#: python/dialogs.py:254
-#, python-format
-msgid "The connection to the server in tab %s has failed."
-msgstr "The connection to the server in tab %s has failed."
 
 #: python/__init__.py.in.in:80
 msgid "Copyright 2005-2011 Stephen Fairchild and others."
@@ -54,80 +39,207 @@ msgstr "Copyright 2005-2011 Stephen Fairchild and others."
 msgid "Released under the GNU General Public License V2.0 or later."
 msgstr "Released under the GNU General Public License V2.0 or later."
 
-#: python/irc.py:122
-msgid "Insert Attribute or Colour Code"
-msgstr "Insert Attribute or Colour Code"
+#. TC: IRC message subcategory, triggers on new track announcements.
+#: python/irc.py:78
+msgid "Track announce"
+msgstr ""
 
-#: python/irc.py:140 python/mutagentagger.py:362 python/p3db.py:368
+#. TC: IRC message subcategory, triggered by a timer.
+#: python/irc.py:80
+#, fuzzy
+msgid "Timer"
+msgstr "Timer:"
+
+#. TC: IRC message subcategory, triggered once when the stream starts.
+#: python/irc.py:82
+#, fuzzy
+msgid "On stream up"
+msgstr " Stream "
+
+#. TC: IRC message subcategory, triggered once at the stream's end.
+#: python/irc.py:84
+#, fuzzy
+msgid "On stream down"
+msgstr " Stream "
+
+#: python/irc.py:91 python/mutagentagger.py:362 python/p3db.py:368
 #: python/p3db.py:443 python/sourceclientgui.py:80
 msgid "Artist"
 msgstr "Artist"
 
-#: python/irc.py:140 python/mutagentagger.py:362 python/p3db.py:368
+#: python/irc.py:91 python/mutagentagger.py:362 python/p3db.py:368
 #: python/p3db.py:446 python/sourceclientgui.py:80
 msgid "Title"
 msgstr "Title"
 
-#: python/irc.py:140 python/mutagentagger.py:363 python/p3db.py:368
+#: python/irc.py:91 python/mutagentagger.py:363 python/p3db.py:368
 #: python/p3db.py:444 python/sourceclientgui.py:80
 msgid "Album"
 msgstr "Album"
 
-#: python/irc.py:140 python/sourceclientgui.py:80
+#: python/irc.py:91 python/sourceclientgui.py:80
 msgid "Song name"
 msgstr "Song name"
 
-#: python/irc.py:140
+#: python/irc.py:92
 msgid "DJ name"
 msgstr "DJ name"
 
-#: python/irc.py:141 python/playergui.py:229
+#: python/irc.py:92 python/playergui.py:229
 msgid "Description"
 msgstr "Description"
 
-#: python/irc.py:141
+#: python/irc.py:92
 msgid "Listen URL"
 msgstr "Listen URL"
 
-#: python/irc.py:148
+#. TC: Popup menu item for a GTK text entry widget.
+#: python/irc.py:135
+msgid "Insert Attribute or Colour Code"
+msgstr "Insert Attribute or Colour Code"
+
+#. TC: Text formatting style.
+#: python/irc.py:162
 msgid "<b>Bold</b>"
 msgstr "<b>Bold</b>"
 
-#: python/irc.py:148
+#. TC: Text formatting style.
+#: python/irc.py:164
 msgid "<u>Underline</u>"
 msgstr "<u>Underline</u>"
 
-#: python/irc.py:148
+#. TC: Text formatting style.
+#: python/irc.py:166
 msgid "Normal"
 msgstr "Normal"
 
-#: python/irc.py:235
-msgid "<Artist>"
-msgstr "<Artist>"
+#: python/irc.py:169
+msgid "Colours"
+msgstr ""
 
-#: python/irc.py:235
-msgid "<Title>"
-msgstr "<Title>"
+#. TC: Tab heading text.
+#: python/irc.py:361
+msgid "IRC server"
+msgstr ""
 
-#: python/irc.py:236
-msgid "<Album>"
-msgstr "<Album>"
+#. TC: The IRC network e.g. EFnet.
+#: python/irc.py:395
+msgid "Network"
+msgstr ""
 
-#: python/irc.py:236
-msgid "<Song name>"
-msgstr "<Song name>"
+#. TC: label for hostname entry.
+#: python/irc.py:397
+#, fuzzy
+msgid "Hostname"
+msgstr "Hostname:"
 
-#: python/irc.py:237
-msgid "<DJ name>"
-msgstr "<DJ name>"
+#. TC: TCP/IP port number label.
+#: python/irc.py:399 python/sourceclientgui.py:614
+msgid "Port"
+msgstr "Port"
 
-#: python/irc.py:237
-msgid "<Description>"
-msgstr "<Description>"
+#: python/irc.py:400
+#, fuzzy
+msgid "User name"
+msgstr "DJ name"
 
-#: python/irc.py:238
-msgid "<Listen URL>"
-msgstr "<Listen URL>"
+#: python/irc.py:401
+#, fuzzy
+msgid "Password"
+msgstr "Password:"
+
+#. TC: IRC nickname data entry label.
+#: python/irc.py:403
+#, fuzzy
+msgid "Nickname"
+msgstr "Filename"
+
+#. TC: Second choice of IRC nickname.
+#: python/irc.py:405
+msgid "Second choice"
+msgstr ""
+
+#. TC: Third choice of IRC nickname.
+#: python/irc.py:407
+msgid "Third choice"
+msgstr ""
+
+#. TC: The IRC user's 'real' name.
+#: python/irc.py:409
+#, fuzzy
+msgid "Real name"
+msgstr "DJ name"
+
+#. TC: The NickServ password.
+#: python/irc.py:411
+msgid "NickServ p/w"
+msgstr ""
+
+#: python/irc.py:442
+msgid ""
+"<span weight='bold' size='12000'>Permanently delete this server?</span>\n"
+"\n"
+"This action will also erase all of its associated messages."
+msgstr ""
+
+#. TC: Dialog window data text entry label. Used for message routing to channels and or users.
+#: python/irc.py:484
+#, fuzzy
+msgid "Channels/Users"
+msgstr "Channel"
+
+#. TC: Message text to send to an IRC channel. Widget label.
+#: python/irc.py:492
+msgid "Message"
+msgstr ""
+
+#. TC: Dialog window title text.
+#: python/irc.py:560
+msgid "IRC track announce"
+msgstr ""
+
+#. TC: Spinbutton label for a delay value.
+#: python/irc.py:567
+#, fuzzy
+msgid "Delay"
+msgstr "Delays of"
+
+#. TC: Dialog window title text.
+#: python/irc.py:592
+msgid "IRC timed message"
+msgstr ""
+
+#. TC: Spinbutton label for a value to schedule messages with respect to some particular interval elsewhere defined.
+#: python/irc.py:601
+msgid "Offset"
+msgstr ""
+
+#. TC: Spinbutton label for a timed interval between repetition of messages.
+#: python/irc.py:603
+#, fuzzy
+msgid "Interval"
+msgstr "Interaction"
+
+#: python/irc.py:837
+msgid "This feature requires the installation of python-irclib."
+msgstr ""
+
+#. TC: IRC server settings using SSL protocol.
+#: python/irc.py:910
+msgid "SSL"
+msgstr ""
+
+#. TC: Appears on message entry dialog title bar for messages to show when stream goes active.
+#: python/irc.py:936
+#, fuzzy
+msgid "IRC stream up message"
+msgstr " Stream "
+
+#. TC: Appears on message entry dialog title bar for messages to show when stream goes inactive.
+#: python/irc.py:938
+#, fuzzy
+msgid "IRC stream down message"
+msgstr " Stream "
 
 #: python/jingles.py:346
 msgid "IDJC Jingles"
@@ -2264,10 +2376,6 @@ msgstr ""
 msgid "Hostname/IP"
 msgstr "Hostname/IP"
 
-#: python/sourceclientgui.py:614
-msgid "Port"
-msgstr "Port"
-
 #: python/sourceclientgui.py:618
 msgid "Mount point      "
 msgstr "Mount point      "
@@ -3009,3 +3117,39 @@ msgstr "A connection to a radio server failed."
 #: python/sourceclientgui.py:2753
 msgid "A timer triggered an automatic server disconnection."
 msgstr "A timer triggered an automatic server disconnection."
+
+#~ msgid "<Artist>"
+#~ msgstr "<Artist>"
+
+#~ msgid "<Title>"
+#~ msgstr "<Title>"
+
+#~ msgid "<Album>"
+#~ msgstr "<Album>"
+
+#~ msgid "<Song name>"
+#~ msgstr "<Song name>"
+
+#~ msgid "<DJ name>"
+#~ msgstr "<DJ name>"
+
+#~ msgid "<Description>"
+#~ msgstr "<Description>"
+
+#~ msgid "<Listen URL>"
+#~ msgstr "<Listen URL>"
+
+#~ msgid "Automatic reconnect in %d seconds."
+#~ msgstr "Automatic reconnect in %d seconds."
+
+#~ msgid "Try {0} of {1}."
+#~ msgstr "Try {0} of {1}."
+
+#~ msgid "Try %d."
+#~ msgstr "Try %d."
+
+#~ msgid "Connection Lost"
+#~ msgstr "Connection Lost"
+
+#~ msgid "The connection to the server in tab %s has failed."
+#~ msgstr "The connection to the server in tab %s has failed."

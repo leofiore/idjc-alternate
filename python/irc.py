@@ -42,15 +42,15 @@ from .gtkstuff import NamedTreeRowReference
 from .gtkstuff import ConfirmationDialog
 from .gtkstuff import threadslock
 from .freefunctions import string_multireplace
+from .tooltips import main_tips
 
 
 import gettext
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
 
-
-
 pm = ProfileManager()
+set_tip = main_tips.set_tip
 
 
 XChat_colour = {
@@ -73,10 +73,24 @@ XChat_colour = {
 }
 
 
-message_categories = ("Announce", "Timer", "On up", "On down")
+message_categories = (
+         # TC: IRC message subcategory, triggers on new track announcements.
+         _("Track announce"),
+         # TC: IRC message subcategory, triggered by a timer.
+         _("Timer"),
+         # TC: IRC message subcategory, triggered once when the stream starts.
+         _("On stream up"),
+         # TC: IRC message subcategory, triggered once at the stream's end.
+         _("On stream down"))
 
 
 ASCII_C0 = "".join(chr(x) for x in range(32))
+
+
+codes_and_descriptions = zip((u"%r", u"%t", u"%l", u"%s", u"%n", u"%d", u"%u"),
+                        (_('Artist'), _('Title'), _('Album'), _('Song name'),
+                         _('DJ name'), _('Description'), _('Listen URL')))
+
 
 
 
@@ -119,6 +133,7 @@ class IRCEntry(gtk.Entry):
 
 
    def _popup_menu_populate(self, entry, menu):
+      # TC: Popup menu item for a GTK text entry widget.
       menuitem = gtk.MenuItem(_('Insert Attribute or Colour Code'))
       menu.append(menuitem)
       submenu = gtk.Menu()
@@ -126,7 +141,7 @@ class IRCEntry(gtk.Entry):
       menuitem.show()
       
       def sub(pairs):
-         for menutext, code in pairs:
+         for code, menutext in pairs:
             mi = gtk.MenuItem()
             l = gtk.Label()
             l.set_alignment(0.0, 0.5)
@@ -137,18 +152,23 @@ class IRCEntry(gtk.Entry):
             submenu.append(mi)
             mi.show()
 
-      sub(zip((_('Artist'), _('Title'), _('Album'), _('Song name'), _('DJ name'),
-                                 _('Description'), _('Listen URL')),
-                                 (u"%r", u"%t", u"%l", u"%s", u"%n", u"%d", u"%u")))
+      
+      sub(codes_and_descriptions)
 
       s = gtk.SeparatorMenuItem()
       submenu.append(s)
       s.show()
       
-      sub(zip((_('<b>Bold</b>'), _('<u>Underline</u>'), _('Normal')), (u"\u0002", u"\u001F", u"\u000F")))
+      sub(zip((u"\u0002", u"\u001F", u"\u000F"), (
+               # TC: Text formatting style.
+               _('<b>Bold</b>'),
+               # TC: Text formatting style.
+               _('<u>Underline</u>'),
+               # TC: Text formatting style.
+               _('Normal'))))
       
       for each in ("0-7", "8-15"):
-         mi = gtk.MenuItem(" ".join(("Colours", each)))
+         mi = gtk.MenuItem(" ".join((_("Colours"), each)))
          submenu.append(mi)
          cmenu = gtk.Menu()
          mi.set_submenu(cmenu)
@@ -232,10 +252,7 @@ class IRCView(gtk.TextView):
       ))
 
 
-   readable_equiv = (("%r", _('<Artist>')), ("%t", _('<Title>')),
-      ("%l", _('<Album>')), ("%s", _('<Song name>')),
-      ("%n", _('<DJ name>')), ("%d", _('<Description>')),
-      ("%u", _('<Listen URL>')))
+   readable_equiv = tuple((x, "<%s>" % y) for x, y in codes_and_descriptions)
 
 
    def __init__(self):
@@ -340,16 +357,23 @@ server_port_adj = gtk.Adjustment(6667.0, 0.0, 65535.0, 1.0, 10.0)
 
 class ServerDialog(gtk.Dialog):
    """Data entry dialog for adding a new irc server."""
+
+
+   optinfo = _("Optional data entry field for information only.")
+  
    
-   
-   def __init__(self, title="IRC server"):
+   # TC: Tab heading text.
+   def __init__(self, title=_("IRC server")):
       gtk.Dialog.__init__(self, title + " - IDJC" + pm.title_extra)
 
       self.network = gtk.Entry()
+      set_tip(self.network, self.optinfo)
       self.network.set_width_chars(25)
       self.hostname = gtk.Entry()
       self.port = gtk.SpinButton(server_port_adj)
-      self.ssl = gtk.CheckButton("SSL")
+      # TC: Checkbutton label text for server connection to be made using the SSL security protocol.
+      self.ssl = gtk.CheckButton(_("SSL"))
+      set_tip(self.ssl, _("Connect to the server using the SSL security protocol.\n\nThis feature is typically offered on different ports than the standard connection method and is widespread but not universally available."))
       self.username = gtk.Entry()
       self.password = gtk.Entry()
       self.password.set_visibility(False)
@@ -374,18 +398,42 @@ class ServerDialog(gtk.Dialog):
       hbox.pack_start(image, False, padding=20)
       hbox.pack_start(table, True)
       
-      for i, (text, widget) in enumerate(zip(("Network", "Hostname", "Port", "",
-                              "User name", "Password", "Nickname", "Second choice",
-                              "Third choice", "Real name", "Nickserv p/w"),
+      for i, (text, widget) in enumerate(zip((
+                     # TC: The IRC network e.g. EFnet.
+                     _("Network"),
+                     # TC: label for hostname entry.
+                     _("Hostname"),
+                     # TC: TCP/IP port number label.
+                     _("Port"), "",
+                     _("User name"),
+                     _("Password"),
+                     # TC: IRC nickname data entry label.
+                     _("Nickname"),
+                     # TC: Second choice of IRC nickname.
+                     _("Second choice"),
+                     # TC: Third choice of IRC nickname.
+                     _("Third choice"),
+                     # TC: The IRC user's 'real' name.
+                     _("Real name"),
+                     # TC: The NickServ password.
+                     _("NickServ p/w")),
             (self.network, self.hostname, self.port, self.ssl,
              self.username, self.password, self.nick1, self.nick2,
              self.nick3, self.realname, self.nickserv))):
+         # TC: Tooltip to IRC 'User name' field.
+         set_tip(self.username, _("Ideally set this to something even on servers that allow public anonymous access."))
          l = gtk.Label(text)
          l.set_alignment(1.0, 0.5)
          
          table.attach(l, 0, 1, i, i + 1, gtk.SHRINK | gtk.FILL)
          table.attach(widget, 1, 2, i, i + 1)
-         
+
+      for each in (self.nick1, self.nick2, self.nick3):
+         # TC: tooltip to all IRC nicknames entry fields.
+         set_tip(each, _("When a nickname is in use on the target IRC network, during connection these IRC nicknames are cycled through, then twice again after appending an additional underscore until giving up. This gives IDJC a maximum of nine IRC nicknames to try."))
+      set_tip(self.realname, _("The real name you want to use which will be available regardless of whether the network connection was made with the primary nickname or not.\n\nIdeally set this to something."))
+      set_tip(self.nickserv, _("If this value is set an attempt will be made to acquire your first choice IRC nickname (if needed) and log in with NickServ@services.\n\nThe use of the NickServ service requires prior nickname registration on the network using a regular chat client."))
+      
       self.get_content_area().add(hbox)
       
       
@@ -407,9 +455,7 @@ class EditServerDialog(ServerDialog, EditDialogMixin):
 
    def delete_confirmation(self, deleter):
       def inner(w):
-         cd = ConfirmationDialog("", 
-         "<span weight='bold' size='12000'>Permanently delete this server?</span>\n\n"
-         "This action will also erase all of its associated messages.", markup=True)
+         cd = ConfirmationDialog("", _("<span weight='bold' size='12000'>Permanently delete this server?</span>\n\nThis action will also erase all of its associated messages."), markup=True)
          cd.set_transient_for(self)
          cd.ok.connect("clicked", deleter)
          cd.show_all()
@@ -450,17 +496,21 @@ class MessageDialog(gtk.Dialog):
 
       hbox1 = gtk.HBox()
       hbox1.set_spacing(6)
-      l = gtk.Label("Channels/Users")
+      # TC: Dialog window data text entry label. Used for message routing to channels and or users.
+      l = gtk.Label(_("Channels/Users"))
       self.channels = gtk.Entry()
       hbox1.pack_start(l, False)
       hbox1.pack_start(self.channels, True)
+      set_tip(self.channels, _("The comma or space separated list of channels and/or users to whom the message will be sent.\n\nProtected channels are included with the form:\n#channel:keyword."))
       
       hbox2 = gtk.HBox()
       hbox2.set_spacing(6)
-      l = gtk.Label("Message")
+      # TC: Message text to send to an IRC channel. Widget label.
+      l = gtk.Label(_("Message"))
       self.message = IRCEntry()
       hbox2.pack_start(l, False)
       hbox2.pack_start(self.message)
+      set_tip(self.message, _("The message to send.\n\nOn the pop-up window (mouse right click) are some useful options for embedding metadata and for text formatting.\n\nThe window below displays how the message will appear to users of XChat."))
       
       sw = gtk.ScrolledWindow()
       sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
@@ -524,13 +574,17 @@ class EditMessageDialog(MessageDialog, EditDialogMixin):
 
 
 class AnnounceMessageDialog(MessageDialog):
-   title = "IRC track announce"
+   # TC: Dialog window title text.
+   title = _("IRC track announce")
 
    def __init__(self):
       MessageDialog.__init__(self)
       
       self.delay = gtk.SpinButton(message_delay_adj)
-      self._pack((("Delay", self.delay), ))
+      # TC: Spinbutton label for a delay value.
+      self._pack(((_("Delay"), self.delay), ))
+      # TC: tooltip on a spinbutton widget.
+      set_tip(self.delay, _("The delay time of this message.\n\nTypically listener clients will buffer approximately ten seconds of audio data which means they are listening the same amount of time behind the actual stream therefore without a delay IRC messages will appear to the listener many seconds ahead of the audio.\n\nThis setting will help synchronise the track change with the message.")) 
       
       
    def as_tuple(self):
@@ -554,14 +608,24 @@ class EditAnnounceMessageDialog(AnnounceMessageDialog, EditDialogMixin):
    
 
 class TimerMessageDialog(MessageDialog):
-   title = "IRC timed message"
+   # TC: Dialog window title text.
+   title = _("IRC timed message")
 
    def __init__(self):
       MessageDialog.__init__(self)
       
       self.offset = gtk.SpinButton(message_offset_adj)
       self.interval = gtk.SpinButton(message_interval_adj)
-      self._pack((("Offset", self.offset), ("Interval", self.interval)))
+      self._pack((
+                  # TC: Spinbutton label for a value to schedule messages with respect to some particular interval elsewhere defined.
+                  (_("Offset"), self.offset),
+                  # TC: Spinbutton label for a timed interval between repetition of messages.
+                  (_("Interval"), self.interval)))
+                  
+      # TC: spinbutton tooltip
+      set_tip(self.offset, (_("The time offset within the below specified interval at which the message will be issued.")))
+      # TC: spinbutton tooltip
+      set_tip(self.interval, (_("The interval in seconds of the timed message.")))
       
    def as_tuple(self):
       return (self.offset.get_value(), self.interval.get_value()
@@ -795,7 +859,7 @@ class IRCPane(gtk.VBox):
          self.connections_controller = ConnectionsController(self._treestore)
       else:
          self.set_sensitive(False)
-         label = gtk.Label("This feature requires the installation of python-irclib.")
+         label = gtk.Label(_("This feature requires the installation of python-irclib."))
          self.add(label)
          self.connections_controller = ConnectionsController(None)
 
@@ -867,10 +931,13 @@ class IRCPane(gtk.VBox):
 
             opt = []
             if row.ssl:
-               opt.append("SSL")
+               # TC: IRC server settings using SSL protocol.
+               opt.append(_("SSL"))
             if row.password:
+               # TC: IRC server settings using a password protected IRC server.
                opt.append("PASSWORD")
             if row.nickserv:
+               # TC: IRC server settings using NickServ nickname protection.
                opt.append("NICKSERV")
             if opt:
                text += " " + ", ".join(opt)
@@ -890,6 +957,11 @@ class IRCPane(gtk.VBox):
       cell.props.text = text
 
 
+   # TC: Appears on message entry dialog title bar for messages to show when stream goes active.
+   _dsu = _("IRC stream up message")
+   # TC: Appears on message entry dialog title bar for messages to show when stream goes inactive.
+   _dsd = _("IRC stream down message")
+
    @glue
    def _on_new(self, mode, model, iter, dialog):
       if mode == 0:
@@ -899,8 +971,7 @@ class IRCPane(gtk.VBox):
       elif mode == 4:
          dialog(TimerMessageDialog(), self._add_timer)
       elif mode in (6, 8):
-         title = "IRC stream up message" if mode == 6 \
-            else "IRC stream down message"
+         title = self._dsu if mode == 6 else self._dsd
          dialog(MessageDialog(title), self._add_message, mode)
       else:
          if mode / 2 < len(message_categories):
@@ -924,8 +995,7 @@ class IRCPane(gtk.VBox):
                               tuple(model[model.get_path(iter)])[2:6]),
                                                 self._standard_edit, 2)
       if mode in (7, 9):
-         title = "IRC stream up message" if mode == 7 \
-            else "IRC stream down message"
+         title = self._dsu if mode == 7 else self._dsd
          dialog(EditMessageDialog(title, tuple(
             model[model.get_path(iter)])[4:6]), self._standard_edit, 4)
                                                 

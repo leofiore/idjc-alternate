@@ -23,11 +23,16 @@ import gtk
 import pango
 
 from idjc import FGlobs
+from idjc.prelims import ProfileManager
 
 
 import gettext
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
+
+
+
+pm = ProfileManager()
 
 
 
@@ -160,12 +165,14 @@ class autodisconnection_notification_dialog(gtk.Dialog):
 
 class ReconnectionDialog(gtk.Dialog):
    td = (0.0, 10.0, 10.0, 60.0)
+   # TC: Tab refers to a GTK notebook widget tab.   
+   lines = '<span weight="bold" size="12000">The connection to the server in tab %s has failed.</span>\nA reconnection attempt will be made in %d seconds.\nThis is attempt number {0} of {1}.'.splitlines()
    
    def update_countdown_text(self):
       remaining = self.remaining
       self.remaining = int(self.event_time - time.time())
       if self.remaining != remaining:
-         self.label2.set_text(_('Automatic reconnect in %d seconds.') % self.remaining)
+         self.label2.set_text(self.lines[1] % self.remaining)
          if self.remaining == 0:
             self.hide()
             while gtk.events_pending():
@@ -212,11 +219,9 @@ class ReconnectionDialog(gtk.Dialog):
       self.event_time = time.time() + self.remaining
       self.update_countdown_text()
       if self.limited_delays:
-         # Read as: attempt number x of y total possible attempts.
-         text = _('Try {0} of {1}.')
-         self.label3.set_text(text.format(self.trycount, len(self.td) - 1))
+         self.label3.set_text(self.lines[2].format(self.trycount, len(self.td) - 1))
       else:
-         self.label3.set_text(_('Try %d.') % self.trycount)
+         self.label3.set_text(_('This is attempt number %d. There is no retry limit.') % self.trycount)
       if self.config.visible.get_active():
          self.present()
       else:
@@ -239,28 +244,39 @@ class ReconnectionDialog(gtk.Dialog):
 
    def __init__(self, tab):
       self.tab = tab
-      gtk.Dialog.__init__(self, _('Connection Lost'), None, gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, _('Try Now'), gtk.RESPONSE_OK))
+      # TC: Dialog button label _ preceeds accelerator key.
+      # TC: Whatever accelerator is chosen for "Retry Now" must not clash with that of the Cancel button.
+      gtk.Dialog.__init__(self, pm.title_extra.strip(), None, gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, _('_Retry Now'), gtk.RESPONSE_OK))
+      self.set_modal(False)
       self.set_resizable(False)
+      self.set_border_width(6)
+      self.vbox.set_spacing(12)
       
-      self.vb = gtk.VBox() # bug workaround
-      self.vbox.pack_start(self.vb)
-      self.vb.show()
-      self.vb.set_border_width(10)
-      self.vb.set_spacing(10)
-      
+      hbox = gtk.HBox()
+      hbox.set_spacing(12)
+      self.get_content_area().pack_start(hbox, False)
+      hbox.show()
+      i = gtk.image_new_from_stock(gtk.STOCK_DISCONNECT, gtk.ICON_SIZE_DIALOG)
+      i.set_alignment(0.5, 0)
+      hbox.pack_start(i, False)
+      i.show()
+
+      vbox = gtk.VBox()
+      vbox.set_spacing(3)
+      hbox.pack_start(vbox, False)
+      self.label1 = gtk.Label(self.lines[0] % (tab.numeric_id + 1) + "\n")
+      self.label1.set_use_markup(True)
+      self.label2 = gtk.Label(self.lines[1] % self.td[1])
+      self.label3 = gtk.Label(self.lines[2].format(1, len(self.td) - 1))
+      for l in (self.label1, self.label2, self.label3):
+         l.set_alignment(0.0, 0.5)
+         vbox.pack_start(l, False)
+         l.show()
+         
+      vbox.show()
+         
+      self.config = None   # This value unavailable for now.
+      self.active = False
+
       self.connect("delete-event", self.cb_delete)
       self.connect("response", self.cb_response)
-      
-      self.label1 = gtk.Label(_('The connection to the server in tab %s has failed.') % (tab.numeric_id + 1))
-      self.label2 = gtk.Label(_('Automatic reconnect in %d seconds.') % self.td[1])
-      text = _('Try {0} of {1}.')
-      self.label3 = gtk.Label(text.format(1, len(self.td) - 1))
-      for each in (self.label1, self.label2, self.label3):
-         attrlist = pango.AttrList()
-         attrlist.insert(pango.AttrSize(12500, 0, len(each.get_text())))
-         each.set_attributes(attrlist)
-         self.vb.add(each)
-         each.show()
-      
-      self.config = None   # unavailable just yet
-      self.active = False

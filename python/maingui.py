@@ -15,7 +15,7 @@
 #   along with this program in the file entitled COPYING.
 #   If not, see <http://www.gnu.org/licenses/>.
 
-
+         
 import os
 import sys
 import fcntl
@@ -27,6 +27,7 @@ import pickle
 import stat
 import signal
 import time
+import gettext
 
 import glib
 import gobject
@@ -43,18 +44,17 @@ from .freefunctions import int_object
 from .freefunctions import rich_safe
 from .gtkstuff import threadslock, WindowSizeTracker
 from . import midicontrols
-from . import tooltips
+from .tooltips import main_tips
 from . import p3db
 from .prelims import *
 
 
-import gettext
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
 
-
 args = ArgumentParserImplementation().parse_args()
 pm = ProfileManager()
+set_tip = main_tips.set_tip
 
 
 METER_TEXT_SIZE = 8000
@@ -481,7 +481,7 @@ def make_meter_unit(text, l_meter, r_meter):
    r_meter.show()
    return mic_peak_box
  
-def make_stream_meter_unit(text, meters, tooltips):
+def make_stream_meter_unit(text, meters):
    outer_vbox = gtk.VBox()
    outer_vbox.set_border_width(0)
    frame = gtk.Frame()
@@ -514,7 +514,7 @@ def make_stream_meter_unit(text, meters, tooltips):
       meter.show()
       hbox.pack_start(vbox, True, True, 0)
       vbox.show()
-   tooltips.set_tip(frame, _('This indicates the state of the various streams. Flashing means stream packets are being discarded because of network congestion. Partial red means the send buffer is partially full indicating difficulty communicating with the server. Green means everything is okay.'))
+   set_tip(frame, _('This indicates the state of the various streams. Flashing means stream packets are being discarded because of network congestion. Partial red means the send buffer is partially full indicating difficulty communicating with the server. Green means everything is okay.'))
    
    frame = gtk.Frame()              # for the listener count
    frame.set_label_align(0.5, 0.5)
@@ -532,7 +532,7 @@ def make_stream_meter_unit(text, meters, tooltips):
    connections.show()
    outer_vbox.pack_start(frame, False, False, 0)
    frame.show()
-   tooltips.set_tip(frame, _('The combined total number of listeners in all server tabs.'))
+   set_tip(frame, _('The combined total number of listeners in all server tabs.'))
    
    return outer_vbox, connections
  
@@ -1984,7 +1984,6 @@ class MainWindow:
       self.window.set_title(self.appname + pm.title_extra)
       self.window.set_border_width(8)
       self.window.connect("delete_event",self.delete_event)
-      self.tooltips = tooltips.Tooltips()
       self.hbox10 = gtk.HBox(False)
       self.hbox10.set_border_width(2)
       self.hbox10.set_spacing(7)
@@ -2041,7 +2040,7 @@ class MainWindow:
       self.prefs_button.connect("clicked", self.callback, "Prefs")
       self.hbox10.pack_start(self.prefs_button, True, True, 0)
       self.prefs_button.show()
-      self.tooltips.set_tip(self.prefs_button, _('Open the preferences window.'))
+      set_tip(self.prefs_button, _('Open the preferences window.'))
       
       # add a server button to open the output window
       self.server_button = gtk.Button(_('Output'))
@@ -2049,7 +2048,7 @@ class MainWindow:
       self.server_button.connect("clicked", self.callback, "Server")
       self.hbox10.pack_start(self.server_button, True, True, 0)
       self.server_button.show()
-      self.tooltips.set_tip(self.server_button, _('Open the output window.'))
+      set_tip(self.server_button, _('Open the output window.'))
       
       # add a jingles button to open the jingles window
       self.jingles_button = gtk.Button(_('Jingles'))
@@ -2058,7 +2057,7 @@ class MainWindow:
       self.jingles_button.connect("clicked", self.callback, "Jingles")
       self.hbox10.pack_start(self.jingles_button, True, True, 0)
       self.jingles_button.show()
-      self.tooltips.set_tip(self.jingles_button, _('Open the jingles player window.'))
+      set_tip(self.jingles_button, _('Open the jingles player window.'))
       
       sep = gtk.VSeparator()
       self.hbox10.pack_start(sep, False, False, 5)
@@ -2079,7 +2078,7 @@ class MainWindow:
       self.greenphone.connect("toggled", self.cb_toggle, "Greenphone")
       phonebox.pack_start(self.greenphone)
       self.greenphone.show()
-      self.tooltips.set_tip(self.greenphone, _('Mix voice over IP audio to the output stream.'))
+      set_tip(self.greenphone, _('Mix voice over IP audio to the output stream.'))
 
       pixbuf5 = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "redphone.png")
       pixbuf5 = pixbuf5.scale_simple(25, 20, gtk.gdk.INTERP_BILINEAR)
@@ -2091,7 +2090,7 @@ class MainWindow:
       self.redphone.connect("toggled", self.cb_toggle, "Redphone")
       phonebox.pack_start(self.redphone)
       self.redphone.show()
-      self.tooltips.set_tip(self.redphone, _('Mix voice over IP audio to the DJ only.'))
+      set_tip(self.redphone, _('Mix voice over IP audio to the DJ only.'))
  
       self.hbox10.pack_start(phonebox)
       phonebox.show()
@@ -2107,7 +2106,7 @@ class MainWindow:
       self.aux_select.connect("toggled", self.cb_toggle, "Aux Open")
       self.hbox10.pack_start(self.aux_select)
       self.aux_select.show()
-      self.tooltips.set_tip(self.aux_select, _('Mix auxiliary audio to the output stream. See also Prefs->JACK Ports Aux L and Aux R.'))
+      set_tip(self.aux_select, _('Mix auxiliary audio to the output stream. See also Prefs->JACK Ports Aux L and Aux R.'))
       
       # microphone open/unmute dynamic widget cluster thingy
       self.mic_opener = MicOpener(self, self.flash_test)
@@ -2126,7 +2125,7 @@ class MainWindow:
       self.advance.connect("clicked", self.callback, "Advance")
       self.hbox10.pack_end(self.advance)
       self.advance.show()
-      self.tooltips.set_tip(self.advance, _('This button either starts the currently highlighted track playing or stops the currently playing one and highlights the next track.'))
+      set_tip(self.advance, _('This button either starts the currently highlighted track playing or stops the currently playing one and highlights the next track.'))
       
       # we are done messing with hbox7 so lets show it
       self.hbox7.show()
@@ -2172,7 +2171,7 @@ class MainWindow:
       self.deckvol.set_inverted(True)
       hboxvol.pack_start(self.deckvol, False, False, 6)
       self.deckvol.show()
-      self.tooltips.set_tip(self.deckvol, _('The volume control shared by both music players.'))
+      set_tip(self.deckvol, _('The volume control shared by both music players.'))
 
       # Secondary volume controller, visible when using separate player volumes
       self.deck2adj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 6.0)
@@ -2182,7 +2181,7 @@ class MainWindow:
       self.deck2vol.set_draw_value(False)
       self.deck2vol.set_inverted(True)
       hboxvol.pack_start(self.deck2vol, False, False, 0)
-      self.tooltips.set_tip(self.deck2vol, _('The volume control for the right music player.'))
+      set_tip(self.deck2vol, _('The volume control for the right music player.'))
 
       self.spacerbox = gtk.VBox()
       self.spacerbox.set_size_request(1, 5)
@@ -2201,7 +2200,7 @@ class MainWindow:
       self.mixback.set_draw_value(False)
       self.mixback.set_inverted(True)
       self.vboxvol.pack_start(self.mixback, True, True, 0)
-      self.tooltips.set_tip(self.mixback, _('The stream volume level to send to the voice over IP connection.'))
+      set_tip(self.mixback, _('The stream volume level to send to the voice over IP connection.'))
       
       self.vboxvol.show()
       
@@ -2319,7 +2318,7 @@ class MainWindow:
       sg3.add_widget(frame)
       
       self.listen_stream.connect("toggled", self.cb_toggle, "stream-mon")
-      self.tooltips.set_tip(smvbox, _("In IDJC there are are two audio paths and this 'Monitor Mix' control toggles between them. When 'Stream' is active you can hear what the listeners are hearing including the effects of the crossfader. 'Monitor Mix' needs to be set to 'DJ' in order to make proper use of the VOIP features."))
+      set_tip(smvbox, _("In IDJC there are are two audio paths and this 'Monitor Mix' control toggles between them. When 'Stream' is active you can hear what the listeners are hearing including the effects of the crossfader. 'Monitor Mix' needs to be set to 'DJ' in order to make proper use of the VOIP features."))
       
       cross_sizegroup.add_widget(smhbox)
       self.crossbox.pack_start(smvbox, False, False, 0)
@@ -2342,7 +2341,7 @@ class MainWindow:
       self.metadata_source.set_active(3)
       cross_sizegroup.add_widget(self.metadata_source)
       self.metadata_source.connect("changed", self.cb_metadata_source)
-      self.tooltips.set_tip(self.metadata_source, _('Select which Deck is responsible for the metadata on the stream.'))
+      set_tip(self.metadata_source, _('Select which Deck is responsible for the metadata on the stream.'))
       mvbox.add(self.metadata_source)
       self.metadata_source.show()
       self.crossbox.pack_start(mvbox, False, False, 0)
@@ -2362,7 +2361,7 @@ class MainWindow:
       self.passleft.show()
       self.crossbox.pack_start(plvbox, False, False, 0)
       plvbox.show()
-      self.tooltips.set_tip(plvbox, _('Move the crossfader fully left.'))
+      set_tip(plvbox, _('Move the crossfader fully left.'))
       sg3.add_widget(self.passleft)
       
       self.crossadj = gtk.Adjustment(0.0, 0.0, 100.0, 1.0, 3.0, 0.0)
@@ -2382,7 +2381,7 @@ class MainWindow:
       self.crossbox.pack_start(cvbox, True, True, 0)
       cvbox.show()
       self.vbox6.pack_start(self.outercrossbox, False, False, 2)
-      self.tooltips.set_tip(cvbox, _('The crossfader.'))
+      set_tip(cvbox, _('The crossfader.'))
 
       prvbox = gtk.VBox()
       label = gtk.Label(_('R'))
@@ -2396,7 +2395,7 @@ class MainWindow:
       self.passright.show()
       self.crossbox.pack_start(prvbox, False, False, 0)
       prvbox.show()
-      self.tooltips.set_tip(prvbox, _('Move the crossfader fully right.'))
+      set_tip(prvbox, _('Move the crossfader fully right.'))
       sg3.add_widget(self.passright)
       
       patternbox = gtk.HBox()
@@ -2421,12 +2420,12 @@ class MainWindow:
       sg4.add_widget(self.passmidleft)
       passhbox.pack_start(self.passmidleft, False, False, 0)
       self.passmidleft.show()
-      self.tooltips.set_tip(self.passmidleft, _('Move the crossfader to the middle of its range of travel.'))
+      set_tip(self.passmidleft, _('Move the crossfader to the middle of its range of travel.'))
       
       self.passmidright = make_arrow_button(self, gtk.ARROW_UP, gtk.SHADOW_NONE, "cfmmidr")
       passhbox.pack_start(self.passmidright, False, False, 0)
       self.passmidright.show()
-      self.tooltips.set_tip(self.passmidright, _('Move the crossfader to the middle of its range of travel.'))
+      set_tip(self.passmidright, _('Move the crossfader to the middle of its range of travel.'))
       sg4.add_widget(self.passmidright)
       
       pvbox = gtk.VBox()
@@ -2451,7 +2450,7 @@ class MainWindow:
       cross_sizegroup2.add_widget(patternbox)
       self.crosspattern.set_active(0)
       self.crosspattern.connect("changed", self.cb_crosspattern)
-      self.tooltips.set_tip(self.crosspattern, _('This selects the response curve of the crossfader.\n\nThe mid-point attenuations are -3dB, 0dB, and -22dB respectively.'))
+      set_tip(self.crosspattern, _('This selects the response curve of the crossfader.\n\nThe mid-point attenuations are -3dB, 0dB, and -22dB respectively.'))
       patternbox.pack_start(pvbox, True, True, 0)
       pvbox.show()
       
@@ -2481,7 +2480,7 @@ class MainWindow:
       hs.show()
       tvbox.pack_start(psvbox, False, False, 0)
       psvbox.show()
-      self.tooltips.set_tip(tvbox, _('The time in seconds that the crossfader will take to automatically pass across when the button to the right is clicked.'))
+      set_tip(tvbox, _('The time in seconds that the crossfader will take to automatically pass across when the button to the right is clicked.'))
       passbox.pack_start(tvbox, False, False, 0)
       tvbox.show()
       sg4.add_widget(psvbox)
@@ -2502,7 +2501,7 @@ class MainWindow:
       self.passbutton.connect("clicked", self.callback, "pass-crossfader")
       pvbox.add(self.passbutton)
       self.passbutton.show()
-      self.tooltips.set_tip(pvbox, _('This button causes the crossfader to move to the opposite side at a speed determined by the speed selector to the left.'))
+      set_tip(pvbox, _('This button causes the crossfader to move to the opposite side at a speed determined by the speed selector to the left.'))
       passbox.pack_start(pvbox, True, True, 0)
       pvbox.show()
       sg4.add_widget(self.passbutton)
@@ -2544,13 +2543,13 @@ class MainWindow:
       self.stream_peak_box = make_meter_unit(_('Str Peak'), self.str_l_peak, self.str_r_peak)
       self.streammeterbox.pack_start(self.stream_peak_box)
       self.stream_peak_box.show()
-      self.tooltips.set_tip(self.stream_peak_box, _('A peak hold meter indicating the signal strength of the stream audio.'))
+      set_tip(self.stream_peak_box, _('A peak hold meter indicating the signal strength of the stream audio.'))
 
       sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       self.stream_indicator = []
       for i in range(PGlobs.num_streamers):
          self.stream_indicator.append(StreamMeter(1, 100))
-      self.stream_indicator_box, self.listener_indicator = make_stream_meter_unit(_('Streams'), self.stream_indicator, self.tooltips)
+      self.stream_indicator_box, self.listener_indicator = make_stream_meter_unit(_('Streams'), self.stream_indicator)
       self.streammeterbox.pack_start(self.stream_indicator_box, False, False, 0)
       self.stream_indicator_box.show()
       sg.add_widget(self.stream_indicator_box)
@@ -2565,7 +2564,7 @@ class MainWindow:
       stream_vu_box = make_meter_unit(_('Str VU'), self.str_l_rms_vu, self.str_r_rms_vu)
       self.streammeterbox.pack_start(stream_vu_box)
       stream_vu_box.show()
-      self.tooltips.set_tip(stream_vu_box, _('A VU meter for the stream audio.'))
+      set_tip(stream_vu_box, _('A VU meter for the stream audio.'))
        
       self.mic_meters = [MicMeter("Mic ", i) for i in range(1, PGlobs.num_micpairs * 2 + 1)]
       if len(self.mic_meters) <= 4:
@@ -2583,7 +2582,7 @@ class MainWindow:
             table.attach(meter, col, col + 1, row, row + 1)
             meter.show()
       
-      self.tooltips.set_tip(self.micmeterbox, _('A peak hold meter indicating the microphone signal strength and a meter indicating attenuation levels in the microphone signal processing system. Green indicates attenuation from the noise gate, yellow from the de-esser, red from the limiter.'))
+      set_tip(self.micmeterbox, _('A peak hold meter indicating the microphone signal strength and a meter indicating attenuation levels in the microphone signal processing system. Green indicates attenuation from the noise gate, yellow from the de-esser, red from the limiter.'))
 
       # Main window context menu
       self.app_menu = gtk.Menu()

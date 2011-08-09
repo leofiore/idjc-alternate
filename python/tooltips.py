@@ -1,5 +1,5 @@
-#   tooltips.py: a tooltips widget that works? see comments below
-#   Copyright (C) 2008-2010 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   tooltips.py: a replacement for the old style GTK tooltips API
+#   Copyright (C) 2008-2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -20,7 +20,26 @@ import gtk
 
 
 
-class Tooltips:
+class TooltipsGroup:
+   """A central control point for tooltips.""" 
+
+   def __init__(self):
+      self.enabled = False
+
+
+   def set_tip(self, widget, tip_text):
+      widget.set_tooltip_window(None)
+      widget.connect("query-tooltip", self.cb_query_tooltip, tip_text)
+      widget.set_has_tooltip(True)
+
+
+   def enable(self):
+      self.enabled = True
+
+
+   def disable(self):
+      self.enabled = False
+
 
    def cb_query_tooltip(self, widget, x, y, keyboard_mode, tooltip, tip_text):
       label = gtk.Label(tip_text)
@@ -29,16 +48,7 @@ class Tooltips:
       label.show()
       return self.enabled
 
-   def enable(self):
-      self.enabled = True
 
-   def disable(self):
-      self.enabled = False
 
-   def set_tip(self, widget, tip_text):
-      widget.set_tooltip_window(None)
-      widget.connect("query-tooltip", self.cb_query_tooltip, tip_text)
-      widget.set_has_tooltip(True)
-
-   def __init__(self):
-      self.enabled = False
+# An application wide tooltips group.
+main_tips = TooltipsGroup()

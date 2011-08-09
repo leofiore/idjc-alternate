@@ -26,13 +26,13 @@ import subprocess
 import urllib
 import urllib2
 import base64
-import pango
+import gettext
 import xml.dom.minidom as mdom
 import xml.etree.ElementTree
 from collections import namedtuple
 from threading import Thread
-from irc import IRCPane
 
+import pango
 import gtk
 import gobject
 
@@ -40,16 +40,17 @@ from idjc import FGlobs, PGlobs
 from .freefunctions import int_object, string_multireplace
 from .gtkstuff import DefaultEntry, threadslock, HistoryEntry, WindowSizeTracker
 from .dialogs import *
-
+from .irc import IRCPane
+from .tooltips import main_tips
 from .prelims import ProfileManager
 
 
-import gettext
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
 
 
 pm = ProfileManager()
+set_tip = main_tips.set_tip
 
 
 ENCODER_START=1; ENCODER_STOP=0                                 # start_stop_encoder constants
@@ -922,11 +923,10 @@ class StreamTab(Tab):
          sample_rate_pane.set_border_width(10)
          self.add(sample_rate_pane)
          sample_rate_pane.show()
-         tooltips = parent.scg.parent.tooltips
-         tooltips.set_tip(self.resample_no_resample.get_parent(), _('No additional resampling will occur. The stream sample rate will be that of the JACK sound server.'))
-         tooltips.set_tip(self.resample_standard.get_parent(), _('Use one of the standard mp3 sample rates for the stream.'))
-         tooltips.set_tip(self.resample_custom.get_parent(), _('Complete sample rate freedom. Note that only sample rates that appear in the drop down box can be used with an mp3 stream.'))
-         tooltips.set_tip(self.resample_quality_combo_box.get_parent(), _('This selects the audio resampling method to be used, efficiency versus quality. Highest mode offers the best sound quality but also uses the most CPU (not recommended for systems built before 2006). Fastest mode while it uses by far the least amount of CPU should be avoided if at all possible.'))
+         set_tip(self.resample_no_resample.get_parent(), _('No additional resampling will occur. The stream sample rate will be that of the JACK sound server.'))
+         set_tip(self.resample_standard.get_parent(), _('Use one of the standard mp3 sample rates for the stream.'))
+         set_tip(self.resample_custom.get_parent(), _('Complete sample rate freedom. Note that only sample rates that appear in the drop down box can be used with an mp3 stream.'))
+         set_tip(self.resample_quality_combo_box.get_parent(), _('This selects the audio resampling method to be used, efficiency versus quality. Highest mode offers the best sound quality but also uses the most CPU (not recommended for systems built before 2006). Fastest mode while it uses by far the least amount of CPU should be avoided if at all possible.'))
    def make_combo_box(self, items):
       combobox = gtk.combo_box_new_text()
       for each in items:
@@ -949,7 +949,7 @@ class StreamTab(Tab):
    def make_notebook_tab(self, notebook, labeltext, tooltip = None):
       label = gtk.Label(labeltext)
       if tooltip is not None:
-         self.scg.parent.tooltips.set_tip(label, tooltip)
+         set_tip(label, tooltip)
       vbox = gtk.VBox()
       notebook.append_page(vbox, label)
       label.show()
@@ -1425,7 +1425,6 @@ class StreamTab(Tab):
       self.scg = scg
       self.show_indicator("clear")
       self.tab_type = "streamer"
-      set_tip = self.scg.parent.tooltips.set_tip
       self.encoder = "off"                      # can also be set to "mp3" or "ogg" depending on what is encoded
       self.encoder_on_count = 0                 # when this counter hits zero the encoder is turned off
       self.format_page = 0                      # the current format page
@@ -2003,7 +2002,6 @@ class RecordTab(Tab):
          self.stop_button = gtk.Button()
          self.record_button = gtk.ToggleButton()
          self.pause_button = gtk.ToggleButton()
-         tooltips = parent.scg.parent.tooltips
          for button, gname, signal, tip_text in (
                (self.stop_button,   "stop",  "clicked", _('Stop recording.')),
                (self.record_button, "rec",   "toggled", _('Start recording.\n\nIf this button is greyed out it could mean the encoder settings are not valid. This can be fixed by using one of the approved sample rates for mp3 or by choosing a sensible samplerate and bitrate combination for Ogg.\n\nAlso check that you have write permission on the folder you have selected to record to.')),
@@ -2013,7 +2011,7 @@ class RecordTab(Tab):
             button.connect(signal, self.cb_recbuttons, gname)
             hbox.pack_start(button, False, False, 0)
             button.show()
-            tooltips.set_tip(button, tip_text)
+            set_tip(button, tip_text)
          self.add(hbox)
          hbox.show()
    class TimeIndicator(gtk.Entry):
@@ -2040,7 +2038,7 @@ class RecordTab(Tab):
          self.oldvalue = -1
          self.set_value(0)
          self.connect("button-press-event", self.button_press_cancel)
-         parent.scg.parent.tooltips.set_tip(self, _('Recording time elapsed.'))
+         set_tip(self, _('Recording time elapsed.'))
    class SourceDest(CategoryFrame):
       cansave = False
       def set_sensitive(self, boolean):
@@ -2083,8 +2081,8 @@ class RecordTab(Tab):
          self.file_chooser_button.show()
          self.add(hbox)
          hbox.show()
-         parent.scg.parent.tooltips.set_tip(self.source_combo, _("Choose which stream to record or the 24 bit FLAC option. If the stream isn't already running the encoder will be started automatically using whatever settings are currently configured."))
-         parent.scg.parent.tooltips.set_tip(self.file_chooser_button, _('Choose which directory you want to save to. All file names will be in a timestamp format and have either an oga, mp3, or flac file extension. Important: you need to select a directory to which you have adequate write permission.'))
+         set_tip(self.source_combo, _("Choose which stream to record or the 24 bit FLAC option. If the stream isn't already running the encoder will be started automatically using whatever settings are currently configured."))
+         set_tip(self.file_chooser_button, _('Choose which directory you want to save to. All file names will be in a timestamp format and have either an oga, mp3, or flac file extension. Important: you need to select a directory to which you have adequate write permission.'))
    def send(self, string_to_send):
       Tab.send(self, "dev_type=recorder\n" + string_to_send)
    def receive(self):
@@ -2141,7 +2139,7 @@ class TabFrame(ModuleFrame):
          self.tabs.append(tabtype(scg, index, indicator_lookup))
          self.notebook.append_page(self.tabs[-1], labelbox)
          labelbox.show()
-         scg.parent.tooltips.set_tip(labelbox, tab_tip_text)
+         set_tip(labelbox, tab_tip_text)
 
 class StreamTabFrame(TabFrame):
    def forall(self, widget, f, *args):
@@ -2172,7 +2170,7 @@ class StreamTabFrame(TabFrame):
       TabFrame.__init__(self, scg, frametext, q_tabs, tabtype, indicatorlist, tab_tip_text)
 
       outerframe = gtk.Frame()
-      scg.parent.tooltips.set_tip(outerframe, _('Perform operations on multiple servers in unison.'))
+      set_tip(outerframe, _('Perform operations on multiple servers in unison.'))
       outerframe.set_border_width(8)
       outerframe.set_shadow_type(gtk.SHADOW_OUT)
       gvbox = gtk.VBox()
