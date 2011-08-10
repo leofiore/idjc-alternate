@@ -32,6 +32,9 @@ README.gz: README
 ChangeLog.gz: ChangeLog
 	@ gzip -c $? >$@
 
+clean-local:
+	rm -f ChangeLog.gz README.gz NEWS.gz AUTHORS.gz idjc.desktop idjcctrl idjc
+
 # Too lazy to manually claw this out from the source tree.
 dtdist:
 	make dist

@@ -6,3 +6,5 @@ pixmapsdir = ${prefix}/share/pixmaps
 idjc.png: icon.png
 	@cp $? $@
 
+clean-local:
+	rm -f idjc.png

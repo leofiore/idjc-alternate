@@ -6,3 +6,6 @@ idjc.1: idjc.1_
 
 idjcctrl.1: idjcctrl.1_
 	@sed -e 's|VERSION|${PACKAGE_NAME}-${PACKAGE_VERSION}|' $? >$@
+
+clean-local:
+	rm -f idjc.1 idjcctrl.1
