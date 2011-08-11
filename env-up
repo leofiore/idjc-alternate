@@ -11,7 +11,7 @@ function check {
 	done
 }
 
-check autoreconf libtool
+check autoreconf libtool autopoint
 
 
 echo "remaking missing files in build environment"
