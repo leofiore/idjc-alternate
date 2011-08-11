@@ -197,8 +197,8 @@ AC_ARG_ENABLE([static],AC_HELP_STRING([--disable-static],[build with shared libs
 
 if test x$static = "xyes" ; then
    AC_CONFIG_SUBDIRS([libshout])
-   AC_SUBST([LIBSHOUT_CFLAGS],['-I$(top_srcdir)/libshout/include/shout'])
-   AC_SUBST([LIBSHOUT_LIBS],['$(top_srcdir)/libshout/src/.libs/libshout.a'])
+   AC_SUBST([LIBSHOUT_CFLAGS],['-I$(top_builddir)/libshout/include/shout'])
+   AC_SUBST([LIBSHOUT_LIBS],['$(top_builddir)/libshout/src/.libs/libshout.a'])
    AC_SUBST([MAYBE_LIBSHOUT],[libshout])
    AC_SUBST([ENH_SHOUT],[1])
    AC_DEFINE([ENH_SHOUT],[1],[Set if using an enhanced libshout])

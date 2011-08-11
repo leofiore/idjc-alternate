@@ -2,6 +2,10 @@
 
 Added GNU gettext i18n.
 
+Code refactored in c/audiofeed.c. No longer assumes both jack client IDs to be of the same length.
+
+Changes made to the build system so that it now passes the "make distcheck" test.
+
 Mouseover popup of the main media players now indicates the album if that metadata is available.
 
 GUI remembers previous window maximized state as well as the unmaximised size.
