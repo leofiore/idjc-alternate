@@ -2318,7 +2318,9 @@ class MainWindow:
       sg3.add_widget(frame)
       
       self.listen_stream.connect("toggled", self.cb_toggle, "stream-mon")
-      set_tip(smvbox, _("In IDJC there are are two audio paths and this 'Monitor Mix' control toggles between them. When 'Stream' is active you can hear what the listeners are hearing including the effects of the crossfader. 'Monitor Mix' needs to be set to 'DJ' in order to make proper use of the VOIP features."))
+      # TC: Context {0}, {1}, {2} = Monitor Mix, Stream, DJ
+      # TC: Or whatever they become translated to.
+      set_tip(smvbox, _("In IDJC there are are two audio paths and this '{0}' control toggles between them. When '{1}' is active you can hear what the listeners are hearing including the effects of the crossfader. '{0}' needs to be set to '{2}' in order to make proper use of the VoIP features.".format(_("Monitor Mix"), _("Stream"), _("DJ"))))
       
       cross_sizegroup.add_widget(smhbox)
       self.crossbox.pack_start(smvbox, False, False, 0)
