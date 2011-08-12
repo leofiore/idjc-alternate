@@ -2115,7 +2115,7 @@ class RecordTab(Tab):
 
 class TabFrame(ModuleFrame):
    def __init__(self, scg, frametext, q_tabs, tabtype, indicatorlist, tab_tip_text):
-      ModuleFrame.__init__(self, frametext)
+      ModuleFrame.__init__(self, " %s " % frametext)
       self.notebook = gtk.Notebook()
       self.notebook.set_border_width(8)
       self.vbox.add(self.notebook)
@@ -2703,12 +2703,12 @@ class SourceClientGui:
       vbox.set_spacing(10)
       self.window.add(vbox)
       
-      self.recordtabframe = TabFrame(self, _(' Record '), PGlobs.num_recorders, RecordTab, (
+      self.recordtabframe = TabFrame(self, _('Record'), PGlobs.num_recorders, RecordTab, (
                                                                 ("clear", "led_unlit_clear_border_64x64"),
                                                                 ("amber", "led_lit_amber_black_border_64x64"),
                                                                 ("red", "led_lit_red_black_border_64x64")),
                                                                 _('Each one of these tabs represents a separate stream recorder. The LED indicator colours represent the following: Clear=Stopped Yellow=Paused Red=Recording.'))
-      self.streamtabframe = StreamTabFrame(self, _(' Stream '), PGlobs.num_streamers, StreamTab, (
+      self.streamtabframe = StreamTabFrame(self, _('Stream'), PGlobs.num_streamers, StreamTab, (
                                                                 ("clear", "led_unlit_clear_border_64x64"),
                                                                 ("amber", "led_lit_amber_black_border_64x64"),
                                                                 ("green", "led_lit_green_black_border_64x64")),

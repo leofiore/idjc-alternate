@@ -212,6 +212,8 @@ class MicOpener(gtk.HBox):
          self.force_all_on(True)
             
       if not self.mic2button:
+         # TC: A textual placeholder for microphone opener buttons.
+         # TC: If the user is reading this text then all microphones have been deactivated.
          l = gtk.Label(_('No Microphones'))
          l.set_sensitive(False) # It just looks better that way.
          self.add(l)
@@ -830,7 +832,7 @@ class MicMeter(gtk.VBox):
       lhbox.pack_start(self.led, False, False)
       self.set_led(False)
       self.led.show()
-      labeltext = labelbasetext + str(index)
+      labeltext = labelbasetext + " " + str(index)
       label = gtk.Label(labeltext)
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, len(labeltext)))
@@ -892,9 +894,11 @@ class RecIndicator(gtk.HBox):
 class RecordingPanel(gtk.VBox):
    def __init__(self, howmany):
       gtk.VBox.__init__(self)
-      label = gtk.Label(_(' Record '))
+      
+      # TC: Record as in, to make a recording.
+      label = gtk.Label(" %s " % _('Record'))
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, len(_(' Record '))))
+      attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, len(label.get_text())))
       label.set_attributes(attrlist)
       self.pack_start(label)
       label.show()
@@ -939,25 +943,24 @@ class idjc_shutdown_dialog:
       dialog.destroy()
 
    def __init__(self, window_group = None, actionyes = None, actionno = None, additional_text = None):
-      dialog = gtk.Dialog(_('IDJC Shutdown'), None, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_QUIT, gtk.RESPONSE_OK))
+      dialog = gtk.Dialog(pm.title_extra.strip(), None, gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_QUIT, gtk.RESPONSE_OK))
       if window_group is not None:
          window_group.add_window(dialog)
-      dialog.set_icon_from_file(FGlobs.pkgdatadir / "icon.png")
       dialog.set_resizable(False)
       dialog.connect("close", self.respond, actionyes, actionno)
       dialog.connect("response", self.respond, actionyes, actionno)
       dialog.connect("window-state-event", self.window_attn)
+      dialog.set_border_width(6)
+      dialog.vbox.set_spacing(12)
       
       hbox = gtk.HBox(False, 20)
-      hbox.set_border_width(20)
-      dialog.vbox.pack_start(hbox, True, True, 0)
-      hbox.show()
-      image = gtk.Image()
-      image.set_from_stock(gtk.STOCK_DIALOG_QUESTION, gtk.ICON_SIZE_DIALOG)
-      hbox.pack_start(image, True, True, 0)
-      image.show()
+      hbox.set_spacing(12)
+      dialog.get_content_area().add(hbox)
+      image = gtk.image_new_from_stock(gtk.STOCK_DIALOG_WARNING, gtk.ICON_SIZE_DIALOG)
+      image.set_alignment(0.5, 0)
+      hbox.pack_start(image, False)
+
       vbox = gtk.VBox()
-      vbox.set_spacing(8)
       hbox.pack_start(vbox, True, True, 0)
       vbox.show()
       
@@ -966,13 +969,10 @@ class idjc_shutdown_dialog:
             additional_text = additional_text.splitlines()
          for each in additional_text:
             label = gtk.Label()
-            attrlist = pango.AttrList()
-            attrlist.insert(pango.AttrSize(12500, 0, len(each)))
-            label.set_attributes(attrlist)
-            label.set_text(each)
-            vbox.add(label)
-            label.show()
-      dialog.show()
+            label.set_alignment(0.0, 0.5)
+            label.set_markup(each)
+            vbox.pack_start(label, False)
+      dialog.show_all()
 
 
 class MainWindow:
@@ -1522,14 +1522,20 @@ class MainWindow:
       sys.exit(0)
 
    def delete_event(self, widget, event, data=None):
-      if self.server_window.is_streaming:
-         idjc_shutdown_dialog(self.window_group, self.destroy, None, (_('IDJC is currently streaming.'), _('Do you really want to quit?')))
-         return True
+      qm = ["<span size='12000' weight='bold'>%s</span>" % _("Confirmation to quit IDJC is required."), ""]
+      
+      if self.server_window.is_streaming and self.server_window.is_recording:
+         qm.append(_("All active recordings and radio streams will terminate."))
+      elif self.server_window.is_streaming:
+         qm.append(_("All of the active radio streams will terminate."))
       elif self.server_window.is_recording:
-         idjc_shutdown_dialog(self.window_group, self.destroy, None, (_('IDJC is currently recording.'), _('Do you really want to quit?')))
-         return True
-      self.destroy()
-      return False
+         qm.append(_("All active recordings will cease."))
+      else:
+         self.destroy()
+         return False
+      
+      idjc_shutdown_dialog(self.window_group, self.destroy, None, qm)
+      return True
 
    # all mixer write operations should go through here so that broken pipes can be handled properly
    def mixer_write(self, message, flush = False, nowrite = False):
@@ -2106,7 +2112,8 @@ class MainWindow:
       self.aux_select.connect("toggled", self.cb_toggle, "Aux Open")
       self.hbox10.pack_start(self.aux_select)
       self.aux_select.show()
-      set_tip(self.aux_select, _('Mix auxiliary audio to the output stream. See also Prefs->JACK Ports Aux L and Aux R.'))
+      # TC: aux_in_{l,r} is a contraction of aux_in_l and aux_in_r.
+      set_tip(self.aux_select, _('Mix auxiliary audio to the output stream. See also Prefs->JACK Ports->aux_in_{l,r}.'))
       
       # microphone open/unmute dynamic widget cluster thingy
       self.mic_opener = MicOpener(self, self.flash_test)
@@ -2125,7 +2132,7 @@ class MainWindow:
       self.advance.connect("clicked", self.callback, "Advance")
       self.hbox10.pack_end(self.advance)
       self.advance.show()
-      set_tip(self.advance, _('This button either starts the currently highlighted track playing or stops the currently playing one and highlights the next track.'))
+      set_tip(self.advance, _('This button steps through the active playlist, pausing between tracks. Active is defined by the placement of the crossfader.'))
       
       # we are done messing with hbox7 so lets show it
       self.hbox7.show()
@@ -2251,6 +2258,7 @@ class MainWindow:
       self.history_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
       
       history_clear_box = gtk.HBox()
+      # TC: Popup menu item, wipes away the tracks played history text.
       self.history_clear = gtk.Button(" " + _('Remove Contents') + " ")
       self.history_clear.connect("clicked", self.callback, "Clear History") 
       history_clear_box.pack_start(self.history_clear, True, False, 0)
@@ -2568,7 +2576,8 @@ class MainWindow:
       stream_vu_box.show()
       set_tip(stream_vu_box, _('A VU meter for the stream audio.'))
        
-      self.mic_meters = [MicMeter("Mic ", i) for i in range(1, PGlobs.num_micpairs * 2 + 1)]
+      # TC: Appears above the mic meters as a label followed by a number.
+      self.mic_meters = [MicMeter(_("Mic"), i) for i in range(1, PGlobs.num_micpairs * 2 + 1)]
       if len(self.mic_meters) <= 4:
          for meter in self.mic_meters:
             self.micmeterbox.pack_start(meter)
@@ -2672,17 +2681,20 @@ class MainWindow:
       sep = gtk.SeparatorMenuItem()
       sep.show()
       view_menu.append(sep)
-      
+    
+      # TC: The preferences window's opener button text.
       menu_prefs = gtk.MenuItem(_('Prefs'))
       menu_prefs.connect("activate", self.callback, "Prefs")
       menu_prefs.show()
       view_menu.append(menu_prefs)
       
+      # TC: The output window's opener button text.
       menu_server = gtk.MenuItem(_('Output'))
       menu_server.connect("activate", self.callback, "Server")
       menu_server.show()
       view_menu.append(menu_server)
       
+      # TC: The jingles window's opener button text.
       menu_jingles = gtk.MenuItem(_('Jingles'))
       menu_jingles.connect("activate", self.callback, "Jingles")
       menu_jingles.show()
@@ -2691,6 +2703,7 @@ class MainWindow:
       # menu for closing prefs, server, jingles
 
       self.close_menu = gtk.Menu()
+      # TC: Popup menu text for the close action on a window opener button.
       close_menu_item = gtk.MenuItem(_('Close'))
       self.close_menu.add(close_menu_item)
       self.close_menu.show()
