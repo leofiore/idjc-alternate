@@ -2132,7 +2132,7 @@ class MainWindow:
       self.advance.connect("clicked", self.callback, "Advance")
       self.hbox10.pack_end(self.advance)
       self.advance.show()
-      set_tip(self.advance, _('This button steps through the active playlist, pausing between tracks. Active is defined by the placement of the crossfader.'))
+      set_tip(self.advance, _('This button steps through the active playlist, pausing between tracks. The active playlist is defined by the placement of the crossfader.'))
       
       # we are done messing with hbox7 so lets show it
       self.hbox7.show()
@@ -2232,6 +2232,7 @@ class MainWindow:
       # A track history window to help with announcements
 
       history_expander_hbox = gtk.HBox()
+      # Expander widget text for showing a list of tracks that were recently played.
       self.history_expander = gtk.expander_new_with_mnemonic(_('Tracks Played'))
       history_expander_hbox.pack_start(self.history_expander, True, True, 6)
       self.history_expander.connect("notify::expanded", self.expandercallback)
@@ -2313,9 +2314,13 @@ class MainWindow:
       frame = gtk.Frame()
       frame.set_shadow_type(gtk.SHADOW_NONE)
       smhbox = gtk.HBox()
+      # TC: IDJC creates two audio mixes with DJ being the name of one of them.
+      # TC: The DJ mix is strictly for the DJ and allows for off air VoIP chat and pre-listening.
       self.listen_dj = gtk.RadioButton(None, _('DJ'))
       smhbox.add(self.listen_dj)
       self.listen_dj.show()
+      # TC: IDJC creates two audio mixes with Stream being the name of one of them.
+      # TC: The Stream mix is the one the listeners hear.
       self.listen_stream = gtk.RadioButton(self.listen_dj, _('Stream'))
       smhbox.add(self.listen_stream)
       self.listen_stream.show()
@@ -2336,6 +2341,7 @@ class MainWindow:
 
       # metadata source selector combo box
       mvbox = gtk.VBox()
+      # TC: Dropdown box title text. Track metadata is derived from the source selected by a drop down box.
       label = gtk.Label(_('Metadata Source'))
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(8000, 0, len(_('Metadata Source'))))
@@ -2343,10 +2349,15 @@ class MainWindow:
       mvbox.add(label)
       label.show()
       self.metadata_source = gtk.combo_box_new_text()
+      # TC: The chosen source of track metadata.
       self.metadata_source.append_text(_('Left Player'))
+      # TC: The chosen source of track metadata.
       self.metadata_source.append_text(_('Right Player'))
+      # TC: The chosen source of track metadata.
       self.metadata_source.append_text(_('Last Played'))
+      # TC: The chosen source of track metadata.
       self.metadata_source.append_text(_('Crossfader'))
+      # TC: The chosen source of track metadata. In this case no metadata.
       self.metadata_source.append_text(_('None'))
       self.metadata_source.set_active(3)
       cross_sizegroup.add_widget(self.metadata_source)
@@ -2360,6 +2371,7 @@ class MainWindow:
       sg3.add_widget(self.metadata_source)
       
       plvbox = gtk.VBox()
+      # TC: Abbreviation of left.
       label = gtk.Label(_('L'))
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(8000, 0, len(_('L'))))
@@ -2394,6 +2406,7 @@ class MainWindow:
       set_tip(cvbox, _('The crossfader.'))
 
       prvbox = gtk.VBox()
+      # TC: Abbreviation of right.
       label = gtk.Label(_('R'))
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(8000, 0, len(_('R'))))
@@ -2413,6 +2426,7 @@ class MainWindow:
       sg4 = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
       
       passbox = gtk.VBox()
+      # TC: Describes a mid point.
       label = gtk.Label(_('Middle'))
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(8000, 0, len(_('Middle'))))
@@ -2439,6 +2453,7 @@ class MainWindow:
       sg4.add_widget(self.passmidright)
       
       pvbox = gtk.VBox()
+      # TC: The attenuation response curve of the crossfader. User selectable.
       label = gtk.Label(_('Response'))
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(8000, 0, len(_('Response'))))
@@ -2471,6 +2486,7 @@ class MainWindow:
       passbox.set_spacing(2)
       
       tvbox = gtk.VBox()
+      # TC: The time taken for a full sweep of the crossfader when the user hits the crossfader pass button.
       label = gtk.Label(_('Time'))
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(8000, 0, len(_('Time'))))
@@ -2496,6 +2512,7 @@ class MainWindow:
       sg4.add_widget(psvbox)
       
       pvbox = gtk.VBox()
+      # TC: The crossfader pass-across button text. The actual button appears as [<-->] with this text above it.
       label = gtk.Label(_('Pass'))
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(8000, 0, len(_('Pass'))))
@@ -2549,7 +2566,8 @@ class MainWindow:
       self.micmeterbox.show()
       
       self.str_l_peak = peakholdmeter()
-      self.str_r_peak = peakholdmeter() 
+      self.str_r_peak = peakholdmeter()
+      # TC: This text appears above the stream mix peak level meter.
       self.stream_peak_box = make_meter_unit(_('Str Peak'), self.str_l_peak, self.str_r_peak)
       self.streammeterbox.pack_start(self.stream_peak_box)
       self.stream_peak_box.show()
@@ -2571,6 +2589,7 @@ class MainWindow:
 
       self.str_l_rms_vu = vumeter()
       self.str_r_rms_vu = vumeter()
+      # TC: This text appears above the stream mix VU meter.
       stream_vu_box = make_meter_unit(_('Str VU'), self.str_l_rms_vu, self.str_r_rms_vu)
       self.streammeterbox.pack_start(stream_vu_box)
       stream_vu_box.show()
@@ -2600,55 +2619,31 @@ class MainWindow:
       self.app_menu.show()
       self.window.connect_object("event", self.menu_activate, self.app_menu)
       
-      aboutimg = gtk.Image()
-      aboutimg.set_from_stock(gtk.STOCK_ABOUT, gtk.ICON_SIZE_MENU)
-      aboutimg.show()
-      aboutlabel = gtk.Label("About")
-      aboutlabel.show()
-      aboutbox = gtk.HBox()
-      aboutbox.show()
-      aboutbox.pack_start(aboutimg, False, False, 0)
-      aboutbox.pack_start(aboutlabel, False, False, 0)
-      menu_about = gtk.MenuItem(None, False)
+      menu_about = gtk.ImageMenuItem(gtk.STOCK_ABOUT)
       menu_about.connect("activate", self.callback, "Show about")
       menu_about.show()
-      menu_about.add(aboutbox)
+      # TC: Menu item to show the standard application "About" feature.
+      menu_about.set_label(_("About"))
       self.app_menu.append(menu_about)
       
       sep = gtk.SeparatorMenuItem()
       sep.show()
       self.app_menu.append(sep)
-      
-      viewimg = gtk.Image()
-      viewimg.show()
-      viewlabel = gtk.Label("View")
-      viewlabel.show()
-      viewbox = gtk.HBox()
-      viewbox.show()
-      viewbox.pack_start(viewimg, False, False, 8)
-      viewbox.pack_start(viewlabel, False, False, 0)
-      menu_view = gtk.MenuItem(None, False)
+
+      # TC: The View submenu text, allows certain user interface features to be shown/hidden from view.
+      menu_view = gtk.MenuItem(_("View"))
       menu_view.show()
-      menu_view.add(viewbox)
       self.app_menu.append(menu_view)
      
       sep = gtk.SeparatorMenuItem()
       sep.show()
       self.app_menu.append(sep)
       
-      quitimg = gtk.Image()
-      quitimg.set_from_stock(gtk.STOCK_QUIT, gtk.ICON_SIZE_MENU)
-      quitimg.show()
-      quitlabel = gtk.Label("Quit")
-      quitlabel.show()
-      quitbox = gtk.HBox()
-      quitbox.show()
-      quitbox.pack_start(quitimg, False, False, 0)
-      quitbox.pack_start(quitlabel, False, False, 0)
-      menu_quit = gtk.MenuItem(None, False)
+      menu_quit = gtk.ImageMenuItem(gtk.STOCK_QUIT)
+      # TC: Menu item to Quit the program.
+      menu_quit.set_label(_("Quit"))
       menu_quit.connect_object("activate", self.delete_event, self.window, None)
       menu_quit.show()
-      menu_quit.add(quitbox)
       self.app_menu.append(menu_quit)
 
       # The view submenu of app_menu
@@ -2659,19 +2654,24 @@ class MainWindow:
       menu_str_meters = gtk.CheckMenuItem()
       menu_str_meters.show()
       view_menu.append(menu_str_meters)
+      # TC: Menu text for toggling the visibility of information display widgets pertaining to this set of items.
+      # TC: Part of the View submenu.
       self.str_meters_action = gtk.ToggleAction(None, _('Stream Audio Levels And Connections'), None, None)
       self.str_meters_action.connect_proxy(menu_str_meters)
 
       menu_mic_meters = gtk.CheckMenuItem()
       menu_mic_meters.show()
       view_menu.append(menu_mic_meters)
+      # TC: Menu text for toggling the visibility of the audio levels of the microphones.
+      # TC: Part of the View submenu.
       self.mic_meters_action = gtk.ToggleAction(None, _('Microphone Meters'), None, None)
       self.mic_meters_action.connect_proxy(menu_mic_meters)
       
       sep = gtk.SeparatorMenuItem()
       sep.show()
       view_menu.append(sep)
-      
+
+      # TC: Menu item that allows toggling in and out of fully featured mode.
       self.menu_feature_set = gtk.CheckMenuItem(_('Fully Featured'))
       self.menu_feature_set.set_active(True)
       self.menu_feature_set.connect("activate", self.callback, "Features")
