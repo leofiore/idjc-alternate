@@ -158,6 +158,7 @@ class MediaPane(gtk.Frame):
    @staticmethod
    def cell_show_unknown(column, renderer, model, iter, cell):
       if model.get_value(iter, cell) == "":
+         # TC: Placeholder for unknown data.
          renderer.set_property("text", _('<unknown>'))
    
    @staticmethod
@@ -352,7 +353,8 @@ class MediaPane(gtk.Frame):
       self.tree_collapse.show()
       
       buttonbox.show()
-      
+
+      # TC: Refers to the tree view of the tracks database.
       self.treeview, self.treescroll, self.treealt = makeview(self.notebook, _('Tree'), buttonbox)
       self.treeview.set_enable_tree_lines(True)
       self.treeview.set_rubber_banding(True)
@@ -366,10 +368,13 @@ class MediaPane(gtk.Frame):
       self.treeview.set_model(self.treestore)
       self.treecols = makecolumns(self.treeview, (
             ("%s - %s - %s" % (_('Artist'), _('Album'), _('Title')), 1, self.cell_show_unknown, 180),
+            # TC: The album track number.
             (_('Track'), 2, self.cell_ralign, -1),
+            # TC: Track playback time.
             (_('Duration'), 3, self.cond_cell_secs_to_h_m_s, -1),
             (_('Bitrate'), 4, self.cell_ralign, -1),
             (_('Filename'), 5, None, 100),
+            # TC: Directory path to a file.
             (_('Path'), 6, None, -1),
             ))
       
@@ -380,6 +385,7 @@ class MediaPane(gtk.Frame):
       vbox = gtk.VBox()
       vbox.set_border_width(20)
       vbox.set_spacing(20)
+      # TC: Shown with a progress bar as the database tree view is being built.
       label = gtk.Label(_('Populating'))
       vbox.pack_start(label, False, False, 0)
       self.tree_pb = gtk.ProgressBar()
@@ -390,7 +396,8 @@ class MediaPane(gtk.Frame):
       self.tree_idle = None
       
       # flat gui
-      filterframe = gtk.Frame(_(' Filters '))
+      # TC: The user enters search filter text here e.g. fuzzy match text or a more formal SQL search filtering term. 
+      filterframe = gtk.Frame(" %s " % _('Filters'))
       filterframe.set_shadow_type(gtk.SHADOW_OUT)
       filterframe.set_border_width(1)
       filterframe.set_label_align(0.5, 0.5)
@@ -404,6 +411,7 @@ class MediaPane(gtk.Frame):
       fuzzyhbox = gtk.HBox()
       filtervbox.pack_start(fuzzyhbox, False, False, 0)
       fuzzyhbox.show()
+      # TC: A fuzzy search e.g. 'Metal' searches for metal in artists titles, and albums. 
       fuzzylabel = gtk.Label(_('Fuzzy Search'))
       fuzzyhbox.pack_start(fuzzylabel, False, False, 0)
       fuzzylabel.show()
@@ -415,6 +423,7 @@ class MediaPane(gtk.Frame):
       wherehbox = gtk.HBox()
       filtervbox.pack_start(wherehbox, False, False, 0)
       wherehbox.show()
+      # TC: User may type in an SQL query as is applicable after the WHERE keyword.
       wherelabel = gtk.Label(_('WHERE'))
       wherehbox.pack_start(wherelabel, False, False, 0)
       wherelabel.show()
@@ -465,7 +474,8 @@ class Prefs(gtk.Frame):
       self.prokpassword.set_sensitive(sens)
       self.prok_led_image.set_from_pixbuf(self.led["green" if state else "clear"])
       if state:
-         self.main.topleftpane.activate(self.db, _(' P3 Database View (%s) ') % self.prokdatabase.get_text())
+         # TC: P3 refers to Prokyon3, a program which scans and records music collections.
+         self.main.topleftpane.activate(self.db, " %s " % (_('P3 Database View (%s)') % self.prokdatabase.get_text()))
       else:
          self.main.topleftpane.deactivate()
          
@@ -537,6 +547,7 @@ class Prefs(gtk.Frame):
       else:
          vbox = gtk.VBox()
          vbox.set_border_width(3)
+         # TC: shown when the dependency is missing.
          label = gtk.Label(_('Python module MySQLdb required'))
          vbox.add(label)
          label.show()
@@ -548,27 +559,27 @@ class Prefs(gtk.Frame):
       table.set_col_spacing(0, 2)
       table.set_col_spacing(1, 10)
       table.set_col_spacing(2, 2)
-      hostlabel = self.rjustlabel(_('Hostname:'))
+      hostlabel = self.rjustlabel(_('Hostname'))
       table.attach(hostlabel, 0, 1, 0, 1, gtk.SHRINK | gtk.FILL)
       hostlabel.show()
       self.prokhostname = DefaultEntry("localhost", True)
       table.attach(self.prokhostname, 1, 4, 0, 1)
       self.prokhostname.show()
-      userlabel = self.rjustlabel(_('User:'))
+      userlabel = self.rjustlabel(_('User'))
       table.attach(userlabel, 0, 1, 1, 2, gtk.SHRINK | gtk.FILL)
       userlabel.show()
       self.prokuser = DefaultEntry("prokyon", True)
       self.prokuser.set_size_request(30, -1)
       table.attach(self.prokuser, 1, 2, 1, 2)
       self.prokuser.show()
-      databaselabel = self.rjustlabel(_('Database:'))
+      databaselabel = self.rjustlabel(_('Database'))
       table.attach(databaselabel, 2, 3, 1, 2, gtk.SHRINK | gtk.FILL)
       databaselabel.show()
       self.prokdatabase = DefaultEntry("prokyon", True)
       self.prokdatabase.set_size_request(30, -1)
       table.attach(self.prokdatabase, 3, 4, 1, 2)
       self.prokdatabase.show()
-      passwordlabel = self.rjustlabel(_('Password:'))
+      passwordlabel = self.rjustlabel(_('Password'))
       table.attach(passwordlabel, 0, 1, 2, 3, gtk.SHRINK | gtk.FILL)
       passwordlabel.show()
       self.prokpassword = DefaultEntry("prokyon", True)
@@ -576,6 +587,7 @@ class Prefs(gtk.Frame):
       self.prokpassword.set_visibility(False)
       table.attach(self.prokpassword, 1, 2, 2, 3)
       self.prokpassword.show()
+      # TC: Button text, cause connection to the selected database.
       self.proktoggle = gtk.ToggleButton(_('Database Connect'))
       self.proktoggle.set_size_request(10, -1)
       self.proktoggle.connect("toggled", self.cb_proktoggle)

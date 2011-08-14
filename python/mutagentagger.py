@@ -357,6 +357,7 @@ class ID3Tagger(MutagenTagger):
       self.tag_frame = FreeTagFrame()
       set_tip(self.tag_frame, _('Add any other ID3 text frames here.\ne.g. TIT2:Alternate Title\nThis will be appended onto the main TIT2 tag.\n\nEnter user defined text frames like this:\nTXXX:foo=bar\n\nFor more information visit www.id3.org.'))
       self.tag_frame.set_border_width(5)
+      # TC: Remaining textual ID3 data is show below this heading.
       self.tag_frame.set_label(_(' Additional Text Frames '))
       self.add(self.tag_frame)
       self.tag_frame.show()
@@ -675,6 +676,7 @@ class MutagenGUI:
       if idjcroot is not None:
          idjcroot.window_group.add_window(self.window)
       self.window.set_size_request(550, 450)
+      # TC: Window title.
       self.window.set_title(_('IDJC Tagger') + pm.title_extra)
       self.window.set_destroy_with_parent(True)
       self.window.set_border_width(9)

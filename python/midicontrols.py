@@ -1392,7 +1392,7 @@ class BindingEditor(gtk.Dialog):
         action_pane.pack_start(row3, False, False)
         action_pane.show_all()
         # TC: Frame heading. Contents pertain to what action occurs for a specific input.
-        action_frame= gtk.Frame(_(" %s " % _('Action')))
+        action_frame= gtk.Frame(" %s " % _('Action'))
         action_frame.set_border_width(4)
         action_frame.add(action_pane)
         action_pane.show()
