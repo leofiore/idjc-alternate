@@ -722,45 +722,49 @@ class MutagenGUI:
       vbox.pack_start(notebook, True, True, 0)
       notebook.show()
       
-      self.ape = ApeTagger(pathname, extension)
-      
-      if extension == "mp3":
-         self.id3 = ID3Tagger(pathname, True)
-         self.native = None
-      else:
-         self.id3 = ID3Tagger(pathname, False)
-         if extension in ("mp4", "m4a", "m4b", "m4p"):
-            self.native = MP4Tagger(pathname)
-         elif extension == "wma":
-            self.native = WMATagger(pathname)
-         elif extension in ("ape", "mpc"):
-            # APE tags are native to this format.
+      try:
+         self.ape = ApeTagger(pathname, extension)
+         
+         if extension == "mp3":
+            self.id3 = ID3Tagger(pathname, True)
             self.native = None
          else:
-            self.native = NativeTagger(pathname, ext=extension)
-      
-      if self.id3 is not None and self.id3.tag is not None:
-         reload_button.connect("clicked", lambda x: self.id3.load_tag())
-         apply_button.connect("clicked", lambda x: self.id3.save_tag())
-         label = gtk.Label("ID3")
-         notebook.append_page(self.id3, label)
-         self.id3.show()
-      
-      if self.ape is not None and self.ape.tag is not None:
-         reload_button.connect("clicked", lambda x: self.ape.load_tag())
-         apply_button.connect("clicked", lambda x: self.ape.save_tag())
-         label = gtk.Label("APE v2")
-         notebook.append_page(self.ape, label)
-         self.ape.show()   
-      
-      if self.native is not None and self.native.tag is not None:
-         reload_button.connect("clicked", lambda x: self.native.load_tag())
-         apply_button.connect("clicked", lambda x: self.native.save_tag())
-         label = gtk.Label(_('Native') + " (" + self.ext2name[extension] + ")")
-         notebook.append_page(self.native, label)
-         self.native.show()
-      
-      reload_button.clicked()
+            self.id3 = ID3Tagger(pathname, False)
+            if extension in ("mp4", "m4a", "m4b", "m4p"):
+               self.native = MP4Tagger(pathname)
+            elif extension == "wma":
+               self.native = WMATagger(pathname)
+            elif extension in ("ape", "mpc"):
+               # APE tags are native to this format.
+               self.native = None
+            else:
+               self.native = NativeTagger(pathname, ext=extension)
+         
+         if self.id3 is not None and self.id3.tag is not None:
+            reload_button.connect("clicked", lambda x: self.id3.load_tag())
+            apply_button.connect("clicked", lambda x: self.id3.save_tag())
+            label = gtk.Label("ID3")
+            notebook.append_page(self.id3, label)
+            self.id3.show()
+         
+         if self.ape is not None and self.ape.tag is not None:
+            reload_button.connect("clicked", lambda x: self.ape.load_tag())
+            apply_button.connect("clicked", lambda x: self.ape.save_tag())
+            label = gtk.Label("APE v2")
+            notebook.append_page(self.ape, label)
+            self.ape.show()   
+         
+         if self.native is not None and self.native.tag is not None:
+            reload_button.connect("clicked", lambda x: self.native.load_tag())
+            apply_button.connect("clicked", lambda x: self.native.save_tag())
+            label = gtk.Label(_('Native') + " (" + self.ext2name[extension] + ")")
+            notebook.append_page(self.native, label)
+            self.native.show()
+         
+         reload_button.clicked()
 
-      apply_button.connect_object_after("clicked", gtk.Window.destroy, self.window)
-      self.window.show()
+         apply_button.connect_object_after("clicked", gtk.Window.destroy, self.window)
+         self.window.show()
+      except IOError as e:
+         print e
+         self.window.destroy()
