@@ -872,6 +872,86 @@ class Tab(gtk.VBox):
       gtk.VBox.set_border_width(self, 8)
       gtk.VBox.show(self)
 
+
+
+class Troubleshooting(gtk.VBox):
+   def __init__(self):
+      gtk.VBox.__init__(self)
+      self.set_border_width(6)
+      self.set_spacing(8)
+      
+      hbox = gtk.HBox()
+      hbox.set_spacing(4)
+      # TC: user agents are strings that internet clients use to identify themselves to a server.
+      # TC: typically application name, version, maybe a capabilities list.
+      self.custom_user_agent = gtk.CheckButton(_("Custom user agent string"))
+      self.custom_user_agent.connect("toggled", self._on_custom_user_agent)
+      hbox.pack_start(self.custom_user_agent, False)
+      self.user_agent_entry = HistoryEntry()
+      self.user_agent_entry.set_sensitive(False)
+      hbox.pack_start(self.user_agent_entry)
+      self.pack_start(hbox, False)
+      set_tip(hbox, _("Set this on the occasion that the server or its firewall specifically refuses to allow libshout based clients."))
+      
+      frame = gtk.Frame()
+      self.automatic_reconnection = gtk.CheckButton(_("Reconnect to the server when the connection is broken"))
+      self.automatic_reconnection.set_active(True)
+      frame.set_label_widget(self.automatic_reconnection)
+      self.pack_start(frame, False)
+      
+      reconbox = gtk.HBox()
+      reconbox.set_border_width(6)
+      reconbox.set_spacing(4)
+      frame.add(reconbox)
+      # TC: Label for a comma separated list of delay times.
+      reconlabel = gtk.Label(_("Delay times"))
+      reconbox.pack_start(reconlabel, False)
+      self.reconnection_times = HistoryEntry(initial_text=("10,10,60", "5"), store_blank=False)
+      set_tip(self.reconnection_times, _("A comma separated list of delays in seconds between reconnection attempts. Note that bad values or values less than 5 will be interpreted as 5."))
+      reconbox.pack_start(self.reconnection_times, True)
+      # TC: A user specifed sequence is to be allowed to repeat itself indefinitely.
+      self.reconnection_repeat = gtk.CheckButton(_("Repeat"))
+      set_tip(self.reconnection_repeat, _("Repeat the sequence of delays indefinitely."))
+      reconbox.pack_start(self.reconnection_repeat, False)
+      # TC: User specifies no dialog box to be shown.
+      self.reconnection_quiet = gtk.CheckButton(_("Quiet"))
+      set_tip(self.reconnection_quiet, _("Keep the reconnection dialogue box hidden at all times."))
+      reconbox.pack_start(self.reconnection_quiet, False)
+      self.automatic_reconnection.connect("toggled", self._on_automatic_reconnection, reconbox)
+      
+      frame = gtk.Frame(" %s " % _("How to handle the stream buffer becoming full"))
+      sbfbox = gtk.VBox()
+      sbfbox.set_border_width(6)
+      sbfbox.set_spacing(1)
+      frame.add(sbfbox)
+      self.pack_start(frame, False)
+      
+      self.sbf_discard_audio = gtk.RadioButton(None, _("Discard audio data until the connection clears."))
+      self.sbf_reconnect = gtk.RadioButton(self.sbf_discard_audio, _("Reconnect to the server."))
+      for each in (self.sbf_discard_audio, self.sbf_reconnect):
+         sbfbox.pack_start(each, True, False)
+      
+      self.show_all()
+      
+      self.objects = {"custom_user_agent": (self.custom_user_agent, "active"),
+                     "user_agent_entry": (self.user_agent_entry, "history"),
+                     "automatic_reconnection": (self.automatic_reconnection, "active"),
+                     "reconnection_times": (self.reconnection_times, "history"),
+                     "reconnection_repeat": (self.reconnection_repeat, "active"),
+                     "reconnection_quiet": (self.reconnection_quiet, "active"),
+                     "sbf_reconnect": (self.sbf_reconnect, "active"),
+      }
+      
+      
+   def _on_custom_user_agent(self, widget):
+      self.user_agent_entry.set_sensitive(widget.get_active())
+      
+      
+   def _on_automatic_reconnection(self, widget, reconbox):
+      reconbox.set_sensitive(widget.get_active())
+
+
+
 class StreamTab(Tab):
    class ResampleFrame(SubcategoryFrame):
       def cb_eval(self, widget, data = None):
@@ -1873,10 +1953,17 @@ class StreamTab(Tab):
       label.show()
       vbox.show()
       
+      label = gtk.Label(_("Troubleshooting"))
+      self.troubleshooting = Troubleshooting()
+      self.details_nb.append_page(self.troubleshooting, label)
+      label.show()
+      
       label = gtk.Label("IRC")
       self.ircpane = IRCPane()
       self.details_nb.append_page(self.ircpane, label)
       label.show()
+
+      self.details_nb.set_current_page(0)
       
       self.stream_resample_frame.resample_no_resample.emit("clicked")   # bogus signal to update mp3 pane
       self.objects = {  "metadata"    : (self.metadata, "history"),
@@ -1933,7 +2020,12 @@ class StreamTab(Tab):
                         "action_play_which" : (self.start_player_action, "radioindex"),
                         "action_record_active" : (self.start_recorder_action, "active"),
                         "action_record_which" : (self.start_recorder_action, "radioindex"),
-                        "irc_data" : (self.ircpane, "marshall") }
+                        "irc_data" : (self.ircpane, "marshall"),
+                        "details_nb" : (self.details_nb, "current_page"),
+      }
+                        
+      self.objects.update(self.troubleshooting.objects)
+                        
       self.reconnection_dialog = ReconnectionDialog(self)
 
 class RecordTab(Tab):
@@ -2539,6 +2631,8 @@ class SourceClientGui:
                         rvalue = widget.get_history()
                      elif method == "radioindex":
                         rvalue = str(widget.get_radio_index())
+                     elif method == "current_page":
+                        rvalue = str(widget.get_current_page())
                      elif method == "directory":
                         rvalue = widget.get_filename() or ""
                      elif method == "filename":
@@ -2628,6 +2722,8 @@ class SourceClientGui:
                               elif method == "radioindex":
                                  if int_rvalue is not None:
                                     widget.set_radio_index(int_rvalue)
+                              elif method == "current_page":
+                                 widget.set_current_page(int_rvalue)
                               elif method == "text":
                                  widget.set_text(rvalue)
                               elif method == "password":
