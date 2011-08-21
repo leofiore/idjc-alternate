@@ -1,5 +1,7 @@
 * Changes in version 0.8.6 *
 
+Added new Troubleshooting tab in server configuration. This includes the new ability to set the user agent string.
+
 Added GNU gettext i18n.
 
 Code refactored in c/audiofeed.c. No longer assumes both jack client IDs to be of the same length.

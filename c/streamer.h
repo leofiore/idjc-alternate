@@ -31,6 +31,7 @@ struct streamer_vars
    char *mount;
    char *login;
    char *password;
+   char *useragent;
    char *dj_name;
    char *listen_url;
    char *description;

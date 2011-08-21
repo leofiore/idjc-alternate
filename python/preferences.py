@@ -56,51 +56,7 @@ class CSLEntry(gtk.Entry):
       self.connect("key-press-event", self.cb_keypress)
 
 
-
-class ReconnectionDialogConfig(gtk.Frame):
-   """Prefereneces for reconnection"""
-   def lj(self, widget, indent = 0):
-      hbox = gtk.HBox()
-      hbox.pack_start(widget, False, False, indent)
-      hbox.show_all()
-      return hbox
-   def __init__(self):
-      gtk.Frame.__init__(self, " " + _('Connection Management') + " ")
-      vbox = gtk.VBox()
-      vbox.set_border_width(8)
-      vbox.set_spacing(3)
-      self.add(vbox)
-      vbox.show()
-      
-      label = gtk.Label(_('Auto reconnect has...'))
-      vbox.add(self.lj(label))
-      
-      self.limited_delays = gtk.RadioButton(None, _('Delays of'))
-      self.csl = CSLEntry()
-      self.csl.set_text("10,10,60")
-      l1 = gtk.Label(_('seconds'))
-      line = gtk.HBox()
-      line.pack_start(self.limited_delays, False, False, 0)
-      line.pack_start(self.csl, True, True, 0)
-      line.pack_start(l1, False, False, 0)
-      vbox.add(self.lj(line, 20))
-      self.unlimited_retries = gtk.RadioButton(self.limited_delays, _('Unlimited retries of 5s delay'))
-      vbox.add(self.lj(self.unlimited_retries, 20))
-      self.visible = gtk.CheckButton(_('Show reconnection dialog on screen'))
-      self.visible.set_active(True)
-      vbox.add(self.lj(self.visible))
-      sep = gtk.HSeparator()
-      vbox.add(sep)
-      sep.show()
-      l2 = gtk.Label(_('When the stream buffer is full...'))
-      vbox.add(self.lj(l2))
-      self.discard_data = gtk.RadioButton(None, _('Discard data'))
-      self.attempt_reconnection = gtk.RadioButton(self.discard_data, _('Attempt reconnection'))
-      vbox.add(self.lj(self.discard_data, 20))
-      vbox.add(self.lj(self.attempt_reconnection, 20))
-
-
-   
+  
 class AGCControl(gtk.Frame):
    can_mark = all(hasattr(gtk.Scale, x) for x in ('add_mark', 'clear_marks'))
    
@@ -991,7 +947,7 @@ class mixprefs:
       spin = gtk.SpinButton(self.recorder_qty_adj)
       rrvbox.pack_start(hjoin(spin, gtk.Label(_('Simultaneous recording(s)'))))
       
-      key_label = gtk.Label(_('* Works only in Fully Featured mode'))
+      key_label = gtk.Label(_('* In \'Fully Featured\' mode.'))
       rrvbox.pack_start(key_label)
       key_label.show()
 
@@ -1044,7 +1000,7 @@ class mixprefs:
       
       # Replay Gain controls
       
-      frame = gtk.Frame(" " + _('Replay Gain') + " ")
+      frame = gtk.Frame(" %s " % _('Replay Gain'))
       frame.set_border_width(3)
       outervbox.pack_start(frame, False, False, 0)
       vbox = gtk.VBox()
@@ -1177,14 +1133,6 @@ class mixprefs:
       vbox.show()
 
       outervbox.pack_start(frame, False, False, 0)
-      
-      # Reconnection dialog config
-      
-      self.recon_config = ReconnectionDialogConfig()
-      self.recon_config.set_border_width(3)
-      set_tip(self.recon_config, _("A set of controls for managing what happens when the server connection either breaks or suffers prolonged congestion.\n \nThe 'delays of' control consists of a comma separated list of time delays for the reconnection dialog. When the list is exhausted further attempts to reconnect to the server are abandoned, so three numbers denote a maximum three reconnection attempts.\n\nYou also have the option to attempt reconnection when the stream buffer becomes full. Use this option if waiting out the congestion is not helpful."))
-      outervbox.pack_start(self.recon_config, False, False, 0)
-      self.recon_config.show()
       
       # Stream normalizer config
       
@@ -1882,9 +1830,6 @@ class mixprefs:
          "mp3utf8"       : self.mp3_utf8,
          "silencekiller" : self.silence_killer,
          "bonuskiller"   : self.bonus_killer,
-         "unlimretries"  : self.recon_config.unlimited_retries,
-         "recondialog"   : self.recon_config.visible,
-         "sbfullrecon"   : self.recon_config.attempt_reconnection,
          "rg_indicate"   : self.rg_indicate,
          "rg_adjust"     : self.rg_adjust,
          "str_meters"    : self.show_stream_meters,
@@ -1925,7 +1870,6 @@ class mixprefs:
          "et_micoff"     : self.mic_off_event,
          "et_auxon"      : self.aux_on_event,
          "et_auxoff"     : self.aux_off_event,
-         "con_delays"    : self.recon_config.csl,
          "main_full_wst" : self.parent.full_wst,
          "main_min_wst"  : self.parent.min_wst,
          "jingles_wst"   : self.parent.jingles.wst,

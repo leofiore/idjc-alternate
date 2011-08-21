@@ -164,9 +164,9 @@ class autodisconnection_notification_dialog(gtk.Dialog):
       # Dialog is not shown upon creation, but rather is (re)shown when needed.
 
 class ReconnectionDialog(gtk.Dialog):
-   td = (0.0, 10.0, 10.0, 60.0)
+   td = (0.0,)
    # TC: Tab refers to a GTK notebook widget tab.   
-   lines = '<span weight="bold" size="12000">The connection to the server in tab %s has failed.</span>\nA reconnection attempt will be made in %d seconds.\nThis is attempt number {0} of {1}.'.splitlines()
+   lines = _('<span weight="bold" size="12000">The connection to the server in tab %s has failed.</span>\nA reconnection attempt will be made in %d seconds.\nThis is attempt number {0} of {1}.').splitlines()
    
    def update_countdown_text(self):
       remaining = self.remaining
@@ -186,46 +186,38 @@ class ReconnectionDialog(gtk.Dialog):
          self.update_countdown_text()
    
    def activate(self):
-      if self.config is None:
-         self.config = self.tab.source_client_gui.parent.prefs_window.recon_config
       if self.active == False:
-         self.trycount = 1
-         if self.config.limited_delays.get_active():
-            self.limited_delays = True
-            self.td = [0.0]
-            for each in self.config.csl.get_text().split(","):
-               try:
-                  x = float(each)
-               except:
-                  pass
-               else:
-                  if x >= 1.0:
-                    self.td.append(x)
-         else:
-            self.limited_delays = False
+         self.trycount = 0
+         self.td = []
+         for each in self.config.reconnection_times.child.get_text().split(","):
+            try:
+               x = max(float(each), 5.0)
+            except:
+               x = 5.0
+            self.td.append(x)
          self.active = True
       else:
          self.trycount += 1
       
-      if self.limited_delays:
-         if self.trycount >= len(self.td):
-            self.deactivate()
-            self.tab.scg.disconnected_dialog.present()
-            return
-         else:
-            self.remaining = self.td[self.trycount]
-      else:
-         self.remaining = 5.0
+      repeat = self.config.reconnection_repeat.get_active()
+
+      if not repeat and self.trycount >= len(self.td):
+         self.deactivate()
+         self.tab.scg.disconnected_dialog.present()
+         return
+
+      self.remaining = self.td[self.trycount % len(self.td)]
+
       self.event_time = time.time() + self.remaining
       self.update_countdown_text()
-      if self.limited_delays:
-         self.label3.set_text(self.lines[2].format(self.trycount, len(self.td) - 1))
+      if repeat:
+         self.label3.set_text(_('This is attempt number %d. There is no retry limit.') % (self.trycount + 1))
       else:
-         self.label3.set_text(_('This is attempt number %d. There is no retry limit.') % self.trycount)
-      if self.config.visible.get_active():
-         self.present()
-      else:
+         self.label3.set_text(self.lines[2].format(self.trycount + 1, len(self.td)))
+      if self.config.reconnection_quiet.get_active():
          self.realize()
+      else:
+         self.present()
    
    def deactivate(self):
       if self.active:
@@ -266,8 +258,8 @@ class ReconnectionDialog(gtk.Dialog):
       hbox.pack_start(vbox, False)
       self.label1 = gtk.Label(self.lines[0] % (tab.numeric_id + 1) + "\n")
       self.label1.set_use_markup(True)
-      self.label2 = gtk.Label(self.lines[1] % self.td[1])
-      self.label3 = gtk.Label(self.lines[2].format(1, len(self.td) - 1))
+      self.label2 = gtk.Label(self.lines[1] % 0)
+      self.label3 = gtk.Label(self.lines[2].format(1, 1))
       for l in (self.label1, self.label2, self.label3):
          l.set_alignment(0.0, 0.5)
          vbox.pack_start(l, False)
@@ -275,7 +267,7 @@ class ReconnectionDialog(gtk.Dialog):
          
       vbox.show()
          
-      self.config = None   # This value unavailable for now.
+      self.config = tab.troubleshooting
       self.active = False
 
       self.connect("delete-event", self.cb_delete)

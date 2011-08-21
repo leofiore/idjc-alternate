@@ -226,6 +226,7 @@ int main()
       { "mount",            &sv.mount },
       { "login",            &sv.login },
       { "password",         &sv.password },
+      { "useragent",        &sv.useragent },
       { "dj_name",          &sv.dj_name },
       { "listen_url",       &sv.listen_url },
       { "description",      &sv.description },

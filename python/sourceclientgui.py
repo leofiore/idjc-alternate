@@ -894,7 +894,7 @@ class Troubleshooting(gtk.VBox):
       set_tip(hbox, _("Set this on the occasion that the server or its firewall specifically refuses to allow libshout based clients."))
       
       frame = gtk.Frame()
-      self.automatic_reconnection = gtk.CheckButton(_("Reconnect to the server when the connection is broken"))
+      self.automatic_reconnection = gtk.CheckButton(_("If the connection breaks reconnect to the server"))
       self.automatic_reconnection.set_active(True)
       frame.set_label_widget(self.automatic_reconnection)
       self.pack_start(frame, False)
@@ -919,15 +919,15 @@ class Troubleshooting(gtk.VBox):
       reconbox.pack_start(self.reconnection_quiet, False)
       self.automatic_reconnection.connect("toggled", self._on_automatic_reconnection, reconbox)
       
-      frame = gtk.Frame(" %s " % _("How to handle the stream buffer becoming full"))
+      frame = gtk.Frame(" %s " % _("The contingency plan upon the stream buffer becoming full is..."))
       sbfbox = gtk.VBox()
       sbfbox.set_border_width(6)
       sbfbox.set_spacing(1)
       frame.add(sbfbox)
       self.pack_start(frame, False)
       
-      self.sbf_discard_audio = gtk.RadioButton(None, _("Discard audio data until the connection clears."))
-      self.sbf_reconnect = gtk.RadioButton(self.sbf_discard_audio, _("Reconnect to the server."))
+      self.sbf_discard_audio = gtk.RadioButton(None, _("Discard audio data for as long as needed."))
+      self.sbf_reconnect = gtk.RadioButton(self.sbf_discard_audio, _("Assume the connection is beyond saving and reconnect."))
       for each in (self.sbf_discard_audio, self.sbf_reconnect):
          sbfbox.pack_start(each, True, False)
       
@@ -1297,6 +1297,7 @@ class StreamTab(Tab):
                "mount=" + d["mount"],
                "login=" + d["login"],
                "password=" + d["password"],
+               "useragent=" + (self.troubleshooting.user_agent_entry.get_text().strip() if self.troubleshooting.custom_user_agent.get_active() else ""),
                "dj_name=" + self.dj_name_entry.get_text().strip(),
                "listen_url=" + self.listen_url_entry.get_text().strip(),
                "description=" + self.description_entry.get_text().strip(),
@@ -2391,7 +2392,7 @@ class SourceClientGui:
                   mi.set_active(True)
                   mi.set_value(int(stream_sendbuffer_pc))
                   if int(stream_sendbuffer_pc) >= 100 and self.led_alternate:
-                     if self.parent.prefs_window.recon_config.discard_data.get_active():
+                     if streamtab.troubleshooting.sbf_discard_audio.get_active():
                         streamtab.show_indicator("amber")
                         mi.set_flash(True)
                      else:
