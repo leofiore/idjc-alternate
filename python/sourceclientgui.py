@@ -1885,15 +1885,15 @@ class StreamTab(Tab):
       self.details_nb.append_page(vbox, label)
       label.show()
       vbox.show()
-      self.dj_name_entry = gtk.Entry()
+      self.dj_name_entry = DefaultEntry("eyedeejaycee")
       set_tip(self.dj_name_entry, _('Enter your DJ name or station name here. Typically this information will be displayed by listener clients.'))
-      self.listen_url_entry = gtk.Entry()
+      self.listen_url_entry = DefaultEntry("http://www.example.com")
       set_tip(self.listen_url_entry, _('The URL of your radio station. This and the rest of the information below is intended for display on a radio station listings website.'))
       self.description_entry = gtk.Entry()
       set_tip(self.description_entry, _('A description of your radio station.'))
       genre_entry_box = gtk.HBox()
       genre_entry_box.set_spacing(12)
-      self.genre_entry = gtk.Entry()
+      self.genre_entry = DefaultEntry("Misc")
       set_tip(self.genre_entry, _('The musical genres you are likely to play.'))
       genre_entry_box.pack_start(self.genre_entry, True, True, 0)
       self.genre_entry.show()
@@ -1902,10 +1902,10 @@ class StreamTab(Tab):
       genre_entry_box.pack_start(self.make_public, False, False, 0)
       self.make_public.show()
       info_sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
-      stream_details_pane = self.label_item_layout(((_('DJ Name:'), self.dj_name_entry),
-                                              (_('Listen URL:'), self.listen_url_entry),
-                                              (_('Description:'), self.description_entry),
-                                              (_('Genre(s):'), genre_entry_box)
+      stream_details_pane = self.label_item_layout(((_('DJ Name'), self.dj_name_entry),
+                                              (_('Listen URL'), self.listen_url_entry),
+                                              (_('Description'), self.description_entry),
+                                              (_('Genre(s)'), genre_entry_box)
                                               ), info_sizegroup)
       stream_details_pane.set_border_width(10)
       vbox.add(stream_details_pane)
