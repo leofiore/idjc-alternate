@@ -186,6 +186,11 @@ class ReconnectionDialog(gtk.Dialog):
          self.update_countdown_text()
    
    def activate(self):
+      if not self.tab.troubleshooting.automatic_reconnection.get_active():
+         self.deactivate()
+         self.tab.scg.disconnected_dialog.present()
+         return
+      
       if self.active == False:
          self.trycount = 0
          self.td = []
