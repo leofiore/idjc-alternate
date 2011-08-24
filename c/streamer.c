@@ -307,6 +307,7 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
       goto error;
       }
    if (sv->useragent[0])
+      {
       if (shout_set_agent(self->shout, sv->useragent) != SHOUTERR_SUCCESS)
          {
          sce("useragent");
@@ -314,6 +315,7 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
          }
       else
          fprintf(stderr, "user agent is set\n");
+      }
    if (shout_set_name(self->shout, sv->dj_name) != SHOUTERR_SUCCESS)
       {
       sce("stream/dj name");

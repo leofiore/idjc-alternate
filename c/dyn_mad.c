@@ -47,24 +47,24 @@ int dyn_mad_init()
    {
    char *error;
 
-   (handle = dlopen("libmad.so", RTLD_LAZY)) ||
-   (handle = dlopen("libmad.dylib", RTLD_LAZY));
-
-   if (!handle)
+   if (!((handle = dlopen("libmad.so", RTLD_LAZY)) || (handle = dlopen("libmad.dylib", RTLD_LAZY))))
       {
-      fprintf(stderr, "failed to locate libmad dynamic libraryn");
+      fprintf(stderr, "failed to locate libmad dynamic library\n");
       return 0;
       }
    dlerror();
 
-   (frame_decode = dlsym(handle, "mad_frame_decode")) &&
-   (stream_buffer = dlsym(handle, "mad_stream_buffer")) &&
-   (stream_finish = dlsym(handle, "mad_stream_finish")) &&
-   (frame_finish = dlsym(handle, "mad_frame_finish")) &&
-   (synth_init = dlsym(handle, "mad_synth_init")) &&
-   (stream_init = dlsym(handle, "mad_stream_init")) &&
-   (frame_init = dlsym(handle, "mad_frame_init")) &&
-   (synth_frame = dlsym(handle, "mad_synth_frame"));
+   if (!(   (frame_decode = dlsym(handle, "mad_frame_decode")) &&
+            (stream_buffer = dlsym(handle, "mad_stream_buffer")) &&
+            (stream_finish = dlsym(handle, "mad_stream_finish")) &&
+            (frame_finish = dlsym(handle, "mad_frame_finish")) &&
+            (synth_init = dlsym(handle, "mad_synth_init")) &&
+            (stream_init = dlsym(handle, "mad_stream_init")) &&
+            (frame_init = dlsym(handle, "mad_frame_init")) &&
+            (synth_frame = dlsym(handle, "mad_synth_frame"))))
+      {
+      fprintf(stderr, "missing symbols in libmad");
+      } 
 
    if ((error = dlerror()))
       {

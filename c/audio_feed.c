@@ -140,7 +140,6 @@ static char *str_join(const char *s1, const char *s2)
 struct audio_feed *audio_feed_init(struct threads_info *ti)
    {
    struct audio_feed *self;
-   size_t l;
 
    if (!(self = calloc(1, sizeof (struct audio_feed))))
       {

@@ -57,31 +57,32 @@ int dyn_lame_init()
    {
    char *error;
 
-   (handle = dlopen("libmp3lame.so", RTLD_LAZY)) ||
-   (handle = dlopen("libmp3lame.dylib", RTLD_LAZY)) ||
-   (handle = dlopen("liblame.so", RTLD_LAZY)) ||
-   (handle = dlopen("liblame.dylib", RTLD_LAZY));
-
-   if (!handle)
+   if (!((handle = dlopen("libmp3lame.so", RTLD_LAZY)) ||
+         (handle = dlopen("libmp3lame.dylib", RTLD_LAZY)) ||
+         (handle = dlopen("liblame.so", RTLD_LAZY)) ||
+         (handle = dlopen("liblame.dylib", RTLD_LAZY))))
       {
       fprintf(stderr, "failed to locate lib[mp3]lame dynamic library\n");
       return 0;
       }
    dlerror();
 
-   (init = dlsym(handle, "lame_init")) &&
-   (encode_flush_nogap = dlsym(handle, "lame_encode_flush_nogap")) &&
-   (set_num_channels = dlsym(handle, "lame_set_num_channels")) &&
-   (set_brate = dlsym(handle, "lame_set_brate")) &&
-   (set_in_samplerate = dlsym(handle, "lame_set_in_samplerate")) &&
-   (set_out_samplerate = dlsym(handle, "lame_set_out_samplerate")) &&
-   (set_mode = dlsym(handle, "lame_set_mode")) &&
-   (set_quality = dlsym(handle, "lame_set_quality")) &&
-   (set_free_format = dlsym(handle, "lame_set_free_format")) &&
-   (set_bWriteVbrTag = dlsym(handle, "lame_set_bWriteVbrTag")) &&
-   (init_params = dlsym(handle, "lame_init_params")) &&
-   (close = dlsym(handle, "lame_close")) &&
-   (encode_buffer_float = dlsym(handle, "lame_encode_buffer_float"));
+   if (!(   (init = dlsym(handle, "lame_init")) &&
+            (encode_flush_nogap = dlsym(handle, "lame_encode_flush_nogap")) &&
+            (set_num_channels = dlsym(handle, "lame_set_num_channels")) &&
+            (set_brate = dlsym(handle, "lame_set_brate")) &&
+            (set_in_samplerate = dlsym(handle, "lame_set_in_samplerate")) &&
+            (set_out_samplerate = dlsym(handle, "lame_set_out_samplerate")) &&
+            (set_mode = dlsym(handle, "lame_set_mode")) &&
+            (set_quality = dlsym(handle, "lame_set_quality")) &&
+            (set_free_format = dlsym(handle, "lame_set_free_format")) &&
+            (set_bWriteVbrTag = dlsym(handle, "lame_set_bWriteVbrTag")) &&
+            (init_params = dlsym(handle, "lame_init_params")) &&
+            (close = dlsym(handle, "lame_close")) &&
+            (encode_buffer_float = dlsym(handle, "lame_encode_buffer_float"))))
+      {
+      fprintf(stderr, "missing symbols in lib[mp3]lame\n");
+      }
 
    if ((error = dlerror()))
       {
