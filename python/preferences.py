@@ -38,6 +38,9 @@ from .tooltips import main_tips
 
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
 _ = t.gettext
+def N_(text):
+   return text
+
 
 pm = ProfileManager()
 set_tip = main_tips.set_tip
@@ -56,9 +59,76 @@ class CSLEntry(gtk.Entry):
       self.connect("key-press-event", self.cb_keypress)
 
 
-  
+
+class InitialPlayerConfig(gtk.Frame):
+   def __init__(self, title, player, prefix):
+      self.player = player
+      gtk.Frame.__init__(self, " %s " % title)
+      vbox = gtk.VBox()
+      vbox.set_border_width(3)
+      self.add(vbox)
+      
+      pl_label = gtk.Label(_("Playlist Mode"))
+      fade_label = gtk.Label(_("Fade"))
+      try:
+         self.pl_mode = gtk.ComboBoxText(player.pl_mode.get_model())
+         self.fade = gtk.ComboBoxText(player.fade.get_model())
+      except AttributeError:
+         self.pl_mode = gtk.combo_box_new_text()
+         self.pl_mode.set_model(player.pl_mode.get_model())
+         self.fade = gtk.combo_box_new_text()
+         self.fade.set_model(player.pl_delay.get_model())
+         
+      for each in (self.pl_mode, self.fade):
+         each.set_active(0)
+
+      self.elapsed = gtk.RadioButton(None, _("Track time elapsed"))
+      self.remaining = gtk.RadioButton(self.elapsed, _("Track time remaining"))
+      s1 = gtk.HSeparator()
+      self.to_stream = gtk.CheckButton(_("Audio to stream"))
+      self.to_dj = gtk.CheckButton(_("Audio to DJ"))
+      
+      for each in (self.to_stream, self.to_dj):
+         each.set_active(True)
+
+      for each in (pl_label, self.pl_mode, fade_label, self.fade, self.elapsed, self.remaining, s1, self.to_stream, self.to_dj):
+         vbox.pack_start(each, False)
+      self.show_all()
+      
+      self.active_dict = {
+         prefix + "pl_mode": self.pl_mode,
+         prefix + "fade": self.fade,
+         prefix + "timeremaining": self.remaining,
+         prefix + "tostream": self.to_stream,
+         prefix + "todj": self.to_dj
+      }
+
+
+   def apply(self):
+      p = self.player
+      
+      p.pl_mode.set_active(self.pl_mode.get_active())
+      p.pl_delay.set_active(self.fade.get_active())
+      p.stream.set_active(self.to_stream.get_active())
+      p.listen.set_active(self.to_dj.get_active())
+      if self.remaining.get_active():
+         p.digiprogress_click()
+
+
+
 class AGCControl(gtk.Frame):
    can_mark = all(hasattr(gtk.Scale, x) for x in ('add_mark', 'clear_marks'))
+
+   mic_modes = (
+      # TC: Microphone mode combobox text.
+      N_('Deactivated'),
+      # TC: Microphone mode combobox text.
+      N_('Simple (low CPU drain)'),
+      # TC: Microphone mode combobox text.
+      N_('Full Signal Processing'), 
+      # TC: Microphone mode combobox text.
+      N_('Partnered with Mic %s'))
+
    
    def sendnewstats(self, widget, wname):
       if wname != NotImplemented:
@@ -71,13 +141,17 @@ class AGCControl(gtk.Frame):
 
    def set_partner(self, partner):
       self.partner = partner
-      self.mode.append_text(_('Partnered with Mic ') + partner.ui_name)
       self.mode.set_cell_data_func(self.mode_cell, self.mode_cell_data_func, partner.mode)
 
    def mode_cell_data_func(self, celllayout, cell, model, iter, opposite):
       index = model.get_path(iter)[0]
       oindex = opposite.get_active()
       cell.props.sensitive = not (((index == 0 or index == 3) and oindex == 3) or (index == 3 and oindex == 0))
+      trans = t.gettext(model.get_value(iter, 0))
+      if index == 3:
+         cell.props.text = trans % self.partner.ui_name
+      else:
+         cell.props.text = trans
 
    def numline(self, label_text, wname, initial=0, mini=0, maxi=0, step=0, digits=0, adj=None):
       hbox = gtk.HBox()
@@ -193,7 +267,7 @@ class AGCControl(gtk.Frame):
       label.show()
  
       self.alt_name = gtk.Entry()
-      set_tip(self.alt_name, _('Alternate opener button text goes here e.g. DJ or Guest. When not specified the microphone number is used instead.'))
+      set_tip(self.alt_name, _('Alternate opener button text goes here e.g. DJ, Guest. When not specified the microphone number is shown instead.'))
       self.textdict[self.commandname + "_alt_name"] = self.alt_name
       hbox.pack_start(self.alt_name, True, True)
       self.alt_name.show()
@@ -216,7 +290,8 @@ class AGCControl(gtk.Frame):
       self.mode.set_attributes(self.mode_cell, text=0)
       
       self.vbox.pack_start(self.mode, False, False)
-      for each in (_('Deactivated'), _('Simple (low CPU drain)'), _('Full Signal Processing')):
+      
+      for each in self.mic_modes:
          mode_liststore.append((each, ))
       self.mode.connect("changed", self.sendnewstats, "mode")
       self.mode.connect("changed", self.cb_mode)
@@ -225,6 +300,7 @@ class AGCControl(gtk.Frame):
       set_tip(self.mode, _('The microphone mode.'))
 
       hbox = gtk.HBox()
+      # TC: Indicator of the microphones open or unmuted status. Has alongside an LED indicator.
       label = gtk.Label(_('Open/Unmute'))
       hbox.pack_start(label, False, False, 3)
       label.show()
@@ -238,6 +314,7 @@ class AGCControl(gtk.Frame):
       self.status_led.set_from_pixbuf(self.status_off_pb)
             
       hbox = gtk.HBox()
+      # TC: Mic opener buttons can be grouped together. This checkbutton sits alongside a button group numerical selector.
       self.group = gtk.CheckButton(_('Button group'))
       self.booleandict[self.commandname + "_group"] = self.group
       hbox.pack_start(self.group, False, False, 0)
@@ -251,10 +328,11 @@ class AGCControl(gtk.Frame):
       hbox.pack_end(groups_spin, False)
       groups_spin.show()
 
+      # TC: Checkbutton that selects this microphone to open automatically in certain circumstances.
       self.autoopen = gtk.CheckButton(_('Automatic Open'))
       ivbox.pack_start(self.autoopen, False, False)
       self.autoopen.show()
-      set_tip(self.autoopen, _('This mic is to be opened automatically when a Player Stop or Announcement playlist control is encountered in the active player. This mic is also to be opened by the advance button.'))
+      set_tip(self.autoopen, _('This mic is to be opened automatically when a Player Stop or Announcement playlist control is encountered in the active player. This mic is also to be opened by the playlist advance button.'))
       self.booleandict[self.commandname + "_autoopen"] = self.autoopen
 
       sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
@@ -304,7 +382,8 @@ class AGCControl(gtk.Frame):
       self.vbox.pack_start(panframe, False, False)
       panframe.show_all()
 
-      pairedframe = gtk.Frame(_(' Signal Matching '))
+      # TC: A set of controls that the user canl use to match partnered microphone audio with the master.
+      pairedframe = gtk.Frame(" %s " % _('Signal Matching'))
       set_tip(pairedframe, _('These controls are provided to obtain a decent match between the two microphones.'))
       pairedframe.modes = (3, )
       self.vbox.pack_start(pairedframe, False)
@@ -316,6 +395,7 @@ class AGCControl(gtk.Frame):
       pairedmicgain = self.numline(_('Relative Gain (dB)'), "pairedgain", digits=1, adj=pairedmicgainadj)
       pairedvbox.pack_start(pairedmicgain, False)
       pairedmicgain.show()
+      # TC: Mic audio phase inversion control.
       pairedinvert = self.check(_('Invert Signal'), "pairedinvert")
       pairedvbox.pack_start(pairedinvert, False)
       pairedinvert.show()
@@ -323,6 +403,7 @@ class AGCControl(gtk.Frame):
       micgainadj = gtk.Adjustment(5.0, -20.0, +30.0, 0.1, 2)
       openaction = gtk.ToggleAction("open", _('Open/Unmute'), _('Allow microphone audio into the mix.'), None)
       invertaction = gtk.ToggleAction("invert", _('Invert Signal'), _('Useful for when microphones are cancelling one another out, producing a hollow sound.'), None)
+      # TC: Control whether to mix microphone audio to the DJ mix.
       indjmixaction = gtk.ToggleAction("indjmix", _("In The DJ's Mix"), _('Make the microphone audio audible in the DJ mix. This may not always be desirable.'), None)
 
       self.simple_box = gtk.VBox()
@@ -356,10 +437,12 @@ class AGCControl(gtk.Frame):
       ivbox = self.frame(" " + _('High Pass Filter') + " ", self.processed_box)
       hpcutoff = self.numline(_('Cutoff Frequency'), "hpcutoff", 100.0, 30.0, 120.0, 1.0, 1)
       ivbox.pack_start(hpcutoff, False, False, 0)
+      # TC: User can set the number of filter stages.
       hpstages = self.numline(_('Stages'), "hpstages", 4.0, 1.0, 4.0, 1.0, 0)
       ivbox.pack_start(hpstages, False, False, 0)
       set_tip(ivbox, _('Frequency in Hertz above which audio can pass to later stages. Use this feature to restrict low frequency sounds such as mains hum. Setting too high a level will make your voice sound thin.'))
       
+      # TC: this is the treble control. HF = high frequency.
       ivbox = self.frame(" " + _('HF Detail') + " ", self.processed_box)
       hfmulti = self.numline(_('Effect'), "hfmulti", 0.0, 0.0, 9.0, 0.1, 1)
       ivbox.pack_start(hfmulti, False, False, 0)
@@ -367,6 +450,7 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(hfcutoff, False, False, 0)
       set_tip(ivbox, _('You can use this to boost the amount of treble in the audio.'))
        
+      # TC: this is the bass control. LF = low frequency.
       ivbox = self.frame(" " + _('LF Detail') + " ", self.processed_box)
       lfmulti = self.numline(_('Effect'), "lfmulti", 0.0, 0.0, 9.0, 0.1, 1)
       ivbox.pack_start(lfmulti, False, False, 0)
@@ -374,23 +458,29 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(lfcutoff, False, False, 0)
       set_tip(ivbox, _('You can use this to boost the amount of bass in the audio.'))
       
+      # TC: dynamic range compressor.
       ivbox = self.frame(" " + _('Compressor') + " ", self.processed_box)
       micgain = self.numline(_('Boost/Gain (dB)'), "gain", digits=1, adj=micgainadj)
       ivbox.pack_start(micgain, False, False, 0)
+      # TC: this is the peak signal limit.
       limit = self.numline(_('Limit'), "limit", -3.0, -9.0, 0.0, 0.5, 1)
       ivbox.pack_start(limit, False, False, 0)
       set_tip(ivbox, _('A lookahead brick wall limiter. Use the Ratio control to boost the quieter sounds. The Limit control is used to set the absolute maximum audio level.'))
       
       ivbox = self.frame(" " + _('Noise Gate') + " ", self.processed_box)
+      # TC: noise gate triggers at this level.
       ng_thresh = self.numline(_('Threshold'), "ngthresh", -30.0, -62.0, -20.0, 1.0, 0)
       ivbox.pack_start(ng_thresh, False, False, 0)
+      # TC: negative gain when the noise gate is active.
       ng_gain = self.numline(_('Gain'), "nggain", -6.0, -12.0, 0.0, 1.0, 0)
       ivbox.pack_start(ng_gain, False, False, 0)
       set_tip(ivbox, _("Reduce the unwanted quietest sounds and background noise which you don't want your listeners to hear with this."))
       
       ivbox = self.frame(" " + _('De-esser') + " ", self.processed_box)
+      # TC: the de-esser uses two filters to determine ess or not ess. Bias sets the balance between the two.
       ds_bias = self.numline(_('Bias'), "deessbias", 0.35, 0.1, 10.0, 0.05, 2)
       ivbox.pack_start(ds_bias, False, False, 0)
+      # TC: the de-esser negative gain when the de-esser is active.
       ds_gain = self.numline(_('Gain'), "deessgain", -4.5, -10.0, 0.0, 0.5, 1)
       ivbox.pack_start(ds_gain, False, False, 0)
       set_tip(ivbox, _('Reduce the S, T, and P sounds which microphones tend to exagerate. Ideally the Bias control will be set so that the de-esser is off when there is silence but is set high enough that mouse clicks are detected and suppressed.'))
@@ -434,11 +524,13 @@ def make_entry_line(parent, item, code, hastoggle, index=None):
    entry = gtk.Entry(128)
    entry.set_size_request(185, -1)
 
+   # TC: save the current setting for the next time this session profile is run.
    savebutton = gtk.Button(_('Save'))
    savebutton.connect("clicked", parent.save_click, (code, entry, index))
    box.pack_end(savebutton, False, False, 0)
    savebutton.show()
 
+   # TC: use a user specified setting.
    setbutton = gtk.Button(_('Set'))
    setbutton.connect("clicked", parent.update_click, (code, entry, index))
    box.pack_end(setbutton, False, False, 0)
@@ -449,6 +541,7 @@ def make_entry_line(parent, item, code, hastoggle, index=None):
    box.pack_end(entry, False, False, 0)
    entry.show()
 
+   # TC: use the auto detected default setting.
    checkbox = gtk.CheckButton(_('Auto'))
    box.pack_end(checkbox, False, False, 0)
    if hastoggle:
@@ -462,7 +555,7 @@ def make_entry_line(parent, item, code, hastoggle, index=None):
       
    box.show()
    
-   set_tip(checkbox, _('Use default jack audio routing'))
+   set_tip(checkbox, _('Use default JACK audio routing'))
    set_tip(setbutton, _('Reroute the audio to/from the specified port'))
    set_tip(savebutton, _('Save the audio routing so that it persists across application restarts'))
    set_tip(entry, _("Enter the name of the JACK audio port with which to bind and then click the set button to the right.\nTyping 'jack_lsp -p' in a console will give you a list of valid JACK audio ports. Note that inputs will only bind to output ports and outputs will only bind to input ports."))
@@ -574,9 +667,8 @@ class mixprefs:
       
    def cb_restore_session(self, widget, data=None):
       state = not widget.get_active()
-      self.left_player_frame.set_sensitive(state)
-      self.right_player_frame.set_sensitive(state)
-      self.misc_session_frame.set_sensitive(state)
+      for each in (self.lpconfig, self.rpconfig, self.misc_session_frame):
+         each.set_sensitive(state)
    
    jack_ports= ("audl", "audr", "strl", "strr", "auxl", "auxr", "midi", "dol", "dor", "dil", "dir")
 
@@ -684,41 +776,8 @@ class mixprefs:
       self.parent.send_new_mixer_stats()
          
    def apply_player_prefs(self):
-      left = self.parent.player_left
-      right = self.parent.player_right
-      
-      if self.lplayall.get_active():
-         left.pl_mode.set_active(0)
-      if self.lloopall.get_active():
-         left.pl_mode.set_active(1)
-      if self.lrandom.get_active():
-         left.pl_mode.set_active(2)
-      if self.lmanual.get_active():
-         left.pl_mode.set_active(3)
-      if self.lcueup.get_active():
-         left.pl_mode.set_active(4)
-                 
-      if self.rplayall.get_active():
-         right.pl_mode.set_active(0)
-      if self.rloopall.get_active():
-         right.pl_mode.set_active(1)
-      if self.rrandom.get_active():
-         right.pl_mode.set_active(2)
-      if self.rmanual.get_active():
-         right.pl_mode.set_active(3)
-      if self.rcueup.get_active():
-         right.pl_mode.set_active(4)
-
-      left.stream.set_active(self.lstream.get_active())
-      right.stream.set_active(self.rstream.get_active())
-      
-      left.listen.set_active(self.llisten.get_active())
-      right.listen.set_active(self.rlisten.get_active())
-      
-      if self.lcountdown.get_active():
-         left.digiprogress_click()
-      if self.rcountdown.get_active():
-         right.digiprogress_click()
+      for each in (self.lpconfig, self.rpconfig):
+         each.apply()
          
       if self.startmini.get_active():
          self.mini.clicked()
@@ -850,6 +909,7 @@ class mixprefs:
       self.window.set_size_request(-1, 480)
       self.window.connect("realize", self.cb_realize)
       self.parent.window_group.add_window(self.window)
+      # TC: preferences window title.
       self.window.set_title(_('IDJC Preferences') + pm.title_extra)
       self.window.set_border_width(10)
       self.window.set_resizable(True)
@@ -870,7 +930,8 @@ class mixprefs:
       generalwindow.show()
       outervbox.set_border_width(3)
       
-      featuresframe = gtk.Frame(" " + _('Feature Set') + " ")
+      # TC: the set of features - section heading.
+      featuresframe = gtk.Frame(" %s " % _('Feature Set'))
       featuresframe.set_border_width(3)
       featuresvbox = gtk.VBox()
       hbox = gtk.HBox()
@@ -881,12 +942,14 @@ class mixprefs:
       outervbox.pack_start(featuresframe, False, False, 0)
       featuresframe.show()
       vbox = gtk.VBox()
+      # TC: Start in the full featured user interface mode.
       self.startfull = gtk.RadioButton(None, _('Start Full'))
       self.startfull.set_border_width(2)
       vbox.pack_start(self.startfull, False, False, 0)
       self.startfull.show()
       set_tip(self.startfull, _('Indicates which mode IDJC will be in when launched.'))
       
+      # TC: Start in a reduced user interface mode.
       self.startmini = gtk.RadioButton(self.startfull, _('Start Mini'))
       self.startmini.set_border_width(2)
       vbox.pack_start(self.startmini, False, False, 0)
@@ -899,13 +962,13 @@ class mixprefs:
       hbox2.set_spacing(20)
       hbox.pack_start(hbox2, True, False, 0)
       
-      self.maxi = gtk.Button(" " + _('Fully Featured') + " ")
+      self.maxi = gtk.Button(" %s " % _('Fully Featured'))
       self.maxi.connect("clicked", self.callback, "fully featured")
       hbox2.pack_start(self.maxi, False, False, 0)
       self.maxi.show()
       set_tip(self.maxi, _('Run in full functionality mode which uses more CPU power.'))
       
-      self.mini = gtk.Button(" " + _('Basic Streamer') + " ")
+      self.mini = gtk.Button(" %s " % _('Basic Streamer'))
       self.mini.connect("clicked", self.callback, "basic streamer")
       hbox2.pack_start(self.mini, False, False, 0)
       self.mini.show()
@@ -915,7 +978,7 @@ class mixprefs:
       hbox.pack_start(vbox, False, False, 9)     
       hbox.show()
       
-      requires_restart = gtk.Frame(_(' These settings take effect after restarting '))
+      requires_restart = gtk.Frame(" %s " % _('These settings take effect after restarting'))
       requires_restart.set_border_width(7)
       featuresvbox.pack_start(requires_restart, False)
       requires_restart.show()
@@ -947,7 +1010,8 @@ class mixprefs:
       spin = gtk.SpinButton(self.recorder_qty_adj)
       rrvbox.pack_start(hjoin(spin, gtk.Label(_('Simultaneous recording(s)'))))
       
-      key_label = gtk.Label(_('* In \'Fully Featured\' mode.'))
+      # TC: star marked items are relevant only in 'fully featured' mode.
+      key_label = gtk.Label(_("* In 'Fully Featured' mode."))
       rrvbox.pack_start(key_label)
       key_label.show()
 
@@ -962,7 +1026,7 @@ class mixprefs:
             target.show()
          else:
             target.hide()
-      frame = gtk.Frame(" " + _('Meters') + " ")
+      frame = gtk.Frame(" %s " % _('Meters'))
       frame.set_border_width(3)
       vbox = gtk.VBox()
       vbox.set_border_width(10)
@@ -1026,12 +1090,12 @@ class mixprefs:
       spacer = gtk.HBox()
       hbox.pack_start(spacer, False, False, 16)
       spacer.show()
-      label = gtk.Label(_('Gain value for unmarked tracks:'))
+      label = gtk.Label(_('Unmarked tracks assumed gain value'))
       hbox.pack_start(label, False, False, 0)
       label.show()
       rg_defaultgainadj = gtk.Adjustment(-8.0, -20.0, 10.0, 0.1)
       self.rg_defaultgain = gtk.SpinButton(rg_defaultgainadj, 0.0, 1)
-      set_tip(hbox, _('Set this to the typical track gain values you would expect for the programme material you are currently playing. For pop and rock music (especially modern studio recordings) this should be about a -8 or -9 and classical music much closer to zero.'))
+      set_tip(hbox, _('Set this to the typical track gain values you would expect for the programme material you are currently playing. For pop and rock music (especially modern studio recordings) this should be about a -8 or -9 and classical music around zero.'))
       hbox.pack_start(self.rg_defaultgain, False, False, 0)
       self.rg_defaultgain.show()
       vbox.pack_start(hbox, False, False, 0)
@@ -1042,7 +1106,7 @@ class mixprefs:
       spacer = gtk.HBox()
       hbox.pack_start(spacer, False, False, 16)
       spacer.show()
-      label = gtk.Label(_('Boost (for pop/rock):'))
+      label = gtk.Label(_('Further gain adjustment'))
       hbox.pack_start(label, False, False, 0)
       label.show()
       rg_boostadj = gtk.Adjustment(6.0, -5.0, 15.5, 0.5)
@@ -1063,21 +1127,21 @@ class mixprefs:
       vbox.set_border_width(10)
       vbox.set_spacing(1)
       
-      self.silence_killer = gtk.CheckButton(_('End tracks early: those that have quiet endings'))
+      self.silence_killer = gtk.CheckButton(_('Trim quiet endings'))
       self.silence_killer.set_active(True)
       vbox.pack_start(self.silence_killer, False, False, 0)
       self.silence_killer.show()
       
-      self.bonus_killer = gtk.CheckButton(_('End tracks early: those containing excessive silence'))
+      self.bonus_killer = gtk.CheckButton(_('End tracks containing long passages of silence'))
       self.bonus_killer.set_active(True)
       vbox.pack_start(self.bonus_killer, False, False, 0)
       self.bonus_killer.show()
       
-      self.twodblimit = gtk.CheckButton(_('Restrict the stream audio level to -2dB'))
+      self.twodblimit = gtk.CheckButton(_('Restrict the stream audio ceiling to -2dB'))
       vbox.pack_start(self.twodblimit, False, False, 0)
       self.twodblimit.connect("toggled", self.cb_twodblimit)
       self.twodblimit.show()
-      set_tip(self.twodblimit, _('This option may improve the audio quality at the expense of a little playback volume.'))
+      set_tip(self.twodblimit, _('This option may improve the audio quality at the expense of a little playback volume. Limiting audio to -2dB at the encoder input will generally prevent decoded audio from breaching 0dB.'))
       
       self.speed_variance = gtk.CheckButton(_('Enable the main-player speed/pitch controls'))
       vbox.pack_start(self.speed_variance, False, False, 0)
@@ -1085,13 +1149,13 @@ class mixprefs:
       self.speed_variance.show()
       set_tip(self.speed_variance, _('This option causes some extra widgets to appear below the playlists which allow the playback speed to be adjusted from 25% to 400% and a normal speed button.'))
 
-      self.dual_volume = gtk.CheckButton(_('Separate left/right volume faders'))
+      self.dual_volume = gtk.CheckButton(_('Separate left/right player volume faders'))
       vbox.pack_start(self.dual_volume, False, False, 0)
       self.dual_volume.connect("toggled", self.cb_dual_volume)
       self.dual_volume.show()
-      set_tip(self.dual_volume, _('Tick this option to use an independent volume fader for the left and right music players.'))
+      set_tip(self.dual_volume, _('Select this option to use an independent volume fader for the left and right music players.'))
 
-      self.flash_mic = gtk.CheckButton(_('Microphone reminder - flashes the mic button icon'))
+      self.flash_mic = gtk.CheckButton(_('Open mic button icon to flash during playback'))
       vbox.pack_start(self.flash_mic, False)
       self.flash_mic.show()
       set_tip(self.flash_mic, _('A reminder to turn the microphone off when a main player is active and any particular mic button is still engaged.'))
@@ -1105,19 +1169,19 @@ class mixprefs:
       self.djalarm = gtk.CheckButton(_('Sound an alarm when the music is due to end'))
       vbox.pack_start(self.djalarm, False, False, 0)
       self.djalarm.show()
-      set_tip(self.djalarm, _('An alarm tone alerting the DJ that dead-air is just nine seconds away.'))
+      set_tip(self.djalarm, _('An alarm tone alerting the DJ that dead-air is just nine seconds away. This also works when monitoring stream audio but the alarm tone is not sent to the stream.'))
       
       self.dither = gtk.CheckButton(_('Apply dither to MP3 and FLAC playback'))
       vbox.pack_start(self.dither, False, False, 0)
       self.dither.connect("toggled", self.cb_dither)
       self.dither.show()
-      set_tip(self.dither, _('This feature improves the sound quality a little when listening on a 24 bit sound card.'))
+      set_tip(self.dither, _('This feature maybe improves the sound quality a little when listening on a 24 bit sound card.'))
 
       self.mp3_utf8 = gtk.CheckButton(_('Use utf-8 encoding when streaming mp3 metadata'))
       self.mp3_utf8.set_active(True)
       vbox.pack_start(self.mp3_utf8, False, False, 0)
       self.mp3_utf8.show()
-      set_tip(self.mp3_utf8, _('It is standard practice when streaming metadata in mp3 streams to use iso-8859-1 character encoding. This is unfortunate since with utf-8 practically anything can be encoded. In deciding whether to use this feature you have to consider the proportion of listener clients that will be capable of correctly decoding text encoded with utf-8.'))
+      set_tip(self.mp3_utf8, _('It is standard to stream mp3 metadata with iso-8859-1 character encoding on shoutcast. This option should therefore not be used.'))
       
       self.mic_aux_mutex = gtk.CheckButton(_('Make Mic and Aux buttons mutually exclusive'))
       vbox.pack_start(self.mic_aux_mutex, False, False, 0)
@@ -1140,7 +1204,7 @@ class mixprefs:
       self.normalize = gtk.CheckButton(_('Stream Normaliser'))
       self.normalize.connect("toggled", self.cb_normalizer)
       frametitlebox.pack_start(self.normalize, True, False, 2)
-      set_tip(self.normalize, _("This feature is provided to make the various pieces of music that are played of a more uniform loudness level which is standard practice by 'real' radio stations. The default settings are likely to be sufficient however you may adjust them and you can compare the effect by clicking the 'Monitor Mix' 'Stream' button in the main application window which will allow you to compare the processed with the non-processed audio."))
+      set_tip(self.normalize, _("This feature is provided to make the various pieces of music that are played of a more uniform loudness level. The default settings are likely to be sufficient however you may adjust them and you can compare the effect by clicking the 'Monitor Mix' 'Stream' button in the main application window which will allow you to compare the processed with the non-processed audio."))
       self.normalize.show()
       frametitlebox.show()
 
@@ -1243,7 +1307,8 @@ class mixprefs:
       
       # User can use this to set the audio level in the headphones
       
-      frame = gtk.Frame(" " + _('DJ Aud Level') + " ")
+      # TC: The DJ's sound level controller.
+      frame = gtk.Frame(" " + _('DJ Audio Level') + " ")
       frame.set_label_align(0.5, 0.5)
       frame.set_border_width(3)
       hbox = gtk.HBox()
@@ -1263,7 +1328,7 @@ class mixprefs:
       
       # User can use this to set the resampled sound quality
       
-      frame = gtk.Frame(" " + _('Player Resample Quality') + " ")
+      frame = gtk.Frame(" %s " % _('Player Resample Quality'))
       frame.set_label_align(0.5, 0.5)
       frame.set_border_width(3)
       hbox = gtk.HBox()
@@ -1314,7 +1379,7 @@ class mixprefs:
       self.p3prefs.show()
       
       # Session to be saved, or initial settings preferences.
-      frame = gtk.Frame(" " + _('Player Settings At Startup') + " ")
+      frame = gtk.Frame(" %s " % _('Player Settings At Startup'))
       frame.set_label_align(0.5, 0.5)
       frame.set_border_width(3)
       vbox = gtk.VBox()
@@ -1324,126 +1389,23 @@ class mixprefs:
       restoresessionhbox = gtk.HBox()
       restoresessionhbox.set_border_width(8)
       restoresessionhbox.show()
-      self.restore_session_option = gtk.CheckButton(_('Restore previous session'))
+      self.restore_session_option = gtk.CheckButton(_('Restore the previous session'))
       vbox.pack_start(restoresessionhbox, False, False, 0)
       restoresessionhbox.pack_start(self.restore_session_option, False, False, 0)
       self.restore_session_option.show()
       set_tip(self.restore_session_option, _('When starting IDJC most of the main window settings will be as they were left. As an alternative you may specify below how you want the various settings to be when IDJC starts.'))
       
-      hbox = gtk.HBox()
+      hbox = gtk.HBox(True)
       vbox.add(hbox)
-      hbox.set_border_width(3)
+      hbox.set_border_width(6)
+      hbox.set_spacing(3)
       
-      self.left_player_frame = gtk.Frame(" " + _('Player 1') + " ")
-      self.left_player_frame.set_border_width(2)
-      hbox.pack_start(self.left_player_frame, True, True, 6)
-      self.left_player_frame.show()
+      self.lpconfig = InitialPlayerConfig(_("Player 1"), parent.player_left, "l")
+      self.rpconfig = InitialPlayerConfig(_("Player 2"), parent.player_right, "r")
+      for each in self.lpconfig, self.rpconfig:
+         hbox.pack_start(each, True, True)
       
-      self.right_player_frame = gtk.Frame(" " + _('Player 2') + " ")
-      self.right_player_frame.set_border_width(2)
-      hbox.pack_start(self.right_player_frame, True, True, 6)
-      self.right_player_frame.show()
-
       hbox.show()
-      
-      lvbox = gtk.VBox()
-      lvbox.set_border_width(4)
-      self.left_player_frame.add(lvbox)
-      self.lplayall = gtk.RadioButton(None, _('Play All'))
-      self.lplayall.set_border_width(1)
-      lvbox.add(self.lplayall)
-      self.lplayall.show()
-      self.lloopall = gtk.RadioButton(self.lplayall, _('Loop All'))
-      self.lloopall.set_border_width(1)
-      lvbox.add(self.lloopall)
-      self.lloopall.show()
-      self.lrandom = gtk.RadioButton(self.lloopall, _('Random'))
-      self.lrandom.set_border_width(1)
-      lvbox.add(self.lrandom)
-      self.lrandom.show()
-      self.lmanual = gtk.RadioButton(self.lrandom, _('Manual'))
-      self.lmanual.set_border_width(1)
-      lvbox.add(self.lmanual)
-      self.lmanual.show()
-      self.lcueup = gtk.RadioButton(self.lmanual, _('Cue Up'))
-      self.lcueup.set_border_width(1)
-      lvbox.add(self.lcueup)
-      self.lcueup.show()
-      separator = gtk.HSeparator()
-      lvbox.pack_start(separator, False, False, 1)
-      separator.show()
-      self.lcountup = gtk.RadioButton(None, _('Count Up'))
-      self.lcountup.set_border_width(1)
-      lvbox.add(self.lcountup)
-      self.lcountup.show()
-      self.lcountdown = gtk.RadioButton(self.lcountup, _('Count Down'))
-      self.lcountdown.set_border_width(1)
-      lvbox.add(self.lcountdown)
-      self.lcountdown.show()
-      separator = gtk.HSeparator()
-      lvbox.pack_start(separator, False, False, 1)
-      separator.show()
-      self.lstream = gtk.CheckButton(_(' Stream '))
-      self.lstream.set_border_width(1)
-      self.lstream.set_active(True)
-      lvbox.add(self.lstream)
-      self.lstream.show()
-      self.llisten = gtk.CheckButton(_(' DJ '))
-      self.llisten.set_border_width(1)
-      self.llisten.set_active(True)
-      lvbox.add(self.llisten)
-      self.llisten.show()
-      
-      lvbox.show()
-      
-      rvbox = gtk.VBox()
-      rvbox.set_border_width(4)
-      self.right_player_frame.add(rvbox)
-      self.rplayall = gtk.RadioButton(None, _('Play All'))
-      self.rplayall.set_border_width(1)
-      rvbox.add(self.rplayall)
-      self.rplayall.show()
-      self.rloopall = gtk.RadioButton(self.rplayall, _('Loop All'))
-      self.rloopall.set_border_width(1)
-      rvbox.add(self.rloopall)
-      self.rloopall.show()
-      self.rrandom = gtk.RadioButton(self.rloopall, _('Random'))
-      self.rrandom.set_border_width(1)
-      rvbox.add(self.rrandom)
-      self.rrandom.show()
-      self.rmanual = gtk.RadioButton(self.rrandom, _('Manual'))
-      self.rmanual.set_border_width(1)
-      rvbox.add(self.rmanual)
-      self.rmanual.show()
-      self.rcueup = gtk.RadioButton(self.rmanual, _('Cue Up'))
-      self.rcueup.set_border_width(1)
-      rvbox.add(self.rcueup)
-      self.rcueup.show()
-      separator = gtk.HSeparator()
-      rvbox.pack_start(separator, False, False, 1)
-      separator.show()
-      self.rcountup = gtk.RadioButton(None, _('Count Up'))
-      self.rcountup.set_border_width(1)
-      rvbox.add(self.rcountup)
-      self.rcountup.show()
-      self.rcountdown = gtk.RadioButton(self.rcountup, _('Count Down'))
-      self.rcountdown.set_border_width(1)
-      rvbox.add(self.rcountdown)
-      self.rcountdown.show()
-      separator = gtk.HSeparator()
-      rvbox.pack_start(separator, False, False, 1)
-      separator.show()
-      self.rstream = gtk.CheckButton(_(' Stream '))
-      self.rstream.set_border_width(1)
-      self.rstream.set_active(True)
-      rvbox.add(self.rstream)
-      self.rstream.show()
-      self.rlisten = gtk.CheckButton(_(' DJ '))
-      self.rlisten.set_border_width(1)
-      self.rlisten.set_active(True)
-      rvbox.add(self.rlisten)
-      self.rlisten.show()
-      rvbox.show()
       
       self.misc_session_frame = gtk.Frame()
       self.misc_session_frame.set_border_width(4)
@@ -1466,6 +1428,7 @@ class mixprefs:
       self.tracks_played = gtk.CheckButton(_('Tracks Played'))
       misc_startupl.add(self.tracks_played)
       self.tracks_played.show()
+      # TC: DJ hears the stream mix.
       self.stream_mon = gtk.CheckButton(_('Monitor Stream Mix'))
       misc_startupr.add(self.stream_mon)
       self.stream_mon.show()
@@ -1476,6 +1439,7 @@ class mixprefs:
       outervbox.pack_start(frame, False, False, 0)
       frame.show() 
             
+      # TC: Tab heading for controls that don't merit their own preferences tab.
       features_label = gtk.Label(_('General'))
       self.notebook.append_page(generalwindow, features_label)
       features_label.show()
@@ -1519,7 +1483,7 @@ class mixprefs:
       panevbox.pack_start(vbox, False, False, 0)
       vbox.show()
       
-      frame = gtk.Frame(" " + _('General Mic Options') + " ")
+      frame = gtk.Frame(" %s " % _('General Mic Options'))
       frame.set_label_align(0.5, 0.5)
       frame.set_border_width(3)
       vbox = gtk.VBox()
@@ -1557,7 +1521,7 @@ class mixprefs:
       
       jackname = os.environ["jack_server_name"]
       if jackname != "default":
-         label = gtk.Label(_('Using named JACK server: ') + jackname)
+         label = gtk.Label(_('Using named JACK server: %s') % jackname)
          jack_vbox.add(label)
          label.show()
       
@@ -1622,7 +1586,7 @@ class mixprefs:
       
       frame = gtk.Frame()
       frame.set_border_width(5)
-      self.use_dsp = gtk.CheckButton(_('Route audio through DSP interface'))
+      self.use_dsp = gtk.CheckButton(_('Route audio through the DSP interface'))
       self.use_dsp.connect("toggled", self.cb_use_dsp)
       frame.set_label_widget(self.use_dsp)
       self.use_dsp.show()
@@ -1651,6 +1615,7 @@ class mixprefs:
 
       # Controls tab
       tab= midicontrols.ControlsUI(self.parent.controls)
+      # TC: Keyboard and MIDI bindings configuration.
       label= gtk.Label(_('Bindings'))
       self.notebook.append_page(tab, label)
       tab.show()
@@ -1724,7 +1689,8 @@ class mixprefs:
       label.show()
       
       label = gtk.Label()
-      label.set_markup(u'<span font_desc="sans 10" underline="low" foreground="blue">' + _('Released under the GNU General Public License V2.0') + '</span>')
+      # TC: 'General Public License' is a proper name and must not be translated. It can however be abbreviated as 'GPL'.
+      label.set_markup('<span font_desc="sans 10" underline="low" foreground="blue">' + _('Released under the GNU General Public License V2.0') + '</span>')
       vbox.pack_start(label, False, False, 1)
       label.show()
       
@@ -1786,23 +1752,6 @@ class mixprefs:
       self.bind_jack_ports()
       
       self.playersettingsdict = {       # Settings of these will be saved in the config file 
-         "lplayall"      : self.lplayall,       # These are all True/False values
-         "lloopall"      : self.lloopall,
-         "lrandom"       : self.lrandom,
-         "lmanual"       : self.lmanual,
-         "lcueup"        : self.lcueup,
-         "lcountup"      : self.lcountup,
-         "lcountdown"    : self.lcountdown,
-         "lstream"       : self.lstream,
-         "llisten"       : self.llisten,
-         "rplayall"      : self.rplayall,
-         "rloopall"      : self.rloopall,
-         "rrandom"       : self.rrandom,
-         "rmanual"       : self.rmanual,
-         "rcueup"        : self.rcueup,
-         "rcountdown"    : self.rcountdown,
-         "rstream"       : self.rstream,
-         "rlisten"       : self.rlisten,
          "startmini"     : self.startmini,
          "djalarm"       : self.djalarm,
          "trxpld"        : self.tracks_played,
@@ -1840,7 +1789,11 @@ class mixprefs:
          
       for mic_control in mic_controls:
          self.playersettingsdict.update(mic_control.booleandict)
-         
+
+      for each in (self.lpconfig, self.rpconfig):
+         self.playersettingsdict.update(each.active_dict)
+
+
       self.valuesdict = {
          "interval_vol"  : self.parent.jingles.interadj,
          "passspeed"     : self.parent.passspeed_adj,
