@@ -49,7 +49,7 @@ class dialog_group:
             each.hide()
 
 # Used to show a dialog related to the failure of the server connection
-class error_notification_dialog(gtk.Dialog):
+class disconnection_notification_dialog(gtk.Dialog):
    def window_attn(self, widget, event):
       if event.new_window_state | gtk.gdk.WINDOW_STATE_ICONIFIED:
          widget.set_urgency_hint(True)
@@ -64,39 +64,43 @@ class error_notification_dialog(gtk.Dialog):
       self.dial_group.hide(self)
       gtk.Dialog.present(self)
 
-   def __init__(self, dial_group = None, window_group = None, window_title = "", additional_text = None):
+   def __init__(self, dial_group = None, window_group = None, window_title = None, text = None):
+      if window_title is None:
+         window_title = pm.title_extra.strip()
+      else:
+         window_title += pm.title_extra
+      
       gtk.Dialog.__init__(self, window_title, None, gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE))
       if window_group is not None:
          window_group.add_window(self)
       self.set_resizable(False)
+      self.set_border_width(6)
+      self.get_child().set_spacing(12)
       self.connect("close", self.respond)
       self.connect("response", self.respond)
       self.connect("window-state-event", self.window_attn)
       
       hbox = gtk.HBox(False, 20)
-      hbox.set_border_width(20)
-      self.vbox.pack_start(hbox, True, True, 0)
+      hbox.set_spacing(12)
+      self.get_content_area().pack_start(hbox, True, True, 0)
       hbox.show()
       image = gtk.Image()
-      image.set_from_stock(gtk.STOCK_DIALOG_ERROR, gtk.ICON_SIZE_DIALOG)
-      hbox.pack_start(image, True, True, 0)
+      image.set_alignment(0.5, 0)
+      image.set_from_stock(gtk.STOCK_DISCONNECT, gtk.ICON_SIZE_DIALOG)
+      hbox.pack_start(image, False)
       image.show()
       vbox = gtk.VBox()
-      vbox.set_spacing(8)
       hbox.pack_start(vbox, True, True, 0)
       vbox.show()
       
-      if additional_text is not None:
-         if type(additional_text) is str:
-            additional_text = additional_text.splitlines()
-         for each in additional_text:
-            label = gtk.Label()
-            attrlist = pango.AttrList()
-            attrlist.insert(pango.AttrSize(12500, 0, len(each)))
-            label.set_attributes(attrlist)
-            label.set_text(each)
-            vbox.add(label)
+      if text is not None:
+         for each in text.splitlines():
+            label = gtk.Label(each)
+            label.set_use_markup(True)
+            label.set_alignment(0.0, 0.5)
+            vbox.pack_start(label, False)
             label.show()
+
       if dial_group is not None:
          dial_group.add(self)
       self.dial_group = dial_group

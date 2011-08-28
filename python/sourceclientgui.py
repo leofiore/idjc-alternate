@@ -75,6 +75,7 @@ class HistoryEntryWithMenu(HistoryEntry):
       
       
    def _on_populate_popup(self, entry, menu):
+      # TC: gtk.Entry popup menu item. Attribute may be one of Artist, Title, Album, and so on.
       attr_menu_item = gtk.MenuItem(_('Insert Attribute'))
       submenu = gtk.Menu()
       attr_menu_item.set_submenu(submenu)
@@ -172,7 +173,7 @@ class ConnectionDialog(gtk.Dialog):
       self.loginname = DefaultEntry("source")
       self.password = DefaultEntry("changeme")
       self.password.set_visibility(False)
-      self.stats = gtk.CheckButton(_('Server to be scanned for audience figures'))
+      self.stats = gtk.CheckButton(_('This server is to be scanned for audience figures'))
       
       # Layout
       #
@@ -185,11 +186,12 @@ class ConnectionDialog(gtk.Dialog):
       hbox.pack_start(col)
       sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       for text, widget in zip(
-            (_('Server type:'), _('Hostname:'), _('Port number:'), 
-            _('Mount point:'), _('Login name:'), _('Password:')), 
+            (_('Server type'), _('Hostname'), _('Port number'), 
+            _('Mount point'), _('Login name'), _('Password')), 
             (self.servertype, self.hostname, self.portnumber, 
             self.mountpoint, self.loginname, self.password)):
          row = gtk.HBox()
+         row.set_spacing(3)
          label = gtk.Label(text)
          label.set_alignment(1.0, 0.5)
          row.pack_start(label, False)
@@ -409,6 +411,7 @@ class ConnectionPane(gtk.VBox):
          text = "{0.host}:{0.port}{0.mount}".format(config)
          tab.server_connect_label.set_text(text)
       else:
+         # TC: The connect button text when no connection details have been entered.
          tab.server_connect_label.set_text(_('No Master Server Configured'))
    
    def individual_listeners_toggle_cb(self, cell, path):
@@ -606,16 +609,18 @@ class ConnectionPane(gtk.VBox):
       self.treeview.append_column(col_type)
       text_cell_rend = gtk.CellRendererText()
       text_cell_rend.set_property("ellipsize", pango.ELLIPSIZE_END)
-      col_host = gtk.TreeViewColumn(_('Hostname/IP'), text_cell_rend, text=2)
+      col_host = gtk.TreeViewColumn(_('Hostname/IP address'), text_cell_rend, text=2)
       col_host.set_sizing = gtk.TREE_VIEW_COLUMN_FIXED
       col_host.set_expand(True)
       self.treeview.append_column(col_host)
       rend_port = gtk.CellRendererText()
       rend_port.set_property("xalign", 1.0)
+      # TC: TCP port number.
       col_port = gtk.TreeViewColumn(_('Port'), rend_port, text = 3)
       col_port.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       col_port.set_alignment(0.5)
       self.treeview.append_column(col_port)
+      # TC: Mount point is a technical term in relation to icecast servers.
       col_mount = gtk.TreeViewColumn(_('Mount point      '), text_cell_rend, text=4)
       col_mount.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       self.treeview.append_column(col_mount)
@@ -623,6 +628,7 @@ class ConnectionPane(gtk.VBox):
       rend_enabled = gtk.CellRendererToggle()
       rend_enabled.connect("toggled", self.individual_listeners_toggle_cb)
       rend_listeners = gtk.CellRendererText()
+      # TC: This is the listener count heading.
       col_listeners = gtk.TreeViewColumn(_('Listeners'))
       col_listeners.set_sizing = gtk.TREE_VIEW_COLUMN_AUTOSIZE
       col_listeners.pack_start(rend_enabled, False)
@@ -732,7 +738,7 @@ class TimeEntry(gtk.HBox):              # A 24-hour-time entry widget with a che
          self.seconds_past_midnight = -1
    def __init__(self, labeltext):
       gtk.HBox.__init__(self)
-      self.set_spacing(5)
+      self.set_spacing(3)
       self.check = gtk.CheckButton(labeltext)
       self.check.connect("toggled", self.__entry_activate)
       self.pack_start(self.check, False)
@@ -976,7 +982,7 @@ class StreamTab(Tab):
          self.resample_rate = self.jack_sample_rate
          self.extraction_method = "no_resample"
          self.mp3_compatible = True
-         SubcategoryFrame.__init__(self, _(' Sample rate '))
+         SubcategoryFrame.__init__(self, " %s " % _('Sample rate'))
          self.resample_no_resample, self.resample_standard, self.resample_custom = self.parentobject.make_radio(3)
          self.resample_no_resample.connect("clicked", self.cb_eval, "no_resample")
          self.resample_standard.connect("clicked", self.cb_eval, "standard")
@@ -1110,7 +1116,7 @@ class StreamTab(Tab):
       vbox_right.set_spacing(1)
       hbox.pack_start(vbox_left, False, False, 0)
       hbox.pack_start(vbox_right, True, True, 0)
-      hbox.set_spacing(5)
+      hbox.set_spacing(3)
       for text, item in label_item_pairs:
          if text is not None:
             labelbox = gtk.HBox()
@@ -1535,6 +1541,7 @@ class StreamTab(Tab):
       self.server_connect_label.show()
       self.server_connect.show()
       
+      # TC: Kick whoever is on the server.
       self.kick_incumbent = gtk.Button(_('Kick Incumbent'))
       self.kick_incumbent.connect("clicked", self.cb_kick_incumbent)
       set_tip(self.kick_incumbent, _('This will disconnect whoever is currently using the server, freeing it up for personal use.'))
@@ -1545,24 +1552,30 @@ class StreamTab(Tab):
       hbox.show()
       
       hbox = gtk.HBox()
-      hbox.set_spacing(10)
-      label = gtk.Label(_('Timer:'))
+      hbox.set_spacing(6)
+      label = gtk.Label(_('Connection timer:'))
       hbox.pack_start(label, False)
       label.show()
       
-      self.start_timer = TimeEntry(_('Start:'))
+      self.start_timer = TimeEntry(_('Begin'))
       set_tip(self.start_timer, _('Automatically connect to the server at a specific time in 24 hour format, midnight being 00:00'))
-      hbox.pack_start(self.start_timer, True)
+      hbox.pack_start(self.start_timer, False)
       self.start_timer.show()
-      self.stop_timer = TimeEntry(_('Stop:'))
+      
+      self.kick_before_start = gtk.CheckButton(_('With kick'))
+      self.kick_before_start.set_sensitive(False)
+      set_tip(self.kick_before_start, _('Disconnect whoever is using the server just before start time.'))
+      hbox.pack_start(self.kick_before_start, False)
+      self.kick_before_start.show()
+
+      self.start_timer.check.connect("toggled", lambda w: self.kick_before_start.set_sensitive(w.props.active))
+
+      
+      self.stop_timer = TimeEntry(_('End'))
       set_tip(self.stop_timer, _('Automatically disconnect from the server at a specific time in 24 hour format.'))
-      hbox.pack_start(self.stop_timer, True)
+      hbox.pack_end(self.stop_timer, False)
       self.stop_timer.show()
       
-      self.kick_before_start = gtk.CheckButton(_('Kick Before Start'))
-      set_tip(self.kick_before_start, _('Disconnect whoever is using the server just before start time.'))
-      hbox.pack_end(self.kick_before_start, False)
-      self.kick_before_start.show()
       
       ic_vbox.pack_start(hbox, False, False, 0)
       hbox.show()
@@ -1572,6 +1585,7 @@ class StreamTab(Tab):
       label = gtk.Label(_('At connect:'))
       hbox.pack_start(label, False, False, 0)
       label.show()
+      # TC: [x] Start player (*) 1 ( ) 2
       self.start_player_action = AutoAction(_('Start player'), (
                 ("1", self.source_client_gui.parent.player_left.play.clicked),
                 ("2", self.source_client_gui.parent.player_right.play.clicked)))
@@ -1583,6 +1597,7 @@ class StreamTab(Tab):
          hbox.pack_start(vseparator, True, False, 0)
          vseparator.show()
       
+      # TC: [x] Start recorder (*) 1 ( ) 2
       self.start_recorder_action = AutoAction(_('Start recorder'), [ (chr(ord("1") + i), t.record_buttons.record_button.activate) for i, t in enumerate(self.source_client_gui.recordtabframe.tabs) ])
       
       hbox.pack_end(self.start_recorder_action, False, False, 0)
@@ -1592,7 +1607,7 @@ class StreamTab(Tab):
       ic_vbox.pack_start(hbox, False, False, 0)
       hbox.show()
 
-      frame = gtk.Frame(_(' Metadata '))
+      frame = gtk.Frame(" %s " % _('Metadata'))
       table = gtk.Table(3, 3)
       table.set_border_width(6)
       table.set_row_spacings(1)
@@ -1603,6 +1618,7 @@ class StreamTab(Tab):
       frame.show()
       
       format_label = SmallLabel(_('Format String'))
+      # TC: Label for the metadata fallback value.
       fallback_label = SmallLabel(_('Fallback'))
       self.metadata = HistoryEntryWithMenu()
       self.metadata.child.connect("changed", self.cb_new_metadata_format)
@@ -1756,7 +1772,9 @@ class StreamTab(Tab):
       
       upper_spin_adj = gtk.Adjustment(150, 100, 400, 1, 10, 0)
       lower_spin_adj = gtk.Adjustment(50, 0, 100, 1, 10, 0)
+      # TC: The upper bitrate limit as a percentage.
       self.vorbis_encoding_upper_spin_control = FramedSpin(_('Upper %'), upper_spin_adj, self.vorbis_encoding_nominal_spin_adj)
+      # TC: The lower bitrate limit as a percentage.
       self.vorbis_encoding_lower_spin_control = FramedSpin(_('Lower %'), lower_spin_adj, self.vorbis_encoding_nominal_spin_adj)
       
       sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
@@ -1783,7 +1801,7 @@ class StreamTab(Tab):
       
       flac_bitrates = (_('%d Bit') % x for x in (16, 20, 24))
       self.flac16bit, self.flac20bit, self.flac24bit = self.make_radio_with_text(flac_bitrates)
-      set_tip(self.flac16bit, _('The ideal bit width for streaming assuming you have the bandwidth to spare.'))
+      set_tip(self.flac16bit, _('Useful for streaming but for recording choose a higher bitrate option.'))
       set_tip(self.flac20bit, _('Ideal for very high quality streaming or recording although not as compatible as 16 bit.'))
       set_tip(self.flac24bit, _('The highest quality audio format available within IDJC. Recommended for pre-recording.'))
       if FGlobs.oggflacenabled:
@@ -1796,12 +1814,18 @@ class StreamTab(Tab):
       # Speex subtab contents
       self.speex_mode = gtk.combo_box_new_text()
       # The Speex audio codec has specific modes that are user selectable (dropdown list text).
-      speex_modes = (_('Ultra Wide Band'), _('Wide Band'), _('Narrow Band'))
+      speex_modes = (
+         # TC: One of the modes supported by the Speex codec.
+         _('Ultra Wide Band'), 
+         # TC: One of the modes supported by the Speex codec.
+         _('Wide Band'), 
+         # TC: One of the modes supported by the Speex codec.
+         _('Narrow Band'))
       for each in speex_modes:
          self.speex_mode.append_text(each)
       self.speex_mode.set_active(0)
       self.speex_stereo = gtk.CheckButton(_('Stereo'))
-      set_tip(self.speex_stereo, _('Apply intensity stereo to the audio stream. This is a very efficient implementation of stereo but is only really suited to voice.'))
+      set_tip(self.speex_stereo, _('Apply intensity stereo to the audio stream. This is a very efficient implementation of stereo but is only suited to voice.'))
       self.speex_metadata = gtk.CheckButton(_('Metadata'))
       set_tip(self.speex_metadata, _('Sending metadata may cause listener clients to misbehave when the metadata changes. By keeping this feature turned off you can avoid that.'))
       self.speex_quality = gtk.combo_box_new_text()
@@ -1817,6 +1841,7 @@ class StreamTab(Tab):
          svbox = gtk.VBox()
          svbox.set_border_width(5)
          
+         # TC: The mode uesd by the Speex codec.
          label = gtk.Label(_('Mode'))
          shbox0 = gtk.HBox()
          shbox0.set_spacing(5)
@@ -1869,6 +1894,7 @@ class StreamTab(Tab):
       format_control_bar.pack_start(self.format_info_bar, True, True, 0)
       self.format_info_bar.show()
       set_tip(self.format_info_bar, _('Information about how the encoder is currently configured is displayed here.'))
+      # TC: Button when pressed performs an update.
       self.update_button = gtk.Button(_('Update'))
       set_tip(self.update_button, _('Use this to change the encoder settings while streaming or recording.\n \nIf this button is greyed out it means that the encoder is not running, or the bitrate/samplerate combination is not supported by the encoder, or you are trying to switch between Ogg and mp3, which is not permitted.'))
       self.update_button.connect("clicked", self.cb_update_button)
@@ -1881,6 +1907,7 @@ class StreamTab(Tab):
       self.format_notebook.set_current_page(0)
 
       vbox = gtk.VBox()
+      # TC: Tab heading. User can enter information about the stream here.
       label = gtk.Label(_('Stream Info'))
       self.details_nb.append_page(vbox, label)
       label.show()
@@ -1902,8 +1929,11 @@ class StreamTab(Tab):
       genre_entry_box.pack_start(self.make_public, False, False, 0)
       self.make_public.show()
       info_sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
-      stream_details_pane = self.label_item_layout(((_('DJ Name'), self.dj_name_entry),
+      stream_details_pane = self.label_item_layout((
+                                              # TC: The DJ or Stream name.
+                                              (_('DJ name'), self.dj_name_entry),
                                               (_('Listen URL'), self.listen_url_entry),
+                                              # TC: Station description. Typically the user enters a small paragraph of text.
                                               (_('Description'), self.description_entry),
                                               (_('Genre(s)'), genre_entry_box)
                                               ), info_sizegroup)
@@ -1915,8 +1945,8 @@ class StreamTab(Tab):
       vbox = gtk.VBox()
       alhbox = gtk.HBox()
       alhbox.set_border_width(10)
-      alhbox.set_spacing(5)
-      label = gtk.Label(_('Master server admin password:'))
+      alhbox.set_spacing(3)
+      label = gtk.Label(_('Master server admin password'))
       alhbox.pack_start(label, False)
       label.show()
       self.admin_password_entry = gtk.Entry()
@@ -1927,7 +1957,7 @@ class StreamTab(Tab):
       vbox.pack_start(alhbox, False)
       alhbox.show()
            
-      frame = CategoryFrame(_(' Contact Details '))
+      frame = CategoryFrame(" %s " % _('Contact Details'))
       frame.set_shadow_type(gtk.SHADOW_NONE)
       frame.set_border_width(0)
       self.irc_entry = gtk.Entry()
@@ -1938,9 +1968,9 @@ class StreamTab(Tab):
       set_tip(self.icq_entry, _('ICQ instant messenger connection info goes here.'))
       contact_sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
       contact_details_pane = self.label_item_layout((
-                                              (_('IRC:'), self.irc_entry),
-                                              (_('AIM:'), self.aim_entry),
-                                              (_('ICQ:'), self.icq_entry)
+                                              (_('IRC'), self.irc_entry),
+                                              (_('AIM'), self.aim_entry),
+                                              (_('ICQ'), self.icq_entry)
                                               ), contact_sizegroup)
       contact_details_pane.set_border_width(10)
       frame.add(contact_details_pane)
@@ -2167,6 +2197,7 @@ class RecordTab(Tab):
          self.file_dialog = gtk.FileChooserDialog("", None, gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
          self.file_dialog.set_do_overwrite_confirmation(True)
          self.file_chooser_button = gtk.FileChooserButton(self.file_dialog)
+         # TC: Dialog title bar text.
          self.file_dialog.set_title(_('Select A Folder To Save To') + pm.title_extra)
          self.file_dialog.connect("current-folder-changed", self.cb_new_folder)
          self.file_dialog.set_current_folder(os.environ["HOME"])
@@ -2275,7 +2306,7 @@ class StreamTabFrame(TabFrame):
       hbox.set_spacing(5)
       gvbox.pack_start(hbox, False)
       hbox.show()
-      self.connect_group = gtk.Button("Connect")
+      self.connect_group = gtk.Button(_("Connect"))
       self.connect_group.connect("clicked", self.forall, self.cb_connect_toggle, True)
       hbox.add(self.connect_group)
       self.connect_group.show()
@@ -2291,13 +2322,13 @@ class StreamTabFrame(TabFrame):
       self.group_safety.connect("toggled", self.cb_group_safety)
       ihbox.pack_start(self.group_safety, False)
       self.group_safety.show()
-      self.disconnect_group = gtk.Button("Disconnect")
+      self.disconnect_group = gtk.Button(_("Disconnect"))
       self.disconnect_group.connect("clicked", self.forall, self.cb_connect_toggle, False)
       self.disconnect_group.connect("clicked", lambda x: self.group_safety.set_active(False))
       self.disconnect_group.set_sensitive(False)
       ihbox.add(self.disconnect_group)
       self.disconnect_group.show()
-      self.kick_group = gtk.Button("Kick Incumbents")
+      self.kick_group = gtk.Button(_("Kick Incumbents"))
       self.kick_group.connect("clicked", self.forall, self.cb_kick_group)
       self.kick_group.connect("clicked", lambda x: self.group_safety.set_active(False))
       self.kick_group.set_sensitive(False)
@@ -2305,7 +2336,7 @@ class StreamTabFrame(TabFrame):
       self.kick_group.show()
       hbox = gtk.HBox()
       hbox.set_spacing(6)
-      label = gtk.Label(_('Metadata: '))
+      label = gtk.Label("%s " % _('Metadata:'))
       hbox.pack_start(label, False)
       label.show()
       self.metadata_group = HistoryEntryWithMenu()
@@ -2333,7 +2364,7 @@ class StreamTabFrame(TabFrame):
       self.objects = { "group_metadata": (self.metadata_group, "history") }
       self.togglelist = [gtk.CheckButton(str(x + 1)) for x in range(q_tabs)]
       hbox = gtk.HBox()
-      label = gtk.Label(_(' Group Controls '))
+      label = gtk.Label(" %s " % _('Group Controls'))
       hbox.pack_start(label, False)
       label.show()
       for i, cb in enumerate(self.togglelist):
@@ -2789,6 +2820,7 @@ class SourceClientGui:
       self.source_client_open()
       self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
       self.parent.window_group.add_window(self.window)
+      # TC: Window title bar text.
       self.window.set_title(_('IDJC Output') + pm.title_extra)
       self.window.set_destroy_with_parent(True)
       self.window.set_border_width(11)
@@ -2843,9 +2875,9 @@ class SourceClientGui:
       self.is_shoutcast = False
 
       self.dialog_group = dialog_group()
-      self.disconnected_dialog = error_notification_dialog(self.dialog_group, self.parent.window_group, _('IDJC Disconnected'), _('A connection to a radio server failed.'))
+      self.disconnected_dialog = disconnection_notification_dialog(self.dialog_group, self.parent.window_group, "", _('<span weight="bold" size="12000">A connection to a radio server has failed.</span>\n\nReconnection will not be attempted.'))
 
-      self.autoshutdown_dialog = error_notification_dialog(self.dialog_group, self.parent.window_group, _('IDJC Disconnected'), _('A timer triggered an automatic server disconnection.'))
+      self.autoshutdown_dialog = disconnection_notification_dialog(self.dialog_group, self.parent.window_group, "", _('<span weight="bold" size="12000">A scheduled stream disconnection has occurred.</span>'))
       
       self.monitor_source_id = gobject.timeout_add(250, self.monitor)
       self.window.realize()   # prevent rendering bug and problems with sizegroups on certain widgets
