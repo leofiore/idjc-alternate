@@ -1,6 +1,6 @@
 /*
 #   avcodecdecode.c: decodes wma file format for xlplayer
-#   Copyright (C) 2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2007, 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 #ifdef HAVE_AVCODEC
 #ifdef HAVE_AVFORMAT
+#ifdef HAVE_AVUTIL
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,7 +56,7 @@ static void avcodecdecode_eject(struct xlplayer *xlplayer)
       }
    if (self->outbuf)
       free(self->outbuf);
-   if (self->floatsamples);
+   if (self->floatsamples)
       free(self->floatsamples);
    pthread_mutex_lock(&mutex);
    avcodec_close(self->c);
@@ -222,7 +223,7 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
    else
       xlplayer->dec_data = self;
    
-   if (av_open_input_file(&self->ic, xlplayer->pathname, NULL, 0, NULL) < 0)
+   if (avformat_open_input(&self->ic, xlplayer->pathname, NULL, NULL) < 0)
       {
       fprintf(stderr, "avcodecdecode_reg: failed to open input file %s\n", xlplayer->pathname);
       free(self);
@@ -288,21 +289,21 @@ fprintf(stderr, "avcodecdecode_reg: registered\n");
 
 void avformatinfo(char *pathname)
    {
-   AVFormatContext *ic;
-   AVMetadata *mc;
-   AVMetadataTag *tag;
+   AVFormatContext *ic = NULL;
+   AVDictionary *mc;
+   AVDictionaryEntry *tag;
    const int flags = AV_METADATA_DONT_STRDUP_KEY | AV_METADATA_DONT_STRDUP_VAL;
    char *keys[] = {"artist", "title", "album", NULL}, **kp;
    
    pthread_once(&once_control, once_init);
-   if (av_open_input_file(&ic, pathname, NULL, 0, NULL) >= 0)
+   if (avformat_open_input(&ic, pathname, NULL, NULL) >= 0)
       {
       av_find_stream_info(ic);
       mc = ic->metadata;
 
       for(kp = keys; *kp; kp++)
          {
-         if ((tag = av_metadata_get(mc, *kp, NULL, flags)))
+         if ((tag = av_dict_get(mc, *kp, NULL, flags)))
             printf("avformatinfo: %s=%s\n", tag->key, tag->value);
          }
      
@@ -313,5 +314,6 @@ void avformatinfo(char *pathname)
    fflush(stdout);
    }
    
+#endif /* HAVE_AVUTIL */
 #endif /* HAVE_AVFORMAT */
 #endif /* HAVE_AVCODEC */

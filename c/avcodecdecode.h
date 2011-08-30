@@ -1,6 +1,6 @@
 /*
 #   avcodecdecode.h: decodes wma file format for xlplayer
-#   Copyright (C) 2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2007, 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 #ifdef HAVE_AVCODEC
 #ifdef HAVE_AVFORMAT
+#ifdef HAVE_AVUTIL
 
 #ifdef FFMPEG_AVCODEC
 #include <ffmpeg/avcodec.h>
@@ -28,6 +29,7 @@
 #else
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavutil/dict.h>
 #endif
 
 #include "xlplayer.h"
@@ -39,7 +41,7 @@ struct avcodecdecode_vars
    AVCodecContext *c;
    AVFormatContext *ic;
    int resample;
-   int stream;
+   unsigned int stream;
    uint8_t *outbuf;
    float *floatsamples;
    float drop;
@@ -48,5 +50,6 @@ struct avcodecdecode_vars
 int avcodecdecode_reg(struct xlplayer *xlplayer);
 void avformatinfo(char *pathname);
 
+#endif /* HAVE_AVUTIL */
 #endif /* HAVE_AVFORMAT */
 #endif /* HAVE_AVCODEC */
