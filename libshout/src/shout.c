@@ -220,7 +220,7 @@ ssize_t shout_send_raw(shout_t *self, const unsigned char *data, size_t len)
 	if (len && ! self->wqueue.len) {
 		if ((ret = try_write(self, data, len)) < 0)
 			return self->error;
-		if (ret < len) {
+		if (ret < (ssize_t)len) {
 			self->error = queue_data(&self->wqueue, data + ret, len - ret);
 			if (self->error != SHOUTERR_SUCCESS)
 				return self->error;

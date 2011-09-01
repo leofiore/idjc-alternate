@@ -616,7 +616,7 @@ void mp3_tag_cleanup(struct mp3taginfo *ti)
    memset(ti, 0, sizeof (struct mp3taginfo));
    }
 
-struct chapter *mp3_tag_chapter_scan(struct mp3taginfo *ti, int time_ms)
+struct chapter *mp3_tag_chapter_scan(struct mp3taginfo *ti, unsigned time_ms)
    {
    struct chapter *c;
 

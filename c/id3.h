@@ -74,7 +74,7 @@ struct id3_header
 struct id3_tag
    {
    void *tag_data;
-   int tag_data_size;
+   size_t tag_data_size;
    struct id3_header header;
    struct id3_extended_header *extended_header;
    struct id3_frame *first_frame;

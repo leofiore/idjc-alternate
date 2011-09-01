@@ -317,7 +317,7 @@ void speex_tag_write(char *suppliedpathname, char *createdby, char *taglist)
    int   id3size;
    char *copybuf;
    int   first = TRUE;
-   int   bytes;
+   size_t bytes;
    enum  packet_t packet_type = INITIAL_PACKET;
    ogg_sync_state    oy;
    ogg_page          ogr;

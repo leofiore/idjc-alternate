@@ -91,8 +91,8 @@ struct recorder
    struct metadata_item2 *mi2_last;
    int mp3_mode;                /* indicate we are recording an mp3 file */
    int is_vbr;                  /* frame length changed */
-   int oldbitrate;
-   int oldsamplerate;
+   unsigned oldbitrate;
+   unsigned oldsamplerate;
    char first_mp3_header[4];
    SNDFILE *sf;                 /* support for recording with libsndfile */
    SF_INFO sfinfo;

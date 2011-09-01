@@ -70,7 +70,7 @@ static void live_oggspeex_build_metadata(struct encoder *encoder, struct lose_da
    {
    int len;
    int items = 0;
-   int base;
+   size_t base;
    struct ogg_tag_data *t = &s->tag_data;
 
    /* build a vorbis comment block */

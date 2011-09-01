@@ -206,10 +206,11 @@ static long encoder_resampler_get_data(void *cb_data, float **data)
    return (long)n_samples;
    }
   
-struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, int min_samples_needed, int max_samples, float **caller_supplied_buffer)
+struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, size_t min_samples_needed, size_t max_samples, float **caller_supplied_buffer)
    {
    struct encoder_ip_data *id;
-   int samples_available, i;
+   size_t samples_available;
+   int i;
    
    if (!(id = calloc(1, sizeof (struct encoder_ip_data))))
       {

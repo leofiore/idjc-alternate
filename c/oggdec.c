@@ -76,11 +76,11 @@ int oggdec_get_next_packet(struct oggdec_vars *self)
    return 1;
    }
 
-static int vorbis_get_samplerate(struct oggdec_vars *self)  /* attempt to get ARTIST=, TITLE= also */
+static unsigned vorbis_get_samplerate(struct oggdec_vars *self)  /* attempt to get ARTIST=, TITLE= also */
    {
    vorbis_info vi;
    vorbis_comment vc;
-   int samplerate;
+   unsigned samplerate;
 
    vorbis_info_init(&vi);
    vorbis_comment_init(&vc);
@@ -187,7 +187,7 @@ FLAC__StreamDecoderReadStatus oggflac_read_callback(const FLAC__StreamDecoder *d
    if (bytes_remaining < 0 || *bytes <= 0)
       return FLAC__STREAM_DECODER_READ_STATUS_ABORT;
 
-   if (*bytes > bytes_remaining)
+   if (*bytes > (size_t)bytes_remaining)
       *bytes = bytes_remaining;
 
    *bytes = fread(buffer, sizeof (FLAC__byte), *bytes, self->fp);
@@ -213,7 +213,7 @@ FLAC__StreamDecoderSeekStatus oggflac_seek_callback(const FLAC__StreamDecoder *d
    else
       end_bound = self->bos_offset[self->ix + 1] - start_bound;
 
-   if (absolute_byte_offset > end_bound - start_bound)
+   if (absolute_byte_offset > (FLAC__uint64)(end_bound - start_bound))
       {
       fprintf(stderr, "oggflac_seek_callback: seek error1\n");
       return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
@@ -282,7 +282,7 @@ static void oggflac_metadata_callback(const FLAC__StreamDecoder *decoder, const 
    struct oggdec_vars *self = client_data;
    const FLAC__StreamMetadata_StreamInfo *si;
    const FLAC__StreamMetadata_VorbisComment *vc;
-   int i, use_alt_tags;
+   int use_alt_tags;
    
    int match(char *t, char *comment)
       {
@@ -299,10 +299,9 @@ static void oggflac_metadata_callback(const FLAC__StreamDecoder *decoder, const 
 
    void copy_tag(char *t, char **target, int multiple)
       {
-      int j;
       char *old, *new;
       
-      for (j = 0; j < vc->num_comments; j++)
+      for (unsigned j = 0; j < vc->num_comments; j++)
          {
          if (match(t, (char *)vc->comments[j].entry))
             {
@@ -336,7 +335,7 @@ static void oggflac_metadata_callback(const FLAC__StreamDecoder *decoder, const 
          vc = &metadata->data.vorbis_comment;
          fprintf(stderr, "There are %u comment tags\n", (unsigned)vc->num_comments);
          use_alt_tags = FALSE;
-         for (i = 0; i < vc->num_comments; i++)
+         for (unsigned i = 0; i < vc->num_comments; i++)
             {
             if (match("trk-title", (char *)vc->comments[i].entry))
                use_alt_tags = TRUE;
@@ -691,7 +690,7 @@ static off_t oggscan_eos(struct oggdec_vars *self, off_t offset, off_t offset_en
          /* make space for data about this logical stream */
          self->n_streams++;
          self->bos_offset = realloc(self->bos_offset, self->n_streams * sizeof (off_t));
-         self->granule_count = realloc(self->granule_count, self->n_streams * sizeof (int));
+         self->granule_count = realloc(self->granule_count, self->n_streams * sizeof (unsigned));
          self->samplerate = realloc(self->samplerate, self->n_streams * sizeof (int));
          self->channels = realloc(self->channels, self->n_streams * sizeof (int));
          self->serial = realloc(self->serial, self->n_streams * sizeof (int));
@@ -774,7 +773,8 @@ static struct oggdec_vars *oggdecode_get_metadata(char *pathname)
    off_t  offset = 0, offset_end, offset_new;
    size_t bytes;
    char  *buffer;
-   int i, samplerate = 0;
+   int i;
+   unsigned samplerate = 0;
    double start_time = 0.0;
    
    /* allocate storage space */

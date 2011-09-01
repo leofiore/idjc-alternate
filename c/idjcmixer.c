@@ -56,7 +56,7 @@
 /* playlength of ring buffer contents */
 #define RB_SIZE 10.0
 /* number of samples in the fade (ring) buffer */
-#define FB_SIZE (RB_SIZE * sr)
+#define FB_SIZE (size_t)(RB_SIZE * sr)
 /* number of bytes in the MIDI queue buffer */
 #define MIDI_QUEUE_SIZE 1024
 
@@ -93,8 +93,8 @@ int eot_alarm_set = 0;
 /* set when end of track alarm is active */
 int eot_alarm_f = 0;
 /* threshold values for a premature indicator that a player is about to finish */
-int jingles_samples_cutoff;
-int player_samples_cutoff;
+unsigned jingles_samples_cutoff;
+unsigned player_samples_cutoff;
 /* the number of samples processed this song - used to calculate the player progress bars */
 int left_samples_total, right_samples_total;
 /* used to implement interlude player fade in/out: true when playing a track */
@@ -122,7 +122,7 @@ struct mic **mics;
 /* flag for mp3 decode capability */
 int have_mad;
 /* size of the fade buffer */
-int fb_size;
+size_t fb_size;
 /* peakfilter handles for stream peak */
 struct peakfilter *str_pf_l, *str_pf_r;
 
@@ -147,13 +147,13 @@ float current_dj_audio_level = 0.0;
 
 struct compressor stream_limiter =
    {
-   0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0
+   0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0, 0.0
    }, audio_limiter =
    {
-   0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0
+   0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0, 0.0
    }, phone_limiter =
    {
-   0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0
+   0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0, 0.0
    };
 
 struct normalizer str_normalizer =
@@ -229,44 +229,44 @@ char *flag;
 
 /* dictionary look-up type thing used by the parse routine */
 struct kvpdict kvpdict[] = {
-         { "PLRP", &playerpathname },   /* The media-file pathname for playback */
-         { "RGDB", &rg_db },            /* Replay Gain volume level controlled at the player end */
-         { "SEEK", &seek_s },           /* Playback initial seek time in seconds */
-         { "SIZE", &size },             /* Size of the file in seconds */
-         { "PLPL", &playerplaylist },   /* A playlist for the media players */
-         { "LOOP", &loop },             /* play in a loop */
-         { "MIXR", &mixer_string },     /* Control strings */
-         { "COMP", &compressor_string },/* packed full of data */
-         { "GATE", &gate_string },
-         { "MICS", &microphone_string },
-         { "INDX", &item_index },
-         { "NORM", &normalizer_string },
-         { "NMIC", &new_mic_string },
-         { "MIC",  &target_port_name },
-         { "AUXL", &auxl },
-         { "AUXR", &auxr },
-         { "MIDI", &midi },
-         { "AUDL", &audl },
-         { "AUDR", &audr },
-         { "STRL", &strl },
-         { "STRR", &strr },
-         { "DOL", &dol   },
-         { "DOR", &dor   },
-         { "DIL", &dil   },
-         { "DIR", &dir   },
-         { "FADE", &fade_mode },
-         { "OGGP", &oggpathname },
-         { "SPXP", &speexpathname },
-         { "SNDP", &sndfilepathname },
-         { "AVFP", &avformatpathname },
-         { "SPXT", &speextaglist },
-         { "SPXC", &speexcreatedby },
-         { "RSQT", &resamplequality },
-         { "AGCP", &mic_param },
-         { "HEAD", &headroom },
-         { "FLAG", &flag },
-         { "ACTN", &action },                   /* Action to take */
-         { "", NULL }};
+         { "PLRP", &playerpathname, NULL },   /* The media-file pathname for playback */
+         { "RGDB", &rg_db, NULL },            /* Replay Gain volume level controlled at the player end */
+         { "SEEK", &seek_s, NULL },           /* Playback initial seek time in seconds */
+         { "SIZE", &size, NULL },             /* Size of the file in seconds */
+         { "PLPL", &playerplaylist, NULL },   /* A playlist for the media players */
+         { "LOOP", &loop, NULL },             /* play in a loop */
+         { "MIXR", &mixer_string, NULL },     /* Control strings */
+         { "COMP", &compressor_string, NULL },/* packed full of data */
+         { "GATE", &gate_string, NULL },
+         { "MICS", &microphone_string, NULL },
+         { "INDX", &item_index, NULL },
+         { "NORM", &normalizer_string, NULL },
+         { "NMIC", &new_mic_string, NULL },
+         { "MIC",  &target_port_name, NULL },
+         { "AUXL", &auxl, NULL },
+         { "AUXR", &auxr, NULL },
+         { "MIDI", &midi, NULL },
+         { "AUDL", &audl, NULL },
+         { "AUDR", &audr, NULL },
+         { "STRL", &strl, NULL },
+         { "STRR", &strr, NULL },
+         { "DOL", &dol, NULL   },
+         { "DOR", &dor, NULL   },
+         { "DIL", &dil, NULL   },
+         { "DIR", &dir, NULL   },
+         { "FADE", &fade_mode, NULL },
+         { "OGGP", &oggpathname, NULL },
+         { "SPXP", &speexpathname, NULL },
+         { "SNDP", &sndfilepathname, NULL },
+         { "AVFP", &avformatpathname, NULL },
+         { "SPXT", &speextaglist, NULL },
+         { "SPXC", &speexcreatedby, NULL },
+         { "RSQT", &resamplequality, NULL },
+         { "AGCP", &mic_param, NULL },
+         { "HEAD", &headroom, NULL },
+         { "FLAG", &flag, NULL },
+         { "ACTN", &action, NULL },                   /* Action to take */
+         { "", NULL, NULL }};
 
 /* the rms filter currently in use */
 struct rms_calc *lm_rms_filter, *rm_rms_filter;
@@ -1549,7 +1549,7 @@ int main(int argc, char **argv)
    float normrise, normfall;
    int fadeout_f;
    int flush_left, flush_right, flush_jingles, flush_interlude;
-   int i, new_left_pause, new_right_pause;
+   int new_left_pause, new_right_pause;
    static int old_aux_on = 0;
    jack_nframes_t nframes;
    char *artist = NULL, *title = NULL, *album = NULL, *replaygain = NULL;
@@ -1683,7 +1683,7 @@ int main(int argc, char **argv)
    else
       {
       alarm_size = (sr / 900) * 900;    /* builds the alarm tone wave table */
-      for (i = 0; i < alarm_size ; i++) /* note it has a nice 2nd harmonic added */
+      for (unsigned i = 0; i < alarm_size ; i++) /* note it has a nice 2nd harmonic added */
          {
          eot_alarm_table[i] = 0.83F * sinf((i % (sr/900)) * 6.283185307F / (sr/900));
          eot_alarm_table[i] += 0.024F * sinf((i % (sr/900)) * 12.56637061F / (sr/900) + 3.141592654F / 4.0F);
@@ -1704,7 +1704,7 @@ int main(int argc, char **argv)
       plr_i->fadeindex = FB_SIZE;
 
       float f = powf(10.0f, -441.0f/((FB_SIZE) * 200.0f));
-      for (i = 0; i < FB_SIZE; i++)
+      for (unsigned i = 0; i < FB_SIZE; i++)
          fade_table[i] = powf(f, i);
       }
 

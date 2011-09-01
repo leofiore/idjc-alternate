@@ -43,7 +43,7 @@ static void sndfiledecode_init(struct xlplayer *xlplayer)
       xlplayer->command = CMD_COMPLETE;
       return;
       }
-   if (self->sf_info.samplerate != xlplayer->samplerate)
+   if (self->sf_info.samplerate != (int)xlplayer->samplerate)
       {
       fprintf(stderr, "sndfiledecode_init: configuring resampler\n");
       xlplayer->src_state = src_new(xlplayer->rsqual, self->sf_info.channels, &src_error);

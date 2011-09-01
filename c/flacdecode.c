@@ -34,7 +34,8 @@
 
 void make_flac_audio_to_float(struct xlplayer *self, float *flbuf, const FLAC__int32 * const inputbuffer[], unsigned int numsamples, unsigned int bits_per_sample, unsigned int numchannels)
    {
-   int sample, channel, shiftvalue = 32 - bits_per_sample;
+   int shiftvalue = 32 - bits_per_sample;
+   unsigned sample, channel;
    const float half_randmax = (float)(RAND_MAX >> 1);
    float dither;
    float dscale;

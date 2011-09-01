@@ -41,7 +41,8 @@ static FLAC__int32 **live_oggflac_encoder_make_pcm(struct encoder_ip_data *id, s
    const FLAC__int32 ll = ~ul;
    FLAC__int32 val;
    FLAC__int32 **pcm;
-   int i, j;
+   int i;
+   unsigned j;
 
    if (!(pcm = malloc(sizeof (FLAC__int32 *) * id->channels)))
       {

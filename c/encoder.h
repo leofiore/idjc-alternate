@@ -168,6 +168,6 @@ int encoder_update(struct threads_info *ti, struct universal_vars *uv, void *oth
 int encoder_new_song_metadata(struct threads_info *ti, struct universal_vars *uv, void *other);
 int encoder_new_custom_metadata(struct threads_info *ti, struct universal_vars *uv, void *other);
 void encoder_src_data_cleanup(struct encoder *self);
-struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, int min_samples_needed, int max_samples, float **caller_supplied_buffer);
+struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, size_t min_samples_needed, size_t max_samples, float **caller_supplied_buffer);
 void encoder_ip_data_free(struct encoder_ip_data *id);
 #endif

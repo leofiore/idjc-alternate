@@ -549,9 +549,9 @@ static void *recorder_main(void *args)
                   w = self->combined;
                   while (rl != endp)
                      {
-                     for (int i = 0; i < sizeof (sample_t); i++)
+                     for (unsigned i = 0; i < sizeof (sample_t); i++)
                         *w++ = *rl++;
-                     for (int i = 0; i < sizeof (sample_t); i++)
+                     for (unsigned i = 0; i < sizeof (sample_t); i++)
                         *w++ = *rr++;
                      }
                   sf_writef_float(self->sf, (float *)self->combined, nbytes / sizeof (sample_t));

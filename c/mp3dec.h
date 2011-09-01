@@ -34,7 +34,7 @@ struct mp3decode_vars
    float playduration;
    int resample;
    int nchannels;
-   int samplerate;
+   unsigned samplerate;
    struct mp3taginfo taginfo;
    struct chapter *current_chapter;
    jack_ringbuffer_t *lrb;

@@ -86,7 +86,7 @@ struct xlplayer
    int fadeinstep;                      /* affects the fade in speed */
    int jack_flush;                      /* tells the jack callback to flush the ringbuffers */
    int jack_is_flushed;                 /* indicates true when jack callback has done the flush */
-   int samplerate;                      /* the audio sample rate in use by the jack transport */
+   unsigned samplerate;                 /* the audio sample rate in use by the jack transport */
    jack_nframes_t fadeindex;            /* running tally of where we are up to re. the fadeout */
    int pause;                           /* flag controlling the player paused state */
    int write_deferred;                  /* suppress further generation of audio data */

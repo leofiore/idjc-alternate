@@ -84,7 +84,7 @@ static void avcodecdecode_init(struct xlplayer *xlplayer)
             break;
          }
       }
-   if ((self->resample = (self->c->sample_rate != xlplayer->samplerate)))
+   if ((self->resample = (self->c->sample_rate != (int)xlplayer->samplerate)))
       {
       fprintf(stderr, "configuring resampler\n");
       xlplayer->src_data.src_ratio = (double)xlplayer->samplerate / (double)self->c->sample_rate;
@@ -146,7 +146,7 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
    inbuf_ptr = pkt.data;
    pktcopy = pkt;
 
-   if (pkt.stream_index != self->stream)
+   if (pkt.stream_index != (int)self->stream)
       {
       if (pkt.data)
          av_free_packet(&pkt);

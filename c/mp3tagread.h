@@ -74,5 +74,5 @@ struct tag_lookup
 
 void mp3_tag_read(struct mp3taginfo *ti, FILE *fp);
 void mp3_tag_cleanup(struct mp3taginfo *ti);
-struct chapter *mp3_tag_chapter_scan(struct mp3taginfo *ti, int time_ms);
+struct chapter *mp3_tag_chapter_scan(struct mp3taginfo *ti, unsigned time_ms);
 
