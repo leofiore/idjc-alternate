@@ -1064,6 +1064,7 @@ class MainWindow:
          self.album = ""
 
       self.new_metadata = (self.songname, self.artist, self.title, self.album)
+      
       # update metadata on stream if it has changed
       if self.new_metadata != self.old_metadata:
          self.old_metadata = self.new_metadata             # now we need to send the new metadata
@@ -1072,8 +1073,9 @@ class MainWindow:
             self.window.set_title("%s :: IDJC%s" % (self.songname, pm.title_extra))
             tm = time.localtime()
             ts = "%02d:%02d :: " % (tm[3], tm[4])       # hours and minutes
+            tstext = self.songname.encode("utf-8") + " - %s" % self.album
             self.history_buffer.place_cursor(self.history_buffer.get_end_iter())
-            self.history_buffer.insert_at_cursor(ts + self.songname + "\n")
+            self.history_buffer.insert_at_cursor(ts + tstext + "\n")
             adjustment = self.history_window.get_vadjustment()
             adjustment.set_value(adjustment.upper)
             try:
@@ -1082,7 +1084,7 @@ class MainWindow:
                print "unable to open history.log for writing"
             else:
                try:
-                  file.write(time.strftime("%x %X :: ") + self.songname.encode("utf-8") + "\n")
+                  file.write(time.strftime("%x %X :: ") + tstext + "\n")
                except IOError:
                   print "unable to append to file \"history.log\""
                file.close()
