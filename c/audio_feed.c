@@ -132,8 +132,7 @@ static char *str_join(const char *s1, const char *s2)
       return NULL;
       }
 
-   strcpy(s, s1);
-   strcat(s, s2);
+   snprintf(s, l, "%s%s", s1, s2);
    return s;
    }
 
@@ -197,6 +196,6 @@ void audio_feed_destroy(struct audio_feed *self)
    free(self->mx_port_l);
    free(self->mx_port_r);
    free(self->sc_port_l);
-   free(self->mx_port_r);
+   free(self->sc_port_r);
    free(self);
    }

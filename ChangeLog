@@ -1,5 +1,7 @@
 * Changes in version 0.8.6 *
 
+Fixed double free and memory leak in audio_feed.c.
+
 Album metadata is now logged in tracks played and history.log.
 
 Added new Troubleshooting tab in server configuration. This includes the new ability to set the user agent string.
