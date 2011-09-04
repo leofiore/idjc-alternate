@@ -1222,6 +1222,8 @@ class MainWindow:
       if data == "Jingles":
          self.jingles.window.present()
          self.jingles.entry.grab_focus()
+      if data == "Profile":
+         pm.show_profile_dialog()
       if data.startswith("cfm"):
          if self.crosspass:
             gobject.source_remove(self.crosspass)
@@ -2067,6 +2069,14 @@ class MainWindow:
       self.jingles_button.show()
       set_tip(self.jingles_button, _('Open the jingles player window.'))
       
+      # window opener button for profiles
+      self.profile_button = gtk.Button(_('Profile'))
+      wbsg.add_widget(self.profile_button)
+      self.profile_button.connect("clicked", self.callback, "Profile")
+      self.hbox10.pack_start(self.profile_button, True, True, 0)
+      self.profile_button.show()
+      set_tip(self.profile_button, _('Open the profile window.'))
+      
       sep = gtk.VSeparator()
       self.hbox10.pack_start(sep, False, False, 5)
       sep.show()
@@ -2701,6 +2711,12 @@ class MainWindow:
       menu_jingles.connect("activate", self.callback, "Jingles")
       menu_jingles.show()
       view_menu.append(menu_jingles)
+
+      # TC: The profile manager window's opener button text.
+      menu_profile = gtk.MenuItem(_('Profile'))
+      menu_profile.connect("activate", self.callback, "Profile")
+      menu_profile.show()
+      view_menu.append(menu_profile)
 
       # menu for closing prefs, server, jingles
 

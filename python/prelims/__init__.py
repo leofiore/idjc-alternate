@@ -25,6 +25,8 @@ import argparse
 import shutil
 import tempfile
 import time
+import math
+import subprocess
 from functools import partial
 from collections import defaultdict
 
@@ -455,6 +457,9 @@ class ProfileManager(object):
                                profile, "icon") or PGlobs.default_icon
             dialog.set_profile(profile, self.title_extra, self._iconpathname)
             self._uprep.activate_for_profile(self._dbus_bus_name, self.get_uptime)
+      else:
+         print "%s run -p %s" % (FGlobs.bindir / FGlobs.package_name, profile)
+         subprocess.Popen([FGlobs.bindir / FGlobs.package_name, "run", "-p", profile], close_fds=True)
 
 
    def _generate_profile(self, newprofile, template=None, **kwds):
@@ -550,7 +555,7 @@ class ProfileManager(object):
                   rslt[each] = None
                
             rslt["active"] = self._profile_has_owner(profname)
-            rslt["uptime"] = self._uprep.get_uptime_for_profile(profname)
+            rslt["uptime"] = math.floor(self._uprep.get_uptime_for_profile(profname))
             yield rslt
 
 

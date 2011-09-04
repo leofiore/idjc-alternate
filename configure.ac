@@ -232,6 +232,7 @@ AC_CONFIG_FILES([Makefile
                   Man/Makefile
                   doc/Makefile
                   python/__init__.py.in
-                  idjc.in])
+                  idjc.in
+                  idjc.desktop.in])
 
 AC_OUTPUT

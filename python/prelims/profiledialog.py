@@ -444,7 +444,7 @@ class ProfileDialog(gtk.Dialog):
 
    def do_selection_active_changed(self, profile, state):
       state = not state
-      self.choose.set_sensitive(state and self._profile is None)
+      self.choose.set_sensitive(state)
       self.edit.set_sensitive(state)
       self.clone.set_sensitive(state)
 
@@ -530,11 +530,12 @@ class ProfileDialog(gtk.Dialog):
          self.emit("selection-active-changed", self._highlighted, active)
             
       
-   def _highlight_profile(self, target):
+   def _highlight_profile(self, target, scroll=True):
       i = self._get_index_for_profile(target)
       if i is not None:
          self.selection.select_path(i)
-         self.selection.get_tree_view().scroll_to_cell(i)
+         if scroll:
+            self.selection.get_tree_view().scroll_to_cell(i)
 
 
    def _get_index_for_profile(self, target):
@@ -594,7 +595,7 @@ class ProfileDialog(gtk.Dialog):
                uptime = d["uptime"]
                self.store.append((pb, d["profile"], desc, active, i or "", nick, uptime))
             self.selection.handler_unblock_by_func(self._cb_selection)
-            self._highlight_profile(h)
+            self._highlight_profile(h, scroll=False)
       return self.props.visible
       
       
