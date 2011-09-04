@@ -43,7 +43,7 @@ from ..gtkstuff import threadslock
 
 
 import gettext
-t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
+t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
 _ = t.gettext
 
 

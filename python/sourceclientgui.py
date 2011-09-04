@@ -45,7 +45,7 @@ from .tooltips import main_tips
 from .prelims import ProfileManager
 
 
-t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
+t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
 _ = t.gettext
 
 

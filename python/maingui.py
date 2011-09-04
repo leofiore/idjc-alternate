@@ -49,7 +49,7 @@ from . import p3db
 from .prelims import *
 
 
-t = gettext.translation(FGlobs.package_name, FGlobs.localedir)
+t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
 _ = t.gettext
 
 args = ArgumentParserImplementation().parse_args()
