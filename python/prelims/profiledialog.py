@@ -614,8 +614,12 @@ class ProfileDialog(gtk.Dialog):
       self.set_title(self.get_title() + title_extra)
       NewProfileDialog.append_dialog_title(title_extra)
       self._title_extra = title_extra
-      self.set_icon_from_file(iconpathname)
-      gtk.window_set_default_icon_from_file(iconpathname)
+      try:
+         self.set_icon_from_file(iconpathname)
+      except glib.GError:
+         print "Profile icon image file not found:", iconpathname
+      else:
+         gtk.window_set_default_icon_from_file(iconpathname)
 
       self.cancel.set_label(gtk.STOCK_CLOSE)
       self.connect("delete-event", self._cb_delete_event)

@@ -420,7 +420,7 @@ class ProfileManager(object):
 
          for name, data in zip(self._optionals, opts):
             with open(PGlobs.profile_dir / newprofile / name, "w") as f:
-               f.write(data)
+               f.write(data or "")
 
       except ProfileError, e:
          text = _("<span weight='bold' size='12000'>Error while editing profile: {0}.</span>\n\n{1}").format(oldprofile, e.gui_text)
