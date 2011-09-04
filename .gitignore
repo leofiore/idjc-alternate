@@ -24,6 +24,7 @@ depcomp
 idjc
 idjc.in
 idjc.desktop
+idjc.desktop.in
 idjcctrl
 python/*.pyc
 python/__init__.py
