@@ -1863,18 +1863,6 @@ class MainWindow:
          return True
       return False
    
-   def close_window(self, widget, menu):
-      menu.get_attach_widget().hide()
-   
-   def close_menu_attach(self, widget, event, data):
-      def detach(self, widget):
-         pass
-      if event.button == 3:
-         if self.close_menu.get_attach_widget() is not None:
-            self.close_menu.detach()
-         self.close_menu.attach_to_widget(data, detach)
-         self.close_menu.popup(None, None, None, event.button, event.time)
-   
    # when a second instance of idjc is launched the program launcher will signal the running instance with SIGUSR2
    def second_instance_handler(self, arg1, arg2):
       print "the launch of a second instance of idjc was detected"
@@ -1990,6 +1978,7 @@ class MainWindow:
       # create the GUI elements
       self.window_group = gtk.WindowGroup()
       self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+      self.window.set_gravity(gtk.gdk.GRAVITY_STATIC)
       self.window_group.add_window(self.window)
       self.window.set_title(self.appname + pm.title_extra)
       self.window.set_border_width(8)
@@ -2041,46 +2030,58 @@ class MainWindow:
       # show box 8 now that it's finished
       self.vbox8.show()            
       
-      # do box 7 before the others since it is nice and simple
-      # add a playlist button to open the playlist window
       wbsg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
+
+      self.window_button = gtk.Button()
+      appbox = gtk.HBox()
+      self.window_button.add(appbox)
+      appbox.show()
+      pb = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "app_window.png", 20, 20)
+      image = gtk.image_new_from_pixbuf(pb)
+      image.set_padding(1, 0)
+      image.set_alignment(1.0, 0.5)
+      appbox.pack_start(image, False)
+      image.show()
+      arrow = gtk.Arrow(gtk.ARROW_DOWN, gtk.SHADOW_ETCHED_IN)
+      arrow.set_size_request(12, -1)
+      arrow.set_alignment(1.0, 0.93)
+      appbox.pack_start(arrow, False)
+      arrow.show()
+      self.hbox10.pack_start(self.window_button, False)
+      self.window_button.show()
+      set_tip(self.window_button, _('Open various application windows.'))
       
-      self.prefs_button = gtk.Button(_('Prefs'))
-      wbsg.add_widget(self.prefs_button)
-      self.prefs_button.connect("clicked", self.callback, "Prefs")
-      self.hbox10.pack_start(self.prefs_button, True, True, 0)
-      self.prefs_button.show()
-      set_tip(self.prefs_button, _('Open the preferences window.'))
+      def positioner(menu):
+         w = self.window_button
+         r1 = w.get_allocation()
+         r2 = w.get_toplevel().get_position()
+         return(r1.x + r2[0] + r1.width * 1000 // 1618, r1.y + r2[1] + r1.height - 4, True)
       
-      # add a server button to open the output window
-      self.server_button = gtk.Button(_('Output'))
-      wbsg.add_widget(self.server_button)
-      self.server_button.connect("clicked", self.callback, "Server")
-      self.hbox10.pack_start(self.server_button, True, True, 0)
-      self.server_button.show()
-      set_tip(self.server_button, _('Open the output window.'))
-      
-      # add a jingles button to open the jingles window
-      self.jingles_button = gtk.Button(_('Jingles'))
-      self.jingles_button.viewlevels = (5,)
-      wbsg.add_widget(self.jingles_button)
-      self.jingles_button.connect("clicked", self.callback, "Jingles")
-      self.hbox10.pack_start(self.jingles_button, True, True, 0)
-      self.jingles_button.show()
-      set_tip(self.jingles_button, _('Open the jingles player window.'))
-      
-      # window opener button for profiles
-      self.profile_button = gtk.Button(_('Profile'))
-      wbsg.add_widget(self.profile_button)
-      self.profile_button.connect("clicked", self.callback, "Profile")
-      self.hbox10.pack_start(self.profile_button, True, True, 0)
-      self.profile_button.show()
-      set_tip(self.profile_button, _('Open the profile window.'))
+      def menu_callback(widget, event):
+         window_menu = gtk.Menu()
+         window_menu.show()
+
+         def cb_toggle(mi, window):
+            if mi.get_active():
+               window.present()
+            else:
+               window.hide()
+
+         for label, show_cmd in zip((_('Preferences'), _('Output'), _('Jingles'), _('Profiles')),
+               (self.prefs_window.window.present, self.server_window.window.present,
+                self.jingles.window.present, pm.show_profile_dialog)):
+            mi = gtk.MenuItem(label)
+            mi.connect_object("activate", lambda w: w(), show_cmd)
+            window_menu.append(mi)
+            mi.show()
+       
+         window_menu.popup(None, None, positioner, event.button, event.time)
+         
+      self.window_button.connect("button-press-event", menu_callback)
       
       sep = gtk.VSeparator()
       self.hbox10.pack_start(sep, False, False, 5)
       sep.show()
-      
       
       phonebox = gtk.HBox()
       phonebox.viewlevels = (5,)       
@@ -2110,7 +2111,7 @@ class MainWindow:
       self.redphone.show()
       set_tip(self.redphone, _('Mix voice over IP audio to the DJ only.'))
  
-      self.hbox10.pack_start(phonebox)
+      self.hbox10.pack_start(phonebox, False)
       phonebox.show()
  
       pixbuf3 = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "jack2.png")
@@ -2122,7 +2123,7 @@ class MainWindow:
       self.aux_select.viewlevels = (5,)       
       self.aux_select.add(image)
       self.aux_select.connect("toggled", self.cb_toggle, "Aux Open")
-      self.hbox10.pack_start(self.aux_select)
+      self.hbox10.pack_start(self.aux_select, False)
       self.aux_select.show()
       # TC: aux_in_{l,r} is a contraction of aux_in_l and aux_in_r.
       set_tip(self.aux_select, _('Mix auxiliary audio to the output stream. See also Prefs->JACK Ports->aux_in_{l,r}.'))
@@ -2142,7 +2143,7 @@ class MainWindow:
       self.advance.add(image)
       image.show()
       self.advance.connect("clicked", self.callback, "Advance")
-      self.hbox10.pack_end(self.advance)
+      self.hbox10.pack_end(self.advance, False)
       self.advance.show()
       set_tip(self.advance, _('This button steps through the active playlist, pausing between tracks. The active playlist is defined by the placement of the crossfader.'))
       
@@ -2695,7 +2696,7 @@ class MainWindow:
       view_menu.append(sep)
     
       # TC: The preferences window's opener button text.
-      menu_prefs = gtk.MenuItem(_('Prefs'))
+      menu_prefs = gtk.MenuItem(_('Preferences'))
       menu_prefs.connect("activate", self.callback, "Prefs")
       menu_prefs.show()
       view_menu.append(menu_prefs)
@@ -2713,20 +2714,11 @@ class MainWindow:
       view_menu.append(menu_jingles)
 
       # TC: The profile manager window's opener button text.
-      menu_profile = gtk.MenuItem(_('Profile'))
+      menu_profile = gtk.MenuItem(_('Profiles'))
       menu_profile.connect("activate", self.callback, "Profile")
       menu_profile.show()
       view_menu.append(menu_profile)
 
-      # menu for closing prefs, server, jingles
-
-      self.close_menu = gtk.Menu()
-      # TC: Popup menu text for the close action on a window opener button.
-      close_menu_item = gtk.MenuItem(_('Close'))
-      self.close_menu.add(close_menu_item)
-      self.close_menu.show()
-      close_menu_item.show()
-      close_menu_item.connect("activate", self.close_window, self.close_menu)
 
       # Create the jingles player
       self.jingles = Jingles(self)
@@ -2839,10 +2831,6 @@ class MainWindow:
          self.player_right.restore_session()
          self.restore_session()
       self.session_loaded = True
-       
-      self.prefs_button.connect("button-press-event", self.close_menu_attach, self.prefs_window.window)
-      self.server_button.connect("button-press-event", self.close_menu_attach, self.server_window.window)
-      self.jingles_button.connect("button-press-event", self.close_menu_attach, self.jingles.window)
        
       self.window.set_focus_chain((self.player_left.scrolllist, self.player_right.scrolllist))
        
