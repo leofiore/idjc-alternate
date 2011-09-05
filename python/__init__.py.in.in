@@ -77,7 +77,7 @@ class PGlobs(object):
    app_shortform = "IDJC"
    app_longform = "Internet DJ Console"
    default_icon = FGlobs.pkgdatadir / "icon.png"
-   profile_dialog_refusal_pathname = config_dir / "profile_dialog_refusal"
+   autoload_profile_pathname = config_dir / "autoload-profile"
    copyright = _("Copyright 2005-2011 Stephen Fairchild and others.")
    license = _("Released under the GNU General Public License V2.0 or later.")
    num_micpairs = 2

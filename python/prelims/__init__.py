@@ -26,6 +26,7 @@ import shutil
 import tempfile
 import time
 import math
+import fcntl
 import subprocess
 from functools import partial
 from collections import defaultdict
@@ -52,6 +53,7 @@ _ = t.gettext
 default = "default"
 
 
+# Yes there are too many of these.
 config_files = ("config", "controls", "left_session", "main_session",
    "main_session_files_played", "main_session_tracks", "playerdefaults",
    "right_session", "s_data", "mic1", "mic2", "mic3", "mic4", "mic5",
@@ -300,8 +302,13 @@ class ProfileManager(object):
          except ProfileError as e:
             ap.error(_("failed to create profile: %s") % str(e))
 
-         profile = default
-         dialog_selects = not os.path.exists(PGlobs.profile_dialog_refusal_pathname)
+         profile = self.autoloadprofilename
+         if profile is None:
+            profile = default
+            dialog_selects = True
+         else:
+            dialog_selects = False
+
          if args.profile is not None:
             profile = args.profile[0]
             dialog_selects = False
@@ -328,6 +335,8 @@ class ProfileManager(object):
          self._profile_dialog.connect("new", new_profile)
          self._profile_dialog.connect("clone", new_profile)
          self._profile_dialog.connect("edit", self._cb_edit_profile)
+         self._profile_dialog.connect("auto", self._cb_auto)
+         self._profile_dialog.highlight_profile(profile, scroll=True)
          if dialog_selects:
             self._profile_dialog.run()
             self._profile_dialog.hide()
@@ -379,6 +388,22 @@ class ProfileManager(object):
          return "  (%s)" % self.profile
 
 
+   @property
+   def autoloadprofilename(self):
+      """Which profile would automatically load if given the chance?"""
+      
+      al_profile = self._autoloadprofilename()
+      if al_profile is None:
+         return None
+      
+      try:
+         profiledirs = os.walk(PGlobs.profile_dir).next()[1]
+      except (EnvironmentError, StopIteration):
+         return None
+
+      return al_profile if al_profile in profiledirs else None
+
+
    def get_uptime(self):
       if self._init_time is not None:
          return time.time() - self._init_time
@@ -388,7 +413,32 @@ class ProfileManager(object):
 
    def show_profile_dialog(self):
       self._profile_dialog.show_all()
+
+
+   def _autoloadprofilename(self):
+      """Just the file contents without checking."""
+
+      try:
+         with open(PGlobs.autoload_profile_pathname) as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            al_profile = f.readline().strip()
+      except IOError:
+         return None
+      return al_profile
       
+
+   def _cb_auto(self, dialog, profile):
+      try:
+         with open(PGlobs.autoload_profile_pathname, "r+") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            al_profile = f.readline().strip()
+            f.seek(0)
+            if profile != al_profile:
+               f.write(profile)
+            f.truncate()
+      except IOError:
+         print "Auto failed!"
+
       
    def _cb_edit_profile(self, dialog, newprofile, oldprofile, *opts):
       busses = []
@@ -538,10 +588,11 @@ class ProfileManager(object):
 
 
    def _profile_data(self):
+      a = self._autoloadprofilename()
       d = PGlobs.profile_dir
       try:
          profdirs = os.walk(d).next()[1]
-      except EnvironmentError:
+      except (EnvironmentError, StopIteration):
          return
       for profname in profdirs:
          if profile_name_valid(profname):
@@ -556,6 +607,7 @@ class ProfileManager(object):
                
             rslt["active"] = self._profile_has_owner(profname)
             rslt["uptime"] = math.floor(self._uprep.get_uptime_for_profile(profname))
+            rslt["auto"] = (1 if a == profname else 0)
             yield rslt
 
 

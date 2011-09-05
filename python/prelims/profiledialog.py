@@ -310,7 +310,7 @@ class ProfileDialog(gtk.Dialog):
                         "", MAX_PROFILE_LENGTH)
    }
 
-   _signal_names = "choose", "delete"
+   _signal_names = "choose", "delete", "auto"
    _new_profile_dialog_signal_names = "new", "clone", "edit"
 
    __gsignals__ = { "selection-active-changed" : (
@@ -346,14 +346,14 @@ class ProfileDialog(gtk.Dialog):
 
       # TC: profile dialog window title text.
       gtk.Dialog.__init__(self, _("IDJC Profile Manager"))
-      self.set_size_request(500, 300)
+      self.set_size_request(600, 300)
       self.set_border_width(6)
       w = gtk.ScrolledWindow()
       w.set_border_width(6)
       w.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
       w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
       self.get_content_area().add(w)
-      self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int, str, str, int)
+      self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int, str, str, int, int)
       self.sorted = gtk.TreeModelSort(self.store)
       self.sorted.set_sort_func(1, self._sort_func)
       self.sorted.set_sort_column_id(1, gtk.SORT_ASCENDING)
@@ -361,13 +361,23 @@ class ProfileDialog(gtk.Dialog):
       self.treeview.set_headers_visible(True)
       self.treeview.set_rules_hint(True)
       w.add(self.treeview)
+      autorend = gtk.CellRendererPixbuf()
+      autorend.props.width = 16
+      autorend.props.stock_id = gtk.STOCK_APPLY
+      autorend.props.stock_size = gtk.ICON_SIZE_MENU
       pbrend = gtk.CellRendererPixbuf()
+      pbrend.props.width = 16
       strrend = gtk.CellRendererText()
       ledrend = CellRendererLED()
       time_rend = CellRendererTime()
       strrend_ellip = gtk.CellRendererText()
-      strrend_ellip.set_property("ellipsize", pango.ELLIPSIZE_END)
+      strrend_ellip.props.ellipsize = pango.ELLIPSIZE_END
       # TC: column heading. The available profile names appears below.
+      c0 = gtk.TreeViewColumn(None, autorend, visible=7)
+      image = gtk.image_new_from_stock(gtk.STOCK_OPEN, gtk.ICON_SIZE_MENU)
+      c0.set_widget(image)
+      image.show()
+      self.treeview.append_column(c0)
       c1 = gtk.TreeViewColumn(_("Profile"))
       c1.pack_start(pbrend, expand=False)
       c1.pack_start(strrend)
@@ -376,14 +386,10 @@ class ProfileDialog(gtk.Dialog):
       c1.set_spacing(2)
       self.treeview.append_column(c1)
       # TC: column heading. The profile nicknames. Non latin characters supported.
-      c2 = gtk.TreeViewColumn(_("Nickname"))
-      c2.pack_start(strrend)
-      c2.add_attribute(strrend, "text", 5)
+      c2 = gtk.TreeViewColumn(_("Nickname"), strrend, text=5)
       self.treeview.append_column(c2)
       # TC: column heading.
-      c3 = gtk.TreeViewColumn(_("Description"))
-      c3.pack_start(strrend_ellip)
-      c3.add_attribute(strrend_ellip, "text", 2)
+      c3 = gtk.TreeViewColumn(_("Description"), strrend_ellip, text=2)
       c3.set_expand(True)
       self.treeview.append_column(c3)
       # TC: column heading. The time a particular profile has been running.
@@ -398,12 +404,14 @@ class ProfileDialog(gtk.Dialog):
       self.selection.connect("changed", self._cb_selection)
       box = self.get_action_area()
       box.set_spacing(6)
-      for attr, label, sec in zip(
-                        ("new", "clone", "edit", "delete", "cancel", "choose"), 
+      for attr, label, sec, stock in zip(
+                        ("new", "clone", "edit", "delete", "auto", "cancel", "choose"), 
                         (gtk.STOCK_NEW, gtk.STOCK_COPY, gtk.STOCK_EDIT,
-                         gtk.STOCK_DELETE, gtk.STOCK_QUIT, gtk.STOCK_OPEN),
-                        (True,) * 4 + (False,) * 2):
-         w = gtk.Button(stock=label)
+                         gtk.STOCK_DELETE, _("_Auto"), gtk.STOCK_QUIT, gtk.STOCK_OPEN),
+                        (True,) * 4 + (False,) * 3,
+                        (True,) * 4 + (False,) + (True,) * 2):
+         w = gtk.Button(label)
+         w.set_use_stock(stock)
          box.add(w)
          box.set_child_secondary(w, sec)
          setattr(self, attr, w)
@@ -489,7 +497,7 @@ class ProfileDialog(gtk.Dialog):
          nickname = np_dialog.nickname_entry.get_text().strip()
          self.emit(action, profile, template, icon, nickname, description)
          self._update_data()
-         self._highlight_profile(profile)
+         self.highlight_profile(profile)
          
       np_dialog.ok.connect("clicked", sub_ok)
       if action == "edit":
@@ -510,6 +518,7 @@ class ProfileDialog(gtk.Dialog):
 
    
    def _cb_visible(self, *args):
+      self._update_data()
       if self.props.visible:
          gobject.timeout_add(200, self._protected_update_data)
       
@@ -530,7 +539,7 @@ class ProfileDialog(gtk.Dialog):
          self.emit("selection-active-changed", self._highlighted, active)
             
       
-   def _highlight_profile(self, target, scroll=True):
+   def highlight_profile(self, target, scroll=True):
       i = self._get_index_for_profile(target)
       if i is not None:
          self.selection.select_path(i)
@@ -546,7 +555,11 @@ class ProfileDialog(gtk.Dialog):
 
 
    def _get_row_for_profile(self, target):
-      return list(self.sorted[self._get_index_for_profile(target)])
+      path = self._get_index_for_profile(target)
+      if path is not None:
+         return list(self.sorted[path])
+      else:
+         return None
 
 
    def _sort_func(self, model, *iters):
@@ -562,9 +575,17 @@ class ProfileDialog(gtk.Dialog):
       self._data_function = f
       self._update_data()
       if f is not None:
-         self._highlight_profile(self._default)
-         
-         
+         self.highlight_profile(self._default)
+
+
+   def _auto_data_function(self, col, cell, model, iter):
+      val = model.get_value(iter, 7)
+      cell.set_visible(val)
+      if val:
+         cell.props.stock_id = gtk.STOCK_APPLY
+         cell.props.stock_size = gtk.ICON_SIZE_MENU
+
+
    def _update_data(self):
       if self._data_function is not None:
          data = tuple(self._data_function())
@@ -593,24 +614,21 @@ class ProfileDialog(gtk.Dialog):
                active = d["active"]
                nick = d["nickname"] or ""
                uptime = d["uptime"]
-               self.store.append((pb, d["profile"], desc, active, i or "", nick, uptime))
+               auto = d["auto"]
+               self.store.append((pb, d["profile"], desc, active, i or "", nick, uptime, auto))
             self.selection.handler_unblock_by_func(self._cb_selection)
-            self._highlight_profile(h, scroll=False)
+            self.highlight_profile(h, scroll=False)
       return self.props.visible
       
       
    _protected_update_data = threadslock(_update_data)
       
       
-   @property
-   def profile(self):
-      return self._profile
-      
-      
    def set_profile(self, newprofile, title_extra, iconpathname):
       assert self._profile is None
       self.hide()
       self._profile = newprofile
+      self.highlight_profile(newprofile, scroll=True)
       self.set_title(self.get_title() + title_extra)
       NewProfileDialog.append_dialog_title(title_extra)
       self._title_extra = title_extra
