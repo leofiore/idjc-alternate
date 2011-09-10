@@ -2609,7 +2609,7 @@ class MainWindow:
       set_tip(stream_vu_box, _('A VU meter for the stream audio.'))
        
       # TC: Appears above the mic meters as a label followed by a number.
-      self.mic_meters = [MicMeter(_("Mic"), i) for i in range(1, PGlobs.num_micpairs * 2 + 1)]
+      self.mic_meters = [MicMeter(_("Ch"), i) for i in range(1, PGlobs.num_micpairs * 2 + 1)]
       if len(self.mic_meters) <= 4:
          for meter in self.mic_meters:
             self.micmeterbox.pack_start(meter)

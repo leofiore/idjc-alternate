@@ -50,31 +50,31 @@ static void mic_process_start(struct mic *self, jack_nframes_t nframes)
    if (mode_request != self->mode)
       {
       if (self->mode == 0)
-         fprintf(stderr, "activated mic %d\n", self->id);
+         fprintf(stderr, "activated ch %d\n", self->id);
          
       if (self->mode == 2)
          {
-         fprintf(stderr, "leaving fully processed mode, mic %d\n", self->id);
+         fprintf(stderr, "leaving fully processed mode, ch %d\n", self->id);
          agc_reset(self->agc);
          }
 
       if (mode_request == 3)
          {
-         fprintf(stderr, "entering stereo mode, mic %d\n", self->id);
+         fprintf(stderr, "entering stereo mode, ch %d\n", self->id);
          self->host = self->partner;
          agc_set_partnered_mode(self->agc, TRUE);
          }
 
       if (self->mode == 3)
          {
-         fprintf(stderr, "leaving stereo mode, mic %d\n", self->id);
+         fprintf(stderr, "leaving stereo mode, ch %d\n", self->id);
          self->host = self;
          agc_set_partnered_mode(self->agc, FALSE);
          }
 
       if (mode_request == 0)
          {
-         fprintf(stderr, "deactivated mic %d\n", self->id);
+         fprintf(stderr, "deactivated ch %d\n", self->id);
          self->open = 0;
          self->mute = 0.0f;
          self->unp = self->unpm = self->unpmdj = 0.0f;
@@ -233,7 +233,7 @@ static struct mic *mic_init(jack_client_t *client, int sample_rate, int id)
       free(self);
       return NULL;
       }
-   snprintf(port_name, 10, "mic_in_%d", id);  
+   snprintf(port_name, 10, "ch_in_%d", id);  
    self->jack_port = jack_port_register(client, port_name,
                      JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0); 
    calculate_gain_values(self);   

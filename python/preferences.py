@@ -123,11 +123,11 @@ class AGCControl(gtk.Frame):
       # TC: Microphone mode combobox text.
       N_('Deactivated'),
       # TC: Microphone mode combobox text.
-      N_('Simple (low CPU drain)'),
+      N_('Line input'),
       # TC: Microphone mode combobox text.
-      N_('Full Signal Processing'), 
+      N_('Mic input (processed)'), 
       # TC: Microphone mode combobox text.
-      N_('Partnered with Mic %s'))
+      N_('Partnered with channel %s'))
 
    
    def sendnewstats(self, widget, wname):
@@ -297,7 +297,7 @@ class AGCControl(gtk.Frame):
       self.mode.connect("changed", self.cb_mode)
       self.booleandict[self.commandname + "_mode"] = self.mode
       self.mode.show()
-      set_tip(self.mode, _('The microphone mode.'))
+      set_tip(self.mode, _('The signal processing mode.'))
 
       hbox = gtk.HBox()
       # TC: Indicator of the microphones open or unmuted status. Has alongside an LED indicator.
@@ -412,7 +412,7 @@ class AGCControl(gtk.Frame):
       self.simple_box.modes = (1, )
 
       ivbox = self.frame(" " + _('Basic Controls') + " ", self.simple_box)
-      micgain = self.numline(_('Boost/Gain (dB)'), "gain", digits=1, adj=micgainadj)
+      micgain = self.numline(_('Boost/Cut (dB)'), "gain", digits=1, adj=micgainadj)
       ivbox.pack_start(micgain, False, False)
       
       self.open = self.check("", "open", save=False)
@@ -460,7 +460,7 @@ class AGCControl(gtk.Frame):
       
       # TC: dynamic range compressor.
       ivbox = self.frame(" " + _('Compressor') + " ", self.processed_box)
-      micgain = self.numline(_('Boost/Gain (dB)'), "gain", digits=1, adj=micgainadj)
+      micgain = self.numline(_('Boost/Cut (dB)'), "gain", digits=1, adj=micgainadj)
       ivbox.pack_start(micgain, False, False, 0)
       # TC: this is the peak signal limit.
       limit = self.numline(_('Limit'), "limit", -3.0, -9.0, 0.0, 0.5, 1)
@@ -492,7 +492,7 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(duckhold, False, False, 0)
       set_tip(ivbox, _('The ducker automatically reduces the level of player audio when the DJ speaks. These settings allow you to adjust the timings of that audio reduction.'))
        
-      ivbox = self.frame(" " + _('Options') + " ", self.processed_box)
+      ivbox = self.frame(" " + _('Other options') + " ", self.processed_box)
 
       open_complex = self.check("", NotImplemented, save=False)
       openaction.connect_proxy(open_complex)
@@ -1504,7 +1504,7 @@ class mixprefs:
       vbox.add(hbox)
       hbox.show()
       
-      compressor_label = gtk.Label(_('Microphones'))
+      compressor_label = gtk.Label(_('Channels'))
       self.notebook.append_page(scrolled_window, compressor_label)
       compressor_label.show()
        
@@ -1534,7 +1534,7 @@ class mixprefs:
       self.mic_jack_data = []
       for i in range(1, PGlobs.num_micpairs * 2 + 1):
          n = str(i)
-         box, check, entry, update = make_entry_line(self, "mic_in_" + n + ": ", "MIC", True, i - 1)
+         box, check, entry, update = make_entry_line(self, "ch_in_" + n + ": ", "MIC", True, i - 1)
          vbox.add(box)
          self.mic_jack_data.append((check, entry, update))
          if i < 5:
