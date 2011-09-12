@@ -43,6 +43,7 @@ from .jingles import *
 from .freefunctions import int_object
 from .freefunctions import rich_safe
 from .gtkstuff import threadslock, WindowSizeTracker
+from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog
 from . import midicontrols
 from .tooltips import main_tips
 from . import p3db
@@ -119,6 +120,165 @@ class MicButton(gtk.ToggleButton):
       self.connect("toggled", self.__cb_toggle)
       self.emit("toggled")
       self.__flash = False
+   
+
+class ChannelOpenerButton(gtk.ToggleButton):
+   def __init__(self, ident, channel):
+      gtk.Button.__init__(self)
+      self.set_no_show_all(True)
+      
+      hbox = gtk.HBox()
+      hbox.set_spacing(4)
+      pad = gtk.HBox()
+      hbox.pack_start(pad)
+      self._text_label = gtk.Label()
+      self._text_label.set_no_show_all(True)
+      hbox.pack_start(self._text_label, False)
+      self._icon_image = gtk.Image()
+      self._icon_image.set_no_show_all(True)
+      hbox.pack_start(self._icon_image, False)
+      pad = gtk.HBox()
+      hbox.pack_start(pad)
+
+      self.add(hbox)
+      
+      self.set_ident(ident)
+      self.add_channel(channel)
+      self.child.show_all()
+
+
+   def set_ident(self, ident):
+      return
+      self._ident_label.set_text(str(ident))
+      
+      
+   def set_text(self, text):
+      if text:
+         self._text_label.set_text(text)
+         self._text_label.show()
+      else:
+         self._text_label.hide()
+      
+      
+   def set_icon(self, icon):
+      if icon is not None:
+         try:
+            pb = gtk.gdk.pixbuf_new_from_file_at_size(icon, 47, 20)
+         except glib.GError:
+            self._icon_image.hide()
+         else:
+            self._icon_image.set_from_pixbuf(pb)
+         self._icon_image.show()
+      else:
+         self._icon_image.hide()
+      
+      
+   def add_channel(self, channel):
+      return
+      self.channels.add(channel)
+
+
+   def remove_channel(self, channel):
+      return
+      self.channels.remove(channel)
+      
+
+class ChannelOpenerTab(gtk.VBox):
+   def __init__(self, ident, channel):
+      gtk.VBox.__init__(self)
+      self.set_border_width(3)
+      self.channels = [channel]
+      self.label = gtk.Label()
+      self.label.show()
+      self.opener = ChannelOpenerButton(ident, channel)
+      self.set_ident(ident)
+      
+      sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
+      lhbox = gtk.HBox()
+      lhbox.set_spacing(3)
+      label = gtk.Label(_('Text'))
+      lhbox.pack_start(label, False)
+      self.button_text = gtk.Entry()
+      sg.add_widget(self.button_text)
+      self.button_text.connect("changed", self._on_button_text_changed)
+      lhbox.pack_start(self.button_text)
+      
+      spc = gtk.HBox()
+      lhbox.pack_start(spc, False, padding=2)
+      
+      label = gtk.Label(_('Icon'))
+      lhbox.pack_start(label, False)
+      
+      self.icon_chooser = IconPreviewFileChooserDialog("Choose An Icon",
+                  buttons = (gtk.STOCK_CLEAR, gtk.RESPONSE_NONE,
+                             gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                             gtk.STOCK_OK, gtk.RESPONSE_OK))
+      self.icon_chooser.connect("response", self._on_icon_changed)
+      icb = IconChooserButton(self.icon_chooser)
+      sg.add_widget(icb)
+      lhbox.pack_start(icb, True)
+
+      self.pack_start(lhbox, False)
+
+
+   def set_ident(self, ident):
+      self.label.set_text(str(ident))
+      self.opener.set_ident(ident)
+      self.ident = ident
+
+
+   def _on_button_text_changed(self, entry):
+      self.opener.set_text(entry.get_text())
+      
+      
+   def _on_icon_changed(self, dialog, response_id):
+      self.opener.set_icon(dialog.get_filename())
+
+
+
+class ChannelOpenerSettings(gtk.Frame):
+   def __init__(self):
+      gtk.Frame.__init__(self, " %s " % _('Main Panel Opener Button Configuration'))
+      self.set_border_width(3)
+
+
+   def finalise(self, channels):
+      self.channels = channels
+      notebook = gtk.Notebook()
+      notebook.set_border_width(3)
+      self.add(notebook)
+      self.tabs = [ChannelOpenerTab(i, c) for i, c in enumerate(channels, start=1)]
+      for tab in self.tabs:
+         notebook.append_page(tab, tab.label)
+      self.show_all()
+
+   
+class ChannelOpenerBox(gtk.HBox):
+   def __init__(self, approot, flash_test):
+      gtk.HBox.__init__(self)
+      self.approot = approot
+      self.flash_test = flash_test
+      self.channels = []
+      self.none_configured = gtk.Label(_("No channels configured"))
+      self.none_configured.set_sensitive(False)
+      #self.pack_start(self.none_configured)
+      self.none_configured.show()
+      self.settings = ChannelOpenerSettings()
+      
+      
+   def register_channel(self, ch):
+      self.channels.append(ch)
+
+
+   def finalise(self):
+      self.settings.finalise(self.channels)
+      for each in self.settings.tabs:
+         self.pack_start(each.opener)
+         each.opener.show() # ***
+
+      self.show_all()
+   
+
    
 class MicOpener(gtk.HBox):
    @property
@@ -2131,8 +2291,11 @@ class MainWindow:
       # microphone open/unmute dynamic widget cluster thingy
       self.mic_opener = MicOpener(self, self.flash_test)
       self.mic_opener.viewlevels = (5,)
-      self.hbox10.pack_start(self.mic_opener, True, True)
-      self.mic_opener.show()
+      self.hbox10.pack_start(self.mic_opener)
+      #self.mic_opener.show()
+      
+      self.channel_opener_box = ChannelOpenerBox(self, self.flash_test)
+      self.hbox10.pack_start(self.channel_opener_box)
       
       # playlist advance button
       pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "advance.png")

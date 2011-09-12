@@ -1457,6 +1457,10 @@ class mixprefs:
       panevbox.get_parent().set_shadow_type(gtk.SHADOW_NONE)
       panevbox.show()
      
+      # Opener buttons controls
+      
+      panevbox.pack_start(parent.channel_opener_box.settings, False)
+    
       # New AGC controls
       
       mic_controls = []
@@ -1475,10 +1479,12 @@ class mixprefs:
             uhbox.add(c)
             c.show()
             parent.mic_opener.add_mic(c)
+            parent.channel_opener_box.register_channel(c)
             mic_controls.append(c)
          mic_controls[-2].set_partner(mic_controls[-1])
          mic_controls[-1].set_partner(mic_controls[-2])   
       parent.mic_opener.new_button_set()
+      parent.channel_opener_box.finalise()
 
       panevbox.pack_start(vbox, False, False, 0)
       vbox.show()

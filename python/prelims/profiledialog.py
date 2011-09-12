@@ -40,6 +40,8 @@ from ..gtkstuff import ErrorMessageDialog
 from ..gtkstuff import CellRendererLED
 from ..gtkstuff import CellRendererTime
 from ..gtkstuff import threadslock
+from ..gtkstuff import IconChooserButton
+from ..gtkstuff import IconPreviewFileChooserDialog
 
 
 import gettext
@@ -49,114 +51,6 @@ _ = t.gettext
 
 
 gtk.window_set_default_icon_from_file(PGlobs.default_icon)
-
-
-
-class IconChooserButton(gtk.Button):
-   """Imitate a FileChooserButton but specific to image types.
-   
-   The image rather than the mime-type icon is shown on the button.
-   """
-   
-   def __init__(self, dialog):
-      gtk.Button.__init__(self)
-      dialog.set_icon_from_file(PGlobs.default_icon)
-
-      hbox = gtk.HBox()
-      hbox.set_spacing(4)
-      image = gtk.Image()
-      hbox.pack_start(image, False, padding=1)
-      label = gtk.Label()
-      label.set_alignment(0, 0.5)
-      label.set_ellipsize(pango.ELLIPSIZE_END)
-      hbox.pack_start(label)
-      
-      vsep = gtk.VSeparator()
-      hbox.pack_start(vsep, False)
-      rightmost_icon = gtk.image_new_from_stock(gtk.STOCK_OPEN,
-                                             gtk.ICON_SIZE_MENU)
-      hbox.pack_start(rightmost_icon, False)
-      self.add(hbox)
-      hbox.show_all()
-
-      self.connect("clicked", self._cb_clicked, dialog)
-      self._dialog = dialog
-      self._image = image
-      self._label = label
-      self.set_filename(dialog.get_filename())
-
-
-   def set_filename(self, f):
-      try:
-         disp = glib.filename_display_name(f)
-         pb = gtk.gdk.pixbuf_new_from_file_at_size(f, 16, 16)
-      except (glib.GError, TypeError):
-         # TC: Text reads as /path/to/file.ext or this when no file is chosen.
-         self._label.set_text(_("(None)"))
-         self._image.clear()
-         self._filename = None
-      else:
-         self._label.set_text(disp)
-         self._image.set_from_pixbuf(pb)
-         self._filename = f
-         self._dialog.set_filename(f)
-      
-      
-   def get_filename(self):
-      return self._filename
-
-
-   def _cb_clicked(self, button, dialog):
-      response = dialog.run()
-      if response == gtk.RESPONSE_OK:
-         self.set_filename(dialog.get_filename())
-      elif response == gtk.RESPONSE_NONE:
-         filename = self.get_filename()
-         if filename is not None:
-            dialog.set_filename(filename)
-         self.set_filename(None)
-      dialog.hide()
-
-
-   def __getattr__(self, attr):
-      if attr in gtk.FileChooser.__dict__:
-         return getattr(self._dialog, attr)
-      raise AttributeError("%s has no attribute, %s" % (
-                                 self, attr))
-      
-
-class IconPreviewFileChooserDialog(gtk.FileChooserDialog):
-   def __init__(self, *args, **kwds):
-      gtk.FileChooserDialog.__init__(self, *args, **kwds)
-      filefilter = gtk.FileFilter()
-      # TC: the file filter text of a file chooser dialog.
-      filefilter.set_name(_("Supported Image Formats"))
-      filefilter.add_pixbuf_formats()
-      self.add_filter(filefilter)
-
-      vbox = gtk.VBox()
-      frame = gtk.Frame()
-      vbox.pack_start(frame, expand=True, fill=False)
-      frame.show()
-      image = gtk.Image()
-      frame.add(image)
-      self.set_use_preview_label(False)
-      self.set_preview_widget(vbox)
-      self.set_preview_widget_active(False)
-      self.connect("update-preview", self._cb_update_preview, image)
-      vbox.show_all()
-      
-      
-   def _cb_update_preview(self, dialog, image):
-      f = self.get_preview_filename()
-      try:
-         pb = gtk.gdk.pixbuf_new_from_file_at_size(f, 16, 16)
-      except (glib.GError, TypeError):
-         active = False
-      else:
-         active = True
-         image.set_from_pixbuf(pb)
-      self.set_preview_widget_active(active)
 
 
 
