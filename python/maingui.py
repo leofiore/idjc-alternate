@@ -28,6 +28,7 @@ import stat
 import signal
 import time
 import gettext
+import itertools
 
 import glib
 import gobject
@@ -125,10 +126,29 @@ class MicButton(gtk.ToggleButton):
 class ChannelOpenerButton(gtk.ToggleButton):
    def __init__(self, ident, channel):
       gtk.Button.__init__(self)
+      self.connect("toggled", self._on_toggle)
       self.set_no_show_all(True)
+      self.channels = set()
+
+      attrlist = pango.AttrList()
+      attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, 10))
       
       hbox = gtk.HBox()
       hbox.set_spacing(4)
+
+      lvbox = gtk.VBox()
+      hbox.pack_start(lvbox, False)
+
+      self._ident_label = gtk.Label()
+      self._ident_label.set_alignment(0.0, 0.0)
+      self._ident_label.set_attributes(attrlist)
+      lvbox.pack_start(self._ident_label, False)
+      
+      self._chan_label3 = gtk.Label()
+      self._chan_label3.set_alignment(0.0, 1.0)
+      self._chan_label3.set_attributes(attrlist)
+      lvbox.pack_end(self._chan_label3, False)
+
       pad = gtk.HBox()
       hbox.pack_start(pad)
       self._text_label = gtk.Label()
@@ -139,6 +159,19 @@ class ChannelOpenerButton(gtk.ToggleButton):
       hbox.pack_start(self._icon_image, False)
       pad = gtk.HBox()
       hbox.pack_start(pad)
+      
+      rvbox = gtk.VBox()
+      hbox.pack_start(rvbox, False)
+      
+      self._chan_label1 = gtk.Label()
+      self._chan_label1.set_alignment(1.0, 0.0)
+      self._chan_label1.set_attributes(attrlist)
+      rvbox.pack_start(self._chan_label1, False)
+
+      self._chan_label2 = gtk.Label()
+      self._chan_label2.set_alignment(1.0, 1.0)
+      self._chan_label2.set_attributes(attrlist)
+      rvbox.pack_end(self._chan_label2, False)
 
       self.add(hbox)
       
@@ -148,7 +181,6 @@ class ChannelOpenerButton(gtk.ToggleButton):
 
 
    def set_ident(self, ident):
-      return
       self._ident_label.set_text(str(ident))
       
       
@@ -174,14 +206,31 @@ class ChannelOpenerButton(gtk.ToggleButton):
       
       
    def add_channel(self, channel):
-      return
       self.channels.add(channel)
+      self._update_channels()
 
 
    def remove_channel(self, channel):
-      return
       self.channels.remove(channel)
+      self._update_channels()
       
+
+   def _on_toggle(self, widget):
+      active = self.get_active()
+      for each in self.channels:
+         each.open.set_active(active)
+
+      
+   def _update_channels(self):
+      def labeltext():
+         ch = sorted(self.channels, lambda x, y: cmp(x.index, y.index))
+         for blk in itertools.izip_longest(*(iter(ch),) * 4):
+            yield ",".join(x.ui_name for x in blk if x is not None)
+      
+      for text, label in zip(labeltext(),
+               (self._chan_label1, self._chan_label2, self._chan_label3)):
+         label.set_text(text)
+
 
 class ChannelOpenerTab(gtk.VBox):
    def __init__(self, ident, channel):
@@ -252,7 +301,7 @@ class ChannelOpenerSettings(gtk.Frame):
          notebook.append_page(tab, tab.label)
       self.show_all()
 
-   
+
 class ChannelOpenerBox(gtk.HBox):
    def __init__(self, approot, flash_test):
       gtk.HBox.__init__(self)
