@@ -120,10 +120,8 @@ class ArgumentParserImplementation(object):
             # TC: command line help placeholder.
             metavar=_("server_name"), help=_("the named jack sound-server to connect with"))
       group = sp_run.add_argument_group(_("user interface settings"))
-      group.add_argument("-m", "--mics", dest="mics", nargs="+", metavar="m",
-            help=_("the microphones open at startup"))
-      group.add_argument("-a", "--aux", dest="aux", nargs="+", metavar="a",
-            help=_("the aux ports open at startup"))
+      group.add_argument("-c", "--channels", dest="channels", nargs="+", metavar="c",
+            help=_("the audio channels to have open at startup"))
       group.add_argument("-V", "--voip", dest="voip", nargs=1, choices=
             ("off", "private", "public"),
             help=_("the voip mode at startup"))
@@ -131,7 +129,7 @@ class ArgumentParserImplementation(object):
             help="the players to start among values {1,2}")
       group.add_argument("-s", "--servers", dest="servers", nargs="+", metavar="s",
             help=_("attempt connection with the specified servers"))
-      group.add_argument("-c", "--crossfader", dest="crossfader", choices=("1", "2"), 
+      group.add_argument("-x", "--crossfader", dest="crossfader", choices=("1", "2"), 
             help=_("position the crossfader for the specified player"))
       # TC: command line help placeholder.
       sp_mp.add_argument("newprofile", metavar=_("profile_name"),

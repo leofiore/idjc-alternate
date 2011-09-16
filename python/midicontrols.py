@@ -102,13 +102,13 @@ control_methods= {
     'x_pitch': _('Players show pitchbend'),
 
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'm_on': _('Mic output enable'),
+    'm_on': _('Channel output enable'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'm_vol': _('Mic set volume'),
+    'm_vol': _('Channel set volume'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'm_gain': _('Mic set gain'),
+    'm_gain': _('Channel set gain'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'm_pan': _('Mic set balance'),
+    'm_pan': _('Channel set balance'),
 
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
     'v_on': _('VoIP output enable'),
@@ -120,15 +120,6 @@ control_methods= {
     'v_gain': _('VoIP set gain'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
     'v_pan': _('VoIP set balance'),
-
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'a_on': _('Aux output enable'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'a_vol': _('Aux set volume'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'a_gain': _('Aux set gain'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'a_pan': _('Aux set balance'),
 
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
     'k_fire': _('Jingle play from start'),
@@ -159,7 +150,7 @@ control_targets= {
     # TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
     'p': _('Player'),
     # TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
-    'm': _('Mic'),
+    'm': _('Channel'),
     # TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
     'k': _('Jingle'),
     # TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
@@ -187,7 +178,7 @@ class Binding(tuple):
     An input is a MIDI event or keyboard movement. (Possibly others in future?)
     An action is a method of the Controls object, together with how to apply
     input to it, and, for some methods, a target integer specifying which
-    player/mic/etc the method should be aimed at.
+    player/channel/etc the method should be aimed at.
 
     A Binding is represented in string form in the 'controls' prefs file as
     one 'input:action' pair per line. There may be multiple bindings of the
@@ -570,7 +561,7 @@ class Controls(object):
             Binding('k0.31:sx_fade.b.0'), # 1-2 xfader sides
             Binding('k0.32:sx_fade.b.127'),
             Binding('k0.63:px_pass.0.127'), # C, pass xfader
-            Binding('k0.6d:pm_on.0.127'), # M, first mic toggle
+            Binding('k0.6d:pm_on.0.127'), # M, first channel toggle
             Binding('k0.76:pv_on.0.127'), # V, VoIP toggle
             Binding('k0.70:pv_prep.0.127'), # P, VoIP prefade
             Binding('k0.ff08:pp_stop.2.127'), # backspace, stop focused player
@@ -899,7 +890,7 @@ class Controls(object):
            player= self.owner.player_right if v>=0x40 else self.owner.player_left
         player.treeview.grab_focus()
 
-    # Mic
+    # Channel
     #
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def m_on(self, n, v, isd):
@@ -907,7 +898,7 @@ class Controls(object):
         try:
            mic= opener.mic2button[opener.mic_list[n].ui_name]
         except:
-           print "microphone %d is not present" % (n + 1)
+           print "channel %d is not present" % (n + 1)
         else:
            s= not mic.get_active() if isd else v>=0x40
            mic.set_active(s)
@@ -952,26 +943,6 @@ class Controls(object):
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def v_pan(self, n, v, isd):
-    #    pass # XXX
-
-    # Aux
-    #
-    @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
-    def a_on(self, v, isd):
-        aux= self.owner.aux_select
-        s= not aux.get_active() if isd else v>=0x40
-        aux.set_active(s)
-
-    #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
-    #def a_vol(self, n, v, isd):
-    #    pass # XXX
-
-    #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
-    #def a_gain(self, n, v, isd):
-    #    pass # XXX
-
-    #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
-    #def a_pan(self, n, v, isd):
     #    pass # XXX
 
     # One jingle
@@ -1226,11 +1197,9 @@ class BindingEditor(gtk.Dialog):
         # TC: binding editor, action pane, first row, toplevel menu.
         'x': _('Both players'),
         # TC: binding editor, action pane, first row, toplevel menu.
-        'm': _('Microphone'),
+        'm': _('Channel'),
         # TC: binding editor, action pane, first row, toplevel menu.
         'v': _('VoIP channel'),
-        # TC: binding editor, action pane, first row, toplevel menu.
-        'a': _('Aux channel'),
         # TC: binding editor, action pane, first row, toplevel menu.
         'k': _('Single jingle'),
         # TC: binding editor, action pane, first row, toplevel menu.
@@ -1650,7 +1619,7 @@ class PlayerAdjustment(CustomAdjustment):
         return control_targets_players[max(min(int(value), 3), 0)]
 class TargetAdjustment(CustomAdjustment):
     def __init__(self, group, value= 0):
-        CustomAdjustment.__init__(self, value, 0, {'p': 3, 'm': 3, 'k': 99, 's': 5, 'r': 1}[group], 1)
+        CustomAdjustment.__init__(self, value, 0, {'p': 3, 'm': 11, 'k': 99, 's': 9, 'r': 3}[group], 1)
         self._group= group
     def read_input(self, text):
         return int(text.rsplit(' ', 1)[-1])-1
@@ -1723,7 +1692,7 @@ class ControlsUI(gtk.VBox):
         column_action.set_attributes(crmodifier, text= 6)
         column_action.set_sort_column_id(1)
         column_action.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
-        # TC: Tree column heading for targets e.g. Mic 1, Stream 2
+        # TC: Tree column heading for targets e.g. Channel 1, Stream 2
         column_target= gtk.TreeViewColumn(_('Target'), gtk.CellRendererText(), text= 7)
         column_target.set_sort_column_id(2)
 

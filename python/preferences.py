@@ -250,6 +250,7 @@ class AGCControl(gtk.Frame):
          self.partner.openaction.connect_proxy(self.open)
       else:
          self.openaction.connect_proxy(self.open)
+         self.open.set_sensitive(self.no_front_panel_opener.get_active())
          
    def __init__(self, approot, ui_name, commandname, index):
       self.approot = approot
@@ -319,7 +320,7 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(hbox, False, False)
       hbox.show()
       
-      self.groups_adj = gtk.Adjustment(1.0, 1.0, PGlobs.num_micpairs, 1.0)
+      self.groups_adj = gtk.Adjustment(1.0, 1.0, PGlobs.num_micpairs * 2, 1.0)
       self.valuesdict[self.commandname + "_groupnum"] = self.groups_adj
       groups_spin = gtk.SpinButton(self.groups_adj, 0.0, 0)
       hbox.pack_end(groups_spin, False)
@@ -330,6 +331,7 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(hbox, False)
       hbox.show()
       self.no_front_panel_opener = gtk.RadioButton(self.group, _("This:"))
+      self.booleandict[self.commandname + "_using_local_opener"] = self.no_front_panel_opener
       self.no_front_panel_opener.connect("toggled", lambda w: self.open.set_sensitive(w.get_active()))
       hbox.pack_start(self.no_front_panel_opener, False)
       self.no_front_panel_opener.show()
