@@ -371,7 +371,7 @@ class MicOpener(gtk.HBox):
       joiner = ' <span foreground="red">&#64262;</span> '
 
       # Button grouping and label text stored here temporarily.
-      group_list = [[] for x in xrange(PGlobs.num_micpairs)]
+      group_list = [[] for x in xrange(PGlobs.num_micpairs * 2)]
       
       # Categorisation of microphones into button groups and selection of button text.
       for m in self.mic_list:
@@ -393,8 +393,9 @@ class MicOpener(gtk.HBox):
             
             # Mics listed according to their group.
             if not m.group.get_active():
-               # Appending a new group-of-one for individual mics.
-               group_list.append([(mm, t)])
+               ## Appending a new group-of-one for individual mics.
+               #group_list.append([(mm, t)])
+               pass  # No ungrouped microphones to have buttons.
             else:
                # Mic filed according to its group.
                group_list[int(m.groups_adj.props.value - 1)].append((mm, t))
@@ -423,7 +424,7 @@ class MicOpener(gtk.HBox):
       if not self.mic2button:
          # TC: A textual placeholder for microphone opener buttons.
          # TC: If the user is reading this text then all microphones have been deactivated.
-         l = gtk.Label(_('No Microphones'))
+         l = gtk.Label(_('No Channel Opener Buttons'))
          l.set_sensitive(False) # It just looks better that way.
          self.add(l)
          l.show()
@@ -444,6 +445,8 @@ class MicOpener(gtk.HBox):
       return True
      
    def force_all_on(self, val):
+      """Switch on all front panel buttons and make them insensitive."""
+      
       self._forced_on_mode = val
       for mb in self.buttons:
          if val:
@@ -457,12 +460,19 @@ class MicOpener(gtk.HBox):
             self.mic2button[m.ui_name].set_active(True)
 
    def oc(self, mic, val):
-      """Perform open/close on the matching button for the mic."""
+      """Perform open/close."""
       
       try:
          self.mic2button[mic].set_active(val)
       except:
-         pass
+         for m in self.mic_list:
+            if mic == m.ui_name:
+               mode = m.mode.get_active()
+               if mode in (1, 2):
+                  m.open.set_active(val)
+               elif mode == 3:
+                  m.partner.open.set_active(val)
+               break
 
    def close_all(self):
       for mb in self.buttons:
@@ -3065,13 +3075,9 @@ class MainWindow:
       self.player_left.treeview.emit("cursor-changed")
       self.player_right.treeview.emit("cursor-changed")
 
-      if args.mics is not None:
-         for each in args.mics:
+      if args.channels is not None:
+         for each in args.channels:
             self.mic_opener.open(each)
-
-      if args.aux is not None:
-         if "1" in args.aux:
-            self.aux_select.set_active(True)
 
       if args.voip is not None:
          if args.voip == ["public"]:

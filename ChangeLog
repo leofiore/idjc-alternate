@@ -1,5 +1,7 @@
 * Changes in version 0.8.6 *
 
+Bindings upper target limit values revised.
+
 Window opener buttons replaced by a menu to save space.
 
 Fixed double free and memory leak in audio_feed.c.

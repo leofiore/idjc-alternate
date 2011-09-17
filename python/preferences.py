@@ -134,7 +134,7 @@ class AGCControl(gtk.Frame):
       if wname != NotImplemented:
          if isinstance(widget, (gtk.SpinButton, gtk.Scale)):
             value = widget.get_value()
-         if isinstance(widget, (gtk.CheckButton, gtk.ComboBox)):
+         if isinstance(widget, (gtk.ToggleButton, gtk.ComboBox)):
             value = int(widget.get_active())
          stringtosend = "INDX=%d\nAGCP=%s=%s\nACTN=%s\nend\n" % (self.index, wname, str(value), "mic_control")
          self.approot.mixer_write(stringtosend, True)
@@ -221,7 +221,6 @@ class AGCControl(gtk.Frame):
    def cb_open(self, widget):
       active = widget.get_active()
       self.meter.set_led(active)
-      self.status_led.set_from_pixbuf(self.status_on_pb if active else self.status_off_pb)
 
    def cb_pan_middle(self, button):
       self.pan.set_value(50)
@@ -247,6 +246,11 @@ class AGCControl(gtk.Frame):
       self.meter.set_sensitive(sens)
       if not sens:
           self.open.set_active(False)
+      if mode == 3:
+         self.partner.openaction.connect_proxy(self.open)
+      else:
+         self.openaction.connect_proxy(self.open)
+         self.open.set_sensitive(self.no_front_panel_opener.get_active())
          
    def __init__(self, approot, ui_name, commandname, index):
       self.approot = approot
@@ -301,32 +305,48 @@ class AGCControl(gtk.Frame):
 
       hbox = gtk.HBox()
       # TC: Indicator of the microphones open or unmuted status. Has alongside an LED indicator.
-      label = gtk.Label(_('Open/Unmute'))
+      label = gtk.Label(_('Channel Opener'))
       hbox.pack_start(label, False, False, 3)
       label.show()
-      self.status_led = gtk.Image()
-      hbox.pack_start(self.status_led, False, False, 3)
-      self.status_led.show()
       ivbox = self.widget_frame(hbox, self.vbox, _('This controls the allocation of front panel open/unmute buttons. Having one button control multiple microphones can save time.'), (1, 2))
       hbox.show()
-      self.status_off_pb = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "led_unlit_clear_border_64x64.png", 12, 12)
-      self.status_on_pb = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "led_lit_green_black_border_64x64.png", 12, 12)
-      self.status_led.set_from_pixbuf(self.status_off_pb)
             
       hbox = gtk.HBox()
-      # TC: Mic opener buttons can be grouped together. This checkbutton sits alongside a button group numerical selector.
-      self.group = gtk.CheckButton(_('Button group'))
+      # TC: The mic opener control can appear on the main panel. Alongside sits the button selector.
+      self.group = gtk.RadioButton(None, _('Main Panel Button'))
       self.booleandict[self.commandname + "_group"] = self.group
       hbox.pack_start(self.group, False, False, 0)
       self.group.show()
       ivbox.pack_start(hbox, False, False)
       hbox.show()
       
-      self.groups_adj = gtk.Adjustment(1.0, 1.0, PGlobs.num_micpairs, 1.0)
+      self.groups_adj = gtk.Adjustment(1.0, 1.0, PGlobs.num_micpairs * 2, 1.0)
       self.valuesdict[self.commandname + "_groupnum"] = self.groups_adj
       groups_spin = gtk.SpinButton(self.groups_adj, 0.0, 0)
       hbox.pack_end(groups_spin, False)
       groups_spin.show()
+
+      hbox = gtk.HBox()
+      hbox.set_spacing(6)
+      ivbox.pack_start(hbox, False)
+      hbox.show()
+      self.no_front_panel_opener = gtk.RadioButton(self.group, _("This:"))
+      self.booleandict[self.commandname + "_using_local_opener"] = self.no_front_panel_opener
+      self.no_front_panel_opener.connect("toggled", lambda w: self.open.set_sensitive(w.get_active()))
+      hbox.pack_start(self.no_front_panel_opener, False)
+      self.no_front_panel_opener.show()
+
+      self.openaction = gtk.ToggleAction(None, _('Closed'), None, None)
+      self.openaction.connect("toggled", lambda w: w.set_label(_('Open') if w.get_active() else _('Closed')))
+
+      self.open = gtk.ToggleButton()
+      self.open.connect("toggled", self.cb_open)
+      self.open.connect("toggled", self.sendnewstats, "open")
+      hbox.pack_start(self.open)
+      self.open.show()
+      self.openaction.connect_proxy(self.open)
+      self.open.emit("toggled")
+      self.open.set_sensitive(False)
 
       # TC: Checkbutton that selects this microphone to open automatically in certain circumstances.
       self.autoopen = gtk.CheckButton(_('Automatic Open'))
@@ -401,7 +421,6 @@ class AGCControl(gtk.Frame):
       pairedinvert.show()
 
       micgainadj = gtk.Adjustment(5.0, -20.0, +30.0, 0.1, 2)
-      openaction = gtk.ToggleAction("open", _('Open/Unmute'), _('Allow microphone audio into the mix.'), None)
       invertaction = gtk.ToggleAction("invert", _('Invert Signal'), _('Useful for when microphones are cancelling one another out, producing a hollow sound.'), None)
       # TC: Control whether to mix microphone audio to the DJ mix.
       indjmixaction = gtk.ToggleAction("indjmix", _("In The DJ's Mix"), _('Make the microphone audio audible in the DJ mix. This may not always be desirable.'), None)
@@ -414,10 +433,6 @@ class AGCControl(gtk.Frame):
       ivbox = self.frame(" " + _('Basic Controls') + " ", self.simple_box)
       micgain = self.numline(_('Boost/Cut (dB)'), "gain", digits=1, adj=micgainadj)
       ivbox.pack_start(micgain, False, False)
-      
-      self.open = self.check("", "open", save=False)
-      openaction.connect_proxy(self.open)
-      self.open.connect("toggled", self.cb_open)
       
       invert_simple = self.check("", "invert")
       invertaction.connect_proxy(invert_simple)
@@ -494,10 +509,6 @@ class AGCControl(gtk.Frame):
        
       ivbox = self.frame(" " + _('Other options') + " ", self.processed_box)
 
-      open_complex = self.check("", NotImplemented, save=False)
-      openaction.connect_proxy(open_complex)
-      #ivbox.pack_start(open_complex, False, False)
-      #set_tip(open_complex, _('Allow microphone audio into the mix.'))
       invert_complex = self.check("", NotImplemented, save=False)
       invertaction.connect_proxy(invert_complex)
       ivbox.pack_start(invert_complex, False, False)
