@@ -1619,7 +1619,7 @@ class PlayerAdjustment(CustomAdjustment):
         return control_targets_players[max(min(int(value), 3), 0)]
 class TargetAdjustment(CustomAdjustment):
     def __init__(self, group, value= 0):
-        CustomAdjustment.__init__(self, value, 0, {'p': 3, 'm': 11, 'k': 99, 's': 9, 'r': 3}[group], 1)
+        CustomAdjustment.__init__(self, value, 0, {'p': 3, 'm': 11, 'k': 99, 's': 8, 'r': 3}[group], 1)
         self._group= group
     def read_input(self, text):
         return int(text.rsplit(' ', 1)[-1])-1
