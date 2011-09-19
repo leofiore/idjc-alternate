@@ -62,6 +62,35 @@ set_tip = main_tips.set_tip
 METER_TEXT_SIZE = 8000
 
 
+class ColouredArea(gtk.DrawingArea):
+   def __init__(self, colour=gtk.gdk.Color()):
+      gtk.DrawingArea.__init__(self)
+      self.colour = colour
+      self.rect = gtk.gdk.Rectangle()
+      self.connect("realize", self._on_realize)
+      self.connect("configure-event", self._on_configure)
+      self.connect("expose-event", self._on_expose)
+
+
+   def set_colour(self, colour):
+      self.colour = colour
+      self.queue_draw_area(0, 0, self.rect.width, self.rect.height)
+
+
+   def _on_realize(self, widget):
+      self.gc = gtk.gdk.GC(self.window)
+
+
+   def _on_configure(self, widget, event):
+      self.rect.width = event.width
+      self.rect.height = event.height
+      
+
+   def _on_expose(self, widget, event):
+      self.gc.set_rgb_fg_color(self.colour)      
+      self.window.draw_rectangle(self.gc, True, 0, 0, self.rect.width, self.rect.height)
+
+
 
 class MicButton(gtk.ToggleButton):
    @property
@@ -69,66 +98,40 @@ class MicButton(gtk.ToggleButton):
       return self.__flash
    @flash.setter
    def flash(self, value):
-      self.__flash = bool(value)
+      self.__flash = bool(value) and self.has_reminder_flash()
       self.__indicate()
   
    @staticmethod
    def __cb_toggle(self):
       self.__indicate()
       if self.get_active() and self.flash:
-         self.__images[2].hide()
-         self.__images[1].show()
+         self.set_colour(self.open_colour)
 
    def __indicate(self):
-      images = self.__images
-
       if self.get_active():
-         images[0].hide()
          if self.flash:
-            images[1].hide()
-            images[2].show()
+            self.set_colour(self.flash_colour)
          else:
-            images[2].hide()
-            images[1].show()
+            self.set_colour(self.open_colour)
       else:
-         images[1].hide()
-         images[2].hide()
-         images[0].show()
-   
-   def __init__(self, labeltext):
-      gtk.ToggleButton.__init__(self)
-      hbox = gtk.HBox()
-      pad = gtk.HBox()
-      hbox.pack_start(pad, True, True)
-      pad.show()
-      hbox.set_spacing(4)
-      self.add(hbox)
-      label = gtk.Label(labeltext)
-      label.set_use_markup(True)
-      hbox.pack_start(label, False, False)
-      label.show()
-      def image(name):
-         i = gtk.Image()
-         pb = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / (name + ".png"), 47, 20)
-         i.set_from_pixbuf(pb)
-         hbox.pack_start(i, False)
-         return i
-      self.__images = [image(x) for x in ("mic_off", "mic_on", "mic_unshown")]
-      pad = gtk.HBox()
-      hbox.pack_start(pad, True, True)
-      pad.show()
-      hbox.show()
-      self.connect("toggled", self.__cb_toggle)
-      self.emit("toggled")
-      self.__flash = False
-   
+         self.set_colour(self.closed_colour)
+         
+         
+   def set_colour(self, colour):
+      for each in (self.ca1, self.ca2):
+         each.set_colour(colour)
 
-class ChannelOpenerButton(gtk.ToggleButton):
-   def __init__(self, ident, channel):
-      gtk.Button.__init__(self)
-      self.connect("toggled", self._on_toggle)
-      self.set_no_show_all(True)
-      self.channels = set()
+
+   def __init__(self, opener_settings, opener_tab, mic_agc_list):
+      gtk.ToggleButton.__init__(self)
+      self.connect("toggled", self.__cb_toggle)
+
+      nsa = not opener_settings.button_numbers.get_active()
+
+      self.open_colour = opener_settings.open_colour.get_color()
+      self.closed_colour = opener_settings.closed_colour.get_color()
+      self.flash_colour = opener_settings.reminder_colour.get_color()
+      self.has_reminder_flash = opener_tab.has_reminder_flash.get_active
 
       attrlist = pango.AttrList()
       attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, 10))
@@ -136,27 +139,51 @@ class ChannelOpenerButton(gtk.ToggleButton):
       hbox = gtk.HBox()
       hbox.set_spacing(4)
 
+      def make_indicator():
+         ca = ColouredArea(self.closed_colour)
+         width = opener_settings.indicator_width.get_value_as_int()
+         if width:
+            ca.set_size_request(width, -1)
+            hbox.pack_start(ca, False)
+
+         return ca
+         
+      self.ca1 = make_indicator()
+
       lvbox = gtk.VBox()
       hbox.pack_start(lvbox, False)
 
       self._ident_label = gtk.Label()
+      self._ident_label.set_no_show_all(nsa)
       self._ident_label.set_alignment(0.0, 0.0)
       self._ident_label.set_attributes(attrlist)
       lvbox.pack_start(self._ident_label, False)
       
       self._chan_label3 = gtk.Label()
+      self._chan_label3.set_no_show_all(nsa)
       self._chan_label3.set_alignment(0.0, 1.0)
       self._chan_label3.set_attributes(attrlist)
       lvbox.pack_end(self._chan_label3, False)
 
       pad = gtk.HBox()
       hbox.pack_start(pad)
+
       self._text_label = gtk.Label()
-      self._text_label.set_no_show_all(True)
-      hbox.pack_start(self._text_label, False)
+      text = opener_tab.button_text.get_text().strip()
+      if text:
+         self._text_label.set_text(text)
+         hbox.pack_start(self._text_label, False)
+     
       self._icon_image = gtk.Image()
-      self._icon_image.set_no_show_all(True)
-      hbox.pack_start(self._icon_image, False)
+      icon = opener_tab.icon_chooser.get_filename()
+      try:
+         pb = gtk.gdk.pixbuf_new_from_file_at_size(icon, 47, 20)
+      except (TypeError, glib.GError):
+         pass
+      else:
+         self._icon_image.set_from_pixbuf(pb)
+         hbox.pack_start(self._icon_image, False)
+
       pad = gtk.HBox()
       hbox.pack_start(pad)
       
@@ -164,82 +191,48 @@ class ChannelOpenerButton(gtk.ToggleButton):
       hbox.pack_start(rvbox, False)
       
       self._chan_label1 = gtk.Label()
+      self._chan_label1.set_no_show_all(nsa)
       self._chan_label1.set_alignment(1.0, 0.0)
       self._chan_label1.set_attributes(attrlist)
       rvbox.pack_start(self._chan_label1, False)
 
       self._chan_label2 = gtk.Label()
+      self._chan_label2.set_no_show_all(nsa)
       self._chan_label2.set_alignment(1.0, 1.0)
       self._chan_label2.set_attributes(attrlist)
       rvbox.pack_end(self._chan_label2, False)
 
+      self.ca2 = make_indicator()
+
       self.add(hbox)
-      
-      self.set_ident(ident)
-      self.add_channel(channel)
-      self.child.show_all()
 
-
-   def set_ident(self, ident):
-      self._ident_label.set_text(str(ident))
+      self._ident_label.set_text("(%d)" % opener_tab.ident)
       
-      
-   def set_text(self, text):
-      if text:
-         self._text_label.set_text(text)
-         self._text_label.show()
-      else:
-         self._text_label.hide()
-      
-      
-   def set_icon(self, icon):
-      if icon is not None:
-         try:
-            pb = gtk.gdk.pixbuf_new_from_file_at_size(icon, 47, 20)
-         except glib.GError:
-            self._icon_image.hide()
-         else:
-            self._icon_image.set_from_pixbuf(pb)
-         self._icon_image.show()
-      else:
-         self._icon_image.hide()
-      
-      
-   def add_channel(self, channel):
-      self.channels.add(channel)
-      self._update_channels()
-
-
-   def remove_channel(self, channel):
-      self.channels.remove(channel)
-      self._update_channels()
-      
-
-   def _on_toggle(self, widget):
-      active = self.get_active()
-      for each in self.channels:
-         each.open.set_active(active)
-
-      
-   def _update_channels(self):
       def labeltext():
-         ch = sorted(self.channels, lambda x, y: cmp(x.index, y.index))
-         for blk in itertools.izip_longest(*(iter(ch),) * 4):
+         for blk in itertools.izip_longest(*(iter(mic_agc_list),) * 4):
             yield ",".join(x.ui_name for x in blk if x is not None)
       
       for text, label in zip(labeltext(),
                (self._chan_label1, self._chan_label2, self._chan_label3)):
          label.set_text(text)
 
+      self.connect("toggled", self.__cb_toggle)
+      self.emit("toggled")
+      self.__flash = False
+      self.show_all()
+   
+   
 
-class ChannelOpenerTab(gtk.VBox):
-   def __init__(self, ident, channel):
+class OpenerTab(gtk.VBox):
+   __gsignals__ = { "changed" : (
+                  gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ())}
+
+   def __init__(self, ident):
       gtk.VBox.__init__(self)
-      self.set_border_width(3)
-      self.channels = [channel]
+      self.set_border_width(6)
+      self.set_spacing(3)
       self.label = gtk.Label()
       self.label.show()
-      self.opener = ChannelOpenerButton(ident, channel)
       self.set_ident(ident)
       
       sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
@@ -248,8 +241,8 @@ class ChannelOpenerTab(gtk.VBox):
       label = gtk.Label(_('Text'))
       lhbox.pack_start(label, False)
       self.button_text = gtk.Entry()
+      self.button_text.connect("changed", lambda w: self.emit("changed"))
       sg.add_widget(self.button_text)
-      self.button_text.connect("changed", self._on_button_text_changed)
       lhbox.pack_start(self.button_text)
       
       spc = gtk.HBox()
@@ -262,71 +255,139 @@ class ChannelOpenerTab(gtk.VBox):
                   buttons = (gtk.STOCK_CLEAR, gtk.RESPONSE_NONE,
                              gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                              gtk.STOCK_OK, gtk.RESPONSE_OK))
-      self.icon_chooser.connect("response", self._on_icon_changed)
+      self.icon_chooser.connect("response", lambda w, r: self.emit("changed"))
       icb = IconChooserButton(self.icon_chooser)
       sg.add_widget(icb)
       lhbox.pack_start(icb, True)
 
       self.pack_start(lhbox, False)
+      
+      self.has_reminder_flash = gtk.CheckButton(_('This button will flash as a reminder to close'))
+      self.pack_start(self.has_reminder_flash, False)
+      
+      self.automatic_open = gtk.CheckButton(_('This button can be automatically opened'))
+      self.pack_start(self.automatic_open, False)
+      
+      hbox = gtk.HBox()
+      self.pack_start(hbox, False)
+      label = gtk.Label(_('The amount of headroom required (dB)'))
+      label.set_alignment(0.0, 0.5)
+      hbox.pack_start(label, False)
+      self.headroom = gtk.SpinButton(gtk.Adjustment(3.0, 0.0, 10.0, 0.5), digits=1)
+      hbox.pack_end(self.headroom, False)
+      
+      frame = gtk.Frame(_(" %s " % 'When Opened Close These'))
+      self.pack_start(frame, False)
+      self.closer_hbox = gtk.HBox()
+      self.closer_hbox.set_border_width(3)
+      for i in range(1, ident):
+         cb = gtk.CheckButton(str(i))
+         cb.connect("toggled", lambda w: self.emit("changed"))
+         self.closer_hbox.pack_start(cb)
+      frame.add(self.closer_hbox)
+      
+      frame = gtk.Frame(" %s " % _('Shell Command'))
+      self.pack_start(frame, False)
+      ivbox = gtk.VBox()
+      frame.add(ivbox)
+      ivbox.set_border_width(6)
+      ivbox.set_spacing(3)
+      sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
+      def enbox(l, r):
+         hbox = gtk.HBox()
+         hbox.set_spacing(3)
+         label = gtk.Label(l)
+         label.set_alignment(0.0, 0.5)
+         hbox.pack_start(label, False)
+         hbox.pack_start(r)
+         sg.add_widget(r)
+         return hbox
+         
+      self.shell_on_open = gtk.Entry()
+      self.shell_on_close = gtk.Entry()
+      ivbox.pack_start(enbox(_('On open'), self.shell_on_open), False)
+      ivbox.pack_start(enbox(_('On close'), self.shell_on_close), False)
 
 
    def set_ident(self, ident):
       self.label.set_text(str(ident))
-      self.opener.set_ident(ident)
       self.ident = ident
 
 
-   def _on_button_text_changed(self, entry):
-      self.opener.set_text(entry.get_text())
-      
-      
-   def _on_icon_changed(self, dialog, response_id):
-      self.opener.set_icon(dialog.get_filename())
+   def add_closer(self, closer_ident):
+      cb = gtk.CheckButton(str(closer_ident))
+      if closer_ident == self.ident:
+         cb.set_sensitive(False)
+      else:
+         cb.connect("toggled", lambda w: self.emit("changed"))
+      self.closer_hbox.pack_start(cb)
+      cb.show()
 
 
+class OpenerSettings(gtk.Frame):
+   __gsignals__ = { "changed" : (
+                  gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,))}
 
-class ChannelOpenerSettings(gtk.Frame):
    def __init__(self):
-      gtk.Frame.__init__(self, " %s " % _('Main Panel Opener Button Configuration'))
+      gtk.Frame.__init__(self, " %s " % _('Main Panel Opener Buttons'))
       self.set_border_width(3)
-
-
-   def finalise(self, channels):
-      self.channels = channels
-      notebook = gtk.Notebook()
-      notebook.set_border_width(3)
-      self.add(notebook)
-      self.tabs = [ChannelOpenerTab(i, c) for i, c in enumerate(channels, start=1)]
-      for tab in self.tabs:
-         notebook.append_page(tab, tab.label)
-      self.show_all()
-
-
-class ChannelOpenerBox(gtk.HBox):
-   def __init__(self, approot, flash_test):
-      gtk.HBox.__init__(self)
-      self.approot = approot
-      self.flash_test = flash_test
-      self.channels = []
-      self.none_configured = gtk.Label(_("No channels configured"))
-      self.none_configured.set_sensitive(False)
-      #self.pack_start(self.none_configured)
-      self.none_configured.show()
-      self.settings = ChannelOpenerSettings()
       
+      def changed(*args):
+         self.emit("changed", None)
       
-   def register_channel(self, ch):
-      self.channels.append(ch)
+      vbox = gtk.VBox()
+      self.add(vbox)
+      vbox.set_border_width(7)
+      vbox.set_spacing(8)
 
-
-   def finalise(self):
-      self.settings.finalise(self.channels)
-      for each in self.settings.tabs:
-         self.pack_start(each.opener)
-         each.opener.show() # ***
-
+      self.button_numbers = gtk.CheckButton(_('Indicate button numbers and associated channel numbers'))
+      self.button_numbers.set_active(True)
+      self.button_numbers.connect("toggled", changed)
+      vbox.pack_start(self.button_numbers, False)
+      
+      frame = gtk.Frame(" %s " % _('Status Indicator Appearance'))
+      vbox.pack_start(frame, False)
+      hbox = gtk.HBox()
+      hbox.set_border_width(3)
+      hbox.set_spacing(3)
+      frame.add(hbox)
+      
+      hbox.pack_start(gtk.Label(_('Width')), False)
+      self.indicator_width = gtk.SpinButton(gtk.Adjustment(4.0, 0.0, 10.0, 1.0), digits=0)
+      self.indicator_width.connect("value-changed", changed)
+      hbox.pack_start(self.indicator_width, False)
+      hbox.pack_start(gtk.HBox())
+      
+      hbox.pack_start(gtk.Label(_('Opened')), False)
+      self.open_colour = gtk.ColorButton(gtk.gdk.Color(0.95, 0.2, 0.2))
+      hbox.pack_start(self.open_colour, False)
+      hbox.pack_start(gtk.HBox())
+      hbox.pack_start(gtk.Label(_('Closed')), False)
+      col = gtk.gdk.Color("gray")
+      self.closed_colour = gtk.ColorButton(col)
+      hbox.pack_start(self.closed_colour, False)
+      hbox.pack_start(gtk.HBox())
+      hbox.pack_start(gtk.Label(_('Remind')), False)
+      self.reminder_colour = gtk.ColorButton(col)
+      hbox.pack_start(self.reminder_colour, False)
+     
+      for each in (self.open_colour, self.closed_colour, self.reminder_colour):
+         each.connect("color-set", changed)
+     
+      self.notebook = gtk.Notebook()
+      vbox.pack_start(self.notebook, False, padding=2)
       self.show_all()
-   
+      
+
+   def add_channel(self):
+      tab = OpenerTab(len(self.notebook) + 1)
+      self.notebook.append_page(tab, tab.label)
+      def add_closer(each_tab):
+         each_tab.add_closer(tab.ident)
+      self.notebook.foreach(add_closer)
+      tab.show_all()
+      tab.connect("changed", lambda w: self.emit("changed", tab))
+
 
    
 class MicOpener(gtk.HBox):
@@ -373,46 +434,26 @@ class MicOpener(gtk.HBox):
       # Button grouping and label text stored here temporarily.
       group_list = [[] for x in xrange(PGlobs.num_micpairs * 2)]
       
-      # Categorisation of microphones into button groups and selection of button text.
+      # Categorisation of microphones into button groups.
       for m in self.mic_list:
-         if m.mode.get_active() in (1, 2):
-            # Find subordinate mic if there is one.
-            # Prefer alternate text over mic number if that info available.
-            if m.partner.mode.get_active() == 3:
-               # Ascending microphone order maintained on the opener buttons.
-               mm = sorted((m, m.partner), key=operator.attrgetter("ui_name"))
-               t = [rich_safe(t.alt_name.get_text().strip()) for t in mm]
-               if all(t):
-                  t = joiner.join(t)
-               else:
-                  t = t[0] or t[1] or joiner.join(t.ui_name for t in mm)
-            else:
-               # Partner is not a partner so to speak.
-               mm = (m, )
-               t = rich_safe(m.alt_name.get_text().strip()) or m.ui_name
-            
-            # Mics listed according to their group.
-            if not m.group.get_active():
-               ## Appending a new group-of-one for individual mics.
-               #group_list.append([(mm, t)])
-               pass  # No ungrouped microphones to have buttons.
-            else:
-               # Mic filed according to its group.
-               group_list[int(m.groups_adj.props.value - 1)].append((mm, t))
+         mode = m.mode.get_active()
+         if mode:
+            pm = m.partner if mode == 3 else m
+            if pm.group.get_active():
+               group_list[int(pm.groups_adj.value) - 1].append(m)
 
       # Opener buttons built here.      
-      for g in group_list:
+      for i, g in enumerate(group_list):
          if g:
             mic_list = []
-            mb = MicButton(", ".join(t for mm, t in g))
+            mb = MicButton(self.opener_settings, self.opener_settings.notebook.get_children()[i], g)
             self.buttons.append(mb)
             active = False
-            for mm, t in g:
-               for m in mm:
-                  mic_list.append(m)
-                  if m.open.get_active():
-                     active = True
-                  self.mic2button[m.ui_name] = mb
+            for m in g:
+               mic_list.append(m)
+               if m.open.get_active():
+                  active = True
+               self.mic2button[m.ui_name] = mb
             mb.connect("toggled", self.cb_mictoggle, mic_list)
             self.add(mb)
             mb.show()
@@ -487,9 +528,10 @@ class MicOpener(gtk.HBox):
    def add_mic(self, mic):
       """mic: AGCControl object passed here to register it with this class."""
 
+      self.opener_settings.add_channel()
       self.mic_list.append(mic)
-      for attr, signal in zip (("mode", "group", "groups_adj", "alt_name"),
-                               ("changed", "toggled", "notify::value", "changed")):
+      for attr, signal in zip (("mode", "group", "no_front_panel_opener", "groups_adj"),
+                               ("changed", "toggled", "toggled", "notify::value")):
          getattr(mic, attr).connect(signal, self.cb_reconfigure)
 
    def __init__(self, approot, flash_test):
@@ -506,6 +548,9 @@ class MicOpener(gtk.HBox):
       self._flashing_timer = 0
       timeout = glib.timeout_add(700, self.cb_flash_timeout)
       self.connect("destroy", lambda w: glib.source_remove(timeout))
+      self.opener_settings = OpenerSettings()
+      self.opener_settings.connect("changed", self.cb_reconfigure)
+      
 
 class PaddedVBox(gtk.VBox):
    def vbox_pack_start(self, *args, **kwargs):
@@ -2351,10 +2396,7 @@ class MainWindow:
       self.mic_opener = MicOpener(self, self.flash_test)
       self.mic_opener.viewlevels = (5,)
       self.hbox10.pack_start(self.mic_opener)
-      #self.mic_opener.show()
-      
-      self.channel_opener_box = ChannelOpenerBox(self, self.flash_test)
-      self.hbox10.pack_start(self.channel_opener_box)
+      self.mic_opener.show()
       
       # playlist advance button
       pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "advance.png")

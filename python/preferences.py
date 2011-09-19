@@ -271,7 +271,7 @@ class AGCControl(gtk.Frame):
       label.show()
  
       self.alt_name = gtk.Entry()
-      set_tip(self.alt_name, _('Alternate opener button text goes here e.g. DJ, Guest. When not specified the microphone number is shown instead.'))
+      set_tip(self.alt_name, _('A label so you may describe briefly the role of this audio channel.'))
       self.textdict[self.commandname + "_alt_name"] = self.alt_name
       hbox.pack_start(self.alt_name, True, True)
       self.alt_name.show()
@@ -1465,12 +1465,13 @@ class mixprefs:
       scrolled_window.add_with_viewport(panevbox)
       scrolled_window.show()
       panevbox.set_border_width(3)
+      panevbox.set_spacing(3)
       panevbox.get_parent().set_shadow_type(gtk.SHADOW_NONE)
       panevbox.show()
      
       # Opener buttons controls
       
-      panevbox.pack_start(parent.channel_opener_box.settings, False)
+      panevbox.pack_start(parent.mic_opener.opener_settings, False, padding=3)
     
       # New AGC controls
       
@@ -1490,12 +1491,10 @@ class mixprefs:
             uhbox.add(c)
             c.show()
             parent.mic_opener.add_mic(c)
-            parent.channel_opener_box.register_channel(c)
             mic_controls.append(c)
          mic_controls[-2].set_partner(mic_controls[-1])
          mic_controls[-1].set_partner(mic_controls[-2])   
       parent.mic_opener.new_button_set()
-      parent.channel_opener_box.finalise()
 
       panevbox.pack_start(vbox, False, False, 0)
       vbox.show()
