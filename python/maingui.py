@@ -126,6 +126,8 @@ class MicButton(gtk.ToggleButton):
       gtk.ToggleButton.__init__(self)
       self.connect("toggled", self.__cb_toggle)
 
+      self.opener_tab = opener_tab
+
       nsa = not opener_settings.button_numbers.get_active()
 
       self.open_colour = opener_settings.open_colour.get_color()
@@ -206,7 +208,11 @@ class MicButton(gtk.ToggleButton):
 
       self.add(hbox)
 
-      self._ident_label.set_text("(%d)" % opener_tab.ident)
+      to_close = ",".join(str(i) for i, cb in enumerate(opener_tab.closer_hbox.get_children(), start=1) if cb.get_active())
+      if to_close:
+         to_close = "!" + to_close
+
+      self._ident_label.set_text("(%d)%s" % (opener_tab.ident, to_close))
       
       def labeltext():
          for blk in itertools.izip_longest(*(iter(mic_agc_list),) * 4):
@@ -276,7 +282,7 @@ class OpenerTab(gtk.VBox):
       self.headroom = gtk.SpinButton(gtk.Adjustment(3.0, 0.0, 10.0, 0.5), digits=1)
       hbox.pack_end(self.headroom, False)
       
-      frame = gtk.Frame(_(" %s " % 'When Opened Close These'))
+      frame = gtk.Frame(_(" %s " % 'When opened close these other buttons'))
       self.pack_start(frame, False)
       self.closer_hbox = gtk.HBox()
       self.closer_hbox.set_border_width(3)
@@ -415,6 +421,16 @@ class MicOpener(gtk.HBox):
 
    def cb_mictoggle(self, button, mics):
       self._flashing_timer = 0
+
+      if button.get_active():
+         closers = button.opener_tab.closer_hbox.get_children()
+         for i, closer in enumerate(closers, start=1):
+            if closer.get_active():
+               try:
+                  self.ix2button[i].set_active(False)
+               except KeyError:
+                  pass
+
       for mic in mics:
          mic.open.set_active(button.get_active())
       self._any_mic_selected = any(mb.get_active() for mb in self.buttons)
@@ -429,12 +445,12 @@ class MicOpener(gtk.HBox):
       self.foreach(lambda x: x.destroy())
       self.mic2button = {}
       self.buttons = []
+      self.ix2button = {}
       joiner = ' <span foreground="red">&#64262;</span> '
 
-      # Button grouping and label text stored here temporarily.
       group_list = [[] for x in xrange(PGlobs.num_micpairs * 2)]
       
-      # Categorisation of microphones into button groups.
+      # Categorisation of channels into button groups.
       for m in self.mic_list:
          mode = m.mode.get_active()
          if mode:
@@ -442,11 +458,13 @@ class MicOpener(gtk.HBox):
             if pm.group.get_active():
                group_list[int(pm.groups_adj.value) - 1].append(m)
 
-      # Opener buttons built here.      
+      # Opener buttons built here.
+      ot = self.opener_settings.notebook.get_children()      
       for i, g in enumerate(group_list):
          if g:
             mic_list = []
-            mb = MicButton(self.opener_settings, self.opener_settings.notebook.get_children()[i], g)
+            mb = MicButton(self.opener_settings, ot[i], g)
+            self.ix2button[mb.opener_tab.ident] = mb
             self.buttons.append(mb)
             active = False
             for m in g:
