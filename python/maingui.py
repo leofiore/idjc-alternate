@@ -104,8 +104,16 @@ class MicButton(gtk.ToggleButton):
    @staticmethod
    def __cb_toggle(self):
       self.__indicate()
-      if self.get_active() and self.flash:
-         self.set_colour(self.open_colour)
+      if self.get_active():
+         if self.flash:
+            self.set_colour(self.open_colour)
+         cmd = self.opener_tab.shell_on_open.get_text().strip()
+      else:
+         cmd = self.opener_tab.shell_on_close.get_text().strip()
+         
+      if cmd:
+         print "button %d shell command: %s" % (self.opener_tab.ident, cmd)
+         subprocess.Popen(cmd, shell=True, close_fds=True)
 
    def __indicate(self):
       if self.get_active():
