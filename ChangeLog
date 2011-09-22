@@ -1,5 +1,7 @@
 * Changes in version 0.8.6 *
 
+Removed the singular aux input.
+
 Bindings upper target limit values revised.
 
 Window opener buttons replaced by a menu to save space.

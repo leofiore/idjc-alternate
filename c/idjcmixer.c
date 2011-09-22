@@ -76,9 +76,7 @@ int left_audio_runout = 0, right_audio_runout = 0;
 /* the main-player unmute buttons */
 int left_stream = 1, left_audio = 1, right_stream = 1, right_audio = 1;
 /* status variables for the button cluster in lower right of main window */
-int aux_on, mic_on, mixermode = NO_PHONE;
-/* TRUE when the transitioning between on and off */
-int aux_flux;
+int mic_on, mixermode = NO_PHONE;
 /* simple mixer mode: uses less space on the screen and less cpu as well */
 int simple_mixer;
 /* currentvolumes are used to implement volume smoothing */
@@ -180,8 +178,6 @@ sample_t ip_lc_strf = 1.0, ip_rc_strf = 1.0, ip_lc_audf = 0.0, ip_rc_audf = 0.0;
          
 /* used to apply the stereo mix of the microphones */
 sample_t mic_l_lc = 1.0, mic_l_rc = 0.0, mic_r_lc = 0.0, mic_r_rc = 1.0;
-/* aux input gain factor - typically 1.0=on or 0.0=off */
-sample_t aux_lc = 0.0, aux_rc = 0.0;
 /* media player mixback level for when in RedPhone mode */
 sample_t mb_lc_aud = 1.0, mb_rc_aud = 1.0;
 sample_t current_headroom;      /* the amount of mic headroom being applied */
@@ -196,8 +192,6 @@ jack_port_t *dspin_left_port;
 jack_port_t *dspin_right_port;
 jack_port_t *stream_left_port;
 jack_port_t *stream_right_port;
-jack_port_t *aux_left_channel;
-jack_port_t *aux_right_channel;
 jack_port_t *phone_left_send;   /* used for VOIP */
 jack_port_t *phone_right_send;
 jack_port_t *phone_left_recv;
@@ -218,7 +212,7 @@ struct xlplayer *plr_l, *plr_r, *plr_j, *plr_i; /* pipe reader instance stucture
 /* these are set in the parse routine - the contents coming from the GUI */
 char *mixer_string, *compressor_string, *gate_string, *microphone_string, *item_index;
 char *normalizer_string, *new_mic_string;
-char *micl, *micr, *auxl, *auxr, *midi, *audl, *audr, *strl, *strr, *action;
+char *micl, *micr, *midi, *audl, *audr, *strl, *strr, *action;
 char *target_port_name;
 char *dol, *dor, *dil, *dir;
 char *oggpathname, *sndfilepathname, *avformatpathname, *speexpathname, *speextaglist, *speexcreatedby;
@@ -243,8 +237,6 @@ struct kvpdict kvpdict[] = {
          { "NORM", &normalizer_string, NULL },
          { "NMIC", &new_mic_string, NULL },
          { "MIC",  &target_port_name, NULL },
-         { "AUXL", &auxl, NULL },
-         { "AUXR", &auxr, NULL },
          { "MIDI", &midi, NULL },
          { "AUDL", &audl, NULL },
          { "AUDR", &audr, NULL },
@@ -496,39 +488,6 @@ void update_smoothed_volumes()
    dfmod = vol * vol + 1.0F;
    }
 
-/* update_mic_and_aux: provide gradual mute/unmute for aux button */
-void update_mic_and_aux()       /* aux mute/unmute smoothing */
-   {
-   const sample_t onfactor = 0.0006F * 44100.0F / (float)sr;
-   const sample_t offfactor = 0.00028F * 44100.0F / (float)sr;
-   const sample_t upper = 0.999999;     /* these values are to prevent cpu usage going ^^^^ */
-   const sample_t lower = 0.0000004;    /* -120 dB */
-   
-   if (aux_flux)
-      {
-      if (aux_on)
-         {
-         if (aux_lc < upper)
-            aux_lc = aux_rc += (1.0F - aux_lc) * onfactor;
-         else
-            {
-            aux_lc = aux_rc = 1.0F;
-            aux_flux = !aux_on;
-            }
-         }   
-      else
-         {
-         if (aux_lc > lower)
-            aux_lc = aux_rc -= aux_lc * offfactor;
-         else
-            {
-            aux_lc = aux_rc = 0.0F;
-            aux_flux = aux_on;
-            }
-         }
-      }
-   }
-
 /* process_audio: the JACK callback routine */
 void process_audio(jack_nframes_t nframes)
    {
@@ -543,7 +502,7 @@ void process_audio(jack_nframes_t nframes)
    /* index values for reading from a table of fade gain values */
    static jack_nframes_t alarm_index = 0;
    /* pointers to buffers provided by JACK */
-   sample_t *lap, *rap, *lsp, *rsp, *lxp, *rxp, *lpsp, *rpsp, *lprp, *rprp;
+   sample_t *lap, *rap, *lsp, *rsp, *lpsp, *rpsp, *lprp, *rprp;
    sample_t *la_buffer, *ra_buffer, *ls_buffer, *rs_buffer, *lps_buffer, *rps_buffer;
    sample_t *dolp, *dorp, *dilp, *dirp, *dol_buffer, *dor_buffer, *dil_buffer, *dir_buffer;
    /* ponters to buffers for reading the media players */
@@ -639,8 +598,6 @@ void process_audio(jack_nframes_t nframes)
    dir_buffer = dirp = (sample_t *) jack_port_get_buffer (dspin_right_port, nframes);
    lps_buffer = lpsp = (sample_t *) jack_port_get_buffer (phone_left_send, nframes);
    rps_buffer = rpsp = (sample_t *) jack_port_get_buffer (phone_right_send, nframes);
-   lxp = (sample_t *) jack_port_get_buffer (aux_left_channel, nframes);
-   rxp = (sample_t *) jack_port_get_buffer (aux_right_channel, nframes);
    lprp = (sample_t *) jack_port_get_buffer (phone_left_recv, nframes);
    rprp = (sample_t *) jack_port_get_buffer (phone_right_recv, nframes);
    
@@ -746,7 +703,7 @@ void process_audio(jack_nframes_t nframes)
       {
       memset(lps_buffer, 0, nframes * sizeof (sample_t)); /* send silence to VOIP */
       memset(rps_buffer, 0, nframes * sizeof (sample_t));
-      for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, lxp++, rxp++,
+      for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++,
                 lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
          {       
          if (vol_smooth_count++ % 100 == 0) /* Can change volume level every so many samples */
@@ -802,9 +759,6 @@ void process_audio(jack_nframes_t nframes)
          else
             ip_lc_fade = ip_rc_fade = 0.0;
             
-         if (aux_flux)
-            update_mic_and_aux();               /* mic fade in/out */
-            
          if (fabs(*lplcp) > left_peak)          /* peak levels used for song cut-off */
             left_peak = fabs(*lplcp);
          if (fabs(*lprcp) > left_peak)
@@ -815,9 +769,9 @@ void process_audio(jack_nframes_t nframes)
             right_peak = fabs(*rprcp);
          
          /* This is it folks, the main mix */
-         *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str) + (*lxp * aux_lc) + (*jplcp * jp_lc_str)) * df + lc_s_micmix + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf) + 
+         *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str) + (*jplcp * jp_lc_str)) * df + lc_s_micmix + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf) + 
          (lp_lc_fade * lp_lc_strf) + (rp_lc_fade * rp_lc_strf) + (jp_lc_fade * jp_lc_strf);
-         *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + (*rxp * aux_rc) + (*jprcp * jp_rc_str)) * df + rc_s_micmix + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf) +
+         *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + (*jprcp * jp_rc_str)) * df + rc_s_micmix + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf) +
          (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (jp_rc_fade * jp_rc_strf);
          
          /* apply normalization */
@@ -904,7 +858,7 @@ void process_audio(jack_nframes_t nframes)
    else
       if (simple_mixer == FALSE && mixermode == PHONE_PUBLIC)
          {
-         for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, lxp++, rxp++,
+         for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++,
                 lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++,
                 lpsp++, rpsp++, lprp++, rprp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
             {    
@@ -965,9 +919,6 @@ void process_audio(jack_nframes_t nframes)
             *lpsp = lc_s_micmix + (*jplcp * jp_lc_str) + (jp_lc_fade * jp_lc_strf);
             *rpsp = rc_s_micmix + (*jprcp * jp_rc_str) + (jp_rc_fade * jp_rc_strf);
             
-            if (aux_flux)
-               update_mic_and_aux();            /* smooth mic rise and fall mute/unmute */
-
             if (fabs(*lplcp) > left_peak)               /* peak levels used for song cut-off */
                left_peak = fabs(*lplcp);
             if (fabs(*lprcp) > left_peak)
@@ -978,9 +929,9 @@ void process_audio(jack_nframes_t nframes)
                right_peak = fabs(*rprcp);
 
             /* The main mix */
-            *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str) + (*lxp * aux_lc)) + *lprp + *lpsp +
+            *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str)) + *lprp + *lpsp +
             (lp_lc_fade * lp_rc_strf) + (rp_lc_fade * rp_lc_strf) + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf);
-            *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + (*rxp * aux_rc)) + *rprp + *rpsp +
+            *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str)) + *rprp + *rpsp +
             (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf);
             
             compressor_gain = db2level(limiter(&phone_limiter, *lpsp, *rpsp));
@@ -1068,7 +1019,7 @@ void process_audio(jack_nframes_t nframes)
       else
          if (simple_mixer == FALSE && mixermode == PHONE_PRIVATE && mic_on == 0)
             {
-            for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, lxp++, rxp++,
+            for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++,
             lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, lpsp++, rpsp++, 
             lprp++, rprp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
                {         
@@ -1123,9 +1074,6 @@ void process_audio(jack_nframes_t nframes)
                else
                   ip_lc_fade = ip_rc_fade = 0.0;
 
-               if (aux_flux)
-                  update_mic_and_aux();         /* smooth mic rise and fall mute/unmute */
-               
                if (fabs(*lplcp) > left_peak)            /* peak levels used for song cut-off */
                   left_peak = fabs(*lplcp);
                if (fabs(*lprcp) > left_peak)
@@ -1136,9 +1084,9 @@ void process_audio(jack_nframes_t nframes)
                   right_peak = fabs(*rprcp);
                
                /* This is it folks, the main mix */
-               *dolp = (*lplcp * lp_lc_str) + (*rplcp * rp_lc_str) + (*lxp * aux_lc) +
+               *dolp = (*lplcp * lp_lc_str) + (*rplcp * rp_lc_str) + 
                (lp_lc_fade * lp_rc_strf) + (rp_lc_fade * rp_lc_strf) + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf);
-               *dorp = (*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + (*rxp * aux_rc) +
+               *dorp = (*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + 
                (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf);
                
                /* apply normalization at the stream level */
@@ -1229,7 +1177,7 @@ void process_audio(jack_nframes_t nframes)
          else
             if (simple_mixer == FALSE && mixermode == PHONE_PRIVATE) /* note: mic is on */
                {
-               for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, lxp++, rxp++,
+               for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, 
                      lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, lpsp++, rpsp++,
                         iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
                   {
@@ -1286,9 +1234,6 @@ void process_audio(jack_nframes_t nframes)
                   else
                      ip_lc_fade = ip_rc_fade = 0.0;
 
-                  if (aux_flux)
-                     update_mic_and_aux();      /* smooth mic rise and fall mute/unmute */
-
                   if (fabs(*lplcp) > left_peak)         /* peak levels used for song cut-off */
                      left_peak = fabs(*lplcp);
                   if (fabs(*lprcp) > left_peak)
@@ -1299,9 +1244,9 @@ void process_audio(jack_nframes_t nframes)
                      right_peak = fabs(*rprcp);
 
                   /* This is it folks, the main mix */
-                  *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str) + (*lxp * aux_lc) + (*jplcp * jp_lc_str)) * df + lc_s_micmix + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf) +
+                  *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str) + (*jplcp * jp_lc_str)) * df + lc_s_micmix + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf) +
                   (lp_lc_fade * lp_lc_strf) + (rp_lc_fade * rp_lc_strf) + (jp_lc_fade * jp_lc_strf);
-                  *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + (*rxp * aux_rc) + (*jprcp * jp_rc_str)) * df + rc_s_micmix + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf) +
+                  *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + (*jprcp * jp_rc_str)) * df + rc_s_micmix + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf) +
                   (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (jp_rc_fade * jp_rc_strf);
                   
                   /* apply normalization at the stream level */
@@ -1550,7 +1495,6 @@ int main(int argc, char **argv)
    int fadeout_f;
    int flush_left, flush_right, flush_jingles, flush_interlude;
    int new_left_pause, new_right_pause;
-   static int old_aux_on = 0;
    jack_nframes_t nframes;
    char *artist = NULL, *title = NULL, *album = NULL, *replaygain = NULL;
    double length;
@@ -1609,11 +1553,6 @@ int main(int argc, char **argv)
                                         JackPortIsOutput, 0);
    stream_right_port = jack_port_register(client, "str_out_r", JACK_DEFAULT_AUDIO_TYPE, 
                                         JackPortIsOutput, 0);
-   /* intended as a spare for connection to almost any jack app you like */
-   aux_left_channel = jack_port_register(client, "aux_in_l", JACK_DEFAULT_AUDIO_TYPE,
-                                        JackPortIsInput, 0);
-   aux_right_channel = jack_port_register(client, "aux_in_r", JACK_DEFAULT_AUDIO_TYPE,
-                                        JackPortIsInput, 0);
    /* inteneded for connection to a VOIP application */
    phone_left_send = jack_port_register(client, "voip_out_l", JACK_DEFAULT_AUDIO_TYPE,
                                         JackPortIsOutput, 0);
@@ -1919,10 +1858,10 @@ int main(int argc, char **argv)
       if (!strcmp(action, "mixstats"))
          {
          if(sscanf(mixer_string,
-                ":%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d%1d:%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:",
+                ":%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:",
                 &volume, &volume2, &crossfade, &jinglesvolume, &interludevol, &mixbackvol, &jingles_playing,
                 &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
-                &new_left_pause, &new_right_pause, &aux_on, &flush_left, &flush_right, &flush_jingles, &flush_interlude, &simple_mixer, &eot_alarm_set, &mixermode, &fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed), &speed_variance, &dj_audio_level, &crosspattern, &use_dsp, &twodblimit) !=31)
+                &new_left_pause, &new_right_pause, &flush_left, &flush_right, &flush_jingles, &flush_interlude, &simple_mixer, &eot_alarm_set, &mixermode, &fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed), &speed_variance, &dj_audio_level, &crosspattern, &use_dsp, &twodblimit) !=30)
             {
             fprintf(stderr, "mixer got bad mixer string\n");
             break;
@@ -1949,10 +1888,6 @@ int main(int argc, char **argv)
             else
                xlplayer_unpause(plr_r);
             }
-
-         if (aux_on != old_aux_on)
-            aux_flux = TRUE;
-         old_aux_on = aux_on;
          }
       /* the means by which the jack ports are connected to the soundcard */
       /* notably the main app requests the connections */
@@ -2025,18 +1960,6 @@ int main(int argc, char **argv)
             else
                if (outport && outport[1] && outport[2] && outport[3])
                   jack_connect(client, jack_port_name(stream_right_port), outport[3]);
-         }
-      if (!strcmp(action, "remakeauxl"))
-         {
-         jack_port_disconnect(client, aux_left_channel);
-         if (auxl[0] != '\0')
-            jack_connect(client, auxl, jack_port_name(aux_left_channel));
-         }
-      if (!strcmp(action, "remakeauxr"))
-         {
-         jack_port_disconnect(client, aux_right_channel);
-         if (auxr[0] != '\0')
-            jack_connect(client, auxr, jack_port_name(aux_right_channel));
          }
       if (!strcmp(action, "remakemidi"))
          {

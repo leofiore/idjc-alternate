@@ -1616,13 +1616,6 @@ class IDJC_Media_Player:
       control = model.get_value(iter, 0)
       print "control is", control
       
-      if control == "<b>>openaux</b>":
-         self.parent.aux_select.set_active(True)
-         self.stop.clicked()
-         if model.iter_next(iter):
-            treeselection.select_iter(model.iter_next(iter))
-         else:
-            treeselection.select_iter(model.get_iter_first())
       if control == "<b>>normalspeed</b>":
          self.pbspeedzerobutton.clicked()
          self.next.clicked()
@@ -1699,7 +1692,7 @@ class IDJC_Media_Player:
             text = self.liststore.get_value(iter, 0)
             if text.startswith("<b>"):
                text = text[3:-4]
-            if text in (">stopplayer", ">openaux", ">transfer", ">crossfade", ">announcement", ">jumptotop"):
+            if text in (">stopplayer", ">transfer", ">crossfade", ">announcement", ">jumptotop"):
                break
             if text == ">normalspeed":
                speedfactor = 1.0
@@ -1910,7 +1903,7 @@ class IDJC_Media_Player:
 
    def stop_inspect(self):
       stoppers = (">stopplayer", ">announcement")
-      horizon = (">transfer", ">crossfade", ">openaux", ">jumptotop")
+      horizon = (">transfer", ">crossfade", ">jumptotop")
       i = self.iter_playing
       m = self.model_playing
       while 1:
@@ -1949,7 +1942,7 @@ class IDJC_Media_Player:
       if self.islastinplaylist():
          return True
       stoppers = (">stopstreaming", )
-      horizon = (">transfer", ">crossfade", ">openaux")
+      horizon = (">transfer", ">crossfade")
       i = self.iter_playing
       m = self.model_playing
       while 1:
@@ -2768,7 +2761,6 @@ class IDJC_Media_Player:
              "Stream Disconnect Control" : ">stopstreaming",
              "Stop Recording Control"    : ">stoprecording",
              "Normal Speed Control"      : ">normalspeed",
-             "Switch To Aux Control"     : ">openaux",
              "Announcement Control"      : ">announcement",
              "Fade 10"                   : ">fade10",
              "Fade 5"                    : ">fade5",
@@ -3209,12 +3201,6 @@ class IDJC_Media_Player:
                cell_renderer.set_property("foreground", "dark blue")
                # TC: Playlist control.
                cell_renderer.set_property("text", _('Announcement'))
-            if celltext == ">openaux":
-               cell_renderer.set_property("cell-background", "light green")
-               cell_renderer.set_property("background", "gray")
-               cell_renderer.set_property("foreground", "light green")
-               # TC: Playlist control.
-               cell_renderer.set_property("text", _('Switch to Aux input'))
             if celltext == ">normalspeed":
                cell_renderer.set_property("cell-background", "dark green")
                cell_renderer.set_property("background", "gray")
@@ -3750,13 +3736,7 @@ class IDJC_Media_Player:
       self.control_menu_crossfade_control.connect("activate", self.menuitem_response, "Crossfade Control")
       self.control_menu.append(self.control_menu_crossfade_control)
       self.control_menu_crossfade_control.show()
-      
-      # TC: Insert playlist control to switch on the aux input.
-      self.control_menu_auxinput_control = gtk.MenuItem(_('Switch to Aux'))
-      self.control_menu_auxinput_control.connect("activate", self.menuitem_response, "Switch To Aux Control")
-      self.control_menu.append(self.control_menu_auxinput_control)
-      self.control_menu_auxinput_control.show()
-      
+            
       # TC: Embed a DJ announcement text into the playlist.
       self.control_menu_announcement_control = gtk.MenuItem(_('Announcement'))
       self.control_menu_announcement_control.connect("activate", self.menuitem_response, "Announcement Control")

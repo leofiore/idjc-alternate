@@ -244,7 +244,7 @@ class OpenerTab(gtk.VBox):
    def __init__(self, ident):
       gtk.VBox.__init__(self)
       self.set_border_width(6)
-      self.set_spacing(3)
+      self.set_spacing(6)
       self.label = gtk.Label()
       self.label.show()
       self.set_ident(ident)
@@ -275,20 +275,42 @@ class OpenerTab(gtk.VBox):
       lhbox.pack_start(icb, True)
 
       self.pack_start(lhbox, False)
-      
-      self.has_reminder_flash = gtk.CheckButton(_('This button will flash as a reminder to close'))
-      self.pack_start(self.has_reminder_flash, False)
-      
-      self.automatic_open = gtk.CheckButton(_('This button can be automatically opened'))
-      self.pack_start(self.automatic_open, False)
-      
+
       hbox = gtk.HBox()
       self.pack_start(hbox, False)
       label = gtk.Label(_('The amount of headroom required (dB)'))
       label.set_alignment(0.0, 0.5)
       hbox.pack_start(label, False)
       self.headroom = gtk.SpinButton(gtk.Adjustment(3.0, 0.0, 10.0, 0.5), digits=1)
+      self.headroom.connect("value-changed", lambda w: emit("changed"))
       hbox.pack_end(self.headroom, False)
+      
+      self.has_reminder_flash = gtk.CheckButton(_('This button will flash as a reminder to close'))
+      self.pack_start(self.has_reminder_flash, False)
+      
+      self.is_microphone = gtk.CheckButton(_('This button controls one or more microphones'))
+      self.is_microphone.connect("toggled", lambda w: self.emit("changed"))
+      self.pack_start(self.is_microphone, False)
+      
+      frame = gtk.Frame(" %s " % _('Open(/Close) Triggers'))
+      self.open_triggers = {}
+      lvbox = gtk.VBox()
+      rvbox = gtk.VBox()
+      for w, t, col in zip(("advance", "stop_control", "public_voip", "announcement"),
+              (_('Playlist advance button'),
+               _("'%s' playlist control") % _('Player Stop'),
+               _('Public VoIP mode'),
+               _('Announcements')),
+               itertools.cycle((lvbox, rvbox))):
+         cb = gtk.CheckButton(t)
+         self.open_triggers[w] = cb
+         col.pack_start(cb, False)
+      hbox = gtk.HBox(True, 10)
+      hbox.set_border_width(6)
+      for each in (lvbox, rvbox):
+         hbox.pack_start(each, False)
+      frame.add(hbox)
+      self.pack_start(frame, False)
       
       frame = gtk.Frame(_(" %s " % 'When opened close these other buttons'))
       self.pack_start(frame, False)
@@ -414,17 +436,6 @@ class MicOpener(gtk.HBox):
       # Player headroom for mic-audio toggle.
       sts = "ACTN=anymic\nFLAG=%d\nend\n" % self.any_mic_selected
       approot.mixer_write(sts, True)
-      # Aux/Mic mutex implemented here.
-      if not self.any_mic_selected:
-         approot.prefs_window.mic_off_event.activate()
-      else:
-         if approot.prefs_window.mic_aux_mutex.get_active() and approot.aux_select.get_active():
-            approot.prefs_window.mic_aux_mutex.set_active(False)
-            approot.aux_select.set_active(False)
-            approot.prefs_window.mic_aux_mutex.set_active(True)
-         if self.any_mic_selected:
-            approot.prefs_window.mic_on_event.activate()
-      # Mixer mode can change with mic buttons being pressed.
       approot.new_mixermode(approot.mixermode)
 
    def cb_mictoggle(self, button, mics):
@@ -1272,7 +1283,7 @@ class MainWindow:
       if self.prefs_window.dual_volume.get_active():
           deck2adj = self.deck2adj.get_value() * -1.0 + 100.0
 
-      string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:%d%d:%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" % (
+      string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" % (
                                                 deckadj,
                                                 deck2adj,
                                                 self.crossadj.get_value(),
@@ -1287,7 +1298,6 @@ class MainWindow:
                                                 self.listen_stream.get_active(),
                                                 self.player_left.pause.get_active(),
                                                 self.player_right.pause.get_active(),
-                                                self.aux_select.get_active(),
                                                 self.player_left.flush,
                                                 self.player_right.flush,
                                                 self.jingles.flush,
@@ -1561,27 +1571,11 @@ class MainWindow:
 
    def cb_toggle(self, widget, data):
       print "%s was toggled %s" % (data, ("OFF","ON")[widget.get_active()])
-      if data == "Aux Open":
-         if widget.get_active() == False:
-            self.prefs_window.aux_off_event.activate()
-         else:
-            if self.prefs_window.mic_aux_mutex.get_active() and (self.mic_opener.any_mic_selected or self.mixermode != self.NO_PHONE):
-               self.prefs_window.mic_aux_mutex.set_active(False)        # prevent infinite loop
-               self.greenphone.set_active(False)
-               self.redphone.set_active(False)
-               self.mic_opener.close_all()
-               self.prefs_window.mic_aux_mutex.set_active(True)
-            self.prefs_window.aux_on_event.activate()
-         self.send_new_mixer_stats()
       if data == "stream-mon":
          self.send_new_mixer_stats()
       if data == "Greenphone":
          mode = self.mixermode
          if widget.get_active() == True:
-            if self.prefs_window.mic_aux_mutex.get_active() and self.aux_select.get_active():
-               self.prefs_window.mic_aux_mutex.set_active(False)
-               self.aux_select.set_active(False)
-               self.prefs_window.mic_aux_mutex.set_active(True)
             if self.mixermode == self.PRIVATE_PHONE:
                self.mixermode = self.PUBLIC_PHONE
                self.redphone.set_active(False)
@@ -1594,10 +1588,6 @@ class MainWindow:
       if data == "Redphone":
          mode = self.mixermode
          if widget.get_active() == True:
-            if self.prefs_window.mic_aux_mutex.get_active() and self.aux_select.get_active():
-               self.prefs_window.mic_aux_mutex.set_active(False)
-               self.aux_select.set_active(False)
-               self.prefs_window.mic_aux_mutex.set_active(True)
             if self.mixermode == self.PUBLIC_PHONE:
                self.mixermode = self.PRIVATE_PHONE
                self.greenphone.set_active(False)
@@ -1793,7 +1783,6 @@ class MainWindow:
          gobject.source_remove(self.crosspass)
       self.server_window.cleanup()
       self.mic_opener.close_all()
-      self.aux_select.set_active(False)
       self.player_left.cleanup()
       self.player_right.cleanup()
       self.jingles.cleanup()
@@ -1808,7 +1797,6 @@ class MainWindow:
       self.prefs_window.save_player_prefs()
       self.controls.save_prefs()
       self.server_window.save_session_settings()
-      self.prefs_window.appexit_event.activate()        # run user specified command for application exit
       if gtk.main_level():
          gtk.main_quit()
       time.sleep(0.3)   # Allow time for all subthreads/programs time to exit 
@@ -2181,8 +2169,8 @@ class MainWindow:
 
    def flash_test(self):
       """True if the mic button needs to be flashing now or soon.""" 
-      return self.prefs_window.flash_mic.get_active() and \
-               (self.player_left.is_playing or self.player_right.is_playing)
+      
+      return self.player_left.is_playing or self.player_right.is_playing
 
    def __init__(self):
       self.appname = PGlobs.app_longform
@@ -2409,14 +2397,6 @@ class MainWindow:
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf3)
       image.show()
-      self.aux_select = gtk.ToggleButton()
-      self.aux_select.viewlevels = (5,)       
-      self.aux_select.add(image)
-      self.aux_select.connect("toggled", self.cb_toggle, "Aux Open")
-      self.hbox10.pack_start(self.aux_select, False)
-      self.aux_select.show()
-      # TC: aux_in_{l,r} is a contraction of aux_in_l and aux_in_r.
-      set_tip(self.aux_select, _('Mix auxiliary audio to the output stream. See also Prefs->JACK Ports->aux_in_{l,r}.'))
       
       # microphone open/unmute dynamic widget cluster thingy
       self.mic_opener = MicOpener(self, self.flash_test)
@@ -3124,7 +3104,6 @@ class MainWindow:
        
       self.window.set_focus_chain((self.player_left.scrolllist, self.player_right.scrolllist))
        
-      self.prefs_window.appstart_event.activate()       # run user specified commands for application start
       self.server_window.update_metadata()              # metadata formatting -> backend
       
       self.window.forall(self.strip_focusability)

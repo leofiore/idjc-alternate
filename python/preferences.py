@@ -576,61 +576,6 @@ def make_entry_line(parent, item, code, hastoggle, index=None):
 
 
 class mixprefs:
-   class event_command_container(gtk.Frame):
-      def add(self, widget):
-         self.vbox.add(widget)
-      def __init__(self):
-         gtk.Frame.__init__(self)
-         gtk.Frame.set_border_width(self, 4)
-         gtk.Frame.set_shadow_type(self, gtk.SHADOW_ETCHED_OUT)
-         self.vbox = gtk.VBox()
-         self.vbox.set_spacing(2)
-         gtk.Frame.add(self, self.vbox)
-         self.vbox.set_border_width(4)
-         self.vbox.show()
-   
-   class event_command(gtk.HBox):
-      def activate(self):
-         if self.checkbutton.get_active():
-            os.system(self.entry.get_text())
-      def get_text(self):
-         return self.entry.get_text()
-      def get_active(self):
-         return self.checkbutton.get_active()
-      def set_text(self, text):
-         return self.entry.set_text(text)
-      def set_active(self, bool):
-         return self.checkbutton.set_active(bool)
-      def cb_checkbutton(self, widget, data = None):
-         self.entry.set_sensitive(widget.get_active())
-      def __init__(self, imagefile, width, height, text, default_state, crossout, checkbutton_tip = None, entry_tip = None):
-         gtk.HBox.__init__(self)
-         gtk.HBox.set_spacing(self, 6)
-         self.checkbutton = gtk.CheckButton()
-         self.checkbutton.set_active(default_state)
-         image = gtk.Image()
-         if crossout:
-            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "crossout.png", width , height)
-         else:
-            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / (imagefile + ".png"), width, height)
-         image.set_from_pixbuf(pixbuf)
-         self.checkbutton.add(image)
-         image.show()
-         gtk.HBox.pack_start(self, self.checkbutton, False, False, 0)
-         self.checkbutton.connect("toggled", self.cb_checkbutton)
-         self.checkbutton.show()
-         self.entry = gtk.Entry()
-         self.entry.set_text(text)
-         gtk.HBox.pack_start(self, self.entry, True, True, 0)
-         self.entry.set_sensitive(default_state)
-         self.entry.show()
-
-         if checkbutton_tip is not None:
-            set_tip(self.checkbutton, checkbutton_tip)
-         if entry_tip is not None:
-            set_tip(self.entry, entry_tip)
-
-   
    def send_new_normalizer_stats(self):
       r = float(self.parent.samplerate)
       string_to_send = ":%0.1f:%0.1f:%d:%d:%d:" % (
@@ -681,7 +626,7 @@ class mixprefs:
       for each in (self.lpconfig, self.rpconfig, self.misc_session_frame):
          each.set_sensitive(state)
    
-   jack_ports= ("audl", "audr", "strl", "strr", "auxl", "auxr", "midi", "dol", "dor", "dil", "dir")
+   jack_ports= ("audl", "audr", "strl", "strr", "midi", "dol", "dor", "dil", "dir")
 
    def load_jack_port_settings(self):
       for port in self.jack_ports:
@@ -1166,11 +1111,6 @@ class mixprefs:
       self.dual_volume.show()
       set_tip(self.dual_volume, _('Select this option to use an independent volume fader for the left and right music players.'))
 
-      self.flash_mic = gtk.CheckButton(_('Open mic button icon to flash during playback'))
-      vbox.pack_start(self.flash_mic, False)
-      self.flash_mic.show()
-      set_tip(self.flash_mic, _('A reminder to turn the microphone off when a main player is active and any particular mic button is still engaged.'))
-      
       self.bigger_box_toggle = gtk.CheckButton(_('Enlarge the time elapsed/remaining windows'))
       vbox.pack_start(self.bigger_box_toggle, False, False, 0)
       self.bigger_box_toggle.connect("toggled", self.callback, "bigger box")
@@ -1193,11 +1133,6 @@ class mixprefs:
       vbox.pack_start(self.mp3_utf8, False, False, 0)
       self.mp3_utf8.show()
       set_tip(self.mp3_utf8, _('It is standard to stream mp3 metadata with iso-8859-1 character encoding on shoutcast. This option should therefore not be used.'))
-      
-      self.mic_aux_mutex = gtk.CheckButton(_('Make Mic and Aux buttons mutually exclusive'))
-      vbox.pack_start(self.mic_aux_mutex, False, False, 0)
-      self.mic_aux_mutex.show()
-      set_tip(self.mic_aux_mutex, _('This feature ensures that the microphone and auxiliary inputs can not both be on at the same time. This allows the DJ to be able to switch between the two with only one mouse click. It may be of use to those who mix a lot of external audio, or who wish to use the auxiliary input as a secondary microphone source with different audio processing.'))
       
       self.enable_tooltips = gtk.CheckButton(_('Enable tooltips'))
       self.enable_tooltips.connect("toggled", self.callback, "tooltips")
@@ -1563,10 +1498,6 @@ class mixprefs:
       vbox = gtk.VBox(False, 0)
       frame.add(vbox)
       frame.show()
-      box, self.auxlcheck, self.auxlentry, self.auxlupdate = make_entry_line(self, "aux_in_l: ", "AUXL", False)
-      vbox.add(box)
-      box, self.auxrcheck, self.auxrentry, self.auxrupdate = make_entry_line(self, "aux_in_r: ", "AUXR", False)
-      vbox.add(box)
       box, self.midicheck, self.midientry, self.midiupdate = make_entry_line(self, "midi_control: ", "MIDI", False)
       vbox.add(box)
       jack_vbox.pack_start(frame, False)
@@ -1637,47 +1568,6 @@ class mixprefs:
       tab.show()
       label.show()
 
-      # Event tab
-      
-      vbox = gtk.VBox()
-      vbox.set_border_width(4)
-      vbox.set_spacing(2)
-      
-      app_event_container = self.event_command_container()
-      self.appstart_event = self.event_command("icon", 20, 20, "", False, False, _('When IDJC starts run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
-      app_event_container.add(self.appstart_event)
-      self.appstart_event.show()
-      self.appexit_event = self.event_command("icon", 20, 20, "", False, True, _('When IDJC exits run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
-      app_event_container.add(self.appexit_event)
-      self.appexit_event.show()
-      vbox.pack_start(app_event_container, False, False, 0)
-      app_event_container.show()
-      
-      mic_event_container = self.event_command_container()
-      self.mic_on_event = self.event_command("mic4", 20, 20, "", False, False, _('Each time the microphone is turned on run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
-      mic_event_container.add(self.mic_on_event)
-      self.mic_on_event.show()
-      self.mic_off_event = self.event_command("mic4", 20, 20, "", False, True, _('Each time the microphone is turned off run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
-      mic_event_container.add(self.mic_off_event)
-      self.mic_off_event.show()
-      vbox.pack_start(mic_event_container, False, False, 0)
-      mic_event_container.show()
-      
-      aux_event_container = self.event_command_container()
-      self.aux_on_event = self.event_command("jack2", 20, 20, "", False, False, _('Each time the auxiliary input is turned on run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
-      aux_event_container.add(self.aux_on_event)
-      self.aux_on_event.show()
-      self.aux_off_event = self.event_command("jack2", 20, 20, "", False, True, _('Each time the auxiliary input is turned off run the commands to the right.'), _('Enter bash shell commands to run, separated by a semicolon for this particular event.'))
-      aux_event_container.add(self.aux_off_event)
-      self.aux_off_event.show()
-      vbox.pack_start(aux_event_container, False, False, 0)
-      aux_event_container.show()
-      
-      eventlabel = gtk.Label(_('Event'))
-      self.notebook.append_page(vbox, eventlabel)
-      eventlabel.show()
-      vbox.show()
-      
       # about tab
       
       frame = gtk.Frame()
@@ -1751,7 +1641,6 @@ class mixprefs:
       self.notebook.show()
 
       # These on by default
-      self.flash_mic.set_active(True)
       self.djalarm.set_active(True)
       self.dither.set_active(True)
       self.fastest_resample.set_active(True)
@@ -1777,17 +1666,10 @@ class mixprefs:
          "dither"        : self.dither,
          "recallsession" : self.restore_session_option,
          "proktoggle"    : self.p3prefs.proktoggle,
-         "ee_appstart"   : self.appstart_event,
-         "ee_appexit"    : self.appexit_event,
-         "ee_micon"      : self.mic_on_event,
-         "ee_micoff"     : self.mic_off_event,
-         "ee_auxon"      : self.aux_on_event,
-         "ee_auxoff"     : self.aux_off_event,
          "best_rs"       : self.best_quality_resample,
          "good_rs"       : self.good_quality_resample,
          "fast_rs"       : self.fast_resample,
          "fastest_rs"    : self.fastest_resample,
-         "micauxmutex"   : self.mic_aux_mutex,
          "speed_var"     : self.speed_variance,
          "dual_volume"   : self.dual_volume,
          "twodblimit"    : self.twodblimit,
@@ -1800,7 +1682,6 @@ class mixprefs:
          "str_meters"    : self.show_stream_meters,
          "mic_meters"    : self.show_microphones,
          "mic_meters_active" : self.show_active_microphones,
-         "flash_mic"     : self.flash_mic,
          }
          
       for mic_control in mic_controls:
@@ -1833,12 +1714,6 @@ class mixprefs:
          "prokhostname"  : self.p3prefs.prokhostname,
          "ltfilerqdir"   : self.parent.player_left.file_requester_start_dir,
          "rtfilerqdir"   : self.parent.player_right.file_requester_start_dir,
-         "et_appstart"   : self.appstart_event,
-         "et_appexit"    : self.appexit_event,
-         "et_micon"      : self.mic_on_event,
-         "et_micoff"     : self.mic_off_event,
-         "et_auxon"      : self.aux_on_event,
-         "et_auxoff"     : self.aux_off_event,
          "main_full_wst" : self.parent.full_wst,
          "main_min_wst"  : self.parent.min_wst,
          "jingles_wst"   : self.parent.jingles.wst,
