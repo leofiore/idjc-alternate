@@ -463,22 +463,12 @@ void update_smoothed_volumes()
    ip_lc_aud = ip_rc_aud = 0.0F;
    ip_lc_str = ip_rc_str = interlude_vol_rescale;
     
-   mic_target = headroom_db * (mic_on ? -1.0F : 0.0F);
+   mic_target = -headroom_db;
    if ((diff = mic_target - current_headroom))
       {
       current_headroom += diff * 1600.0f / (sr * powf(headroom_db + 10.0f, 0.93f));
-      if (mic_target)
-         {
-         if (diff > -0.00001F)
-            {
-            current_headroom = mic_target;
-            }
-         }
-      else
-         if (diff < 0.0000004F)
-            {
-            current_headroom = 0.0F; 
-            }
+      if (fabsf(diff) < 0.000001F)
+         current_headroom = mic_target;
       }
 
    if (jingles_playing)

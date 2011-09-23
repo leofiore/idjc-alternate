@@ -281,8 +281,8 @@ class OpenerTab(gtk.VBox):
       label = gtk.Label(_('The amount of headroom required (dB)'))
       label.set_alignment(0.0, 0.5)
       hbox.pack_start(label, False)
-      self.headroom = gtk.SpinButton(gtk.Adjustment(3.0, 0.0, 10.0, 0.5), digits=1)
-      self.headroom.connect("value-changed", lambda w: emit("changed"))
+      self.headroom = gtk.SpinButton(gtk.Adjustment(3.0, 0.0, 32.0, 0.5), digits=1)
+      self.headroom.connect("value-changed", lambda w: self.emit("changed"))
       hbox.pack_end(self.headroom, False)
       
       self.has_reminder_flash = gtk.CheckButton(_('This button will flash as a reminder to close'))
@@ -432,11 +432,11 @@ class MicOpener(gtk.HBox):
       return self._any_mic_selected
    
    def notify_others(self):
-      approot = self.approot
+      r = self.approot
       # Player headroom for mic-audio toggle.
-      sts = "ACTN=anymic\nFLAG=%d\nend\n" % self.any_mic_selected
-      approot.mixer_write(sts, True)
-      approot.new_mixermode(approot.mixermode)
+      r.mixer_write("ACTN=anymic\nFLAG=%d\nend\n" % self.any_mic_selected, True)
+      r.mixer_write("HEAD=%f\nACTN=headroom\nend\n" % self._headroom, True)
+      r.new_mixermode(r.mixermode)
 
    def cb_mictoggle(self, button, mics):
       self._flashing_timer = 0
@@ -452,7 +452,11 @@ class MicOpener(gtk.HBox):
 
       for mic in mics:
          mic.open.set_active(button.get_active())
-      self._any_mic_selected = any(mb.get_active() for mb in self.buttons)
+      self._any_mic_selected = any(mb.get_active() for mb in self.buttons if mb.opener_tab.is_microphone.get_active())
+      try: 
+         self._headroom = max(mb.opener_tab.headroom.get_value() for mb in self.buttons if mb.get_active())
+      except ValueError:
+         self._headroom = 0.0
       self.notify_others()
 
    def cb_reconfigure(self, widget, trigger=None):
@@ -510,7 +514,7 @@ class MicOpener(gtk.HBox):
    @threadslock
    def cb_flash_timeout(self):
 
-      if self._flash_test():
+      if self._flash_test() and not self._forced_on_mode:
          self._flashing_timer += 1
       else:
          self._flashing_timer = 0
@@ -523,14 +527,15 @@ class MicOpener(gtk.HBox):
       return True
      
    def force_all_on(self, val):
-      """Switch on all front panel buttons and make them insensitive."""
+      """Switch on all front panel mic buttons and make them insensitive."""
       
       self._forced_on_mode = val
       for mb in self.buttons:
-         if val:
-            mb.set_active(True)
-         mb.set_sensitive(not val)
-         mb.set_inconsistent(val)
+         if mb.opener_tab.is_microphone.get_active():
+            if val:
+               mb.set_active(True)
+            mb.set_sensitive(not val)
+            mb.set_inconsistent(val)
 
    def open_auto(self):
       for m in self.mic_list:
@@ -583,6 +588,7 @@ class MicOpener(gtk.HBox):
       self._forced_on_mode = False
       self._flashing_mode = False
       self._flashing_timer = 0
+      self._headroom = 0.0
       timeout = glib.timeout_add(700, self.cb_flash_timeout)
       self.connect("destroy", lambda w: glib.source_remove(timeout))
       self.opener_settings = OpenerSettings()

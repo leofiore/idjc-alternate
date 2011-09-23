@@ -841,9 +841,6 @@ class mixprefs:
       for mic_entry_line in self.mic_jack_data:
          mic_entry_line[2].clicked()
 
-   def cb_headroom(self, widget):
-      self.parent.mixer_write("HEAD=%f\nACTN=headroom\nend\n" % widget.get_value(), True)
-
    def cb_rg_indicate(self, widget):
       left = self.parent.player_left
       right = self.parent.player_right
@@ -1404,11 +1401,11 @@ class mixprefs:
       panevbox.get_parent().set_shadow_type(gtk.SHADOW_NONE)
       panevbox.show()
      
-      # Opener buttons controls
+      # Opener buttons for channels
       
       panevbox.pack_start(parent.mic_opener.opener_settings, False, padding=3)
     
-      # New AGC controls
+      # Individual channel settings
       
       mic_controls = []
       vbox = gtk.VBox()
@@ -1433,31 +1430,10 @@ class mixprefs:
 
       panevbox.pack_start(vbox, False, False, 0)
       vbox.show()
-      
-      frame = gtk.Frame(" %s " % _('General Mic Options'))
-      frame.set_label_align(0.5, 0.5)
-      frame.set_border_width(3)
-      vbox = gtk.VBox()
-      vbox.set_border_width(3)
-      frame.add(vbox)
-      vbox.show()
-      panevbox.pack_start(frame, False, False, 0)
-      frame.show()
-      hbox = gtk.HBox()
-      label = gtk.Label(_('Player headroom when a microphone is open (dB)'))
-      hbox.pack_start(label, False, False, 0)
+            
+      label = gtk.Label(_('Channels'))
+      self.notebook.append_page(scrolled_window, label)
       label.show()
-      headroom_adj = gtk.Adjustment(0.0, 0.0, 32.0, 0.5)
-      self.headroom = gtk.SpinButton(headroom_adj, digits=1)
-      self.headroom.connect("value-changed", self.cb_headroom)
-      hbox.pack_end(self.headroom, False, False, 0)
-      self.headroom.show()
-      vbox.add(hbox)
-      hbox.show()
-      
-      compressor_label = gtk.Label(_('Channels'))
-      self.notebook.append_page(scrolled_window, compressor_label)
-      compressor_label.show()
        
       # Jack settings tab      
                  
@@ -1651,7 +1627,6 @@ class mixprefs:
       mic0.autoopen.set_active(True)
       self.show_stream_meters.set_active(True)
       self.show_microphones.set_active(True)
-      self.headroom.set_value(3.0)
       
       self.load_jack_port_settings()
       self.bind_jack_ports()
@@ -1699,7 +1674,6 @@ class mixprefs:
          "normrisetc"    : self.normrise_adj,
          "normfalltc"    : self.normfall_adj, 
          "djvolume"      : self.dj_aud_adj,
-         "headroom"      : self.headroom,
          "rg_default"    : self.rg_defaultgain,
          "rg_boost"      : self.rg_boost,
          }
