@@ -123,9 +123,9 @@ class AGCControl(gtk.Frame):
       # TC: Microphone mode combobox text.
       N_('Deactivated'),
       # TC: Microphone mode combobox text.
-      N_('Line input'),
+      N_('Basic input'),
       # TC: Microphone mode combobox text.
-      N_('Mic input (processed)'), 
+      N_('Processed input'), 
       # TC: Microphone mode combobox text.
       N_('Partnered with channel %s'))
 

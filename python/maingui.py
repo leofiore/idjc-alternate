@@ -288,7 +288,7 @@ class OpenerTab(gtk.VBox):
       self.has_reminder_flash = gtk.CheckButton(_('This button will flash as a reminder to close'))
       self.pack_start(self.has_reminder_flash, False)
       
-      self.is_microphone = gtk.CheckButton(_('This button controls one or more microphones'))
+      self.is_microphone = gtk.CheckButton(_('This button is to be treated as a microphone opener'))
       self.is_microphone.connect("toggled", lambda w: self.emit("changed"))
       self.pack_start(self.is_microphone, False)
       
@@ -471,7 +471,10 @@ class MicOpener(gtk.HBox):
       self.ix2button = {}
       joiner = ' <span foreground="red">&#64262;</span> '
 
-      group_list = [[] for x in xrange(PGlobs.num_micpairs * 2)]
+      mic_group_list = [[] for x in xrange(PGlobs.num_micpairs * 2)]
+      aux_group_list = [[] for x in xrange(PGlobs.num_micpairs * 2)]
+      ot = self.opener_settings.notebook.get_children()
+      mic_qty = aux_qty = 0
       
       # Categorisation of channels into button groups.
       for m in self.mic_list:
@@ -479,26 +482,60 @@ class MicOpener(gtk.HBox):
          if mode:
             pm = m.partner if mode == 3 else m
             if pm.group.get_active():
-               group_list[int(pm.groups_adj.value) - 1].append(m)
+               oti = int(pm.groups_adj.value) - 1
+               if ot[oti].is_microphone.get_active():
+                  t = mic_group_list[oti]
+                  if not t:
+                     mic_qty += 1
+               else:
+                  t = aux_group_list[oti]
+                  if not t:
+                     aux_qty += 1
+               t.append(m)
 
       # Opener buttons built here.
-      ot = self.opener_settings.notebook.get_children()      
-      for i, g in enumerate(group_list):
-         if g:
-            mic_list = []
-            mb = MicButton(self.opener_settings, ot[i], g)
-            self.ix2button[mb.opener_tab.ident] = mb
-            self.buttons.append(mb)
-            active = False
-            for m in g:
-               mic_list.append(m)
-               if m.open.get_active():
-                  active = True
-               self.mic2button[m.ui_name] = mb
-            mb.connect("toggled", self.cb_mictoggle, mic_list)
-            self.add(mb)
-            mb.show()
-            mb.set_active(active)  # Open all if any opener members are currently open.
+      def build(group_list, closer):
+         image = gtk.image_new_from_stock(gtk.STOCK_CLOSE, gtk.ICON_SIZE_BUTTON)
+         closer_button = gtk.Button()
+         closer_button.set_image(image)
+         closer_button.show_all()
+
+         if closer == "left":
+            self.pack_start(closer_button, False)
+
+         for i, g in enumerate(group_list):
+            if g:
+               mic_list = []
+               mb = MicButton(self.opener_settings, ot[i], g)
+               self.ix2button[mb.opener_tab.ident] = mb
+               self.buttons.append(mb)
+               active = False
+               for m in g:
+                  mic_list.append(m)
+                  if m.open.get_active():
+                     active = True
+                  self.mic2button[m.ui_name] = mb
+               mb.connect("toggled", self.cb_mictoggle, mic_list)
+               self.add(mb)
+               mb.show()
+               mb.set_active(active)  # Open all if any opener members are currently open.
+               
+               closer_button.connect("clicked", lambda w, btn: btn.set_active(False), mb)
+
+         if closer == "right":
+            self.pack_start(closer_button, False)
+            
+      if aux_qty:
+         build(aux_group_list, closer=("right" if aux_qty > 1 else None))
+         if mic_qty:
+            spc = gtk.HBox()
+            spc.set_size_request(3, -1)
+            self.pack_start(spc, False)
+            spc.show()
+            
+      if mic_qty:
+         build(mic_group_list, closer=("left" if mic_qty > 1 else None))
+         
 
       if self._forced_on_mode:
          self.force_all_on(True)
@@ -507,7 +544,7 @@ class MicOpener(gtk.HBox):
          # TC: A textual placeholder for microphone opener buttons.
          # TC: If the user is reading this text then all microphones have been deactivated.
          l = gtk.Label(_('No Channel Opener Buttons'))
-         l.set_sensitive(False) # It just looks better that way.
+         l.set_sensitive(False)
          self.add(l)
          l.show()
      
@@ -2365,7 +2402,7 @@ class MainWindow:
       
       sep = gtk.VSeparator()
       self.hbox10.pack_start(sep, False, False, 5)
-      sep.show()
+      #sep.show()
       
       phonebox = gtk.HBox()
       phonebox.viewlevels = (5,)       
