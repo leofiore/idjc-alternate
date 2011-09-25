@@ -144,6 +144,8 @@ static void mic_process_stage3(struct mic *self)
 
 static void mic_process_stage4(struct mic *self)
    {
+   float m = self->mic_g;
+   float a = self->aux_g;
    struct mic *host = self->host;   
       
    if (host->mode == 2)
@@ -162,6 +164,24 @@ static void mic_process_stage4(struct mic *self)
    float l = fabsf(self->lrc);
    if (l > self->peak)
       self->peak = l;
+      
+   self->munp = self->unp * m;
+   self->munpm = self->unpm * m;
+   self->munpmdj = self->unpmdj * m;
+   self->mlrc = self->lrc * m;
+   self->mlc = self->lc * m;
+   self->mrc = self->rc * m;
+   self->mlcm = self->lcm * m;
+   self->mrcm = self->rcm * m;
+
+   self->aunp = self->unp * a;
+   self->aunpm = self->unpm * a;
+   self->aunpmdj = self->unpmdj * a;
+   self->alrc = self->lrc * a;
+   self->alc = self->lc * a;
+   self->arc = self->rc * a;
+   self->alcm = self->lcm * a;
+   self->arcm = self->rcm * a;
    }
 
 float mic_process_all(struct mic **mics)
@@ -211,6 +231,26 @@ void mic_stats_all(struct mic **mics)
       mic_stats(*mics++);
    }
 
+static void mic_set_role(struct mic *self, int role)
+   {
+   if (role == 'm')
+      {
+      self->mic_g = 1.0f;
+      self->aux_g = 0.0f;
+      }
+   else // if role == 'a'
+      {
+      self->mic_g = 0.0f;
+      self->aux_g = 1.0f;
+      }
+   }
+
+void mic_set_role_all(struct mic **mics, const char *role)
+   {
+   while (*mics)
+      mic_set_role(*mics++, *role++);
+   }
+
 static struct mic *mic_init(jack_client_t *client, int sample_rate, int id)
    {
    struct mic *self;
@@ -226,6 +266,7 @@ static struct mic *mic_init(jack_client_t *client, int sample_rate, int id)
    self->id = id;
    self->sample_rate = (float)sample_rate;   
    self->pan = 50;
+   self->aux_g = 1.0f;
    self->peak = peak_init;
    if (!(self->agc = agc_init(sample_rate, 0.01161f, id)))
       {

@@ -31,6 +31,26 @@ struct mic
    float rc;        /* audio right channel without muting */
    float lcm;       /* audio left channel with muting */
    float rcm;       /* audio right channel with muting */
+
+   /* mic specific output */
+   float munp;       /* barely processed audio without muting */
+   float munpm;      /* barely processed audio with muting */
+   float munpmdj;    /* barely processed audio for the dj mix */
+   float mlrc;       /* both audio channels without muting */
+   float mlc;        /* audio left channel without muting */
+   float mrc;        /* audio right channel without muting */
+   float mlcm;       /* audio left channel with muting */
+   float mrcm;       /* audio right channel with muting */
+
+   /* aux specific output */
+   float aunp;       /* barely processed audio without muting */
+   float aunpm;      /* barely processed audio with muting */
+   float aunpmdj;    /* barely processed audio for the dj mix */
+   float alrc;       /* both audio channels without muting */
+   float alc;        /* audio left channel without muting */
+   float arc;        /* audio right channel without muting */
+   float alcm;       /* audio left channel with muting */
+   float arcm;       /* audio right channel with muting */
    
    /* control inputs */
    int open;        /* mic open/close */
@@ -55,6 +75,8 @@ struct mic
    float mute;    /* gain applied by soft mute control */
    float djmute;  /* gain applied for muting from the dj mix */
    float peak;    /* highest signal level since last call to mic_getpeak */
+   float mic_g;   /* mic gain for muting */
+   float aux_g;   /* aux gain for muting */
    float rel_igain; /* invert for paired mic */
    float rel_gain;  /* signal level trim for paired mic */
    jack_port_t *jack_port; /* jack port handle */
@@ -69,3 +91,4 @@ void mic_stats_all(struct mic **mics);
 struct mic **mic_init_all(int n_mics, jack_client_t *client);
 void mic_free_all(struct mic **self);
 void mic_valueparse(struct mic *s, char *param);
+void mic_set_role_all(struct mic **s, const char *role);

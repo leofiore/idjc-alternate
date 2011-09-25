@@ -547,6 +547,15 @@ class MicOpener(gtk.HBox):
          l.set_sensitive(False)
          self.add(l)
          l.show()
+         
+      # Categorisation of channels according to type a or m (aux or mic)
+      channel_modes = ['a' for i in range(PGlobs.num_micpairs * 2)]
+      for button in mic_group_list:
+         for channel in button:
+            channel_modes[channel.index] = 'm'
+
+      self.approot.mixer_write("CMOD=%s\nACTN=new_channel_mode_string\nend\n" % "".join(channel_modes), True)    
+
      
    @threadslock
    def cb_flash_timeout(self):

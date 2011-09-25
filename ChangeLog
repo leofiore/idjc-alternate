@@ -1,6 +1,6 @@
 * Changes in version 0.8.6 *
 
-Removed the singular aux input.
+Merged the mic and aux audio features into the new concept of channel.
 
 Bindings upper target limit values revised.
 
