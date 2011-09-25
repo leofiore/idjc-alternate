@@ -402,15 +402,16 @@ class ProfileManager(object):
       return al_profile if al_profile in profiledirs else None
 
 
+   @property
+   def profile_dialog(self):
+      return self._profile_dialog
+
+
    def get_uptime(self):
       if self._init_time is not None:
          return time.time() - self._init_time
       else:
          return 0.0
-
-
-   def show_profile_dialog(self):
-      self._profile_dialog.show_all()
 
 
    def _autoloadprofilename(self):

@@ -1528,7 +1528,7 @@ class MainWindow:
    def callback(self, widget, data):
       print "%s was pressed" % data
       if data == "Show about":
-         self.prefs_window.notebook.set_current_page(6)
+         self.prefs_window.notebook.set_current_page(4)
          self.prefs_window.window.present()
       if data == "Features":
          if widget.get_active():
@@ -1557,16 +1557,6 @@ class MainWindow:
             self.player_left.advance()
          else:
             self.player_right.advance()
-      if data == "Server":
-         self.server_window.window.present()
-         #self.server_window.password_entry.grab_focus()
-      if data == "Prefs":
-         self.prefs_window.window.present()
-      if data == "Jingles":
-         self.jingles.window.present()
-         self.jingles.entry.grab_focus()
-      if data == "Profile":
-         pm.show_profile_dialog()
       if data.startswith("cfm"):
          if self.crosspass:
             gobject.source_remove(self.crosspass)
@@ -2380,30 +2370,32 @@ class MainWindow:
       
       def menu_callback(widget, event):
          window_menu = gtk.Menu()
-         window_menu.show()
 
-         def cb_toggle(mi, window):
-            if mi.get_active():
-               window.present()
-            else:
-               window.hide()
-
-         for label, show_cmd in zip((_('Preferences'), _('Output'), _('Jingles'), _('Profiles')),
-               (self.prefs_window.window.present, self.server_window.window.present,
-                self.jingles.window.present, pm.show_profile_dialog)):
+         windows = (self.prefs_window.window, self.server_window.window,
+                                 self.jingles.window, pm.profile_dialog)
+         for i, (label, show_cmd) in enumerate(zip((_('Preferences'), _('Output'),
+                              _('Jingles'), _('Profiles')), windows)):
+            if i == 2 and self.simplemixer:
+               continue
             mi = gtk.MenuItem(label)
-            mi.connect_object("activate", lambda w: w(), show_cmd)
+            mi.connect_object("activate", lambda w: w.present(), show_cmd)
             window_menu.append(mi)
-            mi.show()
-       
+
+         mi = gtk.SeparatorMenuItem()
+         window_menu.append(mi)
+
+         mi = gtk.ImageMenuItem(gtk.STOCK_CLOSE)
+         def hide(menuitem):
+            for each in windows:
+               each.hide()
+         mi.connect("activate", hide)
+         window_menu.append(mi)
+
+         window_menu.show_all()
          window_menu.popup(None, None, positioner, event.button, event.time)
          
       self.window_button.connect("button-press-event", menu_callback)
-      
-      sep = gtk.VSeparator()
-      self.hbox10.pack_start(sep, False, False, 5)
-      #sep.show()
-      
+            
       phonebox = gtk.HBox()
       phonebox.viewlevels = (5,)       
       phonebox.set_spacing(2)
@@ -3004,35 +2996,6 @@ class MainWindow:
       self.menu_feature_set.show()
       view_menu.append(self.menu_feature_set)
       
-      sep = gtk.SeparatorMenuItem()
-      sep.show()
-      view_menu.append(sep)
-    
-      # TC: The preferences window's opener button text.
-      menu_prefs = gtk.MenuItem(_('Preferences'))
-      menu_prefs.connect("activate", self.callback, "Prefs")
-      menu_prefs.show()
-      view_menu.append(menu_prefs)
-      
-      # TC: The output window's opener button text.
-      menu_server = gtk.MenuItem(_('Output'))
-      menu_server.connect("activate", self.callback, "Server")
-      menu_server.show()
-      view_menu.append(menu_server)
-      
-      # TC: The jingles window's opener button text.
-      menu_jingles = gtk.MenuItem(_('Jingles'))
-      menu_jingles.connect("activate", self.callback, "Jingles")
-      menu_jingles.show()
-      view_menu.append(menu_jingles)
-
-      # TC: The profile manager window's opener button text.
-      menu_profile = gtk.MenuItem(_('Profiles'))
-      menu_profile.connect("activate", self.callback, "Profile")
-      menu_profile.show()
-      view_menu.append(menu_profile)
-
-
       # Create the jingles player
       self.jingles = Jingles(self)
 
@@ -3161,6 +3124,7 @@ class MainWindow:
       self.window.connect("key-release-event", self.cb_key_capture)
      
       self.window.show()
+      self.prefs_window.window.realize()  # Prevent first-time-show delay.
       
       self.player_left.treeview.emit("cursor-changed")
       self.player_right.treeview.emit("cursor-changed")

@@ -544,3 +544,7 @@ class ProfileDialog(gtk.Dialog):
          gtk.Dialog.run(self)
       else:
          self.show()
+
+
+   def present(self):
+      self.show_all()
