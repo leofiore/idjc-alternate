@@ -415,6 +415,10 @@ class IconChooserButton(gtk.Button):
    The image rather than the mime-type icon is shown on the button.
    """
    
+   __gsignals__ = {
+         "filename-changed" : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,)),
+   }
+   
    def __init__(self, dialog):
       gtk.Button.__init__(self)
       dialog.set_icon_from_file(PGlobs.default_icon)
@@ -457,8 +461,9 @@ class IconChooserButton(gtk.Button):
          self._image.set_from_pixbuf(pb)
          self._filename = f
          self._dialog.set_filename(f)
-      
-      
+      self.emit("filename-changed", self._filename)
+
+
    def get_filename(self):
       return self._filename
 

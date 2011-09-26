@@ -21,6 +21,7 @@ __all__ = ['mixprefs']
 import os
 import shutil
 import gettext
+import itertools
 
 import gtk
 
@@ -95,7 +96,7 @@ class InitialPlayerConfig(gtk.Frame):
          vbox.pack_start(each, False)
       self.show_all()
       
-      self.active_dict = {
+      self.activedict = {
          prefix + "pl_mode": self.pl_mode,
          prefix + "fade": self.fade,
          prefix + "timeremaining": self.remaining,
@@ -206,7 +207,7 @@ class AGCControl(gtk.Frame):
       ivbox.set_border_width(3)
       frame.add(ivbox)
       ivbox.show()
-      self.booleandict[self.commandname + "_" + wname] = cb
+      self.activedict[self.commandname + "_" + wname] = cb
       return ivbox
    
    def check(self, label_text, wname, save=True):
@@ -215,7 +216,7 @@ class AGCControl(gtk.Frame):
       cb.emit("toggled")
       cb.show()
       if save:
-         self.booleandict[self.commandname + "_" + wname] = cb
+         self.activedict[self.commandname + "_" + wname] = cb
       return cb
       
    def cb_open(self, widget):
@@ -259,7 +260,7 @@ class AGCControl(gtk.Frame):
       self.commandname = commandname
       self.index = index
       self.valuesdict = {}
-      self.booleandict = {}
+      self.activedict = {}
       self.textdict = {}
       gtk.Frame.__init__(self)
       hbox = gtk.HBox()
@@ -299,7 +300,7 @@ class AGCControl(gtk.Frame):
          mode_liststore.append((each, ))
       self.mode.connect("changed", self.sendnewstats, "mode")
       self.mode.connect("changed", self.cb_mode)
-      self.booleandict[self.commandname + "_mode"] = self.mode
+      self.activedict[self.commandname + "_mode"] = self.mode
       self.mode.show()
       set_tip(self.mode, _('The signal processing mode.'))
 
@@ -314,7 +315,7 @@ class AGCControl(gtk.Frame):
       hbox = gtk.HBox()
       # TC: The mic opener control can appear on the main panel. Alongside sits the button selector.
       self.group = gtk.RadioButton(None, _('Main Panel Button'))
-      self.booleandict[self.commandname + "_group"] = self.group
+      self.activedict[self.commandname + "_group"] = self.group
       hbox.pack_start(self.group, False, False, 0)
       self.group.show()
       ivbox.pack_start(hbox, False, False)
@@ -331,7 +332,7 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(hbox, False)
       hbox.show()
       self.no_front_panel_opener = gtk.RadioButton(self.group, _("This:"))
-      self.booleandict[self.commandname + "_using_local_opener"] = self.no_front_panel_opener
+      self.activedict[self.commandname + "_using_local_opener"] = self.no_front_panel_opener
       self.no_front_panel_opener.connect("toggled", lambda w: self.open.set_sensitive(w.get_active()))
       hbox.pack_start(self.no_front_panel_opener, False)
       self.no_front_panel_opener.show()
@@ -353,7 +354,7 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(self.autoopen, False, False)
       self.autoopen.show()
       set_tip(self.autoopen, _('This mic is to be opened automatically when a Player Stop or Announcement playlist control is encountered in the active player. This mic is also to be opened by the playlist advance button.'))
-      self.booleandict[self.commandname + "_autoopen"] = self.autoopen
+      self.activedict[self.commandname + "_autoopen"] = self.autoopen
 
       sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       panframe = gtk.Frame()
@@ -362,7 +363,7 @@ class AGCControl(gtk.Frame):
       
       hbox = gtk.HBox()
       self.pan_active = gtk.CheckButton(_('Stereo Panning'))
-      self.booleandict[self.commandname + "_pan_active"] = self.pan_active
+      self.activedict[self.commandname + "_pan_active"] = self.pan_active
       hbox.pack_start(self.pan_active, False, False, 0)
       self.pan_active.show()
       self.pan_active.connect("toggled", self.sendnewstats, "pan_active")
@@ -679,7 +680,7 @@ class mixprefs:
    def save_player_prefs(self):
       try:
          with open(pm.basedir / "playerdefaults", "w") as f:
-            for name, widget in self.playersettingsdict.iteritems():
+            for name, widget in self.activedict.iteritems():
                f.write(name + "=" + str(int(widget.get_active())) + "\n")
             for name, widget in self.valuesdict.iteritems():
                f.write(name + "=" + str(widget.get_value()) + "\n")
@@ -709,7 +710,7 @@ class mixprefs:
             line = line.split("=")
             key = line[0].strip()
             value = line[1][:-1].strip()
-            if self.playersettingsdict.has_key(key):
+            if self.activedict.has_key(key):
                if value == "True":
                   value = True
                elif value == "False":
@@ -719,7 +720,7 @@ class mixprefs:
                if key == "proktoggle":
                   proktogglevalue = value
                else:
-                  self.playersettingsdict[key].set_active(value)
+                  self.activedict[key].set_active(value)
             elif self.valuesdict.has_key(key):
                self.valuesdict[key].set_value(float(value))
             elif self.textdict.has_key(key):
@@ -728,7 +729,7 @@ class mixprefs:
       except IOError:
          print "Failed to read playerdefaults file"
       if proktogglevalue:
-         self.playersettingsdict["proktoggle"].set_active(True)
+         self.activedict["proktoggle"].set_active(True)
       self.parent.send_new_mixer_stats()
          
    def apply_player_prefs(self):
@@ -1387,9 +1388,9 @@ class mixprefs:
       self.notebook.append_page(generalwindow, features_label)
       features_label.show()
       outervbox.show()
-         
-      # Microphones tab
-      
+
+      # Channels tab
+
       scrolled_window = gtk.ScrolledWindow()
       scrolled_window.set_border_width(0)
       scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
@@ -1400,13 +1401,14 @@ class mixprefs:
       panevbox.set_spacing(3)
       panevbox.get_parent().set_shadow_type(gtk.SHADOW_NONE)
       panevbox.show()
-     
+
       # Opener buttons for channels
-      
-      panevbox.pack_start(parent.mic_opener.opener_settings, False, padding=3)
-    
+
+      opener_settings = parent.mic_opener.opener_settings
+      panevbox.pack_start(opener_settings, False, padding=3)
+
       # Individual channel settings
-      
+
       mic_controls = []
       vbox = gtk.VBox()
       for i in range(PGlobs.num_micpairs):
@@ -1426,7 +1428,7 @@ class mixprefs:
             mic_controls.append(c)
          mic_controls[-2].set_partner(mic_controls[-1])
          mic_controls[-1].set_partner(mic_controls[-2])   
-      parent.mic_opener.new_button_set()
+      parent.mic_opener.finalise()
 
       panevbox.pack_start(vbox, False, False, 0)
       vbox.show()
@@ -1621,17 +1623,35 @@ class mixprefs:
       self.dither.set_active(True)
       self.fastest_resample.set_active(True)
       self.enable_tooltips.set_active(True)
-      mic0 = mic_controls[0]
-      mic0.mode.set_active(1)
-      mic0.alt_name.set_text("DJ")
-      mic0.autoopen.set_active(True)
+
+      mic_controls[0].mode.set_active(2)
+      mic_controls[0].alt_name.set_text("DJ")
+      mic_controls[2].mode.set_active(1)
+      mic_controls[2].alt_name.set_text("Aux L")
+      mic_controls[2].groups_adj.set_value(2)
+      mic_controls[3].mode.set_active(3)
+      mic_controls[3].alt_name.set_text("Aux R")
+
+      t = parent.mic_opener.ix2button[1].opener_tab
+      t.button_text.set_text("DJ")
+      t.icb.set_filename(FGlobs.pkgdatadir / "mic4.png")
+      t.headroom.set_value(3)
+      t.has_reminder_flash.set_active(True)
+      t.is_microphone.set_active(True)
+      for cb in t.open_close_triggers.itervalues():
+         cb.set_active(True)
+      
+      t = parent.mic_opener.ix2button[2].opener_tab
+      t.button_text.set_text("Aux")
+      t.icb.set_filename(FGlobs.pkgdatadir / "jack2.png")
+
       self.show_stream_meters.set_active(True)
       self.show_microphones.set_active(True)
       
       self.load_jack_port_settings()
       self.bind_jack_ports()
       
-      self.playersettingsdict = {       # Settings of these will be saved in the config file 
+      self.activedict = {       # Settings of these will be saved in the config file 
          "startmini"     : self.startmini,
          "djalarm"       : self.djalarm,
          "trxpld"        : self.tracks_played,
@@ -1659,12 +1679,8 @@ class mixprefs:
          "mic_meters_active" : self.show_active_microphones,
          }
          
-      for mic_control in mic_controls:
-         self.playersettingsdict.update(mic_control.booleandict)
-
-      for each in (self.lpconfig, self.rpconfig):
-         self.playersettingsdict.update(each.active_dict)
-
+      for each in itertools.chain(mic_controls, (self.lpconfig, self.rpconfig, opener_settings)):
+         self.activedict.update(each.activedict)
 
       self.valuesdict = {
          "interval_vol"  : self.parent.jingles.interadj,
@@ -1678,8 +1694,8 @@ class mixprefs:
          "rg_boost"      : self.rg_boost,
          }
 
-      for mic_control in mic_controls:
-         self.valuesdict.update(mic_control.valuesdict)
+      for each in itertools.chain(mic_controls, (opener_settings,)):
+         self.valuesdict.update(each.valuesdict)
 
       self.textdict = {                   # These are all text
          "prokuser"      : self.p3prefs.prokuser,
@@ -1694,7 +1710,7 @@ class mixprefs:
          "prefs_wst"     : self.wst,
          }
 
-      for mic_control in mic_controls:
-         self.textdict.update(mic_control.textdict)
+      for each in itertools.chain(mic_controls, (opener_settings,)):
+         self.textdict.update(each.textdict)
 
       self.rangewidgets = (self.parent.deckadj,)

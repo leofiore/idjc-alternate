@@ -91,6 +91,21 @@ class ColouredArea(gtk.DrawingArea):
       self.window.draw_rectangle(self.gc, True, 0, 0, self.rect.width, self.rect.height)
 
 
+class ColourButton(gtk.ColorButton):
+   def get_text(self):
+      return self.get_color().to_string()
+      
+   def set_text(self, string):
+      self.set_color(gtk.gdk.Color(string))
+
+
+class IconChooserButtonExtd(IconChooserButton):
+   def get_text(self):
+      return self.get_filename() or ""
+      
+   def set_text(self, filename):
+      self.set_filename(filename or None)
+      
 
 class MicButton(gtk.ToggleButton):
    @property
@@ -105,15 +120,10 @@ class MicButton(gtk.ToggleButton):
    def __cb_toggle(self):
       self.__indicate()
       if self.get_active():
-         if self.flash:
-            self.set_colour(self.open_colour)
-         cmd = self.opener_tab.shell_on_open.get_text().strip()
+         self.set_colour(self.open_colour)
+         self.opener_tab.button_was_on = True
       else:
-         cmd = self.opener_tab.shell_on_close.get_text().strip()
-         
-      if cmd:
-         print "button %d shell command: %s" % (self.opener_tab.ident, cmd)
-         subprocess.Popen(cmd, shell=True, close_fds=True)
+         self.opener_tab.button_was_on = False
 
    def __indicate(self):
       if self.get_active():
@@ -132,7 +142,6 @@ class MicButton(gtk.ToggleButton):
 
    def __init__(self, opener_settings, opener_tab, mic_agc_list):
       gtk.ToggleButton.__init__(self)
-      self.connect("toggled", self.__cb_toggle)
 
       self.opener_tab = opener_tab
 
@@ -144,7 +153,7 @@ class MicButton(gtk.ToggleButton):
       self.has_reminder_flash = opener_tab.has_reminder_flash.get_active
 
       attrlist = pango.AttrList()
-      attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, 10))
+      attrlist.insert(pango.AttrSize(METER_TEXT_SIZE, 0, 100))
       
       hbox = gtk.HBox()
       hbox.set_spacing(4)
@@ -185,7 +194,7 @@ class MicButton(gtk.ToggleButton):
          hbox.pack_start(self._text_label, False)
      
       self._icon_image = gtk.Image()
-      icon = opener_tab.icon_chooser.get_filename()
+      icon = opener_tab.icb.get_filename()
       try:
          pb = gtk.gdk.pixbuf_new_from_file_at_size(icon, 47, 20)
       except (TypeError, glib.GError):
@@ -231,7 +240,6 @@ class MicButton(gtk.ToggleButton):
          label.set_text(text)
 
       self.connect("toggled", self.__cb_toggle)
-      self.emit("toggled")
       self.__flash = False
       self.show_all()
    
@@ -244,11 +252,11 @@ class OpenerTab(gtk.VBox):
    def __init__(self, ident):
       gtk.VBox.__init__(self)
       self.set_border_width(6)
-      self.set_spacing(6)
+      self.set_spacing(4)
       self.label = gtk.Label()
       self.label.show()
       self.set_ident(ident)
-      
+      self.activedict = {}
       sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       lhbox = gtk.HBox()
       lhbox.set_spacing(3)
@@ -269,10 +277,10 @@ class OpenerTab(gtk.VBox):
                   buttons = (gtk.STOCK_CLEAR, gtk.RESPONSE_NONE,
                              gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                              gtk.STOCK_OK, gtk.RESPONSE_OK))
-      self.icon_chooser.connect("response", lambda w, r: self.emit("changed"))
-      icb = IconChooserButton(self.icon_chooser)
-      sg.add_widget(icb)
-      lhbox.pack_start(icb, True)
+      self.icb = IconChooserButtonExtd(self.icon_chooser)
+      self.icb.connect("filename-changed", lambda w, r: self.emit("changed"))
+      sg.add_widget(self.icb)
+      lhbox.pack_start(self.icb, True)
 
       self.pack_start(lhbox, False)
 
@@ -281,7 +289,7 @@ class OpenerTab(gtk.VBox):
       label = gtk.Label(_('The amount of headroom required (dB)'))
       label.set_alignment(0.0, 0.5)
       hbox.pack_start(label, False)
-      self.headroom = gtk.SpinButton(gtk.Adjustment(3.0, 0.0, 32.0, 0.5), digits=1)
+      self.headroom = gtk.SpinButton(gtk.Adjustment(0.0, 0.0, 32.0, 0.5), digits=1)
       self.headroom.connect("value-changed", lambda w: self.emit("changed"))
       hbox.pack_end(self.headroom, False)
       
@@ -293,37 +301,38 @@ class OpenerTab(gtk.VBox):
       self.pack_start(self.is_microphone, False)
       
       frame = gtk.Frame(" %s " % _('Open(/Close) Triggers'))
-      self.open_triggers = {}
+      self.pack_start(frame, False, padding=3)
+      self.open_close_triggers = {}
       lvbox = gtk.VBox()
       rvbox = gtk.VBox()
-      for w, t, col in zip(("advance", "stop_control", "public_voip", "announcement"),
+      for w, t, col in zip(("advance", "stop_control", "announcement"),
               (_('Playlist advance button'),
                _("'%s' playlist control") % _('Player Stop'),
-               _('Public VoIP mode'),
                _('Announcements')),
                itertools.cycle((lvbox, rvbox))):
          cb = gtk.CheckButton(t)
-         self.open_triggers[w] = cb
+         self.open_close_triggers[w] = cb
          col.pack_start(cb, False)
+         self.activedict["oc_" + w] = cb
       hbox = gtk.HBox(True, 10)
       hbox.set_border_width(6)
       for each in (lvbox, rvbox):
          hbox.pack_start(each, False)
       frame.add(hbox)
-      self.pack_start(frame, False)
       
       frame = gtk.Frame(_(" %s " % 'When opened close these other buttons'))
-      self.pack_start(frame, False)
+      self.pack_start(frame, False, padding=3)
       self.closer_hbox = gtk.HBox()
       self.closer_hbox.set_border_width(3)
       for i in range(1, ident):
          cb = gtk.CheckButton(str(i))
          cb.connect("toggled", lambda w: self.emit("changed"))
          self.closer_hbox.pack_start(cb)
+         self.activedict["close_%d_button" % i] = cb
       frame.add(self.closer_hbox)
       
       frame = gtk.Frame(" %s " % _('Shell Command'))
-      self.pack_start(frame, False)
+      self.pack_start(frame, False, padding=3)
       ivbox = gtk.VBox()
       frame.add(ivbox)
       ivbox.set_border_width(6)
@@ -343,6 +352,24 @@ class OpenerTab(gtk.VBox):
       self.shell_on_close = gtk.Entry()
       ivbox.pack_start(enbox(_('On open'), self.shell_on_open), False)
       ivbox.pack_start(enbox(_('On close'), self.shell_on_close), False)
+      
+      self.activedict.update({
+         "reminderflash" : self.has_reminder_flash,
+         "isamicrophone" : self.is_microphone,
+      })
+      
+      self.valuesdict = {
+         "headroom" : self.headroom
+      }
+
+      self.textdict = {
+         "iconpathname" : self.icb,
+         "buttontext" : self.button_text,
+         "shell_onopen" : self.shell_on_open,
+         "shell_onclose" : self.shell_on_close,
+      }
+     
+      self.button_was_on = False
 
 
    def set_ident(self, ident):
@@ -356,6 +383,7 @@ class OpenerTab(gtk.VBox):
          cb.set_sensitive(False)
       else:
          cb.connect("toggled", lambda w: self.emit("changed"))
+         self.activedict["close_%d_button" % closer_ident] = cb
       self.closer_hbox.pack_start(cb)
       cb.show()
 
@@ -374,15 +402,14 @@ class OpenerSettings(gtk.Frame):
       vbox = gtk.VBox()
       self.add(vbox)
       vbox.set_border_width(7)
-      vbox.set_spacing(8)
+      vbox.set_spacing(3)
 
       self.button_numbers = gtk.CheckButton(_('Indicate button numbers and associated channel numbers'))
-      self.button_numbers.set_active(True)
       self.button_numbers.connect("toggled", changed)
       vbox.pack_start(self.button_numbers, False)
       
       frame = gtk.Frame(" %s " % _('Status Indicator Appearance'))
-      vbox.pack_start(frame, False)
+      vbox.pack_start(frame, False, padding=6)
       hbox = gtk.HBox()
       hbox.set_border_width(3)
       hbox.set_spacing(3)
@@ -395,24 +422,38 @@ class OpenerSettings(gtk.Frame):
       hbox.pack_start(gtk.HBox())
       
       hbox.pack_start(gtk.Label(_('Opened')), False)
-      self.open_colour = gtk.ColorButton(gtk.gdk.Color(0.95, 0.2, 0.2))
+      self.open_colour = ColourButton(gtk.gdk.Color(0.95, 0.2, 0.2))
       hbox.pack_start(self.open_colour, False)
       hbox.pack_start(gtk.HBox())
       hbox.pack_start(gtk.Label(_('Closed')), False)
       col = gtk.gdk.Color("gray")
-      self.closed_colour = gtk.ColorButton(col)
+      self.closed_colour = ColourButton(col)
       hbox.pack_start(self.closed_colour, False)
       hbox.pack_start(gtk.HBox())
       hbox.pack_start(gtk.Label(_('Remind')), False)
-      self.reminder_colour = gtk.ColorButton(col)
+      self.reminder_colour = ColourButton(col)
       hbox.pack_start(self.reminder_colour, False)
      
       for each in (self.open_colour, self.closed_colour, self.reminder_colour):
          each.connect("color-set", changed)
      
       self.notebook = gtk.Notebook()
-      vbox.pack_start(self.notebook, False, padding=2)
+      vbox.pack_start(self.notebook, False, padding=3)
       self.show_all()
+   
+      self.activedict = {
+         "btnnumbers" : self.button_numbers,
+      }
+
+      self.textdict = {
+         "btncolour_opened" : self.open_colour,
+         "btncolour_closed" : self.closed_colour,
+         "btncolour_remind" : self.reminder_colour,
+      }
+   
+      self.valuesdict = {
+         "btnreminderwidth": self.indicator_width,
+      }
       
 
    def add_channel(self):
@@ -423,7 +464,15 @@ class OpenerSettings(gtk.Frame):
       self.notebook.foreach(add_closer)
       tab.show_all()
       tab.connect("changed", lambda w: self.emit("changed", tab))
-
+      
+      
+   def finalise(self):
+      for tab in self.notebook.get_children():
+         for attrname in ("activedict", "valuesdict", "textdict"):
+            dest = getattr(self, attrname)
+            src = getattr(tab, attrname)
+            for key, val in src.iteritems():
+               dest[key + "_%d" % tab.ident] = val
 
    
 class MicOpener(gtk.HBox):
@@ -442,6 +491,7 @@ class MicOpener(gtk.HBox):
       self._flashing_timer = 0
 
       if button.get_active():
+         cmd = button.opener_tab.shell_on_open.get_text().strip()
          closers = button.opener_tab.closer_hbox.get_children()
          for i, closer in enumerate(closers, start=1):
             if closer.get_active():
@@ -449,19 +499,27 @@ class MicOpener(gtk.HBox):
                   self.ix2button[i].set_active(False)
                except KeyError:
                   pass
+      else:
+         cmd = button.opener_tab.shell_on_close.get_text().strip()
+
+      if cmd and not button.block_shell_command:
+         print "button %d shell command: %s" % (button.opener_tab.ident, cmd)
+         subprocess.Popen(cmd, shell=True, close_fds=True)
 
       for mic in mics:
          mic.open.set_active(button.get_active())
+
       self._any_mic_selected = any(mb.get_active() for mb in self.buttons if mb.opener_tab.is_microphone.get_active())
+
       try: 
          self._headroom = max(mb.opener_tab.headroom.get_value() for mb in self.buttons if mb.get_active())
       except ValueError:
          self._headroom = 0.0
+
       self.notify_others()
 
    def cb_reconfigure(self, widget, trigger=None):
       self.new_button_set()
-      self.notify_others()
       
    def new_button_set(self):
       # Clear away old button widgets.
@@ -518,7 +576,9 @@ class MicOpener(gtk.HBox):
                mb.connect("toggled", self.cb_mictoggle, mic_list)
                self.add(mb)
                mb.show()
+               mb.block_shell_command = mb.opener_tab.button_was_on
                mb.set_active(active)  # Open all if any opener members are currently open.
+               mb.block_shell_command = False
                
                closer_button.connect("clicked", lambda w, btn: btn.set_active(False), mb)
 
@@ -555,6 +615,7 @@ class MicOpener(gtk.HBox):
             channel_modes[channel.index] = 'm'
 
       self.approot.mixer_write("CMOD=%s\nACTN=new_channel_mode_string\nend\n" % "".join(channel_modes), True)    
+      self.notify_others()
 
      
    @threadslock
@@ -621,6 +682,9 @@ class MicOpener(gtk.HBox):
       for attr, signal in zip (("mode", "group", "no_front_panel_opener", "groups_adj"),
                                ("changed", "toggled", "toggled", "notify::value")):
          getattr(mic, attr).connect(signal, self.cb_reconfigure)
+         
+   def finalise(self):
+      self.opener_settings.finalise()
 
    def __init__(self, approot, flash_test):
       self.approot = approot
