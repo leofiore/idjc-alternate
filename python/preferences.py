@@ -257,6 +257,7 @@ class AGCControl(gtk.Frame):
       self.approot = approot
       self.ui_name = ui_name
       self.meter = approot.mic_meters[int(ui_name) - 1]
+      self.meter.agc = self
       self.commandname = commandname
       self.index = index
       self.valuesdict = {}
@@ -421,7 +422,7 @@ class AGCControl(gtk.Frame):
       pairedvbox.pack_start(pairedinvert, False)
       pairedinvert.show()
 
-      micgainadj = gtk.Adjustment(5.0, -20.0, +30.0, 0.1, 2)
+      micgainadj = gtk.Adjustment(0.0, -20.0, +30.0, 0.1, 2)
       invertaction = gtk.ToggleAction("invert", _('Invert Signal'), _('Useful for when microphones are cancelling one another out, producing a hollow sound.'), None)
       # TC: Control whether to mix microphone audio to the DJ mix.
       indjmixaction = gtk.ToggleAction("indjmix", _("In The DJ's Mix"), _('Make the microphone audio audible in the DJ mix. This may not always be desirable.'), None)
@@ -1629,8 +1630,12 @@ class mixprefs:
       mic_controls[2].mode.set_active(1)
       mic_controls[2].alt_name.set_text("Aux L")
       mic_controls[2].groups_adj.set_value(2)
+      mic_controls[2].pan_active.set_active(True)
+      mic_controls[2].pan.set_value(0)
       mic_controls[3].mode.set_active(3)
       mic_controls[3].alt_name.set_text("Aux R")
+      mic_controls[3].pan_active.set_active(True)
+      mic_controls[3].pan.set_value(100)
 
       t = parent.mic_opener.ix2button[1].opener_tab
       t.button_text.set_text("DJ")

@@ -1232,6 +1232,18 @@ class MicMeter(gtk.VBox):
          self.hide()
       else:
          self.show()
+         
+   def _cb_tooltip(self, widget, x, y, keyboard_mode, tooltip):
+      if self.agc:
+         text = self.agc.alt_name.get_text().strip()
+         if not text:
+            return False
+         label = gtk.Label(text)
+         tooltip.set_custom(label)
+         label.show()
+         return True
+      else:
+         return False
 
    def __init__(self, labelbasetext, index):
       gtk.VBox.__init__(self)
@@ -1284,6 +1296,10 @@ class MicMeter(gtk.VBox):
       hbox.pack_start(self.attenuation, False, False)
       self.attenuation.show()
       self.show_while_inactive = True
+      self.agc = None
+      self.set_tooltip_window(None)
+      self.connect("query-tooltip", self._cb_tooltip)
+      self.set_has_tooltip(True)
 
 
 class RecIndicator(gtk.HBox):
