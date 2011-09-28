@@ -263,6 +263,7 @@ class OpenerTab(gtk.VBox):
       label = gtk.Label(_('Text'))
       lhbox.pack_start(label, False)
       self.button_text = gtk.Entry()
+      set_tip(self.button_text, _("The opener button's text."))
       self.button_text.connect("changed", lambda w: self.emit("changed"))
       sg.add_widget(self.button_text)
       lhbox.pack_start(self.button_text)
@@ -278,6 +279,7 @@ class OpenerTab(gtk.VBox):
                              gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                              gtk.STOCK_OK, gtk.RESPONSE_OK))
       self.icb = IconChooserButtonExtd(self.icon_chooser)
+      set_tip(self.icb, _("The opener button's icon."))
       self.icb.connect("filename-changed", lambda w, r: self.emit("changed"))
       sg.add_widget(self.icb)
       lhbox.pack_start(self.icb, True)
@@ -285,6 +287,7 @@ class OpenerTab(gtk.VBox):
       self.pack_start(lhbox, False)
 
       hbox = gtk.HBox()
+      set_tip(hbox, _('The headroom is the amount by which to reduce player volume when this opener is active. Note that the actual amount will be the largest value of all the currently open buttons.'))
       self.pack_start(hbox, False)
       label = gtk.Label(_('The amount of headroom required (dB)'))
       label.set_alignment(0.0, 0.5)
@@ -294,15 +297,17 @@ class OpenerTab(gtk.VBox):
       hbox.pack_end(self.headroom, False)
       
       self.has_reminder_flash = gtk.CheckButton(_('This button will flash as a reminder to close'))
+      set_tip(self.has_reminder_flash, _("After a number of seconds where a main player is active this button's status indicator will start to flash and will continue to do so until the button is closed or the player stops."))
       self.pack_start(self.has_reminder_flash, False)
       
       self.is_microphone = gtk.CheckButton(_('This button is to be treated as a microphone opener'))
+      set_tip(self.is_microphone, _("The button will be grouped with the other microphone opener buttons. It will be affected by signals to close microphone buttons. Channels associated with this button will be mixed differently when using the VoIP modes."))
       self.is_microphone.connect("toggled", lambda w: self.emit("changed"))
       self.pack_start(self.is_microphone, False)
       
-      frame = gtk.Frame(" %s " % _('Open(/Close) Triggers'))
+      frame = gtk.Frame(" %s " % _('Button Open Triggers'))
       self.pack_start(frame, False, padding=3)
-      self.open_close_triggers = {}
+      self.open_triggers = {}
       lvbox = gtk.VBox()
       rvbox = gtk.VBox()
       for w, t, col in zip(("advance", "stop_control", "announcement"),
@@ -311,7 +316,7 @@ class OpenerTab(gtk.VBox):
                _('Announcements')),
                itertools.cycle((lvbox, rvbox))):
          cb = gtk.CheckButton(t)
-         self.open_close_triggers[w] = cb
+         self.open_triggers[w] = cb
          col.pack_start(cb, False)
          self.activedict["oc_" + w] = cb
       hbox = gtk.HBox(True, 10)
@@ -332,6 +337,7 @@ class OpenerTab(gtk.VBox):
       frame.add(self.closer_hbox)
       
       frame = gtk.Frame(" %s " % _('Shell Command'))
+      set_tip(frame, _("Mostly useful issuing 'amixer' commands, in particular for setting capture."))
       self.pack_start(frame, False, padding=3)
       ivbox = gtk.VBox()
       frame.add(ivbox)
@@ -405,10 +411,12 @@ class OpenerSettings(gtk.Frame):
       vbox.set_spacing(3)
 
       self.button_numbers = gtk.CheckButton(_('Indicate button numbers and associated channel numbers'))
+      set_tip(self.button_numbers, _("A useful feature to have switched on while allocating channel openers."))
       self.button_numbers.connect("toggled", changed)
       vbox.pack_start(self.button_numbers, False)
       
       frame = gtk.Frame(" %s " % _('Status Indicator Appearance'))
+      set_tip(frame, _('Each opener button has two vertical bars at the side to make the button state more apparent. These settings control their appearance.'))
       vbox.pack_start(frame, False, padding=6)
       hbox = gtk.HBox()
       hbox.set_border_width(3)
@@ -644,10 +652,15 @@ class MicOpener(gtk.HBox):
             mb.set_sensitive(not val)
             mb.set_inconsistent(val)
 
-   def open_auto(self):
-      for m in self.mic_list:
-         if m.autoopen.get_active():
-            self.mic2button[m.ui_name].set_active(True)
+   def open_auto(self, type_):
+      for b in self.buttons:
+         try:
+            cb = b.opener_tab.open_triggers[type_]
+         except KeyError:
+            print "unknown auto open type:", type_
+         else:
+            if cb.get_active():
+               b.set_active(True)
 
    def oc(self, mic, val):
       """Perform open/close."""
@@ -3009,15 +3022,25 @@ class MainWindow:
             self.micmeterbox.pack_start(meter)
             meter.show()
       else:
-         table = gtk.Table(PGlobs.num_micpairs, 2)
-         table.set_row_spacings(4)
-         table.set_col_spacings(4)
-         self.micmeterbox.pack_start(table)
-         table.show()
-         for i, meter in enumerate(self.mic_meters):
-            row, col = divmod(i, 2)
-            table.attach(meter, col, col + 1, row, row + 1)
-            meter.show()
+         chvbox = gtk.VBox()
+         chvbox.set_spacing(4)
+         self.micmeterbox.pack_start(chvbox)
+         chvbox.show()
+         def showhide(widget, state, box, l, r):
+            if l.flags() & gtk.SENSITIVE or r.flags() & gtk.SENSITIVE:
+               box.show()
+            else:
+               box.hide()
+         for l, r in zip(*((iter(self.mic_meters),) * 2)):
+            chhbox = gtk.HBox()
+            chhbox.set_spacing(4)
+            chhbox.pack_start(l, False)
+            chhbox.pack_end(r, False)
+            chvbox.pack_start(chhbox)
+            chhbox.show()
+            for each in l, r:
+               each.connect("state-changed", showhide, chhbox, l, r)
+               each.show()
       
       set_tip(self.micmeterbox, _('A peak hold meter indicating the microphone signal strength and a meter indicating attenuation levels in the microphone signal processing system. Green indicates attenuation from the noise gate, yellow from the de-esser, red from the limiter.'))
 
@@ -3063,7 +3086,7 @@ class MainWindow:
       view_menu.append(menu_str_meters)
       # TC: Menu text for toggling the visibility of information display widgets pertaining to this set of items.
       # TC: Part of the View submenu.
-      self.str_meters_action = gtk.ToggleAction(None, _('Stream Audio Levels And Connections'), None, None)
+      self.str_meters_action = gtk.ToggleAction(None, _('Stream audio levels, connections, and listener figures'), None, None)
       self.str_meters_action.connect_proxy(menu_str_meters)
 
       menu_mic_meters = gtk.CheckMenuItem()
@@ -3071,7 +3094,7 @@ class MainWindow:
       view_menu.append(menu_mic_meters)
       # TC: Menu text for toggling the visibility of the audio levels of the microphones.
       # TC: Part of the View submenu.
-      self.mic_meters_action = gtk.ToggleAction(None, _('Microphone Meters'), None, None)
+      self.mic_meters_action = gtk.ToggleAction(None, _('Channels'), None, None)
       self.mic_meters_action.connect_proxy(menu_mic_meters)
       
       sep = gtk.SeparatorMenuItem()

@@ -350,13 +350,6 @@ class AGCControl(gtk.Frame):
       self.open.emit("toggled")
       self.open.set_sensitive(False)
 
-      # TC: Checkbutton that selects this microphone to open automatically in certain circumstances.
-      self.autoopen = gtk.CheckButton(_('Automatic Open'))
-      ivbox.pack_start(self.autoopen, False, False)
-      self.autoopen.show()
-      set_tip(self.autoopen, _('This mic is to be opened automatically when a Player Stop or Announcement playlist control is encountered in the active player. This mic is also to be opened by the playlist advance button.'))
-      self.activedict[self.commandname + "_autoopen"] = self.autoopen
-
       sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
       panframe = gtk.Frame()
       panframe.modes = (1, 2, 3)
@@ -955,7 +948,7 @@ class mixprefs:
 
       self.mic_qty_adj = gtk.Adjustment(PGlobs.num_micpairs * 2, 2.0, 12.0, 2.0)
       spin = gtk.SpinButton(self.mic_qty_adj)
-      rrvbox.pack_start(hjoin(spin, gtk.Label(_('Microphone audio channels*'))))
+      rrvbox.pack_start(hjoin(spin, gtk.Label(_('General purpose audio channels*'))))
    
       self.stream_qty_adj = gtk.Adjustment(PGlobs.num_streamers, 1.0, 9.0, 1.0)
       spin = gtk.SpinButton(self.stream_qty_adj)
@@ -987,7 +980,7 @@ class mixprefs:
       vbox.set_border_width(10)
       frame.add(vbox)
       vbox.show()
-      self.show_stream_meters = gtk.CheckButton(_('Stream Audio Levels And Connections'))
+      self.show_stream_meters = gtk.CheckButton()
       self.show_stream_meters.set_active(True)
       self.show_stream_meters.connect("toggled", showhide, parent.streammeterbox)
       parent.str_meters_action.connect_proxy(self.show_stream_meters)
@@ -997,22 +990,19 @@ class mixprefs:
       hbox = gtk.HBox()
       vbox.pack_start(hbox, False, False)
       hbox.show()
-      self.show_microphones = gtk.CheckButton(_('Microphone Meters'))
+      self.show_microphones = gtk.CheckButton()
       self.show_microphones.set_active(True)
       self.show_microphones.connect("toggled", showhide, parent.micmeterbox)
       parent.mic_meters_action.connect_proxy(self.show_microphones)
       hbox.pack_start(self.show_microphones, False, False)
       self.show_microphones.show()            
       
-      self.show_all_microphones = gtk.RadioButton(None, _('All'))
+      self.no_mic_void_space = gtk.CheckButton(_('Fill channel meter void space'))
+      self.no_mic_void_space.set_active(True)
       for meter in parent.mic_meters:
-         self.show_all_microphones.connect("toggled", meter.always_show)
-      hbox.pack_start(self.show_all_microphones, False, False)
-      self.show_all_microphones.show()
-      
-      self.show_active_microphones = gtk.RadioButton(self.show_all_microphones, _('Only Those Active'))
-      hbox.pack_start(self.show_active_microphones, False, False)
-      self.show_active_microphones.show()
+         self.no_mic_void_space.connect("toggled", meter.always_show)
+      hbox.pack_end(self.no_mic_void_space, False)
+      self.no_mic_void_space.show()
       
       outervbox.pack_start(frame, False, False, 0)
       frame.show()
@@ -1643,7 +1633,7 @@ class mixprefs:
       t.headroom.set_value(3)
       t.has_reminder_flash.set_active(True)
       t.is_microphone.set_active(True)
-      for cb in t.open_close_triggers.itervalues():
+      for cb in t.open_triggers.itervalues():
          cb.set_active(True)
       
       t = parent.mic_opener.ix2button[2].opener_tab
@@ -1681,7 +1671,7 @@ class mixprefs:
          "rg_adjust"     : self.rg_adjust,
          "str_meters"    : self.show_stream_meters,
          "mic_meters"    : self.show_microphones,
-         "mic_meters_active" : self.show_active_microphones,
+         "mic_meters_no_void" : self.no_mic_void_space,
          }
          
       for each in itertools.chain(mic_controls, (self.lpconfig, self.rpconfig, opener_settings)):

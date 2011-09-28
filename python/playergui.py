@@ -481,7 +481,7 @@ class AnnouncementDialog(gtk.Dialog):
          self.minutes.set_value((int(lr[2:4])))
          self.seconds.set_value((int(lr[4:6])))
       if mode == "active":
-         self.player.parent.mic_opener.open_auto()
+         self.player.parent.mic_opener.open_auto("announcement")
          
       thbox = gtk.HBox()
       thbox.set_spacing(4)
@@ -1624,7 +1624,7 @@ class IDJC_Media_Player:
       if control == "<b>>stopplayer</b>":
          print "player", self.playername, "stopping due to playlist control"
          if (self.playername == "left" and self.parent.crossfade.get_value() < 50) or (self.playername == "right" and self.parent.crossfade.get_value() >= 50):
-            self.parent.mic_opener.open_auto()
+            self.parent.mic_opener.open_auto("stop_control")
          self.stop.clicked()
          if model.iter_next(iter):
             treeselection.select_iter(model.iter_next(iter))
@@ -1993,7 +1993,7 @@ class IDJC_Media_Player:
    def advance(self):
       #self.set_fade_mode(self.pl_delay.get_active())
       if self.is_playing:
-         self.parent.mic_opener.open_auto()
+         self.parent.mic_opener.open_auto("advance")
          path = self.model_playing.get_path(self.iter_playing)[0]+1
          self.stop.clicked()
          treeselection = self.treeview.get_selection()
