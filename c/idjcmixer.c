@@ -1125,8 +1125,8 @@ void process_audio(jack_nframes_t nframes)
 
                if (stream_monitor == FALSE) /* the DJ can hear the VOIP phone call */
                   {
-                  *lap = (*lsp * mb_lc_aud) + (*jplcp * jp_lc_aud) + d_micmix + lc_s_auxmix + (jp_lc_fade * jp_lc_strf) + *lprp;
-                  *rap = (*rsp * mb_lc_aud) + (*jprcp * jp_rc_aud) + d_micmix + rc_s_auxmix + (jp_rc_fade * jp_rc_strf) + *rprp;
+                  *lap = (*lsp * mb_lc_aud) + (*jplcp * jp_lc_aud) + d_micmix + (lc_s_auxmix *mb_lc_aud) + (jp_lc_fade * jp_lc_strf) + *lprp;
+                  *rap = (*rsp * mb_lc_aud) + (*jprcp * jp_rc_aud) + d_micmix + (rc_s_auxmix *mb_rc_aud) + (jp_rc_fade * jp_rc_strf) + *rprp;
                   compressor_gain = db2level(limiter(&audio_limiter, *lap, *rap));
                   *lap *= compressor_gain;
                   *rap *= compressor_gain;
