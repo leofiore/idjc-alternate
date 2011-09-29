@@ -894,15 +894,12 @@ class Controls(object):
     #
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def m_on(self, n, v, isd):
-        opener= self.owner.mic_opener
-        try:
-           mic= opener.mic2button[opener.mic_list[n].ui_name]
-        except:
-           print "channel %d is not present" % (n + 1)
-        else:
-           s= not mic.get_active() if isd else v>=0x40
-           mic.set_active(s)
-
+       
+        button = self.owner.mic_opener.get_opener_button(n)
+        if button is not None:
+            s = not button.get_active() if isd else v>=0x40
+            button.set_active(s)
+        
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def m_vol(self, n, v, isd):
     #    pass # XXX

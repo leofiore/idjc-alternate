@@ -676,6 +676,21 @@ class MicOpener(gtk.HBox):
                elif mode == 3:
                   m.partner.open.set_active(val)
                break
+   
+   def get_opener_button(self, ix):
+      try:
+         m = self.mic_list[ix]
+         return self.mic2button[m.ui_name]
+      except KeyError:
+         mode = m.mode.get_active()
+         if mode in (1, 2):
+            return m.open
+         elif mode == 3:
+            return m.partner.open
+         print "channel %d is not active" % (ix + 1)
+      except IndexError:
+         print "channel %d does not exist" % (ix + 1)
+      return None
 
    def close_all(self):
       for mb in self.buttons:
