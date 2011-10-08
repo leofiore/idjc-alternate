@@ -2198,7 +2198,7 @@ class RecordTab(Tab):
          self.file_dialog.set_do_overwrite_confirmation(True)
          self.file_chooser_button = gtk.FileChooserButton(self.file_dialog)
          # TC: Dialog title bar text.
-         self.file_dialog.set_title(_('Select A Folder To Save To') + pm.title_extra)
+         self.file_dialog.set_title(_('Select the folder to record to') + pm.title_extra)
          self.file_dialog.connect("current-folder-changed", self.cb_new_folder)
          self.file_dialog.set_current_folder(os.environ["HOME"])
          hbox.pack_start(self.file_chooser_button, True, True, 0)
