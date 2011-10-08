@@ -1,59 +1,19 @@
-.TH "IDJC" 1 "2010-10-07" "VERSION" "Internet DJ Console"
+.TH "IDJC" 1 "2011-10-08" "VERSION" "Internet DJ Console"
 .SH NAME
 idjc - be a dj on the internet
 .SH SYNOPSIS
-.BR "idjc [\-vhe] [\-p " profile "] [\-j " jackserver "] [\-m " microphone "] [\-a " auxiliary "] [\-t " voipmode "] [\-s " serverstart "]"
+idjc
+.PP
+idjc run --help
+.PP
+idjc generateprofile --help
 .SH DESCRIPTION
 .B idjc
 is a powerful yet easy to use source-client for individuals interested in streaming live radio shows over the Internet using Shoutcast or Icecast servers or for making static recordings.
 
-Features include two main media players with a crossfader, a jingles player, microphone signal processing (compressor, noise gate), IRC track announcements with X-Chat, automatic stream start/stop and reconnection, simultaneous mp3 and Ogg streaming to multiple servers at differing bit and sample rates, an aux input, a DSP interface, a VoIP integration feature, MIDI input device support, audio level meters.
+Features include two main media players with a crossfader, a jingles player, microphone signal processing (compressor, noise gate), IRC announcements, automatic stream start/stop and reconnection, simultaneous mp3 and Ogg streaming, up to 12 mono or 6 stereo audio input channels, a DSP interface, a VoIP integration feature, MIDI input device support, audio level meters.
 
 It uses GTK+ for the user interface and JACK Audio Connection Kit for the audio back-end permitting the inclusion of third-party audio components into the mix.
-.SH OPTIONS
-.B
-.IP \-v
-Output version information and exit.
-.B
-.IP \-h
-Display a brief help message and exit.
-.B
-.IP \-e
-Allow the running of additional idjc instances on the same JACK sound server. The JACK client IDs are adjusted to include the profile name.
-.HP
-.BR \-p " profile"
-.br
-The user
-.I profile
-that
-.B idjc
-is to be run with. A different profile means a different set of user settings. Useful for people who want to DJ for different stations or just want to experiment.
-.HP
-.BR \-j " jackserver"
-.br
-To choose which
-.I JACK server
-to connect to. Useful only if you intend to run more than one JACK server simultaneously, which in turn allows you to run more than one instance of
-.I idjc
-, albeit with a different profile
-.RB "(see option " \-p "). If the " \-j " option is not specified,"
-.IR default " will be used."
-.HP
-.BR \-m " microphone"
-.br
-.RB "Select which microphone inputs you wish to be active e.g. " -m " " 12 " activates both the left and right microphone inputs and " -m " " 2 ", just the right."
-.HP
-.BR \-a " auxiliary"
-.br
-Select which auxiliary inputs to have open. At present only 1 such input exists.
-.HP
-.BR \-t " voipmode"
-.br
-.RB "Select which VOIP mode to be using. Modes are " 0 " = None, " 1 " = Green Phone, " 2 " = Red Phone."
-.HP
-.BR \-s " serverstart"
-.br
-.RB "Select which servers to connect to at startup e.g. " -s " " 13 " will try to connect with servers " 1 " and " 3 "."
 .SH ENVIRONMENT
 If the
 .I ~/.jackdrc
@@ -62,20 +22,20 @@ file is not present depending on how recent a version of jackd you have JACK wil
 .B $
 echo "/usr/bin/jackd \-d alsa \-r 44100 \-p 2048" > ~/.jackdrc
 .PP
-If you prefer to start the JACK sound server manually you can so so like this.
+If you prefer to start the JACK sound server manually you can do so like this.
 .PP
 .BR $ " jackd \-d alsa \-r 44100 \-p 2048"
 .PP
 .RB Refer\ to\  jackd (1)\ for\ further\ details.
 .PP
 .B idjc
-takes account of the
+has native language support built in and takes account of the
 .I LANG
-environment variable and has language translations for
-.BR en_GB ,\  en_US ,\ and\  de_DE .
-.RB Type\  locale\ \-a
-in a console to see which locales are supported on your system.
+and
+.I LANGUAGE
+environment variables.
 .SH SEE ALSO
 .I http://idjc.sourceforge.net
+.I http://www.sourceforge.net/projects/idjc
 .PP
 .BR jackd (1), " idjcctrl" (1)
