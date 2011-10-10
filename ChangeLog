@@ -1,5 +1,7 @@
 * Changes in version 0.8.6 *
 
+Improvements to the end of track silence trimmer.
+
 Merged the mic and aux audio features into the new concept of channel.
 
 Bindings upper target limit values revised.

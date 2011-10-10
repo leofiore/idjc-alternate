@@ -86,7 +86,7 @@ struct xlplayer
    int fadeinstep;                      /* affects the fade in speed */
    int jack_flush;                      /* tells the jack callback to flush the ringbuffers */
    int jack_is_flushed;                 /* indicates true when jack callback has done the flush */
-   unsigned samplerate;                 /* the audio sample rate in use by the jack transport */
+   unsigned samplerate;                 /* the audio sample rate in use by jack */
    jack_nframes_t fadeindex;            /* running tally of where we are up to re. the fadeout */
    int pause;                           /* flag controlling the player paused state */
    int write_deferred;                  /* suppress further generation of audio data */
@@ -131,6 +131,7 @@ struct xlplayer
    void (*dec_eject)(struct xlplayer *);/* function that cleans up after the decoder */
    struct xlp_dynamic_metadata dynamic_metadata;
    int usedelay;                        /* client to delay dynamic metadata display */
+   float silence;                       /* the number of seconds of silence */
    };
 
 /* xlplayer_create: create an instance of the player */

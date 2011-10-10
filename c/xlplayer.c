@@ -188,6 +188,9 @@ void xlplayer_demux_channel_data(struct xlplayer *self, sample_t *buffer, int nu
 void xlplayer_write_channel_data(struct xlplayer *self)
    {
    u_int32_t samplecount;
+   const float threshold = 0.003;
+   float *lp, *rp;
+   int sc;
    
    if (self->op_buffersize > jack_ringbuffer_write_space(self->right_ch))
       {
@@ -203,6 +206,18 @@ void xlplayer_write_channel_data(struct xlplayer *self)
          samplecount = self->op_buffersize / sizeof (sample_t);
          self->samples_written += samplecount;
          self->sleep_samples += samplecount;
+         /* count cumulative silent samples */
+         for (sc = 0, lp = self->leftbuffer, rp = self->rightbuffer; samplecount--; ++lp, ++rp)
+            {
+            if (*lp > threshold || *rp > threshold)
+               {
+               sc = 0;
+               self->silence = 0.0f;
+               }
+            else
+               ++sc;
+            }
+         self->silence += (float)sc / self->samplerate;
          }
       self->write_deferred = FALSE;
       if (self->sleep_samples > 6000)
@@ -319,6 +334,7 @@ static void *xlplayer_main(struct xlplayer *self)
                self->samples_written = 0;
                self->sleep_samples = 0;
                self->fadein_index = (self->seek_s || self->fade_mode) ? fb_size - 1 : -1;
+               self->silence = 0.0f;
                self->dec_init(self);
                if (self->command != CMD_COMPLETE)
                   ++self->current_audio_context;
@@ -545,6 +561,7 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
    self->samples_written = 0;
    self->seek_s = 0;
    self->play_progress_ms = 0;
+   self->silence = 0.0f;
    self->dynamic_metadata.data_type = DM_NONE_NEW;
    self->dynamic_metadata.artist = NULL;
    self->dynamic_metadata.title = NULL;

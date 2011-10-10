@@ -29,7 +29,6 @@ from idjc import FGlobs, PGlobs
 from . import licence_window
 from . import p3db
 from . import midicontrols
-from .freefunctions import int_object
 from .gtkstuff import WindowSizeTracker
 from .prelims import ProfileManager
 from .utils import PathStr
@@ -1072,7 +1071,7 @@ class mixprefs:
       vbox.set_border_width(10)
       vbox.set_spacing(1)
       
-      self.silence_killer = gtk.CheckButton(_('Trim quiet endings'))
+      self.silence_killer = gtk.CheckButton(_('Trim quiet song endings and trailing silence'))
       self.silence_killer.set_active(True)
       vbox.pack_start(self.silence_killer, False, False, 0)
       self.silence_killer.show()

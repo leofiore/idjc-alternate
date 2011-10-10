@@ -2045,6 +2045,8 @@ int main(int argc, char **argv)
                    "left_additional_metadata=%d\n"
                    "right_additional_metadata=%d\n"
                    "midi=%s\n"
+                   "silence_l=%f\n"
+                   "silence_r=%f\n"
                    "end\n",
                    str_l_peak_db, str_r_peak_db,
                    str_l_rms_db, str_r_rms_db,
@@ -2064,7 +2066,9 @@ int main(int argc, char **argv)
                    right_audio_runout && (!(plr_r->current_audio_context & 0x1)),
                    plr_l->dynamic_metadata.data_type,
                    plr_r->dynamic_metadata.data_type,
-                   midi_output);
+                   midi_output,
+                   plr_l->silence,
+                   plr_r->silence);
                    
          /* tell the jack mixer it can reset its vu stats now */
          reset_vu_stats_f = TRUE;

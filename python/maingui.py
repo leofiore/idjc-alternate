@@ -41,7 +41,7 @@ from .playergui import *
 from .sourceclientgui import *
 from .preferences import *
 from .jingles import *
-from .freefunctions import int_object
+from .freefunctions import slot_object
 from .freefunctions import rich_safe
 from .gtkstuff import threadslock, WindowSizeTracker
 from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog
@@ -2211,10 +2211,16 @@ class MainWindow:
             if key == "midi":
                midis= value
                continue
-            try:
-               value = int(value)
-            except ValueError:
-               pass
+            if key.startswith("silence_"):
+               try:
+                  value = float(value)
+               except ValueError:
+                  pass
+            else:
+               try:
+                  value = int(value)
+               except ValueError:
+                  pass
             try:
                self.vumap[key].set_meter_value(value)
             except KeyError:
@@ -3149,28 +3155,30 @@ class MainWindow:
       self.PUBLIC_PHONE = 1
       self.PRIVATE_PHONE = 2
       self.mixermode = self.NO_PHONE
-      self.jingles_playing = int_object(0)
-      self.interlude_playing = int_object(0)
-      self.player_left.playtime_elapsed = int_object(0)
-      self.player_right.playtime_elapsed = int_object(0)
-      self.player_left.mixer_playing = int_object(0)
-      self.player_right.mixer_playing = int_object(0)
-      self.player_left.mixer_signal_f = int_object(0)
-      self.player_right.mixer_signal_f = int_object(0)
-      self.player_left.mixer_cid = int_object(0)
-      self.player_right.mixer_cid = int_object(0)
-      self.left_compression_level = int_object(0)
-      self.right_compression_level = int_object(0)
-      self.left_deess_level = int_object(0)
-      self.right_deess_level = int_object(0)
-      self.left_noisegate_level = int_object(0)
-      self.right_noisegate_level = int_object(0)
-      self.jingles.mixer_jingles_cid = int_object(0)
-      self.jingles.mixer_interlude_cid = int_object(0)
-      self.player_left.runout = int_object(0)
-      self.player_right.runout = int_object(0)
-      self.metadata_left_ctrl = int_object(0)
-      self.metadata_right_ctrl = int_object(0)
+      self.jingles_playing = slot_object(0)
+      self.interlude_playing = slot_object(0)
+      self.player_left.playtime_elapsed = slot_object(0)
+      self.player_right.playtime_elapsed = slot_object(0)
+      self.player_left.mixer_playing = slot_object(0)
+      self.player_right.mixer_playing = slot_object(0)
+      self.player_left.mixer_signal_f = slot_object(0)
+      self.player_right.mixer_signal_f = slot_object(0)
+      self.player_left.mixer_cid = slot_object(0)
+      self.player_right.mixer_cid = slot_object(0)
+      self.left_compression_level = slot_object(0)
+      self.right_compression_level = slot_object(0)
+      self.left_deess_level = slot_object(0)
+      self.right_deess_level = slot_object(0)
+      self.left_noisegate_level = slot_object(0)
+      self.right_noisegate_level = slot_object(0)
+      self.jingles.mixer_jingles_cid = slot_object(0)
+      self.jingles.mixer_interlude_cid = slot_object(0)
+      self.player_left.runout = slot_object(0)
+      self.player_right.runout = slot_object(0)
+      self.metadata_left_ctrl = slot_object(0)
+      self.metadata_right_ctrl = slot_object(0)
+      self.player_left.silence = slot_object(0.0)
+      self.player_right.silence = slot_object(0.0)
 
       self.full_wst = WindowSizeTracker(self.window, True)
       self.min_wst = WindowSizeTracker(self.window, False)
@@ -3202,7 +3210,9 @@ class MainWindow:
          "left_audio_runout"        : self.player_left.runout,
          "right_audio_runout"       : self.player_right.runout,
          "left_additional_metadata" : self.metadata_left_ctrl,
-         "right_additional_metadata": self.metadata_right_ctrl
+         "right_additional_metadata": self.metadata_right_ctrl,
+         "silence_l"                : self.player_left.silence,
+         "silence_r"                : self.player_right.silence,
          }
          
       for i, mic in enumerate(self.mic_meters):

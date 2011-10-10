@@ -1763,7 +1763,7 @@ class IDJC_Media_Player:
          self.oldstatusbartext = newtext
 
    def check_mixer_signal(self):
-      if self.parent.menu_feature_set.get_active() and self.progress_press == False and self.progressadj.upper - self.progress_current_figure < 5.0 and self.progressadj.upper > 10.0:
+      if self.parent.menu_feature_set.get_active() and self.progress_press == False and self.progressadj.upper - self.progress_current_figure < float(self.silence) and self.progressadj.upper > 10.0:
          if self.mixer_signal_f.value == 0 and int(self.mixer_cid) == self.player_cid + 1 and self.parent.prefs_window.silence_killer.get_active() and self.eos_inspect() == False:
             print "termination by check mixer signal"
             self.invoke_end_of_track_policy()
@@ -3977,7 +3977,7 @@ class IDJC_Media_Player:
             if self.home[-1:] != '/':
                self.home = self.home + '/'
                
-      self.file_requester_start_dir = int_object(self.home)
+      self.file_requester_start_dir = slot_object(self.home)
       self.plsave_filetype = 0
       self.plsave_open = False
       self.plsave_filtertype = self.plfilefilter_all

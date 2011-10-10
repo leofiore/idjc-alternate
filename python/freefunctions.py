@@ -61,28 +61,32 @@ def url_unescape(text_in):
 
 
 
-class int_object:  
-   """A mutable object containing an int."""
+class slot_object(object):  
+   """A mutable object containing an immutable object."""
    
+   __slots__ = ['value']
    
-   def __init__(self, value = 0):
+   def __init__(self, value):
       self.value = value
    def __str__(self):
-      return self.value
+      return str(self.value)
    def __int__(self):
       return int(self.value)
-   def set_meter_value(self, value):
-      self.value = value
-      return self.value
-   def set_value(self, value):
-      self.value = value
-      return self.value
-   def get_value(self):
-      return self.value
-   def get_text(self):
-      return self.value
-   def set_text(self, value):
-      self.value = value
+   def __float__(self):
+      return float(self.value)
+   def __repr__(self):
+      return "slot_object(%s)" % repr(self.value)
+      
+   def __getattr__(self, what):
+      def assign(value):
+         self.value = value
+         
+      if what.startswith("get_"):
+         return lambda : self.value
+      elif what.startswith("set_"):
+         return assign
+      else:
+         object.__getattribute__(self, what)
 
 
 
