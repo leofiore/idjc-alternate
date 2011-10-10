@@ -1621,15 +1621,18 @@ class IDJC_Media_Player:
          self.next.clicked()
          if self.is_playing == False:
             treeselection.select_path(0)
-      if control == "<b>>stopplayer</b>":
-         print "player", self.playername, "stopping due to playlist control"
-         if (self.playername == "left" and self.parent.crossfade.get_value() < 50) or (self.playername == "right" and self.parent.crossfade.get_value() >= 50):
-            self.parent.mic_opener.open_auto("stop_control")
-         self.stop.clicked()
-         if model.iter_next(iter):
-            treeselection.select_iter(model.iter_next(iter))
-         else:
-            treeselection.select_iter(model.get_iter_first())
+      def x(control_type, open_auto_type):
+         if control == "<b>>%s</b>" % control_type:
+            print "player", self.playername, "stopping due to playlist control"
+            if (self.playername == "left" and self.parent.crossfade.get_value() < 50) or (self.playername == "right" and self.parent.crossfade.get_value() >= 50):
+               self.parent.mic_opener.open_auto(open_auto_type)
+            self.stop.clicked()
+            if model.iter_next(iter):
+               treeselection.select_iter(model.iter_next(iter))
+            else:
+               treeselection.select_iter(model.get_iter_first())
+      x("stopplayer", "stop_control")
+      x("stopplayer2", "stop_control2")
       if control == "<b>>jumptotop</b>":
          self.stop.clicked()
          treeselection.select_path(0)
@@ -1692,7 +1695,7 @@ class IDJC_Media_Player:
             text = self.liststore.get_value(iter, 0)
             if text.startswith("<b>"):
                text = text[3:-4]
-            if text in (">stopplayer", ">transfer", ">crossfade", ">announcement", ">jumptotop"):
+            if text in (">stopplayer", ">stopplayer2", ">transfer", ">crossfade", ">announcement", ">jumptotop"):
                break
             if text == ">normalspeed":
                speedfactor = 1.0
@@ -1902,7 +1905,7 @@ class IDJC_Media_Player:
       return False
 
    def stop_inspect(self):
-      stoppers = (">stopplayer", ">announcement")
+      stoppers = (">stopplayer", ">stopplayer2", ">announcement")
       horizon = (">transfer", ">crossfade", ">jumptotop")
       i = self.iter_playing
       m = self.model_playing
@@ -1920,7 +1923,7 @@ class IDJC_Media_Player:
 
    def fade_inspect(self):
       stoppers = (">crossfade")
-      horizon = (">transfer", ">stopplayer", ">announcement", ">jumptotop")
+      horizon = (">transfer", ">stopplayer", ">stopplayer2", ">announcement", ">jumptotop")
       i = self.iter_playing
       m = self.model_playing
       while 1:
@@ -2756,6 +2759,7 @@ class IDJC_Media_Player:
       
       dict = {
              "Stop Control"              : ">stopplayer",
+             "Stop Control 2"            : ">stopplayer2",
              "Transfer Control"          : ">transfer",
              "Crossfade Control"         : ">crossfade",
              "Stream Disconnect Control" : ">stopstreaming",
@@ -3213,6 +3217,12 @@ class IDJC_Media_Player:
                cell_renderer.set_property("foreground", "red")
                # TC: Playlist control.
                cell_renderer.set_property("text", _('Player stop'))
+            if celltext == ">stopplayer2":
+               cell_renderer.set_property("cell-background", "red")
+               cell_renderer.set_property("background", "gray")
+               cell_renderer.set_property("foreground", "red")
+               # TC: Playlist control.
+               cell_renderer.set_property("text", _('Player stop 2'))
             if celltext == ">jumptotop":
                cell_renderer.set_property("cell-background", "dark magenta")
                cell_renderer.set_property("background", "gray")
@@ -3714,8 +3724,14 @@ class IDJC_Media_Player:
       self.control_normal_speed_control.show()
       
       # TC: Insert playlist control to stop the player.
-      self.control_menu_stop_control = gtk.MenuItem(_('Player stop'))
+      self.control_menu_stop_control = gtk.MenuItem(_('Player Stop'))
       self.control_menu_stop_control.connect("activate", self.menuitem_response, "Stop Control")
+      self.control_menu.append(self.control_menu_stop_control)
+      self.control_menu_stop_control.show()
+
+      # TC: Insert playlist control to stop the player.
+      self.control_menu_stop_control = gtk.MenuItem(_('Player Stop 2'))
+      self.control_menu_stop_control.connect("activate", self.menuitem_response, "Stop Control 2")
       self.control_menu.append(self.control_menu_stop_control)
       self.control_menu_stop_control.show()
 

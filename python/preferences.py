@@ -1632,12 +1632,13 @@ class mixprefs:
       t.headroom.set_value(3)
       t.has_reminder_flash.set_active(True)
       t.is_microphone.set_active(True)
-      for cb in t.open_triggers.itervalues():
-         cb.set_active(True)
+      for cb, state in zip(t.open_triggers.itervalues(), (1, 1, 0, 1)):
+         cb.set_active(state)
       
       t = parent.mic_opener.ix2button[2].opener_tab
       t.button_text.set_text("Aux")
       t.icb.set_filename(FGlobs.pkgdatadir / "jack2.png")
+      t.open_triggers.values()[2].set_active(True)
 
       self.show_stream_meters.set_active(True)
       self.show_microphones.set_active(True)

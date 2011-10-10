@@ -29,6 +29,7 @@ import signal
 import time
 import gettext
 import itertools
+import collections
 
 import glib
 import gobject
@@ -307,12 +308,13 @@ class OpenerTab(gtk.VBox):
       
       frame = gtk.Frame(" %s " % _('Button Open Triggers'))
       self.pack_start(frame, False, padding=3)
-      self.open_triggers = {}
+      self.open_triggers = collections.OrderedDict()
       lvbox = gtk.VBox()
       rvbox = gtk.VBox()
-      for w, t, col in zip(("advance", "stop_control", "announcement"),
+      for w, t, col in zip(("advance", "stop_control", "stop_control2", "announcement"),
               (_('Playlist advance button'),
                _("'%s' playlist control") % _('Player Stop'),
+               _("'%s' playlist control") % _('Player Stop 2'),
                _('Announcements')),
                itertools.cycle((lvbox, rvbox))):
          cb = gtk.CheckButton(t)

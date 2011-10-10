@@ -82,6 +82,8 @@ control_methods= {
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
     'p_istop': _('Playlist insert stop'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    'p_istop2': _('Playlist insert stop 2'),
+    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
     'p_ianno': _('Playlist insert announce'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
     'p_itrans': _('Playlist insert transfer'),
@@ -826,6 +828,13 @@ class Controls(object):
         if player is None: return
         player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Stop Control')
+
+    @action_method(Binding.MODE_PULSE)
+    def p_istop2(self, n, v, isd): #s
+        player= self._get_player(n)
+        if player is None: return
+        player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
+        player.menuitem_response(None, 'Stop Control 2')
 
     @action_method(Binding.MODE_PULSE)
     def p_ianno(self, n, v, isd): #u
