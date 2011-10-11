@@ -1510,12 +1510,13 @@ class IDJC_Media_Player:
             return i
          i = m.get_iter_next(i)
 
-   def invoke_end_of_track_policy(self):
-      # This is where we implement the playlist modes.
-      mode_text = self.pl_mode.get_active_text()
-      if self.is_playing == False:
-         print "Assertion failed in: invoke_end_of_track_policy"
-         return
+   def invoke_end_of_track_policy(self, mode_text=None):
+      # This is where we implement the playlist modes for the most part.
+      if mode_text is None:
+         mode_text = self.pl_mode.get_active_text()
+         if self.is_playing == False:
+            print "Assertion failed in: invoke_end_of_track_policy"
+            return
       
       if mode_text == N_('Manual'):
          # For Manual mode just stop the player at the end of the track.
@@ -1589,7 +1590,7 @@ class IDJC_Media_Player:
             treeselection = self.treeview.get_selection()
             treeselection.select_path(path)
             self.play.clicked()
-      elif mode_text == N_('Alternate'):
+      elif mode_text == N_('Alternate') or mode_text == N_('Random Hop'):
          iter = self.next_real_track(self.iter_playing)
          if iter is None:
             iter = self.first_real_track()
@@ -1601,10 +1602,14 @@ class IDJC_Media_Player:
             treeselection.select_path(0)
          if self.playername == "left":
             self.parent.passright.clicked()
-            self.parent.player_right.play.clicked()
+            other_player = self.parent.player_right
          else:
             self.parent.passleft.clicked()
-            self.parent.player_left.play.clicked()
+            other_player = self.parent.player_left
+         if mode_text == N_('Alternate'):
+            other_player.play.clicked()
+         elif mode_text == N_('Random Hop'):
+            other_player.invoke_end_of_track_policy(N_('Random'))
       else:
          print 'The mode "%s" is not currently supported - stopping' % mode_text
          self.stop.clicked()
@@ -3639,9 +3644,10 @@ class IDJC_Media_Player:
       self.pl_mode.append_text(N_('External'))
       self.pl_mode.append_text(N_('Alternate'))
       self.pl_mode.append_text(N_('Fade Over'))
+      self.pl_mode.append_text(N_('Random Hop'))
       self.pl_mode.set_active(0)
       self.pl_mode.connect("changed", self.cb_playlist_mode)
-      set_tip(self.pl_mode, _("This sets the playlist mode which defines player behaviour after a track has finished playing.\n\n'Play All' is the most versatile mode since it allows the use of embeddable playlist control elements which are accessible using the right click context menu in the playlist. When no playlist controls are present the tracks are played sequentially until the end of the playlist is reached at which point the player will stop.\n\n'Loop All' causes the tracks to be played in sequence, restarting with the first track once the end of the playlist is reached.\n\n'Random' causes the tracks to be played indefinitely with the tracks selected at random.\n\n'Manual' causes the player to stop at the end of each track.\n\n'Cue Up' is similar to manual except that the next track in the playlist will also be highlighted.\n\n'External' draws it's tracks from an external playlist or directory one at a time. Useful for when you want to stream massive playlists.\n\n'Alternate' causes the next track to be cued up before starting the opposite player. The crossfader is moved over.\n\n'Fade Over' will crossfade to the other player at the end of every track."))
+      set_tip(self.pl_mode, _("This sets the playlist mode which defines player behaviour after a track has finished playing.\n\n'Play All' is the most versatile mode since it allows the use of embeddable playlist control elements which are accessible using the right click context menu in the playlist. When no playlist controls are present the tracks are played sequentially until the end of the playlist is reached at which point the player will stop.\n\n'Loop All' causes the tracks to be played in sequence, restarting with the first track once the end of the playlist is reached.\n\n'Random' causes the tracks to be played indefinitely with the tracks selected at random.\n\n'Manual' causes the player to stop at the end of each track.\n\n'Cue Up' is similar to manual except that the next track in the playlist will also be highlighted.\n\n'External' draws it's tracks from an external playlist or directory one at a time. Useful for when you want to stream massive playlists.\n\n'Alternate' causes the next track to be cued up before starting the opposite player. The crossfader is moved over.\n\n'Fade Over' will crossfade to the other player at the end of every track.\n\n'Random Hop' will pick a track at random from the other playlist."))
       
       frame.hbox.pack_start(self.pl_mode, True, True, 0)
       self.pl_mode.show()

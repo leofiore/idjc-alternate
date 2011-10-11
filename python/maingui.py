@@ -313,8 +313,8 @@ class OpenerTab(gtk.VBox):
       rvbox = gtk.VBox()
       for w, t, col in zip(("advance", "stop_control", "stop_control2", "announcement"),
               (_('Playlist advance button'),
-               _("'%s' playlist control") % _('Player Stop'),
-               _("'%s' playlist control") % _('Player Stop 2'),
+               _("'%s' control") % _('Player Stop'),
+               _("'%s' control") % _('Player Stop 2'),
                _('Announcements')),
                itertools.cycle((lvbox, rvbox))):
          cb = gtk.CheckButton(t)

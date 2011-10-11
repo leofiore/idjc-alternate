@@ -1611,7 +1611,7 @@ class mixprefs:
       # These on by default
       self.djalarm.set_active(True)
       self.dither.set_active(True)
-      self.fastest_resample.set_active(True)
+      self.fast_resample.set_active(True)
       self.enable_tooltips.set_active(True)
 
       mic_controls[0].mode.set_active(2)

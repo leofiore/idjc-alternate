@@ -1,5 +1,9 @@
 * Changes in version 0.8.6 *
 
+Resampling now defaults to 'Fast' mode. Fastest should never be used for sound quality reasons which made it a stupid default.
+
+Added 'Random Hop' playlist mode.
+
 Improvements to the end of track silence trimmer.
 
 Merged the mic and aux audio features into the new concept of channel.

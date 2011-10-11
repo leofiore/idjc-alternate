@@ -998,7 +998,7 @@ class StreamTab(Tab):
          resample_quality_label = gtk.Label(_('Quality'))
          self.resample_quality_combo_box = self.parentobject.make_combo_box((_('Highest'),
                         _('Good'), _('Fast'), _('Fastest')))
-         self.resample_quality_combo_box.set_active(3)
+         self.resample_quality_combo_box.set_active(2)
          self.resample_quality_combo_box.connect("changed", self.cb_eval)
          self.resample_dummy_object = gtk.Button()
          self.resample_dummy_object.connect("clicked", self.cb_eval)
