@@ -299,6 +299,9 @@ class ProfileManager(object):
                ap.exit(0)
          except ProfileError as e:
             ap.error(_("failed to create profile: %s") % str(e))
+            
+         with open(PGlobs.autoload_profile_pathname, "a"):
+            pass
 
          profile = self.autoloadprofilename
          if profile is None:
