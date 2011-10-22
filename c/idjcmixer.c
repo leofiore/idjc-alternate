@@ -870,8 +870,8 @@ void process_audio(jack_nframes_t nframes)
                d_micmix += (*micp)->munpm;
                }
 
-            /* No ducking */
-            df = 1.0;
+            /* No ducking but headroom still must apply */
+            df = db2level(current_headroom);
             
             if (plr_l->fadeindex < FB_SIZE)
                {
@@ -923,9 +923,9 @@ void process_audio(jack_nframes_t nframes)
                right_peak = fabs(*rprcp);
 
             /* The main mix */
-            *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str)) + *lprp + *lpsp + lc_s_auxmix +
+            *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str)) * df + *lprp + *lpsp + lc_s_auxmix +
             (lp_lc_fade * lp_rc_strf) + (rp_lc_fade * rp_lc_strf) + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf);
-            *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str)) + *rprp + *rpsp + rc_s_auxmix +
+            *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str)) * df + *rprp + *rpsp + rc_s_auxmix +
             (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf);
             
             compressor_gain = db2level(limiter(&phone_limiter, *lpsp, *rpsp));
@@ -964,9 +964,9 @@ void process_audio(jack_nframes_t nframes)
 
             if (stream_monitor == FALSE)
                {
-               *lap = ((*lplcp * lp_lc_aud) + (*rplcp * rp_lc_aud)) + *lprp + lc_s_auxmix +
+               *lap = ((*lplcp * lp_lc_aud) + (*rplcp * rp_lc_aud)) * df + *lprp + lc_s_auxmix +
                (lp_lc_fade * lp_rc_audf) + (rp_lc_fade * rp_lc_audf) + (*iplcp * ip_lc_aud) + (ip_lc_fade * ip_lc_audf) + d_micmix + (*jplcp * jp_lc_str) + (jp_lc_fade * jp_lc_strf);
-               *rap = ((*lprcp * lp_rc_aud) + (*rprcp * rp_rc_aud)) + *rprp + rc_s_auxmix +
+               *rap = ((*lprcp * lp_rc_aud) + (*rprcp * rp_rc_aud)) * df + *rprp + rc_s_auxmix +
                (lp_rc_fade * lp_rc_audf) + (rp_rc_fade * rp_rc_audf) + (*iprcp * ip_rc_aud) + (ip_rc_fade * ip_rc_audf) + d_micmix + (*jprcp * jp_rc_str) + (jp_rc_fade * jp_rc_strf);
                compressor_gain = db2level(limiter(&audio_limiter, *lap, *rap));
                *lap *= compressor_gain;

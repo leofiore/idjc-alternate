@@ -1,5 +1,7 @@
 * Changes in version 0.8.6 *
 
+Player headroom now also features in 'Green Phone' VoIP mode.
+
 Resampling now defaults to 'Fast' mode. Fastest should never be used for sound quality reasons which made it a stupid default.
 
 Added 'Random Hop' playlist mode.
