@@ -1614,18 +1614,9 @@ class mixprefs:
       self.fast_resample.set_active(True)
       self.enable_tooltips.set_active(True)
 
+      # Default mic/aux configuration
       mic_controls[0].mode.set_active(2)
       mic_controls[0].alt_name.set_text("DJ")
-      mic_controls[2].mode.set_active(1)
-      mic_controls[2].alt_name.set_text("Aux L")
-      mic_controls[2].groups_adj.set_value(2)
-      mic_controls[2].pan_active.set_active(True)
-      mic_controls[2].pan.set_value(0)
-      mic_controls[3].mode.set_active(3)
-      mic_controls[3].alt_name.set_text("Aux R")
-      mic_controls[3].pan_active.set_active(True)
-      mic_controls[3].pan.set_value(100)
-
       t = parent.mic_opener.ix2button[1].opener_tab
       t.button_text.set_text("DJ")
       t.icb.set_filename(FGlobs.pkgdatadir / "mic4.png")
@@ -1634,11 +1625,20 @@ class mixprefs:
       t.is_microphone.set_active(True)
       for cb, state in zip(t.open_triggers.itervalues(), (1, 1, 0, 1)):
          cb.set_active(state)
-      
-      t = parent.mic_opener.ix2button[2].opener_tab
-      t.button_text.set_text("Aux")
-      t.icb.set_filename(FGlobs.pkgdatadir / "jack2.png")
-      t.open_triggers.values()[2].set_active(True)
+      if len(mic_controls) >= 4:
+         mic_controls[2].mode.set_active(1)
+         mic_controls[2].alt_name.set_text("Aux L")
+         mic_controls[2].groups_adj.set_value(2)
+         mic_controls[2].pan_active.set_active(True)
+         mic_controls[2].pan.set_value(0)
+         mic_controls[3].mode.set_active(3)
+         mic_controls[3].alt_name.set_text("Aux R")
+         mic_controls[3].pan_active.set_active(True)
+         mic_controls[3].pan.set_value(100)
+         t = parent.mic_opener.ix2button[2].opener_tab
+         t.button_text.set_text("Aux")
+         t.icb.set_filename(FGlobs.pkgdatadir / "jack2.png")
+         t.open_triggers.values()[2].set_active(True)
 
       self.show_stream_meters.set_active(True)
       self.show_microphones.set_active(True)
