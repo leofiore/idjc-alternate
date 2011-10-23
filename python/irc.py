@@ -876,9 +876,12 @@ class IRCPane(gtk.VBox):
 
 
    def marshall(self):
-      store = [self._m_signature()]
-      self._treestore.foreach(self._m_read, store)
-      return json.dumps(store)
+      if irclib is not None:
+         store = [self._m_signature()]
+         self._treestore.foreach(self._m_read, store)
+         return json.dumps(store)
+      else:
+         return ""
 
 
    def _m_read(self, model, path, iter, store):
@@ -887,21 +890,26 @@ class IRCPane(gtk.VBox):
 
 
    def unmarshall(self, data):
-      store = json.loads(data)
-      if store.pop(0) != self._m_signature():
-         print "IRC server data format mismatch."
-         return
-         
-      selection = self._treeview.get_selection()
-      selection.handler_block_by_func(self._on_selection_changed)
-      self._treestore.clear()
-      for path, row in store:
-         pos = path.pop()
-         pi = self._treestore.get_iter(tuple(path)) if path else None
-         self._treestore.insert(pi, pos, row)
-      self._treeview.expand_all()
-      selection.handler_unblock_by_func(self._on_selection_changed)
-      selection.select_path(0)
+      if irclib is not None:
+         try:
+            store = json.loads(data)
+         except ValueError:
+            return
+
+         if store.pop(0) != self._m_signature():
+            print "IRC server data format mismatch."
+            return
+            
+         selection = self._treeview.get_selection()
+         selection.handler_block_by_func(self._on_selection_changed)
+         self._treestore.clear()
+         for path, row in store:
+            pos = path.pop()
+            pi = self._treestore.get_iter(tuple(path)) if path else None
+            self._treestore.insert(pi, pos, row)
+         self._treeview.expand_all()
+         selection.handler_unblock_by_func(self._on_selection_changed)
+         selection.select_path(0)
 
 
    def _on_selection_changed(self, selection, edit, new):
