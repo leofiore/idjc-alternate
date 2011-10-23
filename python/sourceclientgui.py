@@ -27,6 +27,7 @@ import urllib
 import urllib2
 import base64
 import gettext
+import traceback
 import xml.dom.minidom as mdom
 import xml.etree.ElementTree
 from collections import namedtuple
@@ -2772,8 +2773,11 @@ class SourceClientGui:
                                  widget.unmarshall(rvalue)
                               else:
                                  print "method", method, "is unsupported at this time hence widget pertaining to", lvalue, "will not be set"
-      except:
-         print "failed to open serverdata file"
+      except Exception as e:
+         if isinstance(e, IOError):
+            print e
+         else:
+            traceback.print_exc()
 
 
    def cb_after_realize(self, widget):
