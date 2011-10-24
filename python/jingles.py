@@ -26,6 +26,7 @@ import gettext
 
 import gobject
 import gtk
+import pango
 
 from idjc import *
 from .freefunctions import *
@@ -353,15 +354,61 @@ class Jingles(object):
       self.window.connect("key-press-event", parent.cb_key_capture)
       self.window.connect("key-release-event", parent.cb_key_capture)
       self.wst = WindowSizeTracker(self.window)
+      
+      attrlist = pango.AttrList()
+      attrlist.insert(pango.AttrSize(8000, 0, 100))
 
       hbox = gtk.HBox()
       hbox.set_spacing(8)
 
-      # A vertical box for our volume control
+      # A vertical box for our volume and muting controls
       self.vboxvol = gtk.VBox()
       self.vboxvol.set_border_width(0)
-      hbox.pack_end(self.vboxvol, False, False, 0)
-           
+      hbox.pack_end(self.vboxvol, False)
+
+      bhbox = gtk.HBox()
+      bhbox.set_spacing(2)
+      pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
+                        FGlobs.pkgdatadir / "play2.png", 14, 14)
+      image = gtk.Image()
+      image.set_from_pixbuf(pixbuf)
+      self.play = gtk.ToggleButton()
+      self.play.set_size_request(40, -1)
+      self.play.add(image)
+      image.show()
+      self.play.connect("toggled", self.callback, "Play")
+      bhbox.pack_start(self.play)
+      self.play.show()
+      set_tip(self.play, _('Play the jingles sequence specified above or if none is specified play the jingle highlighted in the catalogue. The volume level of the main media players will be reduced somewhat during playback.'))
+
+      image = gtk.image_new_from_file(FGlobs.pkgdatadir / "stop.png")
+      self.stop = gtk.Button()
+      self.stop.set_size_request(40, -1)
+      self.stop.add(image)
+      image.show()
+      self.stop.connect("clicked", self.callback, "Stop")
+      bhbox.pack_start(self.stop)
+      self.stop.show()
+      set_tip(self.stop, _('Stop all jingles playback.'))
+      
+      pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
+                        FGlobs.pkgdatadir / "play3.png", 14, 14)
+      image = gtk.Image()
+      image.set_from_pixbuf(pixbuf)
+      self.play_ex = gtk.ToggleButton()
+      self.play_ex.set_size_request(40, -1)
+      self.play_ex.add(image)
+      image.show()
+      self.play_ex.connect("toggled", self.callback, "PlayEx")
+      bhbox.pack_start(self.play_ex)
+      self.play_ex.show()
+      set_tip(self.play_ex, _('This button works the same as the button to the left does except that the sound level of all the other media players is fully reduced.'))
+      self.vboxvol.pack_start(bhbox, False)
+      bhbox.show()
+
+
+
+
       # A pictoral volume label
       image = gtk.Image()
       image.set_from_file(FGlobs.pkgdatadir / "volume2.png")
@@ -387,12 +434,18 @@ class Jingles(object):
       hbox.pack_end(self.vboxinter, False, False, 0)
            
       # A pictoral volume label
+
       pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
-                                 FGlobs.pkgdatadir / "note.png", 20, 20)
-      image = gtk.Image()
-      image.set_from_pixbuf(pixbuf)
-      self.vboxinter.pack_start(image, False, False, 0)
+                           FGlobs.pkgdatadir / "interlude2.png", 24, -1)
+      image = gtk.image_new_from_pixbuf(pixbuf)
+      self.interlude = gtk.ToggleButton()
+      self.interlude.add(image)
       image.show()
+      self.interlude.show()
+      # TC: {0}, {1} = Monitor Mix, Stream.
+      # TC: Or whatever they become translated to.
+      set_tip(self.interlude, _("When you click this button the jingle or track selected in the catalogue will be looped continuously and will be audible during moments when the main media players are not active. The '{0}' feature needs to be set to '{1}' if you want to be able to hear it.".format(_("Monitor Mix"), _("Stream"))))
+      self.vboxinter.pack_start(self.interlude, False)
       
       self.interadj = gtk.Adjustment(65.0, 0.0, 100.0, 1.0, 6.0, 0.0)
       self.interadj.connect("value_changed", self.cb_intervol)
@@ -422,7 +475,7 @@ class Jingles(object):
       scrolllist.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
       scrolllist.set_border_width(0)
       scrolllist.set_shadow_type(gtk.SHADOW_IN)
-      scrolllist.set_size_request(-1, 200)   
+      scrolllist.set_size_request(270, 240)   
       
       self.liststore = gtk.ListStore(int, str, str)
       self.treeview = gtk.TreeView(self.liststore)
@@ -456,87 +509,35 @@ class Jingles(object):
       hbox.set_border_width(0)
       
       # TC: Refers to a list of track numbers to play.
+      lvbox = gtk.VBox()
+      lvbox.set_spacing(1)
       label = gtk.Label(_('Sequence'))
-      hbox.pack_start(label, False, False, 0)
+      label.set_attributes(attrlist)
+      lvbox.pack_start(label, False)
       label.show()
       
       self.entry = gtk.Entry(45)
       self.entry.connect("activate", self.callback, "entrybox")
       self.entry.set_width_chars(10)
-      hbox.pack_start(self.entry, True, True, 0)
+      lvbox.pack_start(self.entry)
       self.entry.show()
       set_tip(self.entry, _('Select multiple jingles to play in sequence by entering the corresponding index number as part of a comma separated list, or double click entries in the catalogue to append them.'))
+      hbox.pack_start(lvbox)
+      lvbox.show()
+
+      self.refresh = gtk.Button()
+      image = gtk.image_new_from_stock(gtk.STOCK_REFRESH, gtk.ICON_SIZE_BUTTON)
+      self.refresh.set_image(image)
+      image.show()
+      self.refresh.connect("clicked", self.callback, "Refresh")
+      hbox.pack_start(self.refresh, False)
+      self.refresh.show()
+      set_tip(self.refresh, _("Cause the jingles catalogue to be refreshed. This is for when items have been added or removed from the jingles directory located at '%s'." % pm.jinglesdir))
       
       vbox.pack_start(hbox, False, False, 0)
       hbox.show()
       
-      frame = gtk.Frame()
-      frame.set_shadow_type(gtk.SHADOW_IN)
-      frame.set_border_width(0)
-      
-      hbox = gtk.HBox()
-      hbox.set_spacing(5)
-      hbox.set_border_width(2)
-      
-      pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
-                        FGlobs.pkgdatadir / "play2.png", 14, 14)
-      image = gtk.Image()
-      image.set_from_pixbuf(pixbuf)
-      self.play = gtk.ToggleButton()
-      self.play.set_size_request(40, -1)
-      self.play.add(image)
-      image.show()
-      self.play.connect("toggled", self.callback, "Play")
-      hbox.pack_start(self.play, True, True, 0)
-      self.play.show()
-      set_tip(self.play, _('Play the jingles sequence specified above or if none is specified play the jingle highlighted in the catalogue. The volume level of the main media players will be reduced somewhat during playback.'))
-      
-      pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
-                        FGlobs.pkgdatadir / "play3.png", 14, 14)
-      image = gtk.Image()
-      image.set_from_pixbuf(pixbuf)
-      self.play_ex = gtk.ToggleButton()
-      self.play_ex.set_size_request(40, -1)
-      self.play_ex.add(image)
-      image.show()
-      self.play_ex.connect("toggled", self.callback, "PlayEx")
-      hbox.pack_start(self.play_ex, True, True, 0)
-      self.play_ex.show()
-      set_tip(self.play_ex, _('This button works the same as the button to the left does except that the sound level of all the other media players is fully reduced.'))
-      
-      image = gtk.image_new_from_file(FGlobs.pkgdatadir / "stop.png")
-      self.stop = gtk.Button()
-      self.stop.set_size_request(40, -1)
-      self.stop.add(image)
-      image.show()
-      self.stop.connect("clicked", self.callback, "Stop")
-      hbox.pack_start(self.stop, True, True, 0)
-      self.stop.show()
-      set_tip(self.stop, _('Stop all jingles playback.'))
-      
-      pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
-                           FGlobs.pkgdatadir / "interlude.png", 49, 21)
-      image = gtk.image_new_from_pixbuf(pixbuf)
-      self.interlude = gtk.ToggleButton()
       self.interlude.connect("toggled", self.cb_interlude, self.treeview)
-      self.interlude.add(image)
-      image.show()
-      hbox.pack_start(self.interlude, True, True, 0)
-      self.interlude.show()
-      # TC: {0}, {1} = Monitor Mix, Stream.
-      # TC: Or whatever they become translated to.
-      set_tip(self.interlude, _("When you click this button the jingle or track selected in the catalogue will be looped continuously and will be audible during moments when the main media players are not active. The '{0}' feature needs to be set to '{1}' if you want to be able to hear it.".format(_("Monitor Mix"), _("Stream"))))
-      
-      self.refresh = gtk.Button(None, gtk.STOCK_REFRESH)
-      self.refresh.connect("clicked", self.callback, "Refresh")
-      hbox.pack_start(self.refresh, True, True, 0)
-      self.refresh.show()
-      set_tip(self.refresh, _("Cause the jingles catalogue to be refreshed. This is for when items have been added or removed from the jingles directory located at '%s'." % pm.jinglesdir))
-      
-      frame.add(hbox)
-      hbox.show()
-      vbox.pack_start(frame, False, False, 0)
-      frame.show()
       
       vbox.show()
 
