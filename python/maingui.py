@@ -1445,11 +1445,12 @@ class MainWindow:
       if self.prefs_window.dual_volume.get_active():
           deck2adj = self.deck2adj.get_value() * -1.0 + 100.0
 
-      string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" % (
+      string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" % (
                                                 deckadj,
                                                 deck2adj,
                                                 self.crossadj.get_value(),
-                                                self.jingles.deckadj.get_value() * -1.0 + 100.0,
+                                                self.jingles.l1_adj.get_value() * -1.0 + 100.0,
+                                                self.jingles.l2_adj.get_value() * -1.0 + 100.0,
                                                 self.jingles.interadj.get_value() * -1.0 + 100.0,
                                                 self.mixbackadj.get_value() * -1.0 + 100.0,
                                                 self.jingles.playing,
@@ -1794,7 +1795,8 @@ class MainWindow:
          fh.write("deckvol=" + str(self.deckadj.get_value()) + "\n")
          fh.write("deck2vol=" + str(self.deck2adj.get_value()) + "\n")
          fh.write("crossfade=" + str(self.crossadj.get_value()) + "\n")
-         fh.write("jingles_deckvol=" + str(self.jingles.deckadj.get_value()) + "\n")
+         fh.write("jingles_deckvol1=" + str(self.jingles.l1_adj.get_value()) + "\n")
+         fh.write("jingles_deckvol2=" + str(self.jingles.l2_adj.get_value()) + "\n")
          fh.write("jingles_intervol=" + str(self.jingles.interadj.get_value()) + "\n")
          fh.write("stream_mon="+ str(int(self.listen_stream.get_active())) + "\n")
          fh.write("tracks_played=" + str(int(self.history_expander.get_expanded())) + "\n")
@@ -1854,8 +1856,10 @@ class MainWindow:
             self.deck2adj.set_value(float(v))
          elif k=="crossfade":
             self.crossadj.set_value(float(v))
-         elif k=="jingles_deckvol":
-            self.jingles.deckadj.set_value(float(v))
+         elif k=="jingles_deckvol1":
+            self.jingles.l1_adj.set_value(float(v))
+         elif k=="jingles_deckvol2":
+            self.jingles.l2_adj.set_value(float(v))
          elif k=="jingles_intervol":
             self.jingles.interadj.set_value(float(v))
          elif k=="stream_mon":

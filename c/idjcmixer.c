@@ -68,7 +68,7 @@
 typedef jack_default_audio_sample_t sample_t;
 
 /* values of the volume sliders in the GUI */
-int volume, volume2, crossfade, jinglesvolume, interludevol, mixbackvol, crosspattern;
+int volume, volume2, crossfade, jinglesvolume, jinglesvolume2, interludevol, mixbackvol, crosspattern;
 /* back and forth status indicators re. jingles */
 int jingles_playing, jingles_audio_f;
 /* used for gapless playback to indicate an almost empty buffer */
@@ -80,8 +80,8 @@ int mic_on, mixermode = NO_PHONE;
 /* simple mixer mode: uses less space on the screen and less cpu as well */
 int simple_mixer;
 /* currentvolumes are used to implement volume smoothing */
-int current_volume, current_volume2, current_jingles_volume, current_interlude_volume,
-    current_crossfade, currentmixbackvol, current_crosspattern; 
+int current_volume, current_volume2, current_jingles_volume, current_jingles_volume2, 
+    current_interlude_volume, current_crossfade, currentmixbackvol, current_crosspattern;
 /* the id. number microphone filter we are using */
 int mic_filter;
 /* value of the stream mon. button */
@@ -221,6 +221,7 @@ char *mic_param, *fade_mode;
 char *rg_db, *headroom;
 char *flag;
 char *channel_mode_string;
+char *use_jingles_vol_2;
 
 /* dictionary look-up type thing used by the parse routine */
 struct kvpdict kvpdict[] = {
@@ -247,6 +248,7 @@ struct kvpdict kvpdict[] = {
          { "DOR", &dor, NULL   },
          { "DIL", &dil, NULL   },
          { "DIR", &dir, NULL   },
+         { "VOL2", &use_jingles_vol_2, NULL },
          { "FADE", &fade_mode, NULL },
          { "OGGP", &oggpathname, NULL },
          { "SPXP", &speexpathname, NULL },
@@ -305,7 +307,8 @@ void handle_mute_button(sample_t *gainlevel, int switchlevel)
 /* update_smoothed_volumes: stuff that gets run once every 32 samples */
 void update_smoothed_volumes()
    {
-   static sample_t vol_rescale = 1.0F, vol2_rescale = 1.0F, jingles_vol_rescale = 1.0F, interlude_vol_rescale = 1.0F;
+   static sample_t vol_rescale = 1.0F, vol2_rescale = 1.0F, jingles_vol_rescale = 1.0F;
+   static sample_t jingles_vol_rescale2 = 1.0F, interlude_vol_rescale = 1.0F;
    static sample_t cross_left = 1.0F, cross_right = 0.0F, mixback_rescale = 1.0F;
    static sample_t lp_listen_mute = 1.0F, rp_listen_mute = 1.0F, lp_stream_mute = 1.0F, rp_stream_mute = 1.0F;
    sample_t mic_target, diff;
@@ -412,6 +415,15 @@ void update_smoothed_volumes()
          current_jingles_volume--;
       jingles_vol_rescale = 1.0F/powf(10.0F,current_jingles_volume/55.0F);
       }
+
+   if (jinglesvolume2 != current_jingles_volume2)
+      {
+      if (jinglesvolume2 > current_jingles_volume2)
+         current_jingles_volume2++;
+      else
+         current_jingles_volume2--;
+      jingles_vol_rescale2 = 1.0F/powf(10.0F,current_jingles_volume2/55.0F);
+      }
       
    /* interlude_autovol rises and falls as and when no media players are playing */
    /* it indicates the playback volume in dB in addition to the one specified by the user */
@@ -460,7 +472,7 @@ void update_smoothed_volumes()
    rp_lc_aud = rp_rc_aud = vol2_rescale * rp_listen_mute;
    lp_lc_str = lp_rc_str = vol_rescale * cross_left * lp_stream_mute;
    rp_lc_str = rp_rc_str = vol2_rescale * cross_right * rp_stream_mute;
-   jp_lc_str = jp_rc_str = jp_lc_aud = jp_rc_aud = jingles_vol_rescale;
+   jp_lc_str = jp_rc_str = jp_lc_aud = jp_rc_aud = (use_jingles_vol_2 && use_jingles_vol_2[0] == '1') ? jingles_vol_rescale2 : jingles_vol_rescale;
    mb_lc_aud = mb_rc_aud = mixback_rescale;
    ip_lc_aud = ip_rc_aud = 0.0F;
    ip_lc_str = ip_rc_str = interlude_vol_rescale;
@@ -1860,10 +1872,10 @@ int main(int argc, char **argv)
       if (!strcmp(action, "mixstats"))
          {
          if(sscanf(mixer_string,
-                ":%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:",
-                &volume, &volume2, &crossfade, &jinglesvolume, &interludevol, &mixbackvol, &jingles_playing,
+                ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:",
+                &volume, &volume2, &crossfade, &jinglesvolume, &jinglesvolume2 , &interludevol, &mixbackvol, &jingles_playing,
                 &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
-                &new_left_pause, &new_right_pause, &flush_left, &flush_right, &flush_jingles, &flush_interlude, &simple_mixer, &eot_alarm_set, &mixermode, &fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed), &speed_variance, &dj_audio_level, &crosspattern, &use_dsp, &twodblimit) !=30)
+                &new_left_pause, &new_right_pause, &flush_left, &flush_right, &flush_jingles, &flush_interlude, &simple_mixer, &eot_alarm_set, &mixermode, &fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed), &speed_variance, &dj_audio_level, &crosspattern, &use_dsp, &twodblimit) !=31)
             {
             fprintf(stderr, "mixer got bad mixer string\n");
             break;

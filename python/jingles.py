@@ -180,7 +180,7 @@ class Jingles(object):
                self.parent.deckadj.set_value(self.volume1 + delta)
                self.parent.deck2adj.set_value(self.volume2 + delta)
          self.parent.deckadj.value_changed()
-         string_to_send = "LOOP=0\nPLPL=%s\nACTN=playmanyjingles\nend\n" % self.pack_playlistlist(playlist)
+         string_to_send = "VOL2=%d\nLOOP=0\nPLPL=%s\nACTN=playmanyjingles\nend\n" % (self.play_ex.get_active(), self.pack_playlistlist(playlist))
          self.parent.mixer_write(string_to_send, True)
          
          while 1:
@@ -363,8 +363,10 @@ class Jingles(object):
 
       # A vertical box for our volume and muting controls
       self.vboxvol = gtk.VBox()
+      self.vboxvol.set_spacing(4)
       self.vboxvol.set_border_width(0)
       hbox.pack_end(self.vboxvol, False)
+      self.vboxvol.show()
 
       bhbox = gtk.HBox()
       bhbox.set_spacing(2)
@@ -405,28 +407,27 @@ class Jingles(object):
       set_tip(self.play_ex, _('This button works the same as the button to the left does except that the sound level of all the other media players is fully reduced.'))
       self.vboxvol.pack_start(bhbox, False)
       bhbox.show()
-
-
-
-
-      # A pictoral volume label
-      image = gtk.Image()
-      image.set_from_file(FGlobs.pkgdatadir / "volume2.png")
-      self.vboxvol.pack_start(image, False, False, 0)
-      image.show()
+     
+      label = gtk.Label(_('Level'))
+      self.vboxvol.pack_start(label, False)
+      label.show()
       
-      self.deckadj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 6.0, 0.0)
-      self.deckadj.connect("value_changed", self.cb_deckvol)
-      self.deckvol = gtk.VScale(self.deckadj)
-      self.deckvol.set_inverted(True)
-      self.deckvol.set_update_policy(gtk.UPDATE_CONTINUOUS)
-      self.deckvol.set_digits(1)
-      self.deckvol.set_value_pos(gtk.POS_TOP)
-      self.deckvol.set_draw_value(False)
-      self.vboxvol.pack_start(self.deckvol, True, True, 0)
-      self.deckvol.show()
-      self.vboxvol.show()
-      set_tip(self.deckvol, _('This adjusts the volume level of the jingles player.'))
+      bhbox = gtk.HBox()
+      
+      self.l1_adj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 6.0, 0.0)
+      self.l2_adj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 6.0, 0.0)
+      self.l1 = gtk.VScale(self.l1_adj)
+      self.l2 = gtk.VScale(self.l2_adj)
+      
+      for l in (self.l1, self.l2):
+         l.set_inverted(True)
+         l.set_draw_value(False)
+         l.connect("value-changed", self.cb_deckvol)
+         bhbox.pack_start(l)
+         l.show()
+      
+      self.vboxvol.pack_start(bhbox)
+      bhbox.show()
                 
            # A vertical box for our second volume control
       self.vboxinter = gtk.VBox()
