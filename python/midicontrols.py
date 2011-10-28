@@ -127,9 +127,9 @@ control_methods= {
     'k_fire': _('Jingle play from start'),
 
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'j_ps': _('Jingles play/stop'),
+    'j_ps1': _('Jingles play/stop 1'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'j_playex': _('Jingles play exclusive'),
+    'j_ps2': _('Jingles play/stop 2'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
     'j_sprev': _('Jingles select previous'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
@@ -137,7 +137,9 @@ control_methods= {
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
     'j_sfire': _('Jingles play selected from start'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
-    'j_vol': _('Jingles set jingles volume'),
+    'j_vol1': _('Jingles set jingles volume 1'),
+    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    'j_vol2': _('Jingles set jingles volume 2'),
     # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
     'j_ivol': _('Jingles set interlude volume'),
 
@@ -559,7 +561,7 @@ class Controls(object):
             Binding('k0.ffc7:pk_fire.9.127'),
             Binding('k0.ffc8:pk_fire.a.127'),
             Binding('k0.ffc9:pk_fire.b.127'),
-            Binding('k0.ff1b:pj_ps.b.127'), # Esc stop jingles
+            Binding('k0.ff1b:pj_ps1.b.127'), # Esc stop jingles
             Binding('k0.31:sx_fade.b.0'), # 1-2 xfader sides
             Binding('k0.32:sx_fade.b.127'),
             Binding('k0.63:px_pass.0.127'), # C, pass xfader
@@ -960,15 +962,18 @@ class Controls(object):
     # Jingles player in general
     #
     @action_method(Binding.MODE_PULSE)
-    def j_ps(self, n, v, isd):
+    def j_ps1(self, n, v, isd):
         if self.owner.jingles.play.get_active() or self.owner.jingles.play_ex.get_active():
             self.owner.jingles.stop.clicked()
         else:
             self.owner.jingles.play.set_active(True)
 
     @action_method(Binding.MODE_PULSE)
-    def j_playex(self, n, v, isd):
-        self.owner.jingles.play_ex.set_active(True)
+    def j_ps2(self, n, v, isd):
+        if self.owner.jingles.play.get_active() or self.owner.jingles.play_ex.get_active():
+            self.owner.jingles.stop.clicked()
+        else:
+            self.owner.jingles.play_ex.set_active(True)
 
     @action_method(Binding.MODE_PULSE)
     def j_sprev(self, n, v, isd):
@@ -984,8 +989,15 @@ class Controls(object):
         self.owner.jingles.play.set_active(True)
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
-    def j_vol(self, n, v, isd):
-        fader= self.owner.jingles.deckvol
+    def j_vol1(self, n, v, isd):
+        fader= self.owner.jingles.l1
+        v= 105-v/127.0*105
+        vol= fader.get_value()+v if isd else v
+        fader.set_value(vol)
+
+    @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
+    def j_vol2(self, n, v, isd):
+        fader= self.owner.jingles.l2
         v= 105-v/127.0*105
         vol= fader.get_value()+v if isd else v
         fader.set_value(vol)

@@ -1797,6 +1797,8 @@ class MainWindow:
          fh.write("crossfade=" + str(self.crossadj.get_value()) + "\n")
          fh.write("jingles_deckvol1=" + str(self.jingles.l1_adj.get_value()) + "\n")
          fh.write("jingles_deckvol2=" + str(self.jingles.l2_adj.get_value()) + "\n")
+         fh.write("jingles_muting1=" + str(self.jingles.m1_adj.get_value()) + "\n")
+         fh.write("jingles_muting2=" + str(self.jingles.m2_adj.get_value()) + "\n")
          fh.write("jingles_intervol=" + str(self.jingles.interadj.get_value()) + "\n")
          fh.write("stream_mon="+ str(int(self.listen_stream.get_active())) + "\n")
          fh.write("tracks_played=" + str(int(self.history_expander.get_expanded())) + "\n")
@@ -1860,6 +1862,10 @@ class MainWindow:
             self.jingles.l1_adj.set_value(float(v))
          elif k=="jingles_deckvol2":
             self.jingles.l2_adj.set_value(float(v))
+         elif k=="jingles_muting1":
+            self.jingles.m1_adj.set_value(float(v))
+         elif k=="jingles_muting2":
+            self.jingles.m2_adj.set_value(float(v))
          elif k=="jingles_intervol":
             self.jingles.interadj.set_value(float(v))
          elif k=="stream_mon":

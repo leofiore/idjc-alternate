@@ -143,7 +143,7 @@ class Jingles(object):
          output += "d" + str(len(each)) + ":" + each
       return output 
  
-   def start_player(self, mute_f):
+   def start_player(self, which):
       self.nomute = not self.parent.mic_opener.any_mic_selected and self.parent.mixermode == self.parent.PRIVATE_PHONE
       if self.entry.get_text() == "":
          selection = self.treeview.get_selection()
@@ -158,27 +158,26 @@ class Jingles(object):
          if self.nomute == False:
             self.volume1 = self.parent.deckadj.get_value()
             self.volume2 = self.parent.deck2adj.get_value()
-            if mute_f:
-               self.interludevolume = self.interadj.get_value()
-               self.interadj.set_value(0.0) 
-               self.parent.deckadj.set_value(0.0)
-               self.parent.deck2adj.set_value(0.0)
+            self.interludevolume = self.interadj.get_value()
+            self.lvl = self.m1.get_value() if which == 0 else self.m2.get_value()
+            #for each in (self.interadj, self.parent.deckadj, self.parent.deck2adj):
+            #   each.set_value(lvl)
+            self.interadj.set_value(min(self.lvl, self.interludevolume))
+               
+            # Normalise main player volume to lvl on the highest of the two player volume levels
+            # have the lower of the two levels track the higher value.
+            # Where the highest volume level is below the normal level do nothing to the level.
+            # When the jingles player is done the volume levels are restored.
+            
+            if self.parent.prefs_window.dual_volume.get_active():
+               highest = max((self.volume1, self.volume2))
             else:
-               self.interludevolume = -1
-               
-               # Normalise main player volume to cls.NORMAL on the highest of the two player volume levels
-               # have the lower of the two levels track the higher value.
-               # Where the highest volume level is below the normal level do nothing to the level.
-               # When the jingles player is done the volume levels are restored.
-               
-               if self.parent.prefs_window.dual_volume.get_active():
-                  highest = max((self.volume1, self.volume2))
-               else:
-                  highest = self.volume2 = self.volume1
-                 
-               delta = min((self.NORMAL - highest, 0)) 
-               self.parent.deckadj.set_value(self.volume1 + delta)
-               self.parent.deck2adj.set_value(self.volume2 + delta)
+               highest = self.volume2 = self.volume1
+              
+            delta = min((self.lvl - highest, 0)) 
+            self.parent.deckadj.set_value(self.volume1 + delta)
+            self.parent.deck2adj.set_value(self.volume2 + delta)
+
          self.parent.deckadj.value_changed()
          string_to_send = "VOL2=%d\nLOOP=0\nPLPL=%s\nACTN=playmanyjingles\nend\n" % (self.play_ex.get_active(), self.pack_playlistlist(playlist))
          self.parent.mixer_write(string_to_send, True)
@@ -217,11 +216,11 @@ class Jingles(object):
             # Don't move the level if user moved it upwards.
             v1 = self.parent.deckadj.get_value()
             v2 = self.parent.deck2adj.get_value()
-            if max((v1, v2)) <= self.NORMAL:
+            if max((v1, v2)) <= self.lvl:
                self.parent.deckadj.set_value(self.volume1)
                self.parent.deck2adj.set_value(self.volume2)
-            if self.interludevolume != -1:
-               self.interadj.set_value(self.interludevolume)
+            self.interludevolume = max(self.interludevolume, self.interadj.get_value())
+            self.interadj.set_value(self.interludevolume)
          else:
             self.parent.send_new_mixer_stats()
          
@@ -394,7 +393,7 @@ class Jingles(object):
       set_tip(self.stop, _('Stop all jingles playback.'))
       
       pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
-                        FGlobs.pkgdatadir / "play3.png", 14, 14)
+                        FGlobs.pkgdatadir / "play2.png", 14, 14)
       image = gtk.Image()
       image.set_from_pixbuf(pixbuf)
       self.play_ex = gtk.ToggleButton()
@@ -408,7 +407,7 @@ class Jingles(object):
       self.vboxvol.pack_start(bhbox, False)
       bhbox.show()
      
-      label = gtk.Label(_('Level'))
+      label = gtk.Label(_('Sound Level'))
       self.vboxvol.pack_start(label, False)
       label.show()
       
@@ -426,6 +425,26 @@ class Jingles(object):
          bhbox.pack_start(l)
          l.show()
       
+      self.vboxvol.pack_start(bhbox)
+      bhbox.show()
+                
+      label = gtk.Label(_('Player Muting'))
+      self.vboxvol.pack_start(label, False)
+      label.show()
+
+      bhbox = gtk.HBox()          
+
+      self.m1_adj = gtk.Adjustment(70.0, 0.0, 100.0, 1.0, 6.0, 0.0)
+      self.m2_adj = gtk.Adjustment(0.0, 0.0, 100.0, 1.0, 6.0, 0.0)
+      self.m1 = gtk.VScale(self.m1_adj)
+      self.m2 = gtk.VScale(self.m2_adj)
+      
+      for l in (self.m1, self.m2):
+         l.set_inverted(True)
+         l.set_draw_value(False)
+         bhbox.pack_start(l)
+         l.show()
+                
       self.vboxvol.pack_start(bhbox)
       bhbox.show()
                 
