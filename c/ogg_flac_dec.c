@@ -20,7 +20,6 @@
 #include "../config.h"
 
 #ifdef HAVE_OGGFLAC
-#ifdef FLAC_POST1_1_3
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -182,7 +181,7 @@ int ogg_flacdec_init(struct xlplayer *xlplayer)
                      NULL, oggflac_error_callback, od);
       }
 
-   if (status != FLAC__STREAM_DECODER_SEARCH_FOR_METADATA)
+   if (status != FLAC__STREAM_DECODER_INIT_STATUS_OK)
       {
       fprintf(stderr, "ogg_flacdec_init: failed to initialise OggFLAC decoder\n");
       FLAC__stream_decoder_delete(self->dec);
@@ -231,5 +230,4 @@ int ogg_flacdec_init(struct xlplayer *xlplayer)
    return ACCEPTED;
    }
 
-#endif /* FLAC_POST1_1_3 */
 #endif /* HAVE_OGGFLAC */

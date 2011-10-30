@@ -139,7 +139,6 @@ AC_ARG_ENABLE([flac],
 if test $makeflac != "no" ; then
    PKG_CHECK_MODULES([LIBFLAC],[flac >= 1.1.3],
             [AC_DEFINE([HAVE_FLAC],[1],[Set if libflac >= 1.1.3 was found])
-            AC_DEFINE([FLAC_POST1_1_3],[2],[Set for new(er) flac API])
             AC_SUBST([HAVE_FLAC],[1])
 
             AC_CHECK_LIB([FLAC], [FLAC__stream_decoder_init_ogg_stream],

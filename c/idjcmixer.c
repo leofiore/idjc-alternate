@@ -509,7 +509,7 @@ void process_audio(jack_nframes_t nframes)
    /* pointers to buffers provided by JACK */
    sample_t *lap, *rap, *lsp, *rsp, *lpsp, *rpsp, *lprp, *rprp;
    sample_t *la_buffer, *ra_buffer, *ls_buffer, *rs_buffer, *lps_buffer, *rps_buffer;
-   sample_t *dolp, *dorp, *dilp, *dirp, *dol_buffer, *dor_buffer, *dil_buffer, *dir_buffer;
+   sample_t *dolp, *dorp, *dilp, *dirp;
    /* ponters to buffers for reading the media players */
    sample_t *lplcp, *lprcp, *rplcp, *rprcp, *jplcp, *jprcp, *iplcp, *iprcp;
    /* pointers to buffers for fading */
@@ -597,14 +597,14 @@ void process_audio(jack_nframes_t nframes)
    ra_buffer = rap = (sample_t *) jack_port_get_buffer (audio_right_port, nframes);
    ls_buffer = lsp = (sample_t *) jack_port_get_buffer (stream_left_port, nframes);
    rs_buffer = rsp = (sample_t *) jack_port_get_buffer (stream_right_port, nframes);
-   dol_buffer = dolp = (sample_t *) jack_port_get_buffer (dspout_left_port, nframes);
-   dor_buffer = dorp = (sample_t *) jack_port_get_buffer (dspout_right_port, nframes);
-   dil_buffer = dilp = (sample_t *) jack_port_get_buffer (dspin_left_port, nframes);
-   dir_buffer = dirp = (sample_t *) jack_port_get_buffer (dspin_right_port, nframes);
    lps_buffer = lpsp = (sample_t *) jack_port_get_buffer (phone_left_send, nframes);
    rps_buffer = rpsp = (sample_t *) jack_port_get_buffer (phone_right_send, nframes);
    lprp = (sample_t *) jack_port_get_buffer (phone_left_recv, nframes);
    rprp = (sample_t *) jack_port_get_buffer (phone_right_recv, nframes);
+   dolp = (sample_t *) jack_port_get_buffer (dspout_left_port, nframes);
+   dorp = (sample_t *) jack_port_get_buffer (dspout_right_port, nframes);
+   dilp = (sample_t *) jack_port_get_buffer (dspin_left_port, nframes);
+   dirp = (sample_t *) jack_port_get_buffer (dspin_right_port, nframes);
    
    /* recreate buffers for data read from the pipes via the jack ringbuffer */
    lp_lc = lplcp = irealloc(lp_lc, nframes);

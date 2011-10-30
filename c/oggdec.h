@@ -71,7 +71,6 @@ void oggdecode_set_new_oggpage_callback(struct oggdec_vars *self, void (*cb)(str
 void oggdecode_remove_new_oggpage_callback(struct oggdec_vars *self);
 
 #ifdef HAVE_OGGFLAC
-#ifdef FLAC_POST1_1_3
 
 FLAC__StreamDecoderReadStatus oggflac_read_callback(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data);
 
@@ -85,5 +84,4 @@ FLAC__bool oggflac_eof_callback(const FLAC__StreamDecoder *decoder, void *client
 
 void oggflac_error_callback(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus se, void *client_data);
 
-#endif /* FLAC_POST1_1_3 */
 #endif /* HAVE_OGGFLAC */

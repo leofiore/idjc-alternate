@@ -448,7 +448,7 @@ static int be32bitread(FILE *fp)
 
 static void xing_tag_read(struct mp3taginfo *ti, FILE *fp)
    {
-   unsigned char a, b, c, d;
+   unsigned char a, b, c;
    int mpeg1_f, mpeg_ix, mono_f, br_ix, sr_ix;
    int xing_offset, initial_offset, save_point = 0;
    int i, samples_per_frame, frame_length, padding;
@@ -465,7 +465,6 @@ static void xing_tag_read(struct mp3taginfo *ti, FILE *fp)
       { 0,         0,     0, 0 },
       { 22050, 24000, 16000, 0 },
       { 44100, 48000, 32000, 0 } };
-   enum { XING_MODE_CBR, XING_MODE_VBR } mode;
    
    initial_offset = ftell(fp);
 
@@ -480,7 +479,7 @@ static void xing_tag_read(struct mp3taginfo *ti, FILE *fp)
       if (((b = fgetc(fp)) & 0xE0) == 0xE0)
          {
          c = fgetc(fp);
-         d = fgetc(fp);
+         fgetc(fp);
          if ((br_ix = (c >> 4)) == 0xF || (b & 0x18) == 0x08 || (b & 0x6) != 0x2)
             goto no_tag;
          if ((mpeg_ix =  (b & 0x18) >> 3) == 1)
@@ -506,13 +505,8 @@ static void xing_tag_read(struct mp3taginfo *ti, FILE *fp)
          if (!fread(xing_intro, 4, 1, fp))
             goto no_tag;
  
-         if (!memcmp(xing_intro, "Info", 4))
-            mode = XING_MODE_CBR;
-         else
-            if (!memcmp(xing_intro, "Xing", 4))
-               mode = XING_MODE_VBR;
-            else
-               goto no_tag;
+         if (memcmp(xing_intro, "Info", 4) && memcmp(xing_intro, "Xing", 4))
+            goto no_tag;
  
          fgetc(fp); fgetc(fp); fgetc(fp);
          flags = fgetc(fp);

@@ -173,7 +173,6 @@ static unsigned vorbis_get_samplerate(struct oggdec_vars *self)  /* attempt to g
    
 #ifdef HAVE_OGGFLAC
 
-#ifdef FLAC_POST1_1_3
 FLAC__StreamDecoderReadStatus oggflac_read_callback(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data)
    {
    struct oggdec_vars *self = client_data;
@@ -383,14 +382,9 @@ void oggflac_error_callback(const FLAC__StreamDecoder *decoder, FLAC__StreamDeco
          fprintf(stderr, "oggflac_error_callback: flac decoder error, unknown error\n");
       }
    }
-#endif /* FLAC_POST1_1_3 */
 
 static int flac_get_samplerate(struct oggdec_vars *self)
    {
-#ifndef FLAC_POST1_1_3
-   fprintf(stderr, "flac_get_samplerate: obsolete FLAC API not supported on new features\n"); 
-   return 0;
-#else
    FLAC__StreamDecoder *decoder;
 
    if (!(decoder = FLAC__stream_decoder_new()))
@@ -406,7 +400,7 @@ static int flac_get_samplerate(struct oggdec_vars *self)
       oggflac_tell_callback, oggflac_length_callback,
       oggflac_eof_callback,  oggflac_write_callback,
       oggflac_metadata_callback, oggflac_error_callback,
-      self) != FLAC__STREAM_DECODER_SEARCH_FOR_METADATA)
+      self) != FLAC__STREAM_DECODER_INIT_STATUS_OK)
       {
       fprintf(stderr, "flac_get_samplerate: call to FLAC__stream_decoder_init_stream failed\n");
       FLAC__stream_decoder_delete(decoder);
@@ -417,7 +411,6 @@ static int flac_get_samplerate(struct oggdec_vars *self)
    FLAC__stream_decoder_delete(decoder);
 
    return self->samplerate[self->ix];
-#endif /* FLAC_POST1_1_3 */
    }
 #endif /* HAVE_OGGFLAC */
 

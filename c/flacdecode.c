@@ -59,12 +59,7 @@ void make_flac_audio_to_float(struct xlplayer *self, float *flbuf, const FLAC__i
       }
    }
 
-#ifdef FLAC_PRE1_1_2
-static FLAC__StreamDecoderWriteStatus flac_writer_callback(const FLAC__FileDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const inputbuffer[], void *client_data)
-#endif
-#ifdef FLAC_POST1_1_3
 static FLAC__StreamDecoderWriteStatus flac_writer_callback(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const inputbuffer[], void *client_data)
-#endif
    {
    struct xlplayer *xlplayer = client_data;
    struct flacdecode_vars *self = xlplayer->dec_data;
@@ -113,19 +108,7 @@ static FLAC__StreamDecoderWriteStatus flac_writer_callback(const FLAC__StreamDec
    return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
    }
 
-#ifdef FLAC_PRE1_1_2
-static void flac_metadata_callback(const FLAC__FileDecoder *decoder, const FLAC__StreamMetadata *md, void *client_data)
-   {
-   /* do nothing with the metadata */
-   }
-#endif
-
-#ifdef FLAC_PRE1_1_2
-static void flac_error_callback(const FLAC__FileDecoder *decoder,FLAC__StreamDecoderErrorStatus se, void *client_data)
-#endif
-#ifdef FLAC_POST1_1_3
 static void flac_error_callback(const FLAC__StreamDecoder *decoder,FLAC__StreamDecoderErrorStatus se, void *client_data)
-#endif
    {
    struct xlplayer *xlplayer = client_data;
          
@@ -150,31 +133,6 @@ static void flacdecode_init(struct xlplayer *xlplayer)
    struct flacdecode_vars *self = xlplayer->dec_data;
    int src_error;
    
-#ifdef FLAC_PRE1_1_2
-   if (!(self->decoder = FLAC__file_decoder_new()))
-      {
-      fprintf(stderr, "flacdecode_init: %s could not initialise flac decoder\n", xlplayer->playername);
-      goto cleanup;
-      }
-   FLAC__file_decoder_set_client_data(self->decoder, xlplayer);
-   FLAC__file_decoder_set_write_callback(self->decoder, flac_writer_callback);
-   FLAC__file_decoder_set_error_callback(self->decoder, flac_error_callback);
-   FLAC__file_decoder_set_metadata_callback(self->decoder, flac_metadata_callback);
-   FLAC__file_decoder_set_filename(self->decoder, xlplayer->pathname);
-   if ((self->decoderstate = FLAC__file_decoder_init(self->decoder)) != FLAC__FILE_DECODER_OK)
-      {
-      fprintf(stderr, "flacdecode_init: %s error during flac player initialisation\n", xlplayer->playername);
-      FLAC__file_decoder_delete(self->decoder);
-      goto cleanup;
-      }
-   if (xlplayer->seek_s)
-      {
-      self->suppress_audio_output = TRUE;               /* prevent seek noise */
-      FLAC__file_decoder_seek_absolute(self->decoder, ((FLAC__uint64)xlplayer->seek_s) * ((FLAC__uint64)self->metainfo.data.stream_info.sample_rate));
-      self->suppress_audio_output = FALSE;
-      }
-#endif
-#ifdef FLAC_POST1_1_3
    if (!(self->decoder = FLAC__stream_decoder_new()))
       {
       fprintf(stderr, "flacdecode_init: %s could not initialise flac decoder\n", xlplayer->playername);
@@ -192,7 +150,6 @@ static void flacdecode_init(struct xlplayer *xlplayer)
       FLAC__stream_decoder_seek_absolute(self->decoder, ((FLAC__uint64)xlplayer->seek_s) * ((FLAC__uint64)self->metainfo.data.stream_info.sample_rate));
       self->suppress_audio_output = FALSE;
       }
-#endif
    if ((self->resample_f = (self->metainfo.data.stream_info.sample_rate != xlplayer->samplerate)))
       {
       fprintf(stderr, "flacdecode_init: %s configuring resampler\n", xlplayer->playername);
@@ -200,12 +157,7 @@ static void flacdecode_init(struct xlplayer *xlplayer)
       if (src_error)
          {
          fprintf(stderr, "flacdecode_init: %s src_new reports - %s\n", xlplayer->playername, src_strerror(src_error));
-#ifdef FLAC_PRE1_1_2
-         FLAC__file_decoder_delete(self->decoder);
-#endif
-#ifdef FLAC_POST1_1_3
          FLAC__stream_decoder_delete(self->decoder);
-#endif
          goto cleanup;
          }
       xlplayer->src_data.output_frames = 0;
@@ -229,30 +181,17 @@ static void flacdecode_play(struct xlplayer *xlplayer)
    {
    struct flacdecode_vars *self = xlplayer->dec_data;
 
-#ifdef FLAC_PRE1_1_2
-   FLAC__file_decoder_process_single(self->decoder);
-   if (FLAC__file_decoder_get_state(self->decoder) != FLAC__FILE_DECODER_OK) 
-      xlplayer->playmode = PM_EJECTING;
-#endif
-#ifdef FLAC_POST1_1_3
    FLAC__stream_decoder_process_single(self->decoder);
    if (FLAC__stream_decoder_get_state(self->decoder) == FLAC__STREAM_DECODER_END_OF_STREAM)
       xlplayer->playmode = PM_EJECTING;
-#endif
    }
 
 static void flacdecode_eject(struct xlplayer *xlplayer)
    {
    struct flacdecode_vars *self = xlplayer->dec_data;
 
-#ifdef FLAC_PRE1_1_2
-   FLAC__file_decoder_finish(self->decoder);
-   FLAC__file_decoder_delete(self->decoder);
-#endif
-#ifdef FLAC_POST1_1_3
    FLAC__stream_decoder_finish(self->decoder);
    FLAC__stream_decoder_delete(self->decoder);
-#endif
    if (self->flbuf)
       free(self->flbuf);
    if (self->resample_f)

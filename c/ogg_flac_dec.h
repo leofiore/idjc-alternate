@@ -20,7 +20,6 @@
 #include "../config.h"
 
 #ifdef HAVE_OGGFLAC
-#ifdef FLAC_POST1_1_3
 
 #include <FLAC/all.h>
 #include "xlplayer.h"
@@ -35,5 +34,4 @@ struct oggflacdec_vars
 
 int ogg_flacdec_init(struct xlplayer *xlplayer);
 
-#endif /* FLAC_POST1_1_3 */
 #endif /* HAVE_OGGFLAC */

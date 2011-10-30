@@ -24,12 +24,7 @@
 
 struct flacdecode_vars
    {
-#ifdef FLAC_PRE1_1_2
-   FLAC__FileDecoder *decoder;
-#endif
-#ifdef FLAC_POST1_1_3
    FLAC__StreamDecoder *decoder;
-#endif
    FLAC__StreamMetadata metainfo;
    int decoderstate;
    int resample_f;
