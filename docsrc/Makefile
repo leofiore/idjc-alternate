@@ -3,7 +3,7 @@ HTML = index.html tour.html tour_main.html tour_jingles.html tour_output.html to
 # Wrappers for $(HTML)
 TEMPLATES = template_head.html__ template_tail.html__
 # Images that will to be compressed.
-IMAGES = main-window.png jingles-window.png output-window.png prefs-general.png prefs-microphones.png prefs-jack-ports.png prefs-bindings.png prefs-xchat.png
+IMAGES = main-window.png jingles-window.png output-window.png prefs-general.png prefs-channels.png prefs-jack-ports.png prefs-bindings.png
 # HTML and related style info that will not be wrapped.
 STYLESHEETS = style.css style_ie.css
 # Images that will not be compressed.

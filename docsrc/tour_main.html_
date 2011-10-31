@@ -22,9 +22,9 @@ feature when combined with <i>Monitor Mix DJ</i> facilitates the pre-listening o
 <p>The <i>Metadata source</i> feature controls which player contributes the song title metadata
 to the stream and to the right of that are various crossfader controls.</p>
 
-<p>Bottom right are controls for (un)muting the various audio sources, among them potentially:
-VoIP callers, an analog source via aux, a number of microphones. Here there are two configured on two
-separate opener buttons buttons one of which is helpfully labelled DJ. Finally, conveniently
+<p>At the bottom are controls for opening the various audio sources, among them potentially:
+VoIP callers, auxiliary audio sources, a number of microphones. Here there are two configured on two
+separate opener buttons buttons one of which is helpfully labelled DJ by default. Conveniently
 alongside the mic buttons, a playlist advance button with play/skip-to-the-next-track-and-stop functionality.</p>
 
-<p>On the bottom left, buttons for opening windows discussed in the remainder of the tour.</p>
+<p>On the bottom left a menu button for opening the windows discussed in the remainder of this section.</p>

@@ -12,22 +12,13 @@ ui('Tour: Preferences', 'tour-preferences-nav')
 with an absolute minimum CPU load as well as reducing the amount of screen space that is occupied.</p>
 
 <p>It's possible to toggle the meters that are visible, configure
-<a href="http://en.wikipedia.org/wiki/Replay_Gain">Replay Gain</a> or any of the other
-options shown in detail on the screenshot alongside.</p>
-
-<p>Further down is a very useful control that lets you choose how IDJC behaves
-when a stream connection is lost. The default is to attempt reconnection three times
-after pre-set delays.</p>
-
-<p>Further down still a song title database connection option that enables
-a sidebar on the main window from which tracks can be dragged into the playlists.
-From the sidebar searching or filtering is also possible.</p>
+<a href="http://en.wikipedia.org/wiki/Replay_Gain">Replay Gain</a> and much more.</p>
 
 <br class="division" />
 
-<a href="prefs-microphones.hq.png"><img class="clickthrough-right" src="prefs-microphones.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
+<a href="prefs-channels.hq.png"><img class="clickthrough-right" src="prefs-channels.png" alt="Preferences Window Screenshot (audio channels)" title="Click for full size version" /></a>
 
-<h4>Microphone processing</h4>
+<h4>Audio channel processing</h4>
 
 <p>A great deal of care has been taken to make sure your voice can be heard consistently
 over the mix. The controls to do this are placed in your hands so experimenting and making
@@ -38,39 +29,27 @@ it's all done in software. That said, a good microphone is still advised for the
 
 <br class="division" />
 
-<a href="prefs-xchat.hq.png"><img class="clickthrough-left" src="prefs-xchat.png" alt="Preferences Window Screenshot (XChat)" title="Click for full size version" /></a>
-
-<h4>XChat integration</h4>
-
-<p>The XChat feature works in conjunction with XChat and the XChat plugin, which has an install button here.</p>
-
-<p>Log into the channel you want to announce in with XChat and enter the details here as well.</p>
-
-<p>The announcements will start when a stream is up and running.</p>
-
-<br class="division" />
-
-<a href="prefs-jack-ports.hq.png"><img class="clickthrough-right" src="prefs-jack-ports.png" alt="Preferences Window Screenshot (JACK ports)" title="Click for full size version" /></a>
+<a href="prefs-jack-ports.hq.png"><img class="clickthrough-left" src="prefs-jack-ports.png" alt="Preferences Window Screenshot (JACK ports)" title="Click for full size version" /></a>
 
 <h4>JACK port bindings</h4>
 
 <p>IDJC is built on the technology of <a href="http://www.jackaudio.org/">Jack Audio Connection Kit</a>.
 As the name implies it facilitates audio connections and IDJC makes audio available on a number of such ports.</p>
 
-<p>Microphone audio is collected from the sources specified in this window and there is an interface that
+<p>Microphone and auxiliary audio is collected from the sources specified in this window and there is an interface that
 allows the stream audio to be sent for processing by external applications.</p>
 
-<p>The set and save buttons allow temporary or permanent arrangements to be configured.</p>
+<p>The set and save buttons allow temporary or permanent audio pathways to be configured.</p>
 
 <br class="division" />
 
-<a href="prefs-bindings.hq.png"><img class="clickthrough-left" src="prefs-bindings.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
+<a href="prefs-bindings.hq.png"><img class="clickthrough-right" src="prefs-bindings.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
 
 <h4>Key and MIDI bindings</h4>
 
-<p>Set and see in what way IDJC responds to key presses here.</p>
+<p>Set your keyboard shortcuts here.</p>
 
-<p>You can even set bindings for MIDI events, which means you can control IDJC from MIDI devices.
+<p>You can even set bindings for MIDI events, which means you can control IDJC from MIDI control surfaces or MIDI devices generally.
 The superiority of such a set-up will become apparent with use.</p>
 
 <p>Key presses are collected from the Main and Jingles windows only and depend on focus whereas MIDI

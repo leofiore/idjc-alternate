@@ -15,17 +15,18 @@ With them you can change sample rates, mix audio, apply audio effects, and so on
 For the purpose of getting sound into IDJC from an ALSA source the following can be specified
 in the appropriate configuration file <i>~/.asoundrc</i> which may need to be created.</p>
 
-<pre title="~/.asoundrc additional contents">pcm.idjcvoip {
+<pre title="~/.asoundrc additional contents"># VoIP plugin for the IDJC default profile.
+pcm.idjcvoip {
    type plug
    slave.pcm {
       type jack
       playback_ports {
-         0 idjc-mx:voip_in_l
-         1 idjc-mx:voip_in_r
+         0 idjc-mx_default:voip_in_l
+         1 idjc-mx_default:voip_in_r
       }
       capture_ports {
-         0 idjc-mx:voip_out_l
-         1 idjc-mx:voip_out_r
+         0 idjc-mx_default:voip_out_l
+         1 idjc-mx_default:voip_out_r
       }
    }
 }</pre>
@@ -101,4 +102,4 @@ microphone channels.</p>
 </ul>
 
 <h4>Final advice</h4>
-<p>Practice for the sake of competence. It's confusing at first but there are only three VoIP modes.</p>
+<p>There are only effectively three VoIP modes but they should be practiced off-air until they become second nature.</p>

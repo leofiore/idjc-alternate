@@ -15,19 +15,9 @@ to be done once and full details follow.</p>
 and its sound server, <i>jackd</i>. Forget IDJC exists for the moment as the information on this page
 applies to all applications that require JACK in order to function.</p>
 
-<p>JACK needs real-time privileges in order to run smoothly because of the small sized buffers
-that it uses to transfer audio. Using small buffers keeps the audio time delay (latency) to a minimum
-which is a good thing if you are listening to your voice being captured live but it does mean
-it's effectively running a just in time delivery system and does not want to be interrupted by
-the operating system effectively saying time's up I have to run these other apps.
-</p>
-
-<p>By default the JACK sound server now requires real-time privileges in order to even start. Previous
-versions would not use real-time by default and audio data would be lost because of it.</p>
-
 <h5>Manually running <i>jackd</i> to see what happens</h5>
 <pre>$ jackd -d alsa
-jackd 0.118.0
+jackd 0.121.0
 Copyright 2001-2009 Paul Davis, Stephane Letz, Jack O'Quinn, Torben Hohn and others.
 jackd comes with ABSOLUTELY NO WARRANTY
 This is free software, and you are welcome to redistribute it
@@ -35,57 +25,55 @@ under certain conditions; see the file COPYING for details
 
 
 JACK is running in realtime mode, but you are not allowed to use realtime scheduling.
-Please check your /etc/security/limits.conf for the following lines
-and correct/add them:
+Please check your /etc/security/limits.conf for the following line
+and correct/add it if necessary:
 
-  @audio          -       rtprio          100
-  @audio          -       nice            -10
+  @audio          -       rtprio          99
 
 After applying these changes, please re-login in order for them to take effect.
 
 You don't appear to have a sane system configuration. It is very likely that you
 encounter xruns. Please apply all the above mentioned changes and start jack again!</pre>
 
-<p>What just happened here is <i>jackd</i> just failed to start because it considers your system's
-configuration to be wrong.</p>
+<p>What just happened here is <i>jackd</i> just failed to start because it runs realtime mode by default
+and your system as it is configured won't supply it. Realtime mode helps to ensure that the small and
+therefore low latency audio buffers are refilled without interruption. By choosing not to use realtime mode
+the buffer fills become more erratic making solid performance rely on using larger buffers that result in higher latency.</p>
 
-<h5>Let's get configuring</h5>
+<h5>Let's get reconfiguring</h5>
 
-<p>Add the two lines mentioned above to the file also mentioned above.</p>
+<p>Add the line mentioned above to the file also mentioned above.</p>
 
 <ul>
-<li><p>Ubuntu</p><pre class="reduced">$ sudo echo "@audio   -   rtprio   100" >> /etc/security/limits.conf
-$ sudo echo "@audio   -   nice     -10" >> /etc/security/limits.conf</pre></li>
-<li><p>Debian</p><pre class="reduced">$ su echo "@audio   -   rtprio   100" >> /etc/security/limits.conf
-$ su echo "@audio   -   nice     -10" >> /etc/security/limits.conf</pre></li>
+<li><p>Ubuntu</p><pre class="reduced">$ sudo su -c 'echo "@audio   -   rtprio   99" >> /etc/security/limits.conf'</pre></li>
+<li><p>Debian</p><pre class="reduced">$ su -c 'echo "@audio   -   rtprio   99" >> /etc/security/limits.conf'</pre></li>
 </ul>
 
-<p>Now that you have added all members of the audio group to the real-time privileges list lets
-make sure your user account has audio group membership. You can do this in the Ubuntu <i>System</i> menu
-by selecting <i>Users and Groups</i> from the <i>Administration</i> menu and clicking the
-<i>Manage Groups</i> button. Choose audio and make sure the check-box is selected.</p>
+<p>The above change applies only to members of the audio group. Ensure your user account is a member.</p>
 
-<p>You now need to log out of your desktop and log back in again for the changes to take effect.</p>
+<pre>$ sudo usermod -a -G audio $(whoami)</pre>
 
-<p>Let's try starting jackd one more time.</p>
+<p>Log out of your desktop and log back in again for the new settings to take effect.</p>
+
+<p>Let's try starting <i>jackd</i> one more time.</p>
 
 <pre>$ jackd -d alsa
-jackd 0.118.0
+jackd 0.121.0
 Copyright 2001-2009 Paul Davis, Stephane Letz, Jack O'Quinn, Torben Hohn and others.
 jackd comes with ABSOLUTELY NO WARRANTY
 This is free software, and you are welcome to redistribute it
 under certain conditions; see the file COPYING for details
 
 JACK compiled with System V SHM support.
+cannot lock down memory for jackd (Cannot allocate memory)
 loading driver ..
 creating alsa driver ... hw:0|hw:0|1024|2|48000|0|0|nomon|swmeter|-|32bit
 control device hw:0
 configuring for 48000Hz, period = 1024 frames (21.3 ms), buffer = 2 periods
-ALSA: final selected sample format for capture: 32bit integer little-endian
+ALSA: final selected sample format for capture: 16bit little-endian
 ALSA: use 2 periods for capture
-ALSA: final selected sample format for playback: 32bit integer little-endian
-ALSA: use 2 periods for playback
-</pre>
+ALSA: final selected sample format for playback: 16bit little-endian
+ALSA: use 2 periods for playback</pre>
 <p>This time it has successfully started so you can now run IDJC.</p>
 
 <h5>Making a simple JACK configuration file</h5>
