@@ -467,14 +467,14 @@ class AGCControl(gtk.Frame):
       ivbox.pack_start(lfcutoff, False, False, 0)
       set_tip(ivbox, _('You can use this to boost the amount of bass in the audio.'))
       
-      # TC: dynamic range compressor.
-      ivbox = self.frame(" " + _('Compressor') + " ", self.processed_box)
+      # TC: lookahead brick wall limiter.
+      ivbox = self.frame(" " + _('Limiter') + " ", self.processed_box)
       micgain = self.numline(_('Boost/Cut (dB)'), "gain", digits=1, adj=micgainadj)
       ivbox.pack_start(micgain, False, False, 0)
       # TC: this is the peak signal limit.
-      limit = self.numline(_('Limit'), "limit", -3.0, -9.0, 0.0, 0.5, 1)
+      limit = self.numline(_('Upper Limit'), "limit", -3.0, -9.0, 0.0, 0.5, 1)
       ivbox.pack_start(limit, False, False, 0)
-      set_tip(ivbox, _('A lookahead brick wall limiter. Use the Ratio control to boost the quieter sounds. The Limit control is used to set the absolute maximum audio level.'))
+      set_tip(ivbox, _('A look-ahead brick-wall limiter. Audio signals are capped at the upper limit.'))
       
       ivbox = self.frame(" " + _('Noise Gate') + " ", self.processed_box)
       # TC: noise gate triggers at this level.
@@ -492,7 +492,7 @@ class AGCControl(gtk.Frame):
       # TC: the de-esser negative gain when the de-esser is active.
       ds_gain = self.numline(_('Gain'), "deessgain", -4.5, -10.0, 0.0, 0.5, 1)
       ivbox.pack_start(ds_gain, False, False, 0)
-      set_tip(ivbox, _('Reduce the S, T, and P sounds which microphones tend to exagerate. Ideally the Bias control will be set so that the de-esser is off when there is silence but is set high enough that mouse clicks are detected and suppressed.'))
+      set_tip(ivbox, _('Reduce the S, T, and P sounds which microphones tend to exaggerate. Ideally the Bias control will be set low so that the de-esser is off when there is silence but is set high enough that mouse clicks are detected and suppressed.'))
       
       ivbox = self.toggle_frame(_('Ducker'), "duckenable", self.processed_box)
       duckrelease = self.numline(_('Release'), "duckrelease", 400.0, 100.0, 999.0, 10.0, 0)

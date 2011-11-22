@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: putidjcinthesubjectline@bethere.co.uk\n"
-"POT-Creation-Date: 2011-10-31 11:35+0000\n"
+"POT-Creation-Date: 2011-11-22 15:22+0000\n"
 "PO-Revision-Date: 2011-11-10 15:00+0100\n"
 "Last-Translator: rmorelli\n"
 "Language-Team: American English <kde-i18n-doc@kde.org>\n"
@@ -2733,20 +2733,20 @@ msgstr ""
 msgid "You can use this to boost the amount of bass in the audio."
 msgstr ""
 
-#. TC: dynamic range compressor.
+#. TC: lookahead brick wall limiter.
 #: python/preferences.py:471
-msgid "Compressor"
+msgid "Limiter"
 msgstr ""
 
 #. TC: this is the peak signal limit.
 #: python/preferences.py:475
-msgid "Limit"
-msgstr ""
+#, fuzzy
+msgid "Upper Limit"
+msgstr "Superiore %"
 
 #: python/preferences.py:477
 msgid ""
-"A lookahead brick wall limiter. Use the Ratio control to boost the quieter "
-"sounds. The Limit control is used to set the absolute maximum audio level."
+"A look-ahead brick-wall limiter. Audio signals are capped at the upper limit."
 msgstr ""
 
 #: python/preferences.py:479
@@ -2781,8 +2781,8 @@ msgstr ""
 
 #: python/preferences.py:495
 msgid ""
-"Reduce the S, T, and P sounds which microphones tend to exagerate. Ideally "
-"the Bias control will be set so that the de-esser is off when there is "
+"Reduce the S, T, and P sounds which microphones tend to exaggerate. Ideally "
+"the Bias control will be set low so that the de-esser is off when there is "
 "silence but is set high enough that mouse clicks are detected and suppressed."
 msgstr ""
 
