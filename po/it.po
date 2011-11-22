@@ -2,13 +2,12 @@
 # This file is distributed under the same license as the PACKAGE package.
 #
 # rmorelli, 2011.
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: putidjcinthesubjectline@bethere.co.uk\n"
-"POT-Creation-Date: 2011-10-31 11:35+0000\n"
-"PO-Revision-Date: 2011-11-10 15:00+0100\n"
+"POT-Creation-Date: 2011-11-22 15:52+0000\n"
+"PO-Revision-Date: 2011-11-22 12:18+0100\n"
 "Last-Translator: rmorelli\n"
 "Language-Team: American English <kde-i18n-doc@kde.org>\n"
 "Language: it\n"
@@ -132,7 +131,7 @@ msgstr "percorso ad un'icona -- di base è il logo di idjc "
 #. TC: Actual profile names are very restricted in what characters can be used.
 #: python/prelims/__init__.py:147
 msgid "nickname"
-msgstr "<i>nickname</i>"
+msgstr "nickname"
 
 #: python/prelims/__init__.py:148
 msgid "the alternate profile name to appear in window title bars"
@@ -287,13 +286,13 @@ msgstr "Non c'è un percorso per una directory in: '%s'"
 
 #: python/prelims/__init__.py:589
 msgid "The default profile"
-msgstr "Il profilo base"
+msgstr "Profilo base"
 
 #. TC: data entry dialog window title text. %s = profile name
 #: python/prelims/profiledialog.py:97
 #, python-format
 msgid "Edit profile %s"
-msgstr "Modifica profilo %s"
+msgstr "Modifica il profilo %s"
 
 #. TC: data entry dialog window title text. %s = profile name
 #: python/prelims/profiledialog.py:100
@@ -331,7 +330,7 @@ msgstr "Descrizione"
 #. TC: column heading. The time a particular profile has been running.
 #: python/prelims/profiledialog.py:290
 msgid "Up-time"
-msgstr "Up-time"
+msgstr "Avviato da"
 
 #: python/prelims/profiledialog.py:304
 msgid "_Auto"
@@ -363,32 +362,22 @@ msgstr ""
 
 #. TC: Tab refers to a GTK notebook widget tab.
 #: python/dialogs.py:173
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "<span weight=\"bold\" size=\"12000\">The connection to the server in tab %s "
 "has failed.</span>\n"
 "A reconnection attempt will be made in %d seconds.\n"
 "This is attempt number {0} of {1}."
 msgstr ""
-"#-#-#-#-#  dialogs.po  #-#-#-#-#\n"
-"<span weight=\"bold\" size=\"12000\">La connessione al server specificato in "
-"%s è fallita.</span>\n"
-"Un tentativo di riconnettersi sarà effettuato tra %d secondi.\n"
-"Questo è i tentativo {0} di {1}.\n"
-"#-#-#-#-#  messages.po  #-#-#-#-#\n"
 "<span weight=\"bold\" size=\"12000\">La connessione al server nella "
 "linguetta %s è fallita.</span>\n"
 "Un tentativo di riconnessione verrà effettuato tra %d secondi.\n"
 "Questo è il tentativo {0} di {1}."
 
 #: python/dialogs.py:223
-#, fuzzy, python-format
+#, python-format
 msgid "This is attempt number %d. There is no retry limit."
-msgstr ""
-"#-#-#-#-#  dialogs.po  #-#-#-#-#\n"
-"Questo è il tentativo numero %d. Non c'è limite fissato per i tentativi.\n"
-"#-#-#-#-#  messages.po  #-#-#-#-#\n"
-"Questo è il tentativo %d. Non ci sono limiti ai tentativi."
+msgstr "Tentativo %d. Non ci sono limiti ai tentativi."
 
 #. TC: Dialog button label _ preceeds accelerator key.
 #. TC: Whatever accelerator is chosen for "Retry Now" must not clash with that of the Cancel button.
@@ -398,34 +387,31 @@ msgstr "_Riprova adesso"
 
 #: python/__init__.py.in.in:81
 msgid "Copyright 2005-2011 Stephen Fairchild and others."
-msgstr ""
+msgstr "Diritti 2005-2011 Stephen Fairchild et al."
 
 #: python/__init__.py.in.in:82
 msgid "Released under the GNU General Public License V2.0 or later."
-msgstr ""
+msgstr "Rilasciato sotto la GNU General Public License V2.0 o successiva."
 
 #. TC: IRC message subcategory, triggers on new track announcements.
 #: python/irc.py:78
 msgid "Track announce"
-msgstr ""
+msgstr "Avviso di traccia"
 
 #. TC: IRC message subcategory, triggered by a timer.
 #: python/irc.py:80
-#, fuzzy
 msgid "Timer"
-msgstr "Tempo"
+msgstr "Cronometro"
 
 #. TC: IRC message subcategory, triggered once when the stream starts.
 #: python/irc.py:82
-#, fuzzy
 msgid "On stream up"
-msgstr " Flusso "
+msgstr "Se il flusso è attivo"
 
 #. TC: IRC message subcategory, triggered once at the stream's end.
 #: python/irc.py:84
-#, fuzzy
 msgid "On stream down"
-msgstr " Flusso "
+msgstr "Se il flusso non è attivo"
 
 #: python/irc.py:91 python/mutagentagger.py:370 python/p3db.py:370
 #: python/p3db.py:452 python/sourceclientgui.py:83
@@ -457,44 +443,42 @@ msgstr "Indirizzo di ascolto (URL)"
 
 #. TC: Popup menu item for a GTK text entry widget.
 #: python/irc.py:137
-#, fuzzy
 msgid "Insert Attribute or Colour Code"
-msgstr "Inserisci attributo"
+msgstr "Inserisci un attributo o un codice colore"
 
 #. TC: Text formatting style.
 #: python/irc.py:164
 msgid "<b>Bold</b>"
-msgstr ""
+msgstr "<b>Grassetto</b>"
 
 #. TC: Text formatting style.
 #: python/irc.py:166
 msgid "<u>Underline</u>"
-msgstr ""
+msgstr "<u>Sottolineato</u>"
 
 #. TC: Text formatting style.
 #: python/irc.py:168
-#, fuzzy
 msgid "Normal"
-msgstr "Formato"
+msgstr "Normale"
 
 #: python/irc.py:171
 msgid "Colours"
-msgstr ""
+msgstr "Colori"
 
 #: python/irc.py:362
 msgid "Optional data entry field for information only."
-msgstr ""
+msgstr "Campo opzionale riservato alle informazioni."
 
 #. TC: Tab heading text.
 #: python/irc.py:366
 msgid "IRC server"
-msgstr ""
+msgstr "Server IRC"
 
 #. TC: Checkbutton label text for server connection to be made using the SSL security protocol.
 #. TC: IRC server settings using SSL protocol.
 #: python/irc.py:375 python/irc.py:943
 msgid "SSL"
-msgstr ""
+msgstr "SSL"
 
 #: python/irc.py:376
 msgid ""
@@ -503,16 +487,20 @@ msgid ""
 "This feature is typically offered on different ports than the standard "
 "connection method and is widespread but not universally available."
 msgstr ""
+"Connetti al server usando il protocollo SSL.\n"
+"\n"
+"Questa funzionalità è disponibile anche su porte diverse dalla standard ed è "
+"piuttosto diffusa nonostante non universalmente disponibile."
 
 #. TC: The IRC network e.g. EFnet.
 #: python/irc.py:403
 msgid "Network"
-msgstr ""
+msgstr "Rete"
 
 #. TC: label for hostname entry.
 #: python/irc.py:405 python/p3db.py:562 python/sourceclientgui.py:190
 msgid "Hostname"
-msgstr "Nome <i>host</i>"
+msgstr "Nome host"
 
 #. TC: TCP/IP port number label.
 #. TC: TCP port number.
@@ -521,9 +509,8 @@ msgid "Port"
 msgstr "Porta"
 
 #: python/irc.py:408
-#, fuzzy
 msgid "User name"
-msgstr "nome_server"
+msgstr "Nome utente"
 
 #: python/irc.py:409 python/p3db.py:582 python/sourceclientgui.py:191
 msgid "Password"
@@ -532,23 +519,22 @@ msgstr "Password"
 #. TC: Second choice of IRC nickname.
 #: python/irc.py:413
 msgid "Second choice"
-msgstr ""
+msgstr "Seconda scelta"
 
 #. TC: Third choice of IRC nickname.
 #: python/irc.py:415
 msgid "Third choice"
-msgstr ""
+msgstr "Terza scelta"
 
 #. TC: The IRC user's 'real' name.
 #: python/irc.py:417
-#, fuzzy
 msgid "Real name"
-msgstr "Nome DJ"
+msgstr "Nome reale"
 
 #. TC: The NickServ password.
 #: python/irc.py:419
 msgid "NickServ p/w"
-msgstr ""
+msgstr "NickServ p/w"
 
 #. TC: Tooltip to IRC 'User name' field.
 #: python/irc.py:424
@@ -556,6 +542,8 @@ msgid ""
 "Ideally set this to something even on servers that allow public anonymous "
 "access."
 msgstr ""
+"Impostate questo campo anche per server che consentono l'accesso pubblico "
+"anonimo."
 
 #. TC: tooltip to all IRC nicknames entry fields.
 #: python/irc.py:433
@@ -565,6 +553,10 @@ msgid ""
 "additional underscore until giving up. This gives IDJC a maximum of nine IRC "
 "nicknames to try."
 msgstr ""
+"Quando un nickname è in uso sulla rete IRC cui connettersi, questi nickname "
+"vengono provati in fase di connessione, poi di nuovo aggiungendo un trattino "
+"basso in coda fino a smettere. Questo fornisce a IDJC un massimo di nove "
+"nickname da provare."
 
 #: python/irc.py:434
 msgid ""
@@ -573,6 +565,10 @@ msgid ""
 "\n"
 "Ideally set this to something."
 msgstr ""
+"Il nome reale che volete utilizzare e che sarà sempre disponibile a "
+"prescindere da quale nickname viene utilizzato.\n"
+"\n"
+"Dovreste impostarlo."
 
 #: python/irc.py:435
 msgid ""
@@ -582,23 +578,27 @@ msgid ""
 "The use of the NickServ service requires prior nickname registration on the "
 "network using a regular chat client."
 msgstr ""
+"Se questo valore è impostato verrà effettuato un tentativo di acquisire il "
+"vostro primo nickname IRC (se necessario) ed accedere in NickServ@services.\n"
+"\n"
+"L'utilizzo del servizio NickServ necessista la preventiva registrazione del "
+"nickname sulla rete utilizzando un client regolare."
 
 #: python/irc.py:458
-#, fuzzy
 msgid ""
 "<span weight='bold' size='12000'>Permanently delete this server?</span>\n"
 "\n"
 "This action will also erase all of its associated messages."
 msgstr ""
-"<span weight='bold' size='12000'>Eliminare i dati del profilo '%s'?</span>\n"
+"<span weight='bold' size='12000'>Eliminare il server in modo permanente?</"
+"span>\n"
 "\n"
-"Il profilo sarà disponibile con le impostazioni iniziali"
+"Questa azione eliminerà anche tutti i messaggi associati"
 
 #. TC: Dialog window data text entry label. Used for message routing to channels and or users.
 #: python/irc.py:500
-#, fuzzy
 msgid "Channels/Users"
-msgstr "Canali"
+msgstr "Canali/Utenti"
 
 #: python/irc.py:504
 msgid ""
@@ -608,11 +608,16 @@ msgid ""
 "Protected channels are included with the form:\n"
 "#channel:keyword."
 msgstr ""
+"La lista di canali e/o utenti, separati da virgola o spazio, ai quali verrà "
+"inviato il messaggio.\n"
+"\n"
+"I canali protetti sono inclusi nella forma:\n"
+"#canale:parolachiave"
 
 #. TC: Message text to send to an IRC channel. Widget label.
 #: python/irc.py:509
 msgid "Message"
-msgstr ""
+msgstr "Messaggio"
 
 #: python/irc.py:513
 msgid ""
@@ -623,15 +628,21 @@ msgid ""
 "\n"
 "The window below displays how the message will appear to users of XChat."
 msgstr ""
+"Il messaggio da inviare.\n"
+"\n"
+"Sulla finestra di pop-up (clic con il tasto destro del mouse) ci sono alcune "
+"opzioni utili per includere i metadati e per la formattazione del testo.\n"
+"\n"
+"La finestra in basso mostra il messaggio così come apparirà agli utenti di "
+"XChat."
 
 #. TC: Dialog window title text.
 #: python/irc.py:578
 msgid "IRC track announce"
-msgstr ""
+msgstr "Annuncio traccia IRC"
 
 #. TC: Spinbutton label for a delay value.
 #: python/irc.py:585
-#, fuzzy
 msgid "Delay"
 msgstr "Ritardo"
 
@@ -647,21 +658,30 @@ msgid ""
 "\n"
 "This setting will help synchronise the track change with the message."
 msgstr ""
+"Il ritardo del messaggio.\n"
+"\n"
+"Tipicamente i client degli ascoltatori memorizzeranno circa dieci secondi di "
+"audio il che vuol dire che ascolteranno il flusso con lo stesso ritardo, "
+"quindi senza un ritardo il messaggi IRC apparirebbero all'ascoltatore "
+"altrettanti secondi in anticipo rispetto all'audio.\n"
+"\n"
+"Questa impostazione consente di sincronizzare il cambio di traccia con il "
+"messaggio."
 
 #. TC: Dialog window title text.
 #: python/irc.py:612
 msgid "IRC timed message"
-msgstr ""
+msgstr "Messaggio a tempo IRC"
 
 #. TC: Spinbutton label for a value to schedule messages with respect to some particular interval elsewhere defined.
 #: python/irc.py:621
 msgid "Offset"
-msgstr ""
+msgstr "Sfasamento"
 
 #. TC: Spinbutton label for a timed interval between repetition of messages.
 #: python/irc.py:623
 msgid "Interval"
-msgstr ""
+msgstr "Intervallo"
 
 #. TC: spinbutton tooltip
 #: python/irc.py:626
@@ -669,31 +689,32 @@ msgid ""
 "The time offset within the below specified interval at which the message "
 "will be issued."
 msgstr ""
+"Lo sfasamento con l'intervallo specificato qui sotto con cui il messaggio "
+"verrà recapitato."
 
 #. TC: spinbutton tooltip
 #: python/irc.py:628
 msgid "The interval in seconds of the timed message."
-msgstr ""
+msgstr "L'intervallo in secondi del messaggio temporizzato"
 
 #: python/irc.py:862
 msgid "This feature requires the installation of python-irclib."
-msgstr ""
+msgstr "Questa funzionalità necessita dell'installazione di python-irclib"
 
 #. TC: Appears on message entry dialog title bar for messages to show when stream goes active.
 #: python/irc.py:969
 msgid "IRC stream up message"
-msgstr ""
+msgstr "Messaggio di in onda di IRC"
 
 #. TC: Appears on message entry dialog title bar for messages to show when stream goes inactive.
 #: python/irc.py:971
 msgid "IRC stream down message"
-msgstr ""
+msgstr "Messaggio di fuori onda IRC"
 
 #. TC: Window title.
 #: python/jingles.py:348
-#, fuzzy
 msgid "IDJC Jingles"
-msgstr "Stacchetti"
+msgstr "Stacchetti IDJC"
 
 #: python/jingles.py:383
 msgid ""
@@ -701,25 +722,29 @@ msgid ""
 "jingle highlighted in the catalogue. The volume level of the main media "
 "players will be reduced somewhat during playback."
 msgstr ""
+"Suona la sequenza degli stacchetti specificata sopra oppure lo stacchetto "
+"selezionato nel catalogo. Il volume dei lettori principali verrà ridotto "
+"durante la riproduzione"
 
 #: python/jingles.py:393
 msgid "Stop all jingles playback."
-msgstr ""
+msgstr "Interrompi la riproduzione di tutti gli stacchetti."
 
 #: python/jingles.py:406
 msgid ""
 "This button works the same as the button to the left does except that the "
 "sound level of all the other media players is fully reduced."
 msgstr ""
+"Questo pulsante agisce come il pulsante alla sinistra ma il livello di dei "
+"lettori verrà completamente diminuito durante la riproduzione"
 
 #: python/jingles.py:410
 msgid "Sound Level"
-msgstr ""
+msgstr "Livello del suono"
 
 #: python/jingles.py:431
-#, fuzzy
 msgid "Player Muting"
-msgstr "Ferma lettore"
+msgstr "Silenzia lettore"
 
 #. TC: {0}, {1} = Monitor Mix, Stream.
 #. TC: Or whatever they become translated to.
@@ -728,7 +753,7 @@ msgstr "Ferma lettore"
 #: python/jingles.py:467 python/jingles.py:483 python/maingui.py:2760
 #: python/maingui.py:2762 python/maingui.py:2789
 msgid "Monitor Mix"
-msgstr "Controlla il Mix"
+msgstr "Monitoraggio Mix"
 
 #. TC: IDJC creates two audio mixes with Stream being the name of one of them.
 #. TC: The Stream mix is the one the listeners hear.
@@ -750,6 +775,10 @@ msgid ""
 "media players are not active. The '{0}' feature needs to be set to '{1}' if "
 "you want to be able to hear it."
 msgstr ""
+"Se cliccate questo pulsante lo stacchetto o la traccia selezionata nel "
+"catalogo verrà riprodotta in ciclo continuo e sarà udibile nei momenti in "
+"cui i lettori principali sono spenti. L'opzione '{0}' deve essere impostata "
+"su '{1}' se volete essre in grado di ascoltarlo."
 
 #. TC: For context {0} and {1} refer to Monitor Mix and Stream.
 #. TC: They are extracted to force consistency.
@@ -759,19 +788,21 @@ msgid ""
 "media players are not active. It is only audible to the DJ when '{0}' in the "
 "main application window is set to '{1}'."
 msgstr ""
+"Regola il volume della musica ogni volta che gli altri lettori non sono "
+"attivi. E' udibile al DJ solo se '{0}' nella finestra principale è impostato "
+"su '{1}'"
 
 #. TC: {0}, {1} = Add To Jingles, Item.
 #. TC: Or whatever they get translated to.
 #. TC: Menu Item. The selected track is copied to the jingles catalogue.
 #: python/jingles.py:525 python/playergui.py:3830
-#, fuzzy
 msgid "Add To Jingles"
-msgstr "Stacchetti"
+msgstr "Aggiungi agli stacchetti"
 
 #. TC: The Item submenu.
 #: python/jingles.py:525 python/playergui.py:3711
 msgid "Item"
-msgstr ""
+msgstr "Elemento"
 
 #. TC: {0}, {1} = Add To Jingles, Item.
 #. TC: Or whatever they get translated to.
@@ -785,10 +816,17 @@ msgid ""
 "The jingles catalogue can also be managed by modifying the contents of the "
 "'{2}' directory directly."
 msgstr ""
+"Il catalogo degli stacchetti.\n"
+"\n"
+"Da un lettore principale le tracce possono essere esportate cliccando col il "
+"destro sulla traccia nella playlist e scegliendo {0} dal sottomenù {1}.\n"
+"\n"
+"Il catalogo degli stacchetti può essere gestito anche modificando "
+"direttamente i contenuti della cartella '{2}'."
 
 #: python/jingles.py:534
 msgid "Sequence"
-msgstr ""
+msgstr "Sequenza"
 
 #: python/jingles.py:544
 msgid ""
@@ -796,6 +834,9 @@ msgid ""
 "index number as part of a comma separated list, or double click entries in "
 "the catalogue to append them."
 msgstr ""
+"Seleziona più stacchetti da riprodurre in sequenza inserendo il numero "
+"d'ordine in forma di una lista di numeri separata da virgole oppure facendo "
+"doppio clic negli elementi del catalogo per appenderli in coda."
 
 #: python/jingles.py:555
 #, python-format
@@ -803,6 +844,9 @@ msgid ""
 "Cause the jingles catalogue to be refreshed. This is for when items have "
 "been added or removed from the jingles directory located at '%s'."
 msgstr ""
+"Provoca l'aggiornamento del catalogo degli stacchetti. Questo è per quando "
+"gli elementi sono stati aggiunti o rimossi dalla cartella degli stacchetti "
+"in '%s'."
 
 #: python/maingui.py:264
 msgid "Text"
@@ -821,19 +865,18 @@ msgid "The opener button's icon."
 msgstr "L'iconda del pulsante di apertura."
 
 #: python/maingui.py:291
-#, fuzzy
 msgid ""
 "The headroom is the amount by which to reduce player volume when this opener "
 "is active. Note that the actual amount will be the largest value of all the "
 "currently open buttons."
 msgstr ""
-"L'<i>headroom</i> è la riduzione in dB da applicare al volume del lettore "
-"quando questo <i>opener</i> è attivo. Notare che la riduzione attuale sarà "
-"il valore più alto tra tutti i pulsanti aperti."
+"L'headroom è la riduzione in dB da applicare al volume del lettore quando "
+"questo opener è attivo. Notare che la riduzione attuale sarà il valore più "
+"alto tra tutti i pulsanti aperti."
 
 #: python/maingui.py:293
 msgid "The amount of headroom required (dB)"
-msgstr "La quantità di <i>headroom</i> richiesta (dB)"
+msgstr "La quantità di headroom richiesta (dB)"
 
 #: python/maingui.py:300
 msgid "This button will flash as a reminder to close"
@@ -855,13 +898,15 @@ msgid "This button is to be treated as a microphone opener"
 msgstr "Questo apre il microfono"
 
 #: python/maingui.py:305
-#, fuzzy
 msgid ""
 "The button will be grouped with the other microphone opener buttons. It will "
 "be affected by signals to close microphone buttons. Channels associated with "
 "this button will be mixed differently when using the VoIP modes."
 msgstr ""
 "Questo pulsante sarà raggruppato insieme ai pulsanti degli altri microfoni. "
+"Sarà agito dai segnali per spegnere i microfoni. I canali associati con "
+"questo pulsante saranno missati in modo diverso quando vengono usate le "
+"modalità VoIP."
 
 #: python/maingui.py:309
 msgid "Button Open Triggers"
@@ -869,7 +914,7 @@ msgstr ""
 
 #: python/maingui.py:315
 msgid "Playlist advance button"
-msgstr ""
+msgstr "Playlist pulsante avanzamento"
 
 #: python/maingui.py:316 python/maingui.py:317
 #, python-format
@@ -891,9 +936,8 @@ msgid "Announcements"
 msgstr "Annunci"
 
 #: python/maingui.py:330
-#, python-format
-msgid " %s "
-msgstr "%s"
+msgid "When opened close these other buttons"
+msgstr ""
 
 #: python/maingui.py:341
 msgid "Shell Command"
@@ -908,24 +952,23 @@ msgstr ""
 
 #: python/maingui.py:361
 msgid "On open"
-msgstr "All'apertura"
+msgstr "Esegui dopo l'avvio"
 
 #: python/maingui.py:362
 msgid "On close"
-msgstr "Alla chiusura"
+msgstr "Esegui dopo la chiusura"
 
 #: python/maingui.py:404
 msgid "Main Panel Opener Buttons"
-msgstr ""
+msgstr "Pulsanti di apertura del pannello principale"
 
 #: python/maingui.py:415
 msgid "Indicate button numbers and associated channel numbers"
 msgstr "Indica i numeri dei pulsanti ed associa i numeri al canale"
 
 #: python/maingui.py:416
-#, fuzzy
 msgid "A useful feature to have switched on while allocating channel openers."
-msgstr "Una funzionalità utile da attivare mentre si "
+msgstr "Una funzionalità utile da attivare mentre si allocano i canali"
 
 #: python/maingui.py:420
 msgid "Status Indicator Appearance"
@@ -936,6 +979,8 @@ msgid ""
 "Each opener button has two vertical bars at the side to make the button "
 "state more apparent. These settings control their appearance."
 msgstr ""
+"Ogni pulsante di abilitazione ha due barre verticali ai lati per renderne "
+"chiaro lo stato. Queste impostazioni ne controllano la grafica."
 
 #: python/maingui.py:428
 msgid "Width"
@@ -957,7 +1002,7 @@ msgstr "Ricorda"
 #. TC: If the user is reading this text then all microphones have been deactivated.
 #: python/maingui.py:616
 msgid "No Channel Opener Buttons"
-msgstr ""
+msgstr "Nessun canale da abilitare"
 
 #: python/maingui.py:966
 msgid ""
@@ -968,7 +1013,7 @@ msgid ""
 msgstr ""
 "Indica lo stato dei vari flussi. Il lampeggiamento indica che i pacchetti "
 "del flusso vengono scartati perché la rete è congestionata. Un rosso "
-"parziale indica che il <i>buffer</i> di invio è parzialmente pieno, ovvero "
+"parziale indica che il buffer di invio è parzialmente pieno, ovvero "
 "difficoltà di comunicazione con il server. Verde indica che tutto è a posto."
 
 #: python/maingui.py:984
@@ -1088,7 +1133,7 @@ msgstr "Profili"
 
 #: python/maingui.py:2548
 msgid "Mix voice over IP audio to the output stream."
-msgstr "Missa l'audio del VoIP con il flusso in uscita"
+msgstr "Manda in onda l'audio del VoIP"
 
 #: python/maingui.py:2560
 msgid "Mix voice over IP audio to the DJ only."
@@ -1099,10 +1144,12 @@ msgid ""
 "This button steps through the active playlist, pausing between tracks. The "
 "active playlist is defined by the placement of the crossfader."
 msgstr ""
+"Questo pulsante scorre la playlist attiva facendo una pausa tra le tracce. "
+"La playlist attiva è definita dal posizionamento del crossfader"
 
 #: python/maingui.py:2634 python/preferences.py:819
 msgid "The volume control shared by both music players."
-msgstr "Il controllo del volume, condiviso da entrambi i lettori."
+msgstr "Il controllo del volume per entrambi i lettori"
 
 #: python/maingui.py:2644
 msgid "The volume control for the right music player."
@@ -1131,6 +1178,10 @@ msgid ""
 "including the effects of the crossfader. '{0}' needs to be set to '{2}' in "
 "order to make proper use of the VoIP features."
 msgstr ""
+"In IDJC ci sono due percorsi per l'audio e questo '{0}' controllo passa "
+"dall'uno all'altro. Se '{1}' è attivo ascolterete quello che sentono gli "
+"ascoltatori, inclusi gli effetti della dissolvenza. '{0}' deve essere "
+"impostato su '{2}' per utilizzare al meglio le funzionalità VoIP"
 
 #. TC: Dropdown box title text. Track metadata is derived from the source selected by a drop down box.
 #: python/maingui.py:2798 python/maingui.py:2800
@@ -1161,11 +1212,11 @@ msgstr "Crossfader"
 #. TC: Fade time is zero. No fade, none.
 #: python/maingui.py:2814 python/playergui.py:3662
 msgid "None"
-msgstr "Niente"
+msgstr "Nessuna"
 
 #: python/maingui.py:2818
 msgid "Select which Deck is responsible for the metadata on the stream."
-msgstr ""
+msgstr "Seleziona quale Deck è responsabile dei metadati del flusso"
 
 #. TC: Abbreviation of left.
 #: python/maingui.py:2828 python/maingui.py:2830 python/preferences.py:373
@@ -1174,11 +1225,11 @@ msgstr "L"
 
 #: python/maingui.py:2839
 msgid "Move the crossfader fully left."
-msgstr "Sposta completamente il <i>crossfader</i> a sinistra"
+msgstr "Sposta il crossfader a sinistra"
 
 #: python/maingui.py:2859
 msgid "The crossfader."
-msgstr "Il <i>crossfader</i>"
+msgstr "Il crossfader"
 
 #. TC: Abbreviation of right.
 #: python/maingui.py:2863 python/maingui.py:2865 python/preferences.py:383
@@ -1187,7 +1238,7 @@ msgstr "R"
 
 #: python/maingui.py:2874
 msgid "Move the crossfader fully right."
-msgstr "Sposta completamente il <i>crossfader</i> a destra"
+msgstr "Sposta il crossfader a destra"
 
 #. TC: Describes a mid point.
 #: python/maingui.py:2883 python/maingui.py:2885
@@ -1196,7 +1247,7 @@ msgstr "Mezzo/Metà"
 
 #: python/maingui.py:2900 python/maingui.py:2905
 msgid "Move the crossfader to the middle of its range of travel."
-msgstr "Sposta il <i>crossfader</i> a metà della corsa"
+msgstr "Sposta il crossfader a metà della corsa"
 
 #. TC: The attenuation response curve of the crossfader. User selectable.
 #: python/maingui.py:2910 python/maingui.py:2912
@@ -1208,7 +1259,7 @@ msgid ""
 "This selects the response curve of the crossfader.\n"
 "\n"
 "The mid-point attenuations are -3dB, 0dB, and -22dB respectively."
-msgstr "Consente di selezionare la curva di risposta del <i>crossfader</i>"
+msgstr "Consente di selezionare la curva di risposta del crossfader"
 
 #. TC: The time taken for a full sweep of the crossfader when the user hits the crossfader pass button.
 #: python/maingui.py:2943 python/maingui.py:2945
@@ -1226,24 +1277,26 @@ msgstr ""
 #. TC: The crossfader pass-across button text. The actual button appears as [<-->] with this text above it.
 #: python/maingui.py:2969 python/maingui.py:2971
 msgid "Pass"
-msgstr ""
+msgstr "Avvia"
 
 #: python/maingui.py:2984
 msgid ""
 "This button causes the crossfader to move to the opposite side at a speed "
 "determined by the speed selector to the left."
 msgstr ""
-"Questo pulsante fa sì che il crossfader si sposti alla parte opposta alla "
-"velocità determinata dal selettore di velocità sulla sinistra."
+"Questo pulsante muove il crossfader fino alla parte opposta nel lasso di "
+"tempo specificato qui a sinistra"
 
 #. TC: This text appears above the stream mix peak level meter.
 #: python/maingui.py:3024
 msgid "Str Peak"
-msgstr ""
+msgstr "Str Peak"
 
 #: python/maingui.py:3027
 msgid "A peak hold meter indicating the signal strength of the stream audio."
 msgstr ""
+"Un indicatore a tenuta di picco che indica la potenza del segnale audio "
+"trasmesso."
 
 #: python/maingui.py:3033
 msgid "Streams"
@@ -1252,16 +1305,16 @@ msgstr "Flussi"
 #. TC: This text appears above the stream mix VU meter.
 #: python/maingui.py:3046
 msgid "Str VU"
-msgstr ""
+msgstr "Trasm VU"
 
 #: python/maingui.py:3049
 msgid "A VU meter for the stream audio."
-msgstr "Un indicatore VU per il flusso audio."
+msgstr "Indicatore VU per il flusso audio"
 
 #. TC: Appears above the mic meters as a label followed by a number.
 #: python/maingui.py:3052
 msgid "Ch"
-msgstr ""
+msgstr "Can"
 
 #: python/maingui.py:3078
 msgid ""
@@ -1270,6 +1323,10 @@ msgid ""
 "Green indicates attenuation from the noise gate, yellow from the de-esser, "
 "red from the limiter."
 msgstr ""
+"Un indicatore a tenuta di picco che indica la potenza del segnale e uno  che "
+"indica l'attenuazione del livello del microfono da parte dell'elaboratore di "
+"segnale. Il verde indica l'attenuazione del noise gate, il giallo del de-"
+"esser. Il rosso del limiter."
 
 #. TC: Menu item to show the standard application "About" feature.
 #: python/maingui.py:3089 python/preferences.py:1604
@@ -1306,264 +1363,249 @@ msgstr "Tutte le funzionalità"
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:47
 msgid "Prefs enable tooltips"
-msgstr ""
+msgstr "Preferenze abilita suggerimenti"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:50
 msgid "Player play/pause"
-msgstr ""
+msgstr "Lettore riproduci/pausa"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #. TC: Playlist control.
 #: python/midicontrols.py:52 python/playergui.py:3224
-#, fuzzy
 msgid "Player stop"
 msgstr "Ferma lettore"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:54
 msgid "Player advance"
-msgstr ""
+msgstr "Lettore avanza"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:56
 msgid "Player play previous"
-msgstr ""
+msgstr "Lettore suona la precedente"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:58
-#, fuzzy
 msgid "Player play next"
-msgstr "Ferma lettore 2"
+msgstr "Suona la prossima"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:60
 msgid "Player play selected from start"
-msgstr ""
+msgstr "Lettore suona la selezione dall'inizio"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:62
 msgid "Player select previous"
-msgstr ""
+msgstr "Lettore seleziona la precedente"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:64
 msgid "Player select next"
-msgstr ""
+msgstr "Lettore seleziona la successiva"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:66
 msgid "Player stream output enable"
-msgstr ""
+msgstr "Lettore abilita il flusso"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:68
 msgid "Player DJ output enable"
-msgstr ""
+msgstr "Lettore abilita l'uscita DJ"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:70
 msgid "Player DJ-only switch"
-msgstr ""
+msgstr "Lettore solo al DJ "
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:72
-#, fuzzy
 msgid "Player set volume"
-msgstr "Ferma lettore"
+msgstr "Imposta il volume del lettore"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:74
-#, fuzzy
 msgid "Player set gain"
-msgstr "Ferma lettore 2"
+msgstr "Imposta il gain"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:76
 msgid "Player set balance"
-msgstr ""
+msgstr "Lettore imposta il bilanciamento"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:78
 msgid "Player set pitchbend"
-msgstr ""
+msgstr "Lettore imposta variazione tono"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:81
-#, fuzzy
 msgid "Playlist edit tags"
-msgstr "Modalità playlist"
+msgstr "Modifica i tag nella playlist"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:83
-#, fuzzy
 msgid "Playlist insert stop"
-msgstr "Ferma lettore"
+msgstr "Playlist inserisci stop"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:85
-#, fuzzy
 msgid "Playlist insert stop 2"
-msgstr "Ferma lettore 2"
+msgstr "Playlist inserisci stop 2"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:87
 msgid "Playlist insert announce"
-msgstr ""
+msgstr "Lettore inserisci annuncio"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:89
 msgid "Playlist insert transfer"
-msgstr ""
+msgstr "Lettore inserisci trasferimento"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:91
-#, fuzzy
 msgid "Playlist insert crossfade"
-msgstr "Modalità playlist"
+msgstr "Playlist inserisci dissolvenza"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:93
 msgid "Playlist insert pitchunbend"
-msgstr ""
+msgstr "Playlist inserisci abbassamento tono"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:95
 msgid "Playlist insert jump to top"
-msgstr ""
+msgstr "Playlist inserisci salto all'inizio"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:98
-#, fuzzy
 msgid "Players set crossfade"
-msgstr "Il <i>crossfader</i>"
+msgstr "Lettori imposta dissolvenza"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:100
 msgid "Players pass crossfade"
-msgstr ""
+msgstr "Lettori supera dissolvenza"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:102
-#, fuzzy
 msgid "Players set focus"
-msgstr "Ferma lettore"
+msgstr "Lettori imposta focus"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:104
 msgid "Players show pitchbend"
-msgstr ""
+msgstr "Lettori mostra alzamento tono"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:107
 msgid "Channel output enable"
-msgstr ""
+msgstr "Canale abilita l'uscita"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:109
-#, fuzzy
 msgid "Channel set volume"
-msgstr "Canali"
+msgstr "Canale imposta volume"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:111
-#, fuzzy
 msgid "Channel set gain"
-msgstr "Canali"
+msgstr "Canale imposta guadagno"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:113
 msgid "Channel set balance"
-msgstr ""
+msgstr "Canale imposta bilanciameno"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:116
 msgid "VoIP output enable"
-msgstr ""
+msgstr "VoIP abilita l'uscita"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:118
 msgid "VoIP DJ-only switch"
-msgstr ""
+msgstr "VoIP solo al DJ"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:120
 msgid "VoIP set volume"
-msgstr ""
+msgstr "VoIP imposta volume"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:122
 msgid "VoIP set gain"
-msgstr ""
+msgstr "VoIP imposta guadagno"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:124
 msgid "VoIP set balance"
-msgstr ""
+msgstr "VoIP imposta il bilanciamento"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:127
 msgid "Jingle play from start"
-msgstr ""
+msgstr "Stacchetto suona dall'inizio"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:130
 msgid "Jingles play/stop 1"
-msgstr ""
+msgstr "Stacchetti avvia/interrompi 1"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:132
 msgid "Jingles play/stop 2"
-msgstr ""
+msgstr "Stacchetti avvia/interrompi 2"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:134
 msgid "Jingles select previous"
-msgstr ""
+msgstr "Stacchetti seleziona il precedente"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:136
 msgid "Jingles select next"
-msgstr ""
+msgstr "Stacchetti seleziona il successivo"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:138
 msgid "Jingles play selected from start"
-msgstr ""
+msgstr "Stacchetti riproduci selezione dall'inizio"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:140
 msgid "Jingles set jingles volume 1"
-msgstr ""
+msgstr "Stacchetti imposta volume stacchetti 1"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:142
 msgid "Jingles set jingles volume 2"
-msgstr ""
+msgstr "Stacchetti imposta volume stacchetti 2"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:144
 msgid "Jingles set interlude volume"
-msgstr ""
+msgstr "Stacchetti imposta volume interludio"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:147
-#, fuzzy
 msgid "Stream set connected"
-msgstr "Se connesso"
+msgstr "Flusso imposta connessione"
 
 #. TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
 #: python/midicontrols.py:150
-#, fuzzy
 msgid "Recorder set recording"
-msgstr "Metti in pausa"
+msgstr "Registratore imposta registrazione"
 
 #. TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
 #. TC: binding editor, action pane, first row, toplevel menu.
 #: python/midicontrols.py:155 python/midicontrols.py:1214
-#, fuzzy
 msgid "Player"
-msgstr "Ferma lettore"
+msgstr "Lettore"
 
 #. TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
 #. TC: binding editor, action pane, first row, toplevel menu.
@@ -1571,114 +1613,103 @@ msgstr "Ferma lettore"
 #. TC: Specifically, the numerical midi channel.
 #: python/midicontrols.py:157 python/midicontrols.py:1218
 #: python/midicontrols.py:1285 python/midicontrols.py:1470
-#, fuzzy
 msgid "Channel"
-msgstr "Canali"
+msgstr "Canale"
 
 #. TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
 #: python/midicontrols.py:159
-#, fuzzy
 msgid "Jingle"
-msgstr "Stacchetti"
+msgstr "Stacchetto"
 
 #. TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
 #: python/midicontrols.py:163
-#, fuzzy
 msgid "Recorder"
-msgstr "Registra"
+msgstr "Registratore"
 
 #. TC: This text represents a specific user interface target.
 #: python/midicontrols.py:168
-#, fuzzy
 msgid "Left player"
 msgstr "Lettore sinistro"
 
 #. TC: This text represents a specific user interface target.
 #: python/midicontrols.py:170
-#, fuzzy
 msgid "Right player"
 msgstr "Lettore destro"
 
 #. TC: This text represents a specific user interface target.
 #: python/midicontrols.py:172
 msgid "Focused player"
-msgstr ""
+msgstr "Lettore attivo"
 
 #. TC: This text represents a specific user interface target.
 #: python/midicontrols.py:174
-#, fuzzy
 msgid "Fadered player"
-msgstr "Lettore iniziale"
+msgstr "Lettore inattivo"
 
 #. TC: The name of the backspace key.
 #: python/midicontrols.py:403
 msgid "BackSpace"
-msgstr ""
+msgstr "BackSpace"
 
 #. TC: binding editor, action pane, third row, heading text.
 #: python/midicontrols.py:1190
 msgid "Use value"
-msgstr ""
+msgstr "Usa valore"
 
 #. TC: binding editor, action pane, third row, heading text.
 #: python/midicontrols.py:1192
 msgid "Act if"
-msgstr ""
+msgstr "Agisci se"
 
 #. TC: binding editor, action pane, third row, heading text.
 #: python/midicontrols.py:1194
 msgid "Set to"
-msgstr ""
+msgstr "Imposta a"
 
 #. TC: binding editor, action pane, third row, heading text.
 #: python/midicontrols.py:1196
 msgid "Adjust by"
-msgstr ""
+msgstr "Regola di"
 
 #. TC: binding editor, input pane, fourth row, heading text.
 #: python/midicontrols.py:1201 python/midicontrols.py:1205
-#, fuzzy
 msgid "Control"
-msgstr "Controlli di gruppo"
+msgstr "Controllo"
 
 #. TC: binding editor, input pane, fourth row, heading text.
 #: python/midicontrols.py:1203
 msgid "Note"
-msgstr ""
+msgstr "Nota"
 
 #. TC: binding editor, input pane, fourth row, heading text.
 #: python/midicontrols.py:1207
 msgid "Key"
-msgstr ""
+msgstr "Tasto"
 
 #. TC: binding editor, action pane, first row, toplevel menu.
 #: python/midicontrols.py:1216
-#, fuzzy
 msgid "Both players"
-msgstr "Lettore iniziale"
+msgstr "Entrambi i lettori"
 
 #. TC: binding editor, action pane, first row, toplevel menu.
 #: python/midicontrols.py:1220
-#, fuzzy
 msgid "VoIP channel"
-msgstr "Canali"
+msgstr "Canale VoIP"
 
 #. TC: binding editor, action pane, first row, toplevel menu.
 #: python/midicontrols.py:1222
 msgid "Single jingle"
-msgstr ""
+msgstr "Stacchetto singolo"
 
 #. TC: binding editor, action pane, first row, toplevel menu.
 #: python/midicontrols.py:1224
-#, fuzzy
 msgid "Jingle player"
-msgstr "Lettore destro"
+msgstr "Stacchetto lettore"
 
 #. TC: binding editor, action pane, first row, toplevel menu.
 #: python/midicontrols.py:1228
-#, fuzzy
 msgid "Stream recorder"
-msgstr "Avvia il registratore"
+msgstr "Flusso registratore "
 
 #. TC: binding editor, action pane, second row, dropdown text.
 #: python/midicontrols.py:1233
@@ -1693,23 +1724,22 @@ msgstr ""
 #. TC: binding editor, action pane, second row, dropdown text.
 #: python/midicontrols.py:1237
 msgid "Set value"
-msgstr ""
+msgstr "Imposta valore"
 
 #. TC: binding editor, action pane, second row, dropdown text.
 #: python/midicontrols.py:1239
 msgid "Alter value"
-msgstr ""
+msgstr "Altera valore"
 
 #. TC: binding editor, input pane, second row, dropdown text.
 #: python/midicontrols.py:1244
-#, fuzzy
 msgid "MIDI control"
-msgstr "controllo '%s'"
+msgstr "MIDI controllo"
 
 #. TC: binding editor, input pane, second row, dropdown text.
 #: python/midicontrols.py:1246
 msgid "MIDI note"
-msgstr ""
+msgstr "Nota MIDI"
 
 #. TC: binding editor, input pane, second row, dropdown text.
 #: python/midicontrols.py:1248
@@ -1719,19 +1749,18 @@ msgstr ""
 #. TC: binding editor, input pane, second row, dropdown text.
 #: python/midicontrols.py:1250
 msgid "Keyboard press"
-msgstr ""
+msgstr "Azione da tastiera"
 
 #. TC: binding editor, input pane, second row, dropdown text. Not implemented.
 #: python/midicontrols.py:1252
-#, fuzzy
 msgid "XChat command"
-msgstr "il comando di base"
+msgstr "XChat comando"
 
 #. TC: Dialog window title text.
 #. TC: User is expected to edit a control binding.
 #: python/midicontrols.py:1261
 msgid "Edit control binding"
-msgstr ""
+msgstr "Modifica le scorciatoie per i controlli"
 
 #. TC: After clicking this button the binding editor will be listening for an input
 #. TC: this could be a key press or a settings change from a midi control surface.
@@ -1739,25 +1768,24 @@ msgstr ""
 #: python/midicontrols.py:1275 python/midicontrols.py:1350
 #: python/midicontrols.py:1449
 msgid "Listen for input..."
-msgstr ""
+msgstr "In attesa di input"
 
 #. TC: Refers to the class of control input, the keyboard or some type of midi event.
 #: python/midicontrols.py:1282
 msgid "Source"
-msgstr ""
+msgstr "Fonte"
 
 #. TC: Heading for interaction type e.g. one-shot, set value, alter value.
 #. TC: Basically, the information from the controls can be used in different ways.
 #: python/midicontrols.py:1302
-#, fuzzy
 msgid "Interaction"
-msgstr "Connessione"
+msgstr "Interazione"
 
 #. TC: The effect of the control can be directed upon a specific target.
 #. TC: e.g. On target [Left player]
 #: python/midicontrols.py:1308
 msgid "On target"
-msgstr ""
+msgstr "Obiettivo"
 
 #. TC: Checkbutton text.
 #. TC: Use reverse scale and invert the meaning of button presses.
@@ -1768,17 +1796,17 @@ msgstr "Mai"
 
 #: python/midicontrols.py:1317
 msgid "Pressed"
-msgstr ""
+msgstr "Premuto"
 
 #: python/midicontrols.py:1318
 msgid "Released"
-msgstr ""
+msgstr "Rilasciato"
 
 #. TC: Frame heading. Contents pertain to a specific input source and type.
 #. TC: Tree column heading for Inputs e.g. Backspace, F1, S.
 #: python/midicontrols.py:1346 python/midicontrols.py:1692
 msgid "Input"
-msgstr ""
+msgstr "Ingresso"
 
 #: python/midicontrols.py:1350
 #, python-format
@@ -1788,32 +1816,37 @@ msgid ""
 "\n"
 "Input selection can be done manually or with the help of the '%s' option."
 msgstr ""
+"La prima metà di un binding è l'input che proviene nella forma di un tasto "
+"premuto della tastiera o di un evento di un dispositivo midi.\n"
+"\n"
+"La selezione dell'input può essere fatta manualmente o con l'ausilio "
+"dell'opzione '%s'."
 
 #. TC: Frame heading. Contents pertain to what action occurs for a specific input.
 #. TC: %s is the translation of 'Action'.
 #. TC: Tree column heading for actions e.g. Player stop.
 #: python/midicontrols.py:1382 python/midicontrols.py:1387
 #: python/midicontrols.py:1706
-#, fuzzy
 msgid "Action"
-msgstr "Connessione"
+msgstr "Azione"
 
 #. TC: %s is the translation of 'Action'.
 #: python/midicontrols.py:1387
 #, python-format
 msgid "The '%s' pane determines how the input is handled, and to what effect."
 msgstr ""
+"Il pannello '%s' determina come viene gestito l'ingresso e con quale effetto."
 
 #. TC: The binding editor will capture then next keyboard or midi event
 #. TC: for use in making the settings in the 'Input' pane.
 #: python/midicontrols.py:1445
 msgid "Listening for input"
-msgstr ""
+msgstr "In attesta di input"
 
 #. TC: Refers to key modifiers including Ctrl, Alt, Shift, ....
 #: python/midicontrols.py:1466
 msgid "Shifting"
-msgstr ""
+msgstr "Modificatori"
 
 #. TC: Spinbutton text when there is only one user interface control that can be referenced.
 #: python/midicontrols.py:1653
@@ -1823,51 +1856,47 @@ msgstr ""
 #. TC: Tree column heading for targets e.g. Channel 1, Stream 2
 #: python/midicontrols.py:1714
 msgid "Target"
-msgstr ""
+msgstr "Obiettivo"
 
 #. TC: User to create a new input binding.
 #: python/midicontrols.py:1737
 msgid "New"
-msgstr ""
+msgstr "Nuovo"
 
 #. TC: User to remove an input binding.
 #. TC: Menu Item. Remove the selected track.
 #: python/midicontrols.py:1739 python/playergui.py:3825
 msgid "Remove"
-msgstr ""
+msgstr "Rimuovi"
 
 #. TC: User to modify an existing input binding.
 #: python/midicontrols.py:1741
 msgid "Edit"
-msgstr ""
+msgstr "Modifica"
 
 #: python/mutagentagger.py:218
-#, fuzzy
 msgid "title"
-msgstr "Titolo"
+msgstr "titolo"
 
 #: python/mutagentagger.py:218
-#, fuzzy
 msgid "artist"
-msgstr "Artista"
+msgstr "artista"
 
 #: python/mutagentagger.py:219
-#, fuzzy
 msgid "album"
 msgstr "Album"
 
 #: python/mutagentagger.py:219
 msgid "track/total"
-msgstr ""
+msgstr "traccia/totale"
 
 #: python/mutagentagger.py:220
-#, fuzzy
 msgid "genre"
-msgstr "Genere(i)"
+msgstr "genere"
 
 #: python/mutagentagger.py:220
 msgid "record date"
-msgstr ""
+msgstr "data di registrazione"
 
 #: python/mutagentagger.py:358
 msgid ""
@@ -1880,27 +1909,34 @@ msgid ""
 "\n"
 "For more information visit www.id3.org."
 msgstr ""
+"Aggiunge qualsiasi altro riquadro ID3.\n"
+"es. TIT2: Titolo alternativo \n"
+"Verrà accodato la TIT2 principale.\n"
+"\n"
+"Inserire riquadri definiti dall'utente in questo modo:\n"
+"TXXX:pinco=pallo\n"
+"\n"
+"Per ulteriori informazioni visitare www.id3.org."
 
 #. TC: Remaining textual ID3 data is show below this heading.
 #: python/mutagentagger.py:361
 msgid " Additional Text Frames "
-msgstr ""
+msgstr " Riquadri di testo aggiuntivi "
 
 #. TC: The album track number.
 #. TC: Cuesheet term.
 #: python/mutagentagger.py:371 python/p3db.py:372 python/p3db.py:454
 #: python/playergui.py:200
 msgid "Track"
-msgstr ""
+msgstr "Traccia"
 
 #: python/mutagentagger.py:372
-#, fuzzy
 msgid "Genre"
-msgstr "Genere(i)"
+msgstr "Genere"
 
 #: python/mutagentagger.py:372
 msgid "Year"
-msgstr ""
+msgstr "Anno"
 
 #. TC: Window title.
 #: python/mutagentagger.py:680
@@ -1909,354 +1945,339 @@ msgstr ""
 
 #: python/mutagentagger.py:692 python/mutagentagger.py:694
 #: python/mutagentagger.py:696
-#, fuzzy
 msgid "Filename:"
-msgstr "nome_profilo"
+msgstr "Nome file:"
 
 #: python/mutagentagger.py:760
 msgid "Native"
-msgstr ""
+msgstr "Nativo"
 
 #. TC: Placeholder for unknown data.
 #: python/p3db.py:162
 msgid "<unknown>"
-msgstr ""
+msgstr "<sconosciuto>"
 
 #: python/p3db.py:343
 msgid "_Expand"
-msgstr ""
+msgstr "_Espandi"
 
 #: python/p3db.py:349
 msgid "_Collapse"
-msgstr ""
+msgstr "_Collassa"
 
 #. TC: Refers to the tree view of the tracks database.
 #: python/p3db.py:358
 msgid "Tree"
-msgstr ""
+msgstr "Albero"
 
 #. TC: Track playback time.
 #. TC: Playback time.
 #: python/p3db.py:374 python/p3db.py:456 python/playergui.py:241
-#, fuzzy
 msgid "Duration"
-msgstr "Configurazione"
+msgstr "Durata"
 
 #: python/p3db.py:375 python/p3db.py:457 python/sourceclientgui.py:1755
 msgid "Bitrate"
 msgstr "Bitrate"
 
 #: python/p3db.py:376 python/p3db.py:458
-#, fuzzy
 msgid "Filename"
-msgstr "nome_profilo"
+msgstr "Nome file"
 
 #. TC: Directory path to a file.
 #: python/p3db.py:378 python/p3db.py:459
 msgid "Path"
-msgstr ""
+msgstr "Percorso"
 
 #. TC: Shown with a progress bar as the database tree view is being built.
 #: python/p3db.py:389
 msgid "Populating"
-msgstr ""
+msgstr "Sto popolando"
 
 #. TC: The user enters search filter text here e.g. fuzzy match text or a more formal SQL search filtering term.
 #: python/p3db.py:400
 msgid "Filters"
-msgstr ""
+msgstr "Filtri"
 
 #. TC: A fuzzy search e.g. 'Metal' searches for metal in artists titles, and albums.
 #: python/p3db.py:415
 msgid "Fuzzy Search"
-msgstr ""
+msgstr "Ricerca approssimativa"
 
 #. TC: User may type in an SQL query as is applicable after the WHERE keyword.
 #: python/p3db.py:427
 msgid "WHERE"
-msgstr ""
+msgstr "WHERE"
 
 #: python/p3db.py:442
 msgid "Flat"
-msgstr ""
+msgstr "Piatto"
 
 #. TC: P3 refers to Prokyon3, a program which scans and records music collections.
 #: python/p3db.py:478
 #, python-format
 msgid "P3 Database View (%s)"
-msgstr ""
+msgstr "P3 Vista Database (%s)"
 
 #: python/p3db.py:532
 msgid "Prokyon3 (song title) Database"
-msgstr ""
+msgstr "Prokyon3 (titolo canzone) Database"
 
 #. TC: shown when the dependency is missing.
 #: python/p3db.py:551
 msgid "Python module MySQLdb required"
-msgstr ""
+msgstr "E' necessario il modulo Python MySQLdb"
 
 #: python/p3db.py:568
 msgid "User"
-msgstr ""
+msgstr "Utente"
 
 #: python/p3db.py:575
 msgid "Database"
-msgstr ""
+msgstr "Database"
 
 #. TC: Button text, cause connection to the selected database.
 #: python/p3db.py:591
-#, fuzzy
 msgid "Database Connect"
-msgstr "Disconnetti"
+msgstr "Connetti al database"
 
 #: python/playergui.py:156
 msgid "Cuesheet Playlist"
-msgstr ""
+msgstr "Playlist da file cue"
 
 #. TC: Cuesheet term.
 #: python/playergui.py:202
 msgid "Index"
-msgstr ""
+msgstr "Indice"
 
 #. TC: Column heading, whether to play.
 #: python/playergui.py:228
 msgid "Play"
-msgstr ""
+msgstr "Riproduci"
 
 #. TC: Column heading, the track number.
 #: python/playergui.py:231
 msgid "Trk"
-msgstr ""
+msgstr "Trk"
 
 #. TC: Column heading, the index number.
 #: python/playergui.py:234
-#, fuzzy
 msgid "Ind"
-msgstr "Fine"
+msgstr ""
 
 #: python/playergui.py:312
 msgid "External Playlist"
-msgstr ""
+msgstr "Playlist esterna"
 
 #. TC: Button text to activate an external playlist.
 #: python/playergui.py:323
 msgid "Active"
-msgstr ""
+msgstr "Attivo"
 
 #: python/playergui.py:333
 msgid "Choose a playlist file"
-msgstr ""
+msgstr "Scegli un file playlist"
 
 #: python/playergui.py:335
 msgid "Choose a media directory"
-msgstr ""
+msgstr "Scegli una cartella per i media"
 
 #: python/playergui.py:344
 msgid "Choose a playlist file."
-msgstr ""
+msgstr "Scegli un playlist file"
 
 #: python/playergui.py:346
 msgid "Choose a folder/directory of music."
-msgstr ""
+msgstr "Scegli una cartella per la musica"
 
 #: python/playergui.py:408
 msgid "Create a new announcement"
-msgstr ""
+msgstr "Crea un nuovo annuncio"
 
 #: python/playergui.py:410
 msgid "Modify or Delete this announcement"
-msgstr ""
+msgstr "Modifica o elimina questo annuncio"
 
 #. TC: Playlist control.
 #. TC: Embed a DJ announcement text into the playlist.
 #: python/playergui.py:412 python/playergui.py:3212 python/playergui.py:3763
-#, fuzzy
 msgid "Announcement"
 msgstr "Annunci"
 
 #. TC: The time format as minutes and seconds.
 #: python/playergui.py:438
 msgid "mm:ss"
-msgstr ""
+msgstr "mm:ss"
 
 #. TC: Alongside the name of the next track.
 #: python/playergui.py:491
 msgid "Next track"
-msgstr ""
+msgstr "Traccia successiva"
 
 #: python/playergui.py:766
 msgid "By Extension"
-msgstr ""
+msgstr "Per estensione"
 
 #: python/playergui.py:766
 msgid "M3U playlist"
-msgstr ""
+msgstr "Playlist M3U"
 
 #: python/playergui.py:766
-#, fuzzy
 msgid "XSPF playlist"
-msgstr "Modalità playlist"
+msgstr "XSPF playlist"
 
 #: python/playergui.py:766
-#, fuzzy
 msgid "PLS playlist"
-msgstr "Modalità playlist"
+msgstr "PLS playlist"
 
 #. TC: Missing metadata text.
 #: python/playergui.py:840
 msgid "Unknown"
-msgstr ""
+msgstr "Sconosciuto"
 
 #. TC: Cuesheet data element as shown in the playlist.
 #: python/playergui.py:843
 msgid "(Cue sheet)"
-msgstr ""
+msgstr "(Elementi del file cue)"
 
 #. TC: Playlist text meaning the metadata tag is missing or incomplete.
 #: python/playergui.py:878
 msgid "Bad Tag"
-msgstr ""
+msgstr "Tag errato"
 
 #: python/playergui.py:1521 python/playergui.py:3642
 msgid "Manual"
-msgstr ""
+msgstr "Manuale"
 
 #: python/playergui.py:1525 python/playergui.py:3639
 msgid "Play All"
-msgstr ""
+msgstr "Riproduci tutto"
 
 #: python/playergui.py:1533 python/playergui.py:1541 python/playergui.py:3640
 msgid "Loop All"
-msgstr ""
+msgstr "Riproduci in ciclo"
 
 #: python/playergui.py:1533 python/playergui.py:3643
 msgid "Cue Up"
-msgstr ""
+msgstr "Accoda"
 
 #: python/playergui.py:1533 python/playergui.py:1851 python/playergui.py:3646
-#, fuzzy
 msgid "Fade Over"
 msgstr "Dissolvenza"
 
 #: python/playergui.py:1545 python/playergui.py:1612 python/playergui.py:3641
 msgid "Random"
-msgstr ""
+msgstr "Casuale"
 
 #: python/playergui.py:1581 python/playergui.py:3644
 msgid "External"
-msgstr ""
+msgstr "Esterno"
 
 #: python/playergui.py:1593 python/playergui.py:1609 python/playergui.py:3645
 msgid "Alternate"
-msgstr ""
+msgstr "Alterna"
 
 #: python/playergui.py:1593 python/playergui.py:1611 python/playergui.py:3647
 msgid "Random Hop"
-msgstr ""
+msgstr "Casuale"
 
 #. TC: The remaining playlist time.
 #: python/playergui.py:1749 python/playergui.py:1753
 msgid "Remaining"
-msgstr ""
+msgstr "Restante"
 
 #. TC: The estimated finish time of the playlist.
 #: python/playergui.py:1751 python/playergui.py:1753 python/playergui.py:1764
 msgid "Finish"
-msgstr ""
+msgstr "Fine"
 
 #. TC: The remaining play time of the block of audio tracks from the highlighted track onwards until the next interruption.
 #: python/playergui.py:1753 python/playergui.py:1764
 msgid "Block size"
-msgstr ""
+msgstr "Dimensione blocco"
 
 #. TC: File dialog title text.
 #: python/playergui.py:2058
 msgid "Add music to left playlist"
-msgstr ""
+msgstr "Aggiungi musica alla playlist di sinistra"
 
 #. TC: File dialog title text.
 #: python/playergui.py:2061
 msgid "Add music to right playlist"
-msgstr ""
+msgstr "Aggiungi musica alla playlist di destra"
 
 #. TC: File filter text.
 #: python/playergui.py:2070
 msgid "Supported Media Formats"
-msgstr ""
+msgstr "Formati di media supportati"
 
 #. TC: Expander text which appears as "Select File Type (.pls)" for the pls file type.
 #: python/playergui.py:2113
 msgid "Select File Type"
-msgstr ""
+msgstr "Seleziona il tipo di file"
 
 #: python/playergui.py:2813
 msgid "Save left playlist"
-msgstr ""
+msgstr "Salva la playlist di sinistra"
 
 #: python/playergui.py:2815
 msgid "Save right playlist"
-msgstr ""
+msgstr "Salva la playlist di destra"
 
 #: python/playergui.py:2832
 msgid "File Type"
-msgstr ""
+msgstr "Tipo file"
 
 #. TC: File extension.
 #: python/playergui.py:2836
 msgid "Extension"
-msgstr ""
+msgstr "Estensione"
 
 #. TC: Playlist control.
 #. TC: Insert playlist control to do a ten second fade to the next track.
 #: python/playergui.py:3194 python/playergui.py:3773
-#, fuzzy
 msgid "Fade 10s"
-msgstr "Dissolvenza"
+msgstr "Dissolvi 10sec"
 
 #. TC: Playlist control.
 #. TC: Insert playlist control to do a five second fade to the next track.
 #: python/playergui.py:3200 python/playergui.py:3779
-#, fuzzy
 msgid "Fade 5s"
-msgstr "Dissolvenza"
+msgstr "Dissolvi 5sec"
 
 #. TC: Playlist control.
 #. TC: Insert playlist control to not do a fade to the next track.
 #: python/playergui.py:3206 python/playergui.py:3785
-#, fuzzy
 msgid "No Fade"
-msgstr "Dissolvenza"
+msgstr "Nessun dissolvenza"
 
 #. TC: Playlist control.
 #: python/playergui.py:3218
 msgid ">> Normal Speed <<"
-msgstr ""
+msgstr ">> Velocità normale <<"
 
 #. TC: Playlist control.
 #: python/playergui.py:3230
-#, fuzzy
 msgid "Player stop 2"
-msgstr "Ferma lettore 2"
+msgstr "Lettore ferma 2"
 
 #. TC: Playlist control.
 #. TC: Insert playlist control to jump to the top of the playlist.
 #: python/playergui.py:3236 python/playergui.py:3745
 msgid "Jump To Top"
-msgstr ""
+msgstr "Passa all'inizio"
 
 #. TC: Playlist control.
 #. TC: Insert playlist control to stop all the streams.
 #: python/playergui.py:3242 python/playergui.py:3795
-#, fuzzy
 msgid "Stop streaming"
-msgstr "Ferma la registrazione"
+msgstr "Interrompi il flusso"
 
 #. TC: Playlist control.
 #. TC: Insert playlist control to stop all recording.
 #: python/playergui.py:3248 python/playergui.py:3801
-#, fuzzy
 msgid "Stop recording"
-msgstr "Ferma la registrazione"
+msgstr "Interrompi la registrazione"
 
 #. TC: Playlist control.
 #: python/playergui.py:3255
@@ -2281,63 +2302,65 @@ msgstr ""
 #. TC: Playlist control.
 #: python/playergui.py:3274
 msgid "Ignored playlist control"
-msgstr ""
+msgstr "Controlli playlist ignorati"
 
 #: python/playergui.py:3336
 msgid "Playing track {0} of {1}"
-msgstr ""
+msgstr "Riproduzione traccia {0} di {1}"
 
 #. TC: Previous line: Playing track {0} of {1}
 #: python/playergui.py:3348
 #, python-format
 msgid "From the album, %s"
-msgstr ""
+msgstr "Dall'album, %s"
 
 #: python/playergui.py:3355
 #, python-format
 msgid "Total number of tracks %d"
-msgstr ""
+msgstr "Numero totale di tracce %d"
 
 #: python/playergui.py:3359 python/playergui.py:3361
 #, python-format
 msgid "Total play duration %s"
-msgstr ""
+msgstr "Durata totale %s"
 
 #: python/playergui.py:3402
 msgid ""
 "Left click toggles between showing the amount of time elapsed or remaining "
 "on the current track being played."
 msgstr ""
+"Il click sinistro cambia dal mostrare il tempo trascorso o restante della "
+"traccia in esecuzione."
 
 #: python/playergui.py:3416
 msgid ""
 "This slider acts as both a play progress indicator and as a means for "
 "seeking within the currently playing track."
 msgstr ""
+"Questo cursore agisce sia come un indicatore di avanzamento che come "
+"strumento per spostarsi nella traccia attualmente in esecuzione."
 
 #: python/playergui.py:3423
-#, fuzzy
 msgid "Playlist 1"
-msgstr "Modalità playlist"
+msgstr "Playlist 1"
 
 #: python/playergui.py:3425
-#, fuzzy
 msgid "Playlist 2"
-msgstr "Modalità playlist"
+msgstr "Playlist 2"
 
 #. TC: File filter text.
 #: python/playergui.py:3500
 msgid "All file types"
-msgstr ""
+msgstr "Tutti i tipi di file"
 
 #. TC: File filter text.
 #: python/playergui.py:3504
 msgid "Playlist types (*.m3u, *.xspf, *.pls)"
-msgstr ""
+msgstr "Tipi di playlist (*.m3u, *.xspf, *.pls)"
 
 #: python/playergui.py:3509
 msgid "Supported media"
-msgstr ""
+msgstr "Media supportati"
 
 #: python/playergui.py:3519
 msgid ""
@@ -2346,38 +2369,42 @@ msgid ""
 "'Remaining' is the amount of time until the next stop.\n"
 "'Finish' Is the computed time when the tracks will have finished playing."
 msgstr ""
+"'Dimensione blocco' indica la quantità di tempo che intercorre tra la "
+"riproduzione della traccia selezionata ed il prossimo stop.\n"
+"'Restante' è il tempo fino al prossimo stop.\n"
+"'Fine' è il tempo calcolato quando finirà la riproduzione delle tracce."
 
 #: python/playergui.py:3539
 msgid "This adjusts the playback speed anywhere from 25% to 400%."
-msgstr ""
+msgstr "Regola la velocità di riproduzione tra il 25% ed il 400%."
 
 #: python/playergui.py:3551
 msgid "This sets the playback speed back to normal."
-msgstr ""
+msgstr "Imposta la normale velocità di riproduzione "
 
 #: python/playergui.py:3572
 msgid "Previous track."
-msgstr ""
+msgstr "Traccia precedente"
 
 #: python/playergui.py:3584
 msgid "Play."
-msgstr ""
+msgstr "Riproduci"
 
 #: python/playergui.py:3594
 msgid "Pause."
-msgstr ""
+msgstr "Pausa"
 
 #: python/playergui.py:3604
 msgid "Stop."
-msgstr ""
+msgstr "Ferma"
 
 #: python/playergui.py:3614
 msgid "Next track."
-msgstr ""
+msgstr "Traccia successiva"
 
 #: python/playergui.py:3626
 msgid "Add tracks to the playlist."
-msgstr ""
+msgstr "Aggiungi tracce alla playlist"
 
 #: python/playergui.py:3633 python/preferences.py:71
 msgid "Playlist Mode"
@@ -2415,6 +2442,34 @@ msgid ""
 "\n"
 "'Random Hop' will pick a track at random from the other playlist."
 msgstr ""
+"Imposta la modalità della playlist, che definisce il comportamento del "
+"lettore dopo che una traccia è stata eseguita.\n"
+"\n"
+"'Suona tutto' è la modalità più versatile perché consente di usare gli "
+"elementi di controllo disponibili nel menù contestuale della playlist, "
+"accessibile con il clic destro. Se non sono presenti elementi di controllo "
+"le tracce verranno riprodotte sequenzialmente fino alla fine della playlist "
+"dopodiché il lettore si fermerà.\n"
+"\n"
+"'Tutte in ciclo' fa in modo che le tracce vengano riprodottein sequenza, "
+"iniziando da capo una volta raggiunta la fine della playlist.\n"
+"\n"
+"'Casuale' le tracce verranno riprodotte all'infinito e casualmente.\n"
+"\n"
+"'Manuale' il lettore si fermerà alla fine di ogni traccia.\n"
+"\n"
+"'Accoda' come per Manuale ma che la traccia successiva verrà evidenziata.\n"
+"\n"
+"'Esterna' prende le tracce una alla volta da una playlist esterna o da una "
+"cartella. Utile per trasmettere playlist di grosse dimensioni.\n"
+"\n"
+"'Alterna' fa in modo che la traccia successiva sia messa in coda prima di "
+"avviare l'altro lettore. Il crossfader non viene attivato.\n"
+"\n"
+"'Dissolvenza' nel passaggio da un lettore all'altro l'audio si sovrapporrà "
+"alla fine di ogni traccia.\n"
+"\n"
+"'Salto casuale' sceglierà una traccia a caso dall'altra playlist."
 
 #. TC: Fade time heading.
 #: python/playergui.py:3656 python/preferences.py:72
@@ -2423,139 +2478,134 @@ msgstr "Dissolvenza"
 
 #: python/playergui.py:3667
 msgid "This controls the amount of fade between tracks."
-msgstr ""
+msgstr "Controlla il tempo di dissolvenza tra tracce"
 
 #. TC: The audio feed (mix) that the DJ listens to, could be DJ mix or Stream mix.
 #: python/playergui.py:3675
 msgid "Audio Feed"
-msgstr ""
+msgstr "Audio Feed"
 
 #: python/playergui.py:3684
 msgid "Make output from this player available for streaming."
-msgstr ""
+msgstr "Manda in onda l'audio di questo lettore"
 
 #: python/playergui.py:3691
 msgid "Make output from this player audible to the DJ."
-msgstr ""
+msgstr "Rende l'uscita di questo lettore udibile dal DJ"
 
 #. TC: Insert playlist control.
 #: python/playergui.py:3702
-#, fuzzy
 msgid "Insert control"
-msgstr "controllo '%s'"
+msgstr "Inserisci controllo"
 
 #. TC: The Playlist submenu.
 #: python/playergui.py:3716
-#, fuzzy
 msgid "Playlist"
-msgstr "Modalità playlist"
+msgstr "Playlist 3"
 
 #. TC: Insert playlist control to set playback speed to normal.
 #: python/playergui.py:3727
 msgid "Normal Speed"
-msgstr ""
+msgstr "Velocità normale"
 
 #. TC: Insert playlist control to transfer to the opposite player.
 #. TC: Submenu Item. Parent menu is Playlist.
 #: python/playergui.py:3751 python/playergui.py:3893
 msgid "Transfer"
-msgstr ""
+msgstr "Trasferisci"
 
 #. TC: Insert playlist control to crossfade to the opposite player.
 #: python/playergui.py:3757
-#, fuzzy
 msgid "Crossfade"
-msgstr "Crossfader"
+msgstr "Dissolvenza"
 
 #. TC: Menu item. Opens the metadata tagger on the selected track.
 #: python/playergui.py:3813
-#, fuzzy
 msgid "Meta Tag"
-msgstr "Metadati"
+msgstr "Meta Tag"
 
 #. TC: Menu Item. Duplicates the selected track in the playlist.
 #: python/playergui.py:3819
 msgid "Duplicate"
-msgstr ""
+msgstr "Duplica"
 
 #. TC: Submenu Item. Parent menu item is Remove.
 #: python/playergui.py:3842
-#, fuzzy
 msgid "This"
-msgstr "Questo:"
+msgstr "Questo"
 
 #. TC: Submenu Item. Parent menu item is Remove.
 #: python/playergui.py:3848
 msgid "All"
-msgstr ""
+msgstr "Tutto"
 
 #. TC: Submenu Item. Parent menu item is Remove.
 #: python/playergui.py:3854
 msgid "From Here"
-msgstr ""
+msgstr "Da qui"
 
 #. TC: Submenu Item. Parent menu item is Remove.
 #: python/playergui.py:3860
 msgid "To Here"
-msgstr ""
+msgstr "Fino a qui"
 
 #. TC: Open the file dialog for adding music to the chosen playlist.
 #: python/playergui.py:3872
 msgid "Add Music"
-msgstr ""
+msgstr "Aggiungi musica"
 
 #. TC: Submenu Item. Parent menu is Playlist.
 #. TC: save the current setting for the next time this session profile is run.
 #: python/playergui.py:3878 python/preferences.py:533
 msgid "Save"
-msgstr ""
+msgstr "Salva"
 
 #. TC: Submenu Item. Parent menu is Playlist.
 #: python/playergui.py:3888
 msgid "Copy"
-msgstr ""
+msgstr "Copia"
 
 #. TC: Submenu Item. Parent menu is Playlist.
 #: python/playergui.py:3898
 msgid "Exchange"
-msgstr ""
+msgstr "Scambia"
 
 #. TC: Submenu Item. Parent menu is Playlist.
 #: python/playergui.py:3904
 msgid "Empty"
-msgstr ""
+msgstr "Vuoto"
 
 #. TC: Submenu Item. Parent menus are Playlist->Copy.
 #. TC: Submenu Item. Parent menus are Playlist->Transfer.
 #: python/playergui.py:3917 python/playergui.py:3952
 msgid "Append"
-msgstr ""
+msgstr "Appendi"
 
 #. TC: Submenu Item. Parent menus are Playlist->Copy.
 #. TC: Submenu Item. Parent menus are Playlist->Transfer.
 #: python/playergui.py:3923 python/playergui.py:3958
 msgid "Prepend"
-msgstr ""
+msgstr "Prependi"
 
 #. TC: Submenu Item. Parent menus are Playlist->Copy.
 #: python/playergui.py:3933
 msgid "Append Cursor"
-msgstr ""
+msgstr "Accoda dal cursore"
 
 #. TC: Submenu Item. Parent menus are Playlist->Copy.
 #: python/playergui.py:3939
 msgid "Prepend Cursor"
-msgstr ""
+msgstr "Prependi dal cursore"
 
 #. TC: Submenu Item. Parent menus are Playlist->Transfer.
 #: python/playergui.py:3968
 msgid "Append at Cursor"
-msgstr ""
+msgstr "Accoda dal cursore"
 
 #. TC: Submenu Item. Parent menus are Playlist->Transfer.
 #: python/playergui.py:3974
 msgid "Prepend at Cursor"
-msgstr ""
+msgstr "Prependi dal cursore"
 
 #: python/preferences.py:85
 msgid "Track time elapsed"
@@ -2576,23 +2626,23 @@ msgstr "Audio su DJ"
 #. TC: Microphone mode combobox text.
 #: python/preferences.py:124
 msgid "Deactivated"
-msgstr ""
+msgstr "Disattivato"
 
 #. TC: Microphone mode combobox text.
 #: python/preferences.py:126
 msgid "Basic input"
-msgstr ""
+msgstr "Ingresso semplice"
 
 #. TC: Microphone mode combobox text.
 #: python/preferences.py:128
 msgid "Processed input"
-msgstr ""
+msgstr "Ingresso elaborato"
 
 #. TC: Microphone mode combobox text.
 #: python/preferences.py:130
 #, python-format
 msgid "Partnered with channel %s"
-msgstr ""
+msgstr "Abbinato al canale %s"
 
 #: python/preferences.py:275
 msgid "A label so you may describe briefly the role of this audio channel."
@@ -2601,23 +2651,25 @@ msgstr ""
 
 #: python/preferences.py:305
 msgid "The signal processing mode."
-msgstr "La modalità di elaborazione del segnale."
+msgstr "La modalità di elaborazione del segnale"
 
 #. TC: Indicator of the microphones open or unmuted status. Has alongside an LED indicator.
 #: python/preferences.py:309
 msgid "Channel Opener"
-msgstr ""
+msgstr "Gestore canale"
 
 #: python/preferences.py:312
 msgid ""
 "This controls the allocation of front panel open/unmute buttons. Having one "
 "button control multiple microphones can save time."
 msgstr ""
+"Regola l'allocazione dei pulsanti apri/chiudi sul pannello principale. Un "
+"pulsante che controlla più microfoni può far risparmiare del tempo."
 
 #. TC: The mic opener control can appear on the main panel. Alongside sits the button selector.
 #: python/preferences.py:317
 msgid "Main Panel Button"
-msgstr ""
+msgstr "Pulsante del pannello principale"
 
 #: python/preferences.py:334
 msgid "This:"
@@ -2638,6 +2690,14 @@ msgid ""
 "If you require 0dB straight down the middle then this feature should be "
 "turned off."
 msgstr ""
+"Il panorama stereo è la scelta del posizionamento dell'audio, da destra a "
+"sinistra, in un mix stereofonico.\n"
+"\n"
+"Questo controllo mantiene costante la potenza del segnale in tutto il suo "
+"percorso attenuando entrambi i canali di -3dB nel punto di mezzo.\n"
+"\n"
+"Se volete i 0dB di potenza anche nel punto di mezzo allora dovrete "
+"disattivare questa opzione."
 
 #: python/preferences.py:358
 msgid "Stereo Panning"
@@ -2646,17 +2706,19 @@ msgstr "Panorama Stereo"
 #. TC: A set of controls that the user canl use to match partnered microphone audio with the master.
 #: python/preferences.py:400
 msgid "Signal Matching"
-msgstr ""
+msgstr "Corrispondenza segnale"
 
 #: python/preferences.py:401
 msgid ""
 "These controls are provided to obtain a decent match between the two "
 "microphones."
 msgstr ""
+"Questi controlli servono per ottenere una corrispondenza decente tra "
+"microfoni."
 
 #: python/preferences.py:409
 msgid "Relative Gain (dB)"
-msgstr ""
+msgstr "Guadagno relativo (dB)"
 
 #. TC: Mic audio phase inversion control.
 #: python/preferences.py:413 python/preferences.py:418
@@ -2669,11 +2731,13 @@ msgid ""
 "Useful for when microphones are cancelling one another out, producing a "
 "hollow sound."
 msgstr ""
+"Utile quando i microfoni si annullano l'un l'altro producendo un suono "
+"ovattato."
 
 #. TC: Control whether to mix microphone audio to the DJ mix.
 #: python/preferences.py:420
 msgid "In The DJ's Mix"
-msgstr ""
+msgstr "Invia al mix del DJ"
 
 #: python/preferences.py:420 python/preferences.py:439
 #: python/preferences.py:516
@@ -2681,28 +2745,30 @@ msgid ""
 "Make the microphone audio audible in the DJ mix. This may not always be "
 "desirable."
 msgstr ""
+"Fa in modo che l'audio del microfono sia udibile nel mix del DJ. Non è detto "
+"che sia sempre desiderabile."
 
 #: python/preferences.py:427
 msgid "Basic Controls"
-msgstr ""
+msgstr "Controlli base"
 
 #: python/preferences.py:428 python/preferences.py:472
 msgid "Boost/Cut (dB)"
-msgstr ""
+msgstr "Aumenta/Taglia (dB)"
 
 #: python/preferences.py:446
 msgid "High Pass Filter"
-msgstr ""
+msgstr "Filtro passa alto"
 
 #: python/preferences.py:447 python/preferences.py:458
 #: python/preferences.py:466
 msgid "Cutoff Frequency"
-msgstr ""
+msgstr "Frequenza di taglio"
 
 #. TC: User can set the number of filter stages.
 #: python/preferences.py:450
 msgid "Stages"
-msgstr ""
+msgstr "Livelli"
 
 #: python/preferences.py:452
 msgid ""
@@ -2710,93 +2776,105 @@ msgid ""
 "feature to restrict low frequency sounds such as mains hum. Setting too high "
 "a level will make your voice sound thin."
 msgstr ""
+"La frequenza in Hertz sopra la quale l'audio viene fatto passare ai livelli "
+"successivi. Usare questa funzionalità per eliminare i suoni sulle basse "
+"frequenze quali il ronzio. Impostare questo valore troppo elevato renderà il "
+"suono della voce 'sottile'"
 
 #. TC: this is the treble control. HF = high frequency.
 #: python/preferences.py:455
 msgid "HF Detail"
-msgstr ""
+msgstr "Dettaglio HF"
 
 #: python/preferences.py:456 python/preferences.py:464
 msgid "Effect"
-msgstr ""
+msgstr "Effetto"
 
 #: python/preferences.py:460
 msgid "You can use this to boost the amount of treble in the audio."
-msgstr ""
+msgstr "Potete usarlo per aumentare la quantità di alte frequenze nell'audio."
 
 #. TC: this is the bass control. LF = low frequency.
 #: python/preferences.py:463
 msgid "LF Detail"
-msgstr ""
+msgstr "Dettagli LF"
 
 #: python/preferences.py:468
 msgid "You can use this to boost the amount of bass in the audio."
-msgstr ""
+msgstr "Potete usarlo per aumentare la quantità di basse frequenze nell'audio."
 
-#. TC: dynamic range compressor.
+#. TC: lookahead brick wall limiter.
 #: python/preferences.py:471
-msgid "Compressor"
-msgstr ""
+#, fuzzy
+msgid "Limiter"
+msgstr "Limita"
 
 #. TC: this is the peak signal limit.
 #: python/preferences.py:475
-msgid "Limit"
-msgstr ""
+#, fuzzy
+msgid "Upper Limit"
+msgstr "Superiore %"
 
 #: python/preferences.py:477
 msgid ""
-"A lookahead brick wall limiter. Use the Ratio control to boost the quieter "
-"sounds. The Limit control is used to set the absolute maximum audio level."
+"A look-ahead brick-wall limiter. Audio signals are capped at the upper limit."
 msgstr ""
 
 #: python/preferences.py:479
 msgid "Noise Gate"
-msgstr ""
+msgstr "Noise Gate"
 
 #. TC: noise gate triggers at this level.
 #: python/preferences.py:481 python/preferences.py:1192
 msgid "Threshold"
-msgstr ""
+msgstr "Soglia"
 
 #. TC: negative gain when the noise gate is active.
 #. TC: the de-esser negative gain when the de-esser is active.
 #: python/preferences.py:484 python/preferences.py:493
 msgid "Gain"
-msgstr ""
+msgstr "Guadagno"
 
 #: python/preferences.py:486
 msgid ""
 "Reduce the unwanted quietest sounds and background noise which you don't "
 "want your listeners to hear with this."
 msgstr ""
+"Riduce i suoni sommessi indesiderati ed il rumore di fondo che non volete "
+"venga udito dagli ascoltatori."
 
 #: python/preferences.py:488
 msgid "De-esser"
-msgstr ""
+msgstr "De-esser"
 
 #. TC: the de-esser uses two filters to determine ess or not ess. Bias sets the balance between the two.
 #: python/preferences.py:490
 msgid "Bias"
-msgstr ""
+msgstr "Bias"
 
 #: python/preferences.py:495
+#, fuzzy
 msgid ""
-"Reduce the S, T, and P sounds which microphones tend to exagerate. Ideally "
-"the Bias control will be set so that the de-esser is off when there is "
+"Reduce the S, T, and P sounds which microphones tend to exaggerate. Ideally "
+"the Bias control will be set low so that the de-esser is off when there is "
 "silence but is set high enough that mouse clicks are detected and suppressed."
 msgstr ""
+"Riduce i suoni delle S,T e P che i microfoni normalmente tendono ad "
+"accentuare. Il controllo Bias verrà impostato in modo che il de-esser sia "
+"spento nei momenti di silenzio ma sia alto abbastanza da non rendere udibili "
+"i click del mouse."
 
 #: python/preferences.py:497
 msgid "Ducker"
-msgstr ""
+msgstr "Ducker"
 
 #: python/preferences.py:498
 msgid "Release"
-msgstr ""
+msgstr "Rilascio"
 
 #: python/preferences.py:500
 msgid "Hold"
-msgstr ""
+msgstr "Tenuta"
 
 #: python/preferences.py:502
 msgid ""
@@ -2804,10 +2882,12 @@ msgid ""
 "speaks. These settings allow you to adjust the timings of that audio "
 "reduction."
 msgstr ""
+"Il ducker riduce automaticamente il livello dell'audio quando il DJ parla. "
+"Queste impostazioni ti consentono di regolare la tempistica della riduzione."
 
 #: python/preferences.py:504
 msgid "Other options"
-msgstr ""
+msgstr "Altre opzioni"
 
 #: python/preferences.py:510
 msgid "Phase Rotator"
@@ -2818,20 +2898,22 @@ msgid ""
 "This feature processes the microphone audio so that it sounds more even. The "
 "effect is particularly noticable on male voices."
 msgstr ""
+"Questa funzionalità elabora l'audio del microfono in modo di renderlo più "
+"costante. L'effetto è particolarmente distinguibile sulle voci maschili."
 
 #. TC: use a user specified setting.
 #: python/preferences.py:539
 msgid "Set"
-msgstr ""
+msgstr "Imposta"
 
 #. TC: use the auto detected default setting.
 #: python/preferences.py:550
 msgid "Auto"
-msgstr ""
+msgstr "Auto"
 
 #: python/preferences.py:563
 msgid "Use default JACK audio routing"
-msgstr ""
+msgstr "Usa il sistema base di JACK per il routing audio"
 
 #: python/preferences.py:564
 msgid "Reroute the audio to/from the specified port"
@@ -2840,6 +2922,8 @@ msgstr ""
 #: python/preferences.py:565
 msgid "Save the audio routing so that it persists across application restarts"
 msgstr ""
+"Salva il routing audio in modo che persista tra un avvio e l'altro "
+"dell'applicazione."
 
 #: python/preferences.py:566
 msgid ""
@@ -2849,101 +2933,108 @@ msgid ""
 "ports. Note that inputs will only bind to output ports and outputs will only "
 "bind to input ports."
 msgstr ""
+"Inserire il nome della porta audio JACK alla quale collegarsi e poi cliccare "
+"sul pulsante a destra.\n"
+"Il comando 'jack_lsp -p' lanciato in un terminale vi fornirà una lista di "
+"porte JACK valide. Gli ingressi si collegheranno soltanto a porte in uscita "
+"e le uscite soltanto a porte in entrata."
 
 #: python/preferences.py:806
 msgid "The volume control for the left music player."
-msgstr ""
+msgstr "Il controllo del volume per il lettore di sinistra"
 
 #. TC: preferences window title.
 #: python/preferences.py:860
 msgid "IDJC Preferences"
-msgstr ""
+msgstr "Preferenze IDJC"
 
 #. TC: the set of features - section heading.
 #: python/preferences.py:881
 msgid "Feature Set"
-msgstr ""
+msgstr "Impostazioni funzionalità"
 
 #. TC: Start in the full featured user interface mode.
 #: python/preferences.py:893
 msgid "Start Full"
-msgstr ""
+msgstr "Avvia completo"
 
 #: python/preferences.py:897 python/preferences.py:904
 msgid "Indicates which mode IDJC will be in when launched."
-msgstr ""
+msgstr "Indica con quale modalità verrà avviato IDJC"
 
 #. TC: Start in a reduced user interface mode.
 #: python/preferences.py:900
 msgid "Start Mini"
-msgstr ""
+msgstr "Avvia minimale"
 
 #: python/preferences.py:916
 msgid "Run in full functionality mode which uses more CPU power."
-msgstr ""
+msgstr "Avvia con tutte le funzionalità, consuma più CPU"
 
 #: python/preferences.py:918
 msgid "Basic Streamer"
-msgstr ""
+msgstr "Trasmettitore base"
 
 #: python/preferences.py:922
 msgid ""
 "Run in a reduced functionality mode that lowers the burden on the CPU and "
 "takes up less screen space."
 msgstr ""
+"Avvia con funzionalità ridotte, diminuisce il carico sulla CPU e occupa meno "
+"spazio sullo schermo."
 
 #: python/preferences.py:928
 msgid "These settings take effect after restarting"
-msgstr ""
+msgstr "Queste impostazioni avranno effetto dopo il riavvio."
 
 #: python/preferences.py:950
 msgid "General purpose audio channels*"
-msgstr ""
+msgstr "Canali audio generici"
 
 #: python/preferences.py:954
 msgid "Simultaneous stream(s)"
-msgstr ""
+msgstr "Trasmissione(i) in simultanea"
 
 #: python/preferences.py:958
 msgid "Simultaneous recording(s)"
-msgstr ""
+msgstr "Registrazione(i) in simultanea"
 
 #. TC: star marked items are relevant only in 'fully featured' mode.
 #: python/preferences.py:961
 msgid "* In 'Fully Featured' mode."
-msgstr ""
+msgstr "* in modalità 'Tutte le funzionalità'"
 
 #: python/preferences.py:976
 msgid "Meters"
-msgstr ""
+msgstr "Indicatori"
 
 #: python/preferences.py:999
 msgid "Fill channel meter void space"
-msgstr ""
+msgstr "Riempi il vuoto dell'indicatore per il canale"
 
 #: python/preferences.py:1011
 msgid "Replay Gain"
-msgstr ""
+msgstr "Replay Gain"
 
 #: python/preferences.py:1021
 msgid "Indicate which tracks have Replay Gain values"
-msgstr ""
+msgstr "Indica quali tracce hanno il Replay Gain"
 
 #: python/preferences.py:1022
 msgid "Show a marker in the playlists next to each track."
-msgstr ""
+msgstr "Mostra un segno accanto ad ogni traccia nella playlist"
 
 #: python/preferences.py:1027
 msgid "Adjust playback volume"
-msgstr ""
+msgstr "Regola il volume di riproduzione"
 
 #: python/preferences.py:1028
 msgid "Effective only on newly started tracks."
-msgstr ""
+msgstr "Efficace solo sulle tracce avviate ex-novo "
 
 #: python/preferences.py:1037
 msgid "Unmarked tracks assumed gain value"
-msgstr ""
+msgstr "Valore del guadagno per le tracce non segnate"
 
 #: python/preferences.py:1042
 msgid ""
@@ -2952,10 +3043,14 @@ msgid ""
 "modern studio recordings) this should be about a -8 or -9 and classical "
 "music around zero."
 msgstr ""
+"Impostalo sui valori di guadagno tipici che vi aspettereste dal materiale "
+"che state riproducendo. Per la musica pop e rock (specialmente le "
+"registrazioni in studio moderne) dovrebbe essere circa a -8 o -9, per la "
+"classica intorno allo zero."
 
 #: python/preferences.py:1053
 msgid "Further gain adjustment"
-msgstr ""
+msgstr "Ulteriori regolazioni del guadagno"
 
 #: python/preferences.py:1058
 msgid ""
@@ -2963,22 +3058,25 @@ msgid ""
 "and 8 dB however going too high will result in a loss of dynamic range. The "
 "Str Peak meter is a useful guide for getting this right."
 msgstr ""
+"Per il materiale che \"suona forte\" è raccomandabile impostare questo "
+"valore tra 4dB e 8dB, in ogni caso valori troppo alti riducono sensibilmente "
+"la dinamica. L'indicatore 'Str Peak' è utile per regolare questo valore."
 
 #: python/preferences.py:1066
 msgid "Miscellaneous Features"
-msgstr ""
+msgstr "Impostazioni varie"
 
 #: python/preferences.py:1074
 msgid "Trim quiet song endings and trailing silence"
-msgstr ""
+msgstr "Elimina i finali sommessi ed il silenzio iniziale delle canzoni"
 
 #: python/preferences.py:1079
 msgid "End tracks containing long passages of silence"
-msgstr ""
+msgstr "Interrompi tracce che contengono lunghi passaggi di silenzio"
 
 #: python/preferences.py:1084
 msgid "Restrict the stream audio ceiling to -2dB"
-msgstr ""
+msgstr "Limita il tetto del flusso a -2dB"
 
 #: python/preferences.py:1088
 msgid ""
@@ -2986,10 +3084,14 @@ msgid ""
 "playback volume. Limiting audio to -2dB at the encoder input will generally "
 "prevent decoded audio from breaching 0dB."
 msgstr ""
+"Questa impostazione potrebbe migliore la qualità audio a spesa di un volume "
+"di riproduzione leggermente inferiore. Limitare l'audio a -2dB all'ingresso "
+"del codificatore impedirà all'audio decodificato di superare 0dB"
 
 #: python/preferences.py:1090
 msgid "Enable the main-player speed/pitch controls"
 msgstr ""
+"Abilita il controllo di velocità di riproduzione sul lettore principale"
 
 #: python/preferences.py:1094
 msgid ""
@@ -2997,20 +3099,25 @@ msgid ""
 "allow the playback speed to be adjusted from 25% to 400% and a normal speed "
 "button."
 msgstr ""
+"Questa opzione fa apparire più linguette sotto la playlist che consentono di "
+"regolare la velocità di riproduzione tra il 25% ed il 400% e un pulsante per "
+"la velocità normale."
 
 #: python/preferences.py:1096
 msgid "Separate left/right player volume faders"
-msgstr ""
+msgstr "Cursori del volume separati per i lettori destro/sinistro"
 
 #: python/preferences.py:1100
 msgid ""
 "Select this option to use an independent volume fader for the left and right "
 "music players."
 msgstr ""
+"Selezionare questa opzione per usare un cursore indipendente per il lettore "
+"di destra e sinistra."
 
 #: python/preferences.py:1102
 msgid "Enlarge the time elapsed/remaining windows"
-msgstr ""
+msgstr "Allarga la finestra del tempo trascorso/restante"
 
 #: python/preferences.py:1106
 msgid ""
@@ -3018,10 +3125,13 @@ msgid ""
 "text that appears in them due to unusual DPI settings or the use of a "
 "different rendering engine. This option serves to fix that."
 msgstr ""
+"La finestra del tempo trascorso/restante a volte non compare grande "
+"abbastanza a causa di impostazioni anomale dei DPI o per l'utilizzo di "
+"motori di rendering diversi. Questa opzione sistema le cose."
 
 #: python/preferences.py:1108
 msgid "Sound an alarm when the music is due to end"
-msgstr ""
+msgstr "Avviso sonoro quando la musica si avvicina alla fine"
 
 #: python/preferences.py:1111
 msgid ""
@@ -3029,40 +3139,49 @@ msgid ""
 "also works when monitoring stream audio but the alarm tone is not sent to "
 "the stream."
 msgstr ""
+"Un suono di allarme che avvisa il DJ che mancano nove secondi al fuori onda. "
+"Funziona anche in fase di monitoraggio del flusso ma il suono di allarme non "
+"viene trasmesso."
 
 #: python/preferences.py:1113
 msgid "Apply dither to MP3 and FLAC playback"
-msgstr ""
+msgstr "Applica il dither alla riproduzione MP3 e FLAC"
 
 #: python/preferences.py:1117
 msgid ""
 "This feature maybe improves the sound quality a little when listening on a "
 "24 bit sound card."
 msgstr ""
+"Questa impostazione potrebbe migliorare la qualità del suondo su schede "
+"audio a 24bit"
 
 #: python/preferences.py:1119
 msgid "Use utf-8 encoding when streaming mp3 metadata"
-msgstr ""
+msgstr "Usa la codifica utf-8 quando si inviano i metadati"
 
 #: python/preferences.py:1123
 msgid ""
 "It is standard to stream mp3 metadata with iso-8859-1 character encoding on "
 "shoutcast. This option should therefore not be used."
 msgstr ""
+"E' uno standard quello di inviare i metadati mp3 con la codifica iso-8859-1 "
+"su shoutcast. Quindi questa opzione non dovrebbe essere utilizzate."
 
 #: python/preferences.py:1125
 msgid "Enable tooltips"
-msgstr ""
+msgstr "Abilita suggerimenti"
 
 #: python/preferences.py:1129
 msgid ""
 "This, what you are currently reading, is a tooltip. This feature turns them "
 "on or off."
 msgstr ""
+"Questo che state leggendo adesso è un suggerimento. Questa opzione li "
+"abilita o meno."
 
 #: python/preferences.py:1138
 msgid "Stream Normaliser"
-msgstr ""
+msgstr "Normalizzatore di flusso"
 
 #: python/preferences.py:1141
 msgid ""
@@ -3072,10 +3191,15 @@ msgid ""
 "clicking the 'Monitor Mix' 'Stream' button in the main application window "
 "which will allow you to compare the processed with the non-processed audio."
 msgstr ""
+"Questa opzione serve per uniformare il livello del suono dei vari tipi di "
+"musica che viene riprodotta. Le impostazioni di base dovrebbero essere "
+"sufficenti ma potreste volerle regolare e paragonare cliccando sul pulsante "
+"'Monitora il mix' 'Flusso' nella finestra principale dell'applicazione, che "
+"vi consentirà di confrontare il segnale non elaborato con l'elaborato."
 
 #: python/preferences.py:1177
 msgid "Boost"
-msgstr ""
+msgstr "Boost"
 
 #: python/preferences.py:1182 python/preferences.py:1197
 #: python/preferences.py:1223 python/preferences.py:1238
@@ -3083,14 +3207,16 @@ msgid ""
 "Adjust these settings carefully since they can have subtle but undesireable "
 "effects on the sound quality."
 msgstr ""
+"Regolate queste impostazioni con attenzione poiché potrebbero avere lievi ma "
+"indesiderabili effetti sulla qualità del suono"
 
 #: python/preferences.py:1200
 msgid "Defaults"
-msgstr ""
+msgstr "Base"
 
 #: python/preferences.py:1206
 msgid "Load the recommended settings."
-msgstr ""
+msgstr "Carica le impostazioni consigliate"
 
 #: python/preferences.py:1218
 msgid "Rise"
@@ -3103,15 +3229,15 @@ msgstr ""
 #. TC: The DJ's sound level controller.
 #: python/preferences.py:1245
 msgid "DJ Audio Level"
-msgstr ""
+msgstr "Livello audio DJ"
 
 #: python/preferences.py:1258
 msgid "This adjusts the sound level of the DJ audio."
-msgstr ""
+msgstr "Regola il livello del suono del DJ"
 
 #: python/preferences.py:1265
 msgid "Player Resample Quality"
-msgstr ""
+msgstr "Qualità di ricampionamento del lettore"
 
 #: python/preferences.py:1272 python/sourceclientgui.py:1000
 msgid "Highest"
@@ -3139,14 +3265,19 @@ msgid ""
 "Fastest mode while it uses by far the least amount of CPU should be avoided "
 "if at all possible."
 msgstr ""
+"Regola la qualità del metodo di ricampionamento audio utilizzato qualora la "
+"frequenza di campionamento del file in esecuzione non corrisponda a quella "
+"del server JACK. Valori alti forniscono la migliore qualità ma utilizzano "
+"più CPU (non consigliato per sistemi antecedenti al 2006). Benché utilizzi "
+"meno CPU la modalità 'Più veloce' dovrebbe essere evitata del tutto."
 
 #: python/preferences.py:1316
 msgid "Player Settings At Startup"
-msgstr ""
+msgstr "Impostazioni del lettore all'avvio"
 
 #: python/preferences.py:1326
 msgid "Restore the previous session"
-msgstr ""
+msgstr "Ripristina la sessione precedente"
 
 #: python/preferences.py:1330
 msgid ""
@@ -3154,55 +3285,58 @@ msgid ""
 "left. As an alternative you may specify below how you want the various "
 "settings to be when IDJC starts."
 msgstr ""
+"Quando si avvia IDJC molte delle impostazioni della finestra principale "
+"saranno come le avete lasciate. In alternativa potete specificare qui sotto "
+"come volete trovare le varie impostazioni all'avvio di IDJC."
 
 #: python/preferences.py:1337
 msgid "Player 1"
-msgstr ""
+msgstr "Lettore 1"
 
 #: python/preferences.py:1338
 msgid "Player 2"
-msgstr ""
+msgstr "Lettore 2"
 
 #. TC: DJ hears the stream mix.
 #: python/preferences.py:1366
 msgid "Monitor Stream Mix"
-msgstr ""
+msgstr "Monitora il Flusso"
 
 #. TC: Tab heading for controls that don't merit their own preferences tab.
 #: python/preferences.py:1377
 msgid "General"
-msgstr ""
+msgstr "Generale"
 
 #: python/preferences.py:1443
 #, python-format
 msgid "Using named JACK server: %s"
-msgstr ""
+msgstr "Sto usando il server JACK: %s."
 
 #: python/preferences.py:1504
 msgid "Route audio through the DSP interface"
-msgstr ""
+msgstr "Ruota l'audio attraverso l'interfaccia DSP"
 
 #: python/preferences.py:1526
 msgid "JACK Ports"
-msgstr ""
+msgstr "Porte JACK"
 
 #. TC: Keyboard and MIDI bindings configuration.
 #: python/preferences.py:1534
 msgid "Bindings"
-msgstr ""
+msgstr "Scorciatoie"
 
 #. TC: 'General Public License' is a proper name and must not be translated. It can however be abbreviated as 'GPL'.
 #: python/preferences.py:1567
 msgid "Released under the GNU General Public License V2.0"
-msgstr ""
+msgstr "Rilasciato sotto la Licenza Pubblica Generica GNU, V2.0"
 
 #: python/preferences.py:1579
 msgid "Licence"
-msgstr ""
+msgstr "Licenza"
 
 #: python/preferences.py:1590
 msgid "Contributors"
-msgstr ""
+msgstr "Collaboratori"
 
 #. TC: gtk.Entry popup menu item. Attribute may be one of Artist, Title, Album, and so on.
 #: python/sourceclientgui.py:80
@@ -3235,7 +3369,7 @@ msgstr "Modifica i dettagli della connessione"
 
 #: python/sourceclientgui.py:177
 msgid "This server is to be scanned for audience figures"
-msgstr "Questo server va esaminato per il pubblico"
+msgstr "Da scansionare per il pubblico in ascolto"
 
 #: python/sourceclientgui.py:190
 msgid "Server type"
@@ -3247,7 +3381,7 @@ msgstr "Numero porta"
 
 #: python/sourceclientgui.py:191
 msgid "Mount point"
-msgstr "Punto di <i>mount</i>"
+msgstr "Punto di montaggio"
 
 #: python/sourceclientgui.py:191
 msgid "Login name"
@@ -3303,9 +3437,8 @@ msgstr "Se connesso"
 #. TC: user agents are strings that internet clients use to identify themselves to a server.
 #. TC: typically application name, version, maybe a capabilities list.
 #: python/sourceclientgui.py:894
-#, fuzzy
 msgid "Custom user agent string"
-msgstr "user agent stringa personalizzata"
+msgstr "Stringa personalizzata per i navigatori"
 
 #: python/sourceclientgui.py:901
 msgid ""
@@ -3438,7 +3571,7 @@ msgstr ""
 #. TC: Kick whoever is on the server.
 #: python/sourceclientgui.py:1546
 msgid "Kick Incumbent"
-msgstr ""
+msgstr "Libera connessione"
 
 #: python/sourceclientgui.py:1548
 msgid ""
@@ -3466,7 +3599,7 @@ msgstr ""
 
 #: python/sourceclientgui.py:1566
 msgid "With kick"
-msgstr ""
+msgstr "Libera"
 
 #: python/sourceclientgui.py:1568
 msgid "Disconnect whoever is using the server just before start time."
@@ -3526,7 +3659,7 @@ msgstr "Stringa di formattazione"
 #. TC: Label for the metadata fallback value.
 #: python/sourceclientgui.py:1623
 msgid "Fallback"
-msgstr ""
+msgstr "Alternativa"
 
 #: python/sourceclientgui.py:1637
 msgid ""
@@ -3542,13 +3675,12 @@ msgid ""
 "%s."
 msgstr ""
 "Qui potete inserire del testo da associare al flusso e specificare dei "
-"<i>placemarkers</i> %r %t %l %s per l'artista, il titolo, l'album e la "
-"canzone rispettivamente, oppure lasciare vuoto questo campo per usare i dati "
-"di base.\n"
+"segnaposti %r %t %l %s per l'artista, il titolo, l'album e la canzone "
+"rispettivamente, oppure lasciare vuoto questo campo per usare i dati di "
+"base.\n"
 "\n"
 "In mancanza di metadati sufficenti il nome della canzone (%s) viene preso "
-"dal nome file, mentre gli altri <i>placemarkers</i> utilizzeranno il testo a "
-"destra.\n"
+"dal nome file, mentre gli altri segnaposti utilizzeranno il testo a destra.\n"
 "\n"
 "Se lasciato vuoto, i flussi Ogg utilizzeranno i tag standard e gli mp3 "
 "utilizzeranno %s."
@@ -3829,6 +3961,9 @@ msgid ""
 "metric. Q8 is a good choice for artifact-free speech and Q10 would be the "
 "ideal choice for music."
 msgstr ""
+"Sceglie un bitrate appropriato per l'ampiezza di banda selezionata in base "
+"alla qualità. Q8 è un buon compromesso per il parlato e Q10 rappresenta la "
+"scelta migliore per la musica."
 
 #: python/sourceclientgui.py:1870
 msgid "CPU"
@@ -3933,6 +4068,9 @@ msgid ""
 "administrator password. For those that don't leave this blank (the source "
 "password is sufficient for those)."
 msgstr ""
+"Occorre per le statistiche e per i kick sui server principali che hanno una "
+"password di amministrazione impostata. Per chi riempie questo campo (la "
+"password della fonte è sufficente)"
 
 #: python/sourceclientgui.py:1961
 msgid "Contact Details"
@@ -4044,7 +4182,7 @@ msgstr "Disconnetti"
 
 #: python/sourceclientgui.py:2332
 msgid "Kick Incumbents"
-msgstr ""
+msgstr "Libera le connessioni"
 
 #: python/sourceclientgui.py:2340
 msgid "Metadata:"
@@ -4102,3 +4240,17 @@ msgid ""
 msgstr ""
 "<span weight=\"bold\" size=\"12000\">E' intervenuta una disconnessione "
 "pianificata.</span>"
+
+#~ msgid " %s "
+#~ msgstr "%s"
+
+#~ msgid "Compressor"
+#~ msgstr "Limiter"
+
+#~ msgid ""
+#~ "A lookahead brick wall limiter. Use the Ratio control to boost the "
+#~ "quieter sounds. The Limit control is used to set the absolute maximum "
+#~ "audio level."
+#~ msgstr ""
+#~ "Un limiter predittivo. Il controllo Limita è utilizzato per impostare il "
+#~ "livello massimo assoluto dell'audio."

@@ -327,7 +327,7 @@ class OpenerTab(gtk.VBox):
          hbox.pack_start(each, False)
       frame.add(hbox)
       
-      frame = gtk.Frame(_(" %s " % 'When opened close these other buttons'))
+      frame = gtk.Frame(" %s " % _('When opened close these other buttons'))
       self.pack_start(frame, False, padding=3)
       self.closer_hbox = gtk.HBox()
       self.closer_hbox.set_border_width(3)
