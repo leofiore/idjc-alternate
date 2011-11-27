@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: putidjcinthesubjectline@bethere.co.uk\n"
-"POT-Creation-Date: 2011-11-22 15:52+0000\n"
-"PO-Revision-Date: 2011-11-22 12:18+0100\n"
+"POT-Creation-Date: 2011-11-27 13:09+0000\n"
+"PO-Revision-Date: 2011-11-24 08:22+0100\n"
 "Last-Translator: rmorelli\n"
 "Language-Team: American English <kde-i18n-doc@kde.org>\n"
 "Language: it\n"
@@ -910,7 +910,7 @@ msgstr ""
 
 #: python/maingui.py:309
 msgid "Button Open Triggers"
-msgstr ""
+msgstr "Inneschi apertura pulsante"
 
 #: python/maingui.py:315
 msgid "Playlist advance button"
@@ -1329,7 +1329,7 @@ msgstr ""
 "esser. Il rosso del limiter."
 
 #. TC: Menu item to show the standard application "About" feature.
-#: python/maingui.py:3089 python/preferences.py:1604
+#: python/maingui.py:3089 python/preferences.py:1610
 msgid "About"
 msgstr "Circa"
 
@@ -1714,12 +1714,12 @@ msgstr "Flusso registratore "
 #. TC: binding editor, action pane, second row, dropdown text.
 #: python/midicontrols.py:1233
 msgid "Direct fader/held button"
-msgstr ""
+msgstr "Pulsante cursore/premuto"
 
 #. TC: binding editor, action pane, second row, dropdown text.
 #: python/midicontrols.py:1235
 msgid "One-shot/toggle button"
-msgstr ""
+msgstr "Pulsante a singolo colpo"
 
 #. TC: binding editor, action pane, second row, dropdown text.
 #: python/midicontrols.py:1237
@@ -1744,7 +1744,7 @@ msgstr "Nota MIDI"
 #. TC: binding editor, input pane, second row, dropdown text.
 #: python/midicontrols.py:1248
 msgid "MIDI pitch-wheel"
-msgstr ""
+msgstr "MIDI controllo della tonalità "
 
 #. TC: binding editor, input pane, second row, dropdown text.
 #: python/midicontrols.py:1250
@@ -1790,9 +1790,8 @@ msgstr "Obiettivo"
 #. TC: Checkbutton text.
 #. TC: Use reverse scale and invert the meaning of button presses.
 #: python/midicontrols.py:1316
-#, fuzzy
 msgid "Reversed"
-msgstr "Mai"
+msgstr "Invertiti"
 
 #: python/midicontrols.py:1317
 msgid "Pressed"
@@ -1851,7 +1850,7 @@ msgstr "Modificatori"
 #. TC: Spinbutton text when there is only one user interface control that can be referenced.
 #: python/midicontrols.py:1653
 msgid "Singular control"
-msgstr ""
+msgstr "Controllo unico"
 
 #. TC: Tree column heading for targets e.g. Channel 1, Stream 2
 #: python/midicontrols.py:1714
@@ -1941,7 +1940,7 @@ msgstr "Anno"
 #. TC: Window title.
 #: python/mutagentagger.py:680
 msgid "IDJC Tagger"
-msgstr ""
+msgstr "Il tagger IDJC"
 
 #: python/mutagentagger.py:692 python/mutagentagger.py:694
 #: python/mutagentagger.py:696
@@ -2063,7 +2062,7 @@ msgstr "Trk"
 #. TC: Column heading, the index number.
 #: python/playergui.py:234
 msgid "Ind"
-msgstr ""
+msgstr "Ind"
 
 #: python/playergui.py:312
 msgid "External Playlist"
@@ -2282,22 +2281,22 @@ msgstr "Interrompi la registrazione"
 #. TC: Playlist control.
 #: python/playergui.py:3255
 msgid ">>> Transfer across >>>"
-msgstr ""
+msgstr ">>> Trasferisci tra >>>"
 
 #. TC: Playlist control.
 #: python/playergui.py:3258
 msgid "<<< Transfer across <<<"
-msgstr ""
+msgstr "<<< Trasferisci tra <<<"
 
 #. TC: Playlist control.
 #: python/playergui.py:3265
 msgid ">>> Fade across >>>"
-msgstr ""
+msgstr ">>> Dissolvi tra >>>"
 
 #. TC: Playlist control.
 #: python/playergui.py:3268
 msgid "<<< Fade across <<<"
-msgstr ""
+msgstr "<<< Dissolvi tra <<<"
 
 #. TC: Playlist control.
 #: python/playergui.py:3274
@@ -2891,7 +2890,7 @@ msgstr "Altre opzioni"
 
 #: python/preferences.py:510
 msgid "Phase Rotator"
-msgstr ""
+msgstr "Rotatore di fase"
 
 #: python/preferences.py:512
 msgid ""
@@ -2917,7 +2916,7 @@ msgstr "Usa il sistema base di JACK per il routing audio"
 
 #: python/preferences.py:564
 msgid "Reroute the audio to/from the specified port"
-msgstr ""
+msgstr "Reindirizza l'audio verso/da la porta specificata"
 
 #: python/preferences.py:565
 msgid "Save the audio routing so that it persists across application restarts"
@@ -3220,11 +3219,11 @@ msgstr "Carica le impostazioni consigliate"
 
 #: python/preferences.py:1218
 msgid "Rise"
-msgstr ""
+msgstr "Crescita"
 
 #: python/preferences.py:1233
 msgid "Fall"
-msgstr ""
+msgstr "Decadenza"
 
 #. TC: The DJ's sound level controller.
 #: python/preferences.py:1245
@@ -3334,9 +3333,14 @@ msgstr "Rilasciato sotto la Licenza Pubblica Generica GNU, V2.0"
 msgid "Licence"
 msgstr "Licenza"
 
-#: python/preferences.py:1590
+#: python/preferences.py:1601
 msgid "Contributors"
 msgstr "Collaboratori"
+
+#: python/preferences.py:1606
+#, fuzzy
+msgid "Translators"
+msgstr "Trasferisci"
 
 #. TC: gtk.Entry popup menu item. Attribute may be one of Artist, Title, Album, and so on.
 #: python/sourceclientgui.py:80
@@ -3769,7 +3773,6 @@ msgstr ""
 "dei canali."
 
 #: python/sourceclientgui.py:1720
-#, fuzzy
 msgid ""
 "The type of mpeg header used in the mp3 stream or either s-rate or "
 "freeformat. Freeformat indicates that the bitrate is not specified in the "
@@ -3778,7 +3781,14 @@ msgid ""
 "that. In short you'll be streaming something many listeners may not be able "
 "to listen to. S-rate indicates the sample rate you have selected is not "
 "compatible with mp3 and you'll need to change it if you want to stream."
-msgstr "Il tipo di intestazione mpeg utilizzata nel flusso mp3 o "
+msgstr ""
+"Il tipo di intestazione mpeg utilizzata nel flusso mp3 o s-rate o "
+"freeformat. Freeformat indica che il bitrate non è specificato "
+"nell'intestazione perché è non standard, è il client dell'ascoltatore deve "
+"capire qual'è il bitrate e non tutti sono in grado di farlo. In breve, "
+"trasmetterete qualcosa che non tutti potrebbero essere in grado di "
+"ascoltare. S-rate indica che la frequenza di campionamento selezionata non è "
+"compatibile con mp3 e che dovrete cambiarla se volete trasmettere."
 
 #: python/sourceclientgui.py:1735
 msgid ""

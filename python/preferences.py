@@ -1581,23 +1581,29 @@ class mixprefs:
       lw.show()
       label.show()
       
-      contributors = ("Stephen Fairchild (s-fairchild@users.sourceforge.net)", "And Clover (and@doxdesk.com)", "Dario Abatianni (eisfuchs@users.sourceforge.net)", "Stefan Fendt (stefan@sfendt.de)")
+      def contribs_page(title, content):
+         sw = gtk.ScrolledWindow()
+         sw.set_border_width(1)
+         sw.set_shadow_type(gtk.SHADOW_NONE)
+         sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+         label = gtk.Label(title)
+         nb.append_page(sw, label)
+         sw.show()
+         lw.show()
+         ivbox = gtk.VBox()
+         sw.add_with_viewport(ivbox)
+         ivbox.show()
+         for each in content:
+            label = gtk.Label(each)
+            ivbox.add(label)
+            label.show()
       
-      sw = gtk.ScrolledWindow()
-      sw.set_border_width(1)
-      sw.set_shadow_type(gtk.SHADOW_NONE)
-      sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
-      label = gtk.Label(_('Contributors'))
-      nb.append_page(sw, label)
-      sw.show()
-      lw.show()
-      ivbox = gtk.VBox()
-      sw.add_with_viewport(ivbox)
-      ivbox.show()
-      for each in contributors:
-         label = gtk.Label(each)
-         ivbox.add(label)
-         label.show()
+      contribs_page(_('Contributors'), ("Stephen Fairchild (s-fairchild@users.sourceforge.net)",
+                                       "And Clover (and@doxdesk.com)",
+                                       "Dario Abatianni (eisfuchs@users.sourceforge.net)",
+                                       "Stefan Fendt (stefan@sfendt.de)"))
+                                       
+      contribs_page(_('Translators'), ("it NAME (E-MAIL)",))
       
       vbox.show()
 
