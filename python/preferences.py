@@ -1595,6 +1595,7 @@ class mixprefs:
          ivbox.show()
          for each in content:
             label = gtk.Label(each)
+            label.set_use_markup(True)
             ivbox.add(label)
             label.show()
       
@@ -1603,7 +1604,7 @@ class mixprefs:
                                        "Dario Abatianni (eisfuchs@users.sourceforge.net)",
                                        "Stefan Fendt (stefan@sfendt.de)"))
                                        
-      contribs_page(_('Translators'), ("it NAME (E-MAIL)",))
+      contribs_page(_('Translators'), ("<b>it</b>  Raffaele Morelli (raffaele.morelli@gmail.com)",))
       
       vbox.show()
 
