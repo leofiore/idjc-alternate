@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: putidjcinthesubjectline@bethere.co.uk\n"
-"POT-Creation-Date: 2011-12-15 20:22+0000\n"
-"PO-Revision-Date: 2011-12-15 10:26+0100\n"
+"POT-Creation-Date: 2011-12-18 18:34+0000\n"
+"PO-Revision-Date: 2011-12-16 15:46+0100\n"
 "Last-Translator: rmorelli\n"
 "Language-Team: American English <kde-i18n-doc@kde.org>\n"
 "Language: it\n"
@@ -323,7 +323,7 @@ msgstr "Nickname"
 #. TC: column heading.
 #. TC: Station description. Typically the user enters a small paragraph of text.
 #: python/prelims/profiledialog.py:286 python/irc.py:92
-#: python/playergui.py:236 python/sourceclientgui.py:1938
+#: python/playergui.py:236 python/sourceclientgui.py:1937
 msgid "Description"
 msgstr "Descrizione"
 
@@ -360,19 +360,18 @@ msgstr ""
 "\n"
 "I dati dei profili eliminati non possono essere recuperati."
 
-#. TC: Tab refers to a GTK notebook widget tab.
+#. TC: The contents of <> and {} must not be changed.
 #: python/dialogs.py:173
-#, python-format
 msgid ""
-"<span weight=\"bold\" size=\"12000\">The connection to the server in tab %s "
-"has failed.</span>\n"
-"A reconnection attempt will be made in %d seconds.\n"
-"This is attempt number {0} of {1}."
+"<span weight=\"bold\" size=\"12000\">The connection to the server in tab "
+"{servertab} has failed.</span>\n"
+"A reconnection attempt will be made in {countdown} seconds.\n"
+"This is attempt number {attempt} of {maxtries}."
 msgstr ""
 "<span weight=\"bold\" size=\"12000\">La connessione al server nella "
-"linguetta %s è fallita.</span>\n"
-"Un tentativo di riconnessione verrà effettuato tra %d secondi.\n"
-"Questo è il tentativo {0} di {1}."
+"linguetta {servertab} è fallita.</span>\n"
+"Un tentativo di riconnessione verrà effettuato tra {countdown} secondi.\n"
+"Questo è il tentativo {attempt} di {maxtries}."
 
 #: python/dialogs.py:223
 #, python-format
@@ -433,11 +432,11 @@ msgid "Song name"
 msgstr "Canzone"
 
 #. TC: The DJ or Stream name.
-#: python/irc.py:92 python/sourceclientgui.py:1935
+#: python/irc.py:92 python/sourceclientgui.py:1934
 msgid "DJ name"
 msgstr "Nome DJ"
 
-#: python/irc.py:92 python/sourceclientgui.py:1936
+#: python/irc.py:92 python/sourceclientgui.py:1935
 msgid "Listen URL"
 msgstr "Indirizzo di ascolto (URL)"
 
@@ -748,8 +747,6 @@ msgstr "Silenzia lettore"
 
 #. TC: {0}, {1} = Monitor Mix, Stream.
 #. TC: Or whatever they become translated to.
-#. TC: Context {0}, {1}, {2} = Monitor Mix, Stream, DJ
-#. TC: Or whatever they become translated to.
 #: python/jingles.py:467 python/jingles.py:483 python/maingui.py:2760
 #: python/maingui.py:2762 python/maingui.py:2789
 msgid "Monitor Mix"
@@ -762,7 +759,7 @@ msgstr "Monitoraggio Mix"
 #: python/jingles.py:467 python/jingles.py:483 python/maingui.py:2777
 #: python/maingui.py:2789 python/midicontrols.py:161
 #: python/midicontrols.py:1226 python/playergui.py:3679
-#: python/sourceclientgui.py:2844
+#: python/sourceclientgui.py:2843
 msgid "Stream"
 msgstr "Flusso"
 
@@ -1022,7 +1019,7 @@ msgid "The combined total number of listeners in all server tabs."
 msgstr "Il numero cumulato di ascoltatori per tutti i server."
 
 #. TC: Record as in, to make a recording.
-#: python/maingui.py:1362 python/sourceclientgui.py:2839
+#: python/maingui.py:1362 python/sourceclientgui.py:2838
 msgid "Record"
 msgstr "Registra"
 
@@ -1859,22 +1856,6 @@ msgstr "Controllo unico"
 msgid "Target"
 msgstr "Obiettivo"
 
-#. TC: User to create a new input binding.
-#: python/midicontrols.py:1737
-msgid "New"
-msgstr "Nuovo"
-
-#. TC: User to remove an input binding.
-#. TC: Menu Item. Remove the selected track.
-#: python/midicontrols.py:1739 python/playergui.py:3825
-msgid "Remove"
-msgstr "Rimuovi"
-
-#. TC: User to modify an existing input binding.
-#: python/midicontrols.py:1741
-msgid "Edit"
-msgstr "Modifica"
-
 #: python/mutagentagger.py:218
 msgid "title"
 msgstr "titolo"
@@ -2172,7 +2153,7 @@ msgstr "Casuale"
 
 #: python/playergui.py:1581 python/playergui.py:3644
 msgid "External"
-msgstr "Esterno"
+msgstr "Esterna"
 
 #: python/playergui.py:1593 python/playergui.py:1609 python/playergui.py:3645
 msgid "Alternate"
@@ -2180,7 +2161,7 @@ msgstr "Alterna"
 
 #: python/playergui.py:1593 python/playergui.py:1611 python/playergui.py:3647
 msgid "Random Hop"
-msgstr "Casuale"
+msgstr "Salto casuale"
 
 #. TC: The remaining playlist time.
 #: python/playergui.py:1749 python/playergui.py:1753
@@ -2446,13 +2427,13 @@ msgstr ""
 "Imposta la modalità della playlist, che definisce il comportamento del "
 "lettore dopo che una traccia è stata eseguita.\n"
 "\n"
-"'Suona tutto' è la modalità più versatile perché consente di usare gli "
+"'Riproduci tutto' è la modalità più versatile perché consente di usare gli "
 "elementi di controllo disponibili nel menù contestuale della playlist, "
 "accessibile con il clic destro. Se non sono presenti elementi di controllo "
 "le tracce verranno riprodotte sequenzialmente fino alla fine della playlist "
 "dopodiché il lettore si fermerà.\n"
 "\n"
-"'Tutte in ciclo' fa in modo che le tracce vengano riprodottein sequenza, "
+"'Riproduci in ciclo' fa in modo che le tracce vengano riprodottein sequenza, "
 "iniziando da capo una volta raggiunta la fine della playlist.\n"
 "\n"
 "'Casuale' le tracce verranno riprodotte all'infinito e casualmente.\n"
@@ -2529,6 +2510,11 @@ msgstr "Meta Tag"
 #: python/playergui.py:3819
 msgid "Duplicate"
 msgstr "Duplica"
+
+#. TC: Menu Item. Remove the selected track.
+#: python/playergui.py:3825
+msgid "Remove"
+msgstr "Rimuovi"
 
 #. TC: Submenu Item. Parent menu item is Remove.
 #: python/playergui.py:3842
@@ -3995,18 +3981,7 @@ msgstr ""
 msgid " Test / Monitor "
 msgstr " Test / Monitor "
 
-#: python/sourceclientgui.py:1897
-msgid ""
-"Information about how the encoder is currently configured is displayed here."
-msgstr ""
-"Le informazioni su come è configurato il codificatore sono riportate qui."
-
-#. TC: Button when pressed performs an update.
-#: python/sourceclientgui.py:1899
-msgid "Update"
-msgstr "Aggiorna"
-
-#: python/sourceclientgui.py:1900
+#: python/sourceclientgui.py:1894
 msgid ""
 "Use this to change the encoder settings while streaming or recording.\n"
 " \n"
@@ -4022,12 +3997,18 @@ msgstr ""
 "codificatore, oppure che state cercando di passare da Ogg a mp3, il che non "
 "è consentito."
 
+#: python/sourceclientgui.py:1904
+msgid ""
+"Information about how the encoder is currently configured is displayed here."
+msgstr ""
+"Le informazioni su come è configurato il codificatore sono riportate qui."
+
 #. TC: Tab heading. User can enter information about the stream here.
-#: python/sourceclientgui.py:1912
+#: python/sourceclientgui.py:1911
 msgid "Stream Info"
 msgstr "Informazioni flusso"
 
-#: python/sourceclientgui.py:1917
+#: python/sourceclientgui.py:1916
 msgid ""
 "Enter your DJ name or station name here. Typically this information will be "
 "displayed by listener clients."
@@ -4036,7 +4017,7 @@ msgstr ""
 "informazioni saranno visualizzate attraverso i programmi usati dagli "
 "ascoltatori."
 
-#: python/sourceclientgui.py:1919
+#: python/sourceclientgui.py:1918
 msgid ""
 "The URL of your radio station. This and the rest of the information below is "
 "intended for display on a radio station listings website."
@@ -4045,19 +4026,19 @@ msgstr ""
 "informazioni qui sotto sono da intendersi come visualizzabili su di un sito "
 "web che fornisce una lista di stazioni."
 
-#: python/sourceclientgui.py:1921
+#: python/sourceclientgui.py:1920
 msgid "A description of your radio station."
 msgstr "Descrizione della vostra stazione."
 
-#: python/sourceclientgui.py:1925
+#: python/sourceclientgui.py:1924
 msgid "The musical genres you are likely to play."
 msgstr "Il genere musicale che offrirete."
 
-#: python/sourceclientgui.py:1928
+#: python/sourceclientgui.py:1927
 msgid "Make Public"
 msgstr "Rendi pubblico"
 
-#: python/sourceclientgui.py:1929
+#: python/sourceclientgui.py:1928
 msgid ""
 "Publish your radio station on a listings website. The website in question "
 "will depend on how the server to which you connect is configured."
@@ -4065,15 +4046,15 @@ msgstr ""
 "Pubblicate la vostra stazione su un sito. Il sito in questione dipenderà "
 "dalla configurazione del server cui vi connettete."
 
-#: python/sourceclientgui.py:1939
+#: python/sourceclientgui.py:1938
 msgid "Genre(s)"
 msgstr "Genere(i)"
 
-#: python/sourceclientgui.py:1950
+#: python/sourceclientgui.py:1949
 msgid "Master server admin password"
 msgstr "Password di amministrazione del server principale"
 
-#: python/sourceclientgui.py:1955
+#: python/sourceclientgui.py:1954
 msgid ""
 "This is for kick and stats on Shoutcast master servers that have an "
 "administrator password. For those that don't leave this blank (the source "
@@ -4083,47 +4064,47 @@ msgstr ""
 "password di amministrazione impostata. Per chi riempie questo campo (la "
 "password della fonte è sufficente)"
 
-#: python/sourceclientgui.py:1961
+#: python/sourceclientgui.py:1960
 msgid "Contact Details"
 msgstr "Dettagli del contatto"
 
-#: python/sourceclientgui.py:1965
+#: python/sourceclientgui.py:1964
 msgid "Internet Relay Chat connection info goes here."
 msgstr "Le informazioni per IRC vanno inserite qui"
 
-#: python/sourceclientgui.py:1967
+#: python/sourceclientgui.py:1966
 msgid "Connection info for AOL instant messenger goes here."
 msgstr "Le informazioni per AOL vanno inserite qui."
 
-#: python/sourceclientgui.py:1969
+#: python/sourceclientgui.py:1968
 msgid "ICQ instant messenger connection info goes here."
 msgstr "Le informazioni per ICQ vanno inserite qui."
 
-#: python/sourceclientgui.py:1972
+#: python/sourceclientgui.py:1971
 msgid "IRC"
 msgstr "IRC"
 
-#: python/sourceclientgui.py:1973
+#: python/sourceclientgui.py:1972
 msgid "AIM"
 msgstr "AIM"
 
-#: python/sourceclientgui.py:1974
+#: python/sourceclientgui.py:1973
 msgid "ICQ"
 msgstr "ICQ"
 
-#: python/sourceclientgui.py:1983
+#: python/sourceclientgui.py:1982
 msgid "Extra Shoutcast"
 msgstr "Extra Shoutcast"
 
-#: python/sourceclientgui.py:1988
+#: python/sourceclientgui.py:1987
 msgid "Troubleshooting"
 msgstr "Risoluzione problemi"
 
-#: python/sourceclientgui.py:2130
+#: python/sourceclientgui.py:2129
 msgid "Stop recording."
 msgstr "Ferma la registrazione"
 
-#: python/sourceclientgui.py:2131
+#: python/sourceclientgui.py:2130
 msgid ""
 "Start recording.\n"
 "\n"
@@ -4144,20 +4125,20 @@ msgstr ""
 "Inoltre verificate di avere i permessi di scrittura sulla cartella che avete "
 "scelto come destinazione della registrazione."
 
-#: python/sourceclientgui.py:2132
+#: python/sourceclientgui.py:2131
 msgid "Pause recording."
 msgstr "Metti in pausa"
 
-#: python/sourceclientgui.py:2165
+#: python/sourceclientgui.py:2164
 msgid "Recording time elapsed."
 msgstr "Tempo di registrazione trascorso."
 
 #. TC: Dialog title bar text.
-#: python/sourceclientgui.py:2202
+#: python/sourceclientgui.py:2201
 msgid "Select the folder to record to"
 msgstr "Seleziona la cartella in cui registrare"
 
-#: python/sourceclientgui.py:2209
+#: python/sourceclientgui.py:2208
 msgid ""
 "Choose which stream to record or the 24 bit FLAC option. If the stream isn't "
 "already running the encoder will be started automatically using whatever "
@@ -4167,7 +4148,7 @@ msgstr ""
 "già attivo il codificatore verrà avviato automaticamente con le impostazioni "
 "attualmente configurate."
 
-#: python/sourceclientgui.py:2210
+#: python/sourceclientgui.py:2209
 msgid ""
 "Choose which directory you want to save to. All file names will be in a "
 "timestamp format and have either an oga, mp3, or flac file extension. "
@@ -4179,36 +4160,36 @@ msgstr ""
 "Importante: dovete scegliere una cartella per la quale avete i permessi "
 "necessari alla scrittura."
 
-#: python/sourceclientgui.py:2298
+#: python/sourceclientgui.py:2297
 msgid "Perform operations on multiple servers in unison."
 msgstr "Esegue le operazioni su più server alla volta."
 
-#: python/sourceclientgui.py:2310
+#: python/sourceclientgui.py:2309
 msgid "Connect"
 msgstr "Connetti"
 
-#: python/sourceclientgui.py:2326
+#: python/sourceclientgui.py:2325
 msgid "Disconnect"
 msgstr "Disconnetti"
 
-#: python/sourceclientgui.py:2332
+#: python/sourceclientgui.py:2331
 msgid "Kick Incumbents"
 msgstr "Libera le connessioni"
 
-#: python/sourceclientgui.py:2340
+#: python/sourceclientgui.py:2339
 msgid "Metadata:"
 msgstr "Metadati:"
 
-#: python/sourceclientgui.py:2368
+#: python/sourceclientgui.py:2367
 msgid "Group Controls"
 msgstr "Controlli di gruppo"
 
 #. TC: Window title bar text.
-#: python/sourceclientgui.py:2828
+#: python/sourceclientgui.py:2827
 msgid "IDJC Output"
 msgstr "Uscita IDJC"
 
-#: python/sourceclientgui.py:2843
+#: python/sourceclientgui.py:2842
 msgid ""
 "Each one of these tabs represents a separate stream recorder. The LED "
 "indicator colours represent the following: Clear=Stopped Yellow=Paused "
@@ -4217,7 +4198,7 @@ msgstr ""
 "Ognuna di queste linguette rappresenta un registratore di flusso. I colori "
 "del LED indicano: Vuoto=Fermo Giallo=Pausa Rosso=Registrazione."
 
-#: python/sourceclientgui.py:2848
+#: python/sourceclientgui.py:2847
 msgid ""
 "Each one of these tabs represents a separate radio streamer. The LED "
 "indicator colours represent the following: Clear=No connection "
@@ -4228,11 +4209,11 @@ msgstr ""
 "Vuoto=Non connesso Giallo=In attesa di autenticazione. Verde=Connesso. "
 "Lampeggiante=Perdita di pacchetti a causa di una cattiva connessione."
 
-#: python/sourceclientgui.py:2860
+#: python/sourceclientgui.py:2859
 msgid " Stream "
 msgstr " Flusso "
 
-#: python/sourceclientgui.py:2882
+#: python/sourceclientgui.py:2881
 msgid ""
 "<span weight=\"bold\" size=\"12000\">A connection to a radio server has "
 "failed.</span>\n"
@@ -4244,13 +4225,22 @@ msgstr ""
 "\n"
 "Non verrà effettuato un altro tentativo."
 
-#: python/sourceclientgui.py:2884
+#: python/sourceclientgui.py:2883
 msgid ""
 "<span weight=\"bold\" size=\"12000\">A scheduled stream disconnection has "
 "occurred.</span>"
 msgstr ""
 "<span weight=\"bold\" size=\"12000\">E' intervenuta una disconnessione "
 "pianificata.</span>"
+
+#~ msgid "New"
+#~ msgstr "Nuovo"
+
+#~ msgid "Edit"
+#~ msgstr "Modifica"
+
+#~ msgid "Update"
+#~ msgstr "Aggiorna"
 
 #~ msgid " %s "
 #~ msgstr "%s"

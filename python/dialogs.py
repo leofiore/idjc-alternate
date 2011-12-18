@@ -169,14 +169,14 @@ class autodisconnection_notification_dialog(gtk.Dialog):
 
 class ReconnectionDialog(gtk.Dialog):
    td = (0.0,)
-   # TC: Tab refers to a GTK notebook widget tab.   
-   lines = _('<span weight="bold" size="12000">The connection to the server in tab %s has failed.</span>\nA reconnection attempt will be made in %d seconds.\nThis is attempt number {0} of {1}.').splitlines()
+   # TC: The contents of <> and {} must not be changed.
+   lines = _('<span weight="bold" size="12000">The connection to the server in tab {servertab} has failed.</span>\nA reconnection attempt will be made in {countdown} seconds.\nThis is attempt number {attempt} of {maxtries}.').splitlines()
    
    def update_countdown_text(self):
       remaining = self.remaining
       self.remaining = int(self.event_time - time.time())
       if self.remaining != remaining:
-         self.label2.set_text(self.lines[1] % self.remaining)
+         self.label2.set_text(self.lines[1].format(countdown=self.remaining))
          if self.remaining == 0:
             self.hide()
             while gtk.events_pending():
@@ -222,7 +222,7 @@ class ReconnectionDialog(gtk.Dialog):
       if repeat:
          self.label3.set_text(_('This is attempt number %d. There is no retry limit.') % (self.trycount + 1))
       else:
-         self.label3.set_text(self.lines[2].format(self.trycount + 1, len(self.td)))
+         self.label3.set_text(self.lines[2].format(attempt = self.trycount + 1, maxtries = len(self.td)))
       if self.config.reconnection_quiet.get_active():
          self.realize()
       else:
@@ -265,10 +265,10 @@ class ReconnectionDialog(gtk.Dialog):
       vbox = gtk.VBox()
       vbox.set_spacing(3)
       hbox.pack_start(vbox, False)
-      self.label1 = gtk.Label(self.lines[0] % (tab.numeric_id + 1) + "\n")
+      self.label1 = gtk.Label(self.lines[0].format(servertab = tab.numeric_id + 1) + "\n")
       self.label1.set_use_markup(True)
-      self.label2 = gtk.Label(self.lines[1] % 0)
-      self.label3 = gtk.Label(self.lines[2].format(1, 1))
+      self.label2 = gtk.Label(self.lines[1].format(countdown = 0))
+      self.label3 = gtk.Label(self.lines[2].format(attempt = 1, maxtries = 1))
       for l in (self.label1, self.label2, self.label3):
          l.set_alignment(0.0, 0.5)
          vbox.pack_start(l, False)

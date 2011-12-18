@@ -1734,11 +1734,11 @@ class ControlsUI(gtk.VBox):
         # New/Edit/Remove buttons
         #
         # TC: User to create a new input binding.
-        self.new_button= gtk.Button(_('New'))
+        self.new_button= gtk.Button(stock=gtk.STOCK_NEW)
         # TC: User to remove an input binding.
-        self.remove_button= gtk.Button(_('Remove'))
+        self.remove_button= gtk.Button(stock=gtk.STOCK_DELETE)
         # TC: User to modify an existing input binding.
-        self.edit_button= gtk.Button(_('Edit'))
+        self.edit_button= gtk.Button(stock=gtk.STOCK_EDIT)
         self.new_button.connect('clicked', self.on_new)
         self.remove_button.connect('clicked', self.on_remove)
         self.edit_button.connect('clicked', self.on_edit)
@@ -1749,9 +1749,9 @@ class ControlsUI(gtk.VBox):
         buttons= gtk.HButtonBox()
         buttons.set_spacing(8)
         buttons.set_layout(gtk.BUTTONBOX_END)
-        buttons.pack_start(self.new_button, False, False)
-        buttons.pack_start(self.remove_button, False, False)
         buttons.pack_start(self.edit_button, False, False)
+        buttons.pack_start(self.remove_button, False, False)
+        buttons.pack_start(self.new_button, False, False)
         buttons.show_all()
         self.on_cursor_changed()
 
