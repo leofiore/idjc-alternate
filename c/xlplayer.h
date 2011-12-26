@@ -32,16 +32,13 @@
 #include <FLAC/all.h>
 #endif
 
-#ifdef HAVE_FAAD
-#include <mp4ff.h>
-#include <faad.h>
-#endif
-
 #ifdef DYN_MAD
 #include "mad.h"
 #else
 #include <mad.h>
 #endif /* DYN_MAD */
+
+#include "fade.h"
 
 enum command_t {CMD_COMPLETE, CMD_PLAY, CMD_EJECT, CMD_CLEANUP, CMD_THREADEXIT, CMD_PLAYMANY};
 
@@ -62,6 +59,8 @@ struct xlp_dynamic_metadata     /* song titles can change mid-file */
 
 struct xlplayer
    {
+   struct fade *fadein;                 /* fade level computation */
+   struct fade *fadeout;
    jack_ringbuffer_t *left_ch;          /* main playback buffer */
    jack_ringbuffer_t *right_ch;
    jack_ringbuffer_t *left_fade;        /* buffers used for fade - swapped with above when needed */
@@ -82,17 +81,13 @@ struct xlplayer
    jack_default_audio_sample_t *rightbuffer;
    int fade_mode;                       /* deferred fade mode */
    int fadeout_f;                       /* flag indicated if fade is applied upon stopping */
-   int fadeoutstep;                     /* affects the fade out speed */
-   int fadeinstep;                      /* affects the fade in speed */
    int jack_flush;                      /* tells the jack callback to flush the ringbuffers */
    int jack_is_flushed;                 /* indicates true when jack callback has done the flush */
    unsigned samplerate;                 /* the audio sample rate in use by jack */
-   jack_nframes_t fadeindex;            /* running tally of where we are up to re. the fadeout */
    int pause;                           /* flag controlling the player paused state */
    int write_deferred;                  /* suppress further generation of audio data */
    u_int64_t samples_written;           /* number of samples written to the ringbuffer */
    int32_t play_progress_ms;            /* the playback progress in milliseconds */
-   int32_t fadein_index;                /* used for fadein when seeking */
    char *playername;                    /* the name of this player e.g. "left", "right" etc. */
    enum playmode_t playmode;            /* indicates the player mode or state */
    enum command_t command;              /* the command mode */

@@ -137,7 +137,6 @@ int rms_tally_count;
 float str_l_meansqrd, str_r_meansqrd;
 int reset_vu_stats_f;                   /* when set the mixer will reset the above */
 float *dblookup, *antidblookup;         /* a table for speeding up log / antilog operations */
-float *fade_table;                      /* a table of values used for autofade */
 float dfmod;                            /* used to reduce the ducking factor */
 float dj_audio_level;                   /* used to reduce the level of dj audio */
 float dj_audio_gain = 1.0;              /* same as above but not in dB */
@@ -267,7 +266,6 @@ struct kvpdict kvpdict[] = {
 /* the rms filter currently in use */
 struct rms_calc *lm_rms_filter, *rm_rms_filter;
 
-/* Does this ever get run, or is it cruft? */
 void process_silence(jack_nframes_t nframes)
    {
    sample_t *la_buffer = (sample_t *) jack_port_get_buffer(audio_left_port, nframes);
@@ -730,42 +728,18 @@ void process_audio(jack_nframes_t nframes)
              df = (df < hr) ? df : hr;
          }
 
-         if (plr_l->fadeindex < FB_SIZE)
-            {
-            lp_lc_fade = fade_table[plr_l->fadeindex] * *lplcpf++; 
-            lp_rc_fade = fade_table[plr_l->fadeindex] * *lprcpf++;
-            plr_l->fadeindex += plr_l->fadeoutstep;
-            }
-         else
-            lp_lc_fade = lp_rc_fade = 0.0;
-            
-         if (plr_r->fadeindex < FB_SIZE)
-            {
-            rp_lc_fade = fade_table[plr_r->fadeindex] * *rplcpf++; 
-            rp_rc_fade = fade_table[plr_r->fadeindex] * *rprcpf++;
-            plr_r->fadeindex += plr_r->fadeoutstep;
-            }
-         else
-            rp_lc_fade = rp_rc_fade = 0.0;
-         
-         if (plr_j->fadeindex < FB_SIZE)
-            {
-            jp_lc_fade = fade_table[plr_j->fadeindex] * *jplcpf++; 
-            jp_rc_fade = fade_table[plr_j->fadeindex] * *jprcpf++;
-            plr_j->fadeindex += plr_j->fadeoutstep;
-            }
-         else
-            jp_lc_fade = jp_rc_fade = 0.0;
-            
-         if (plr_i->fadeindex < FB_SIZE)
-            {
-            ip_lc_fade = fade_table[plr_i->fadeindex] * *iplcpf++; 
-            ip_rc_fade = fade_table[plr_i->fadeindex] * *iprcpf++;
-            plr_i->fadeindex += plr_i->fadeoutstep;
-            }
-         else
-            ip_lc_fade = ip_rc_fade = 0.0;
-            
+         #define FM(fl, fr, plr, sl, sr) \
+            do { \
+               float l = fade_get(plr->fadeout); \
+               fl = l * *sl++; \
+               fr = l * *sr++; \
+            }while(0)
+
+         FM(lp_lc_fade, lp_rc_fade, plr_l, lplcpf, lprcpf);
+         FM(rp_lc_fade, rp_rc_fade, plr_r, rplcpf, rprcpf);
+         FM(jp_lc_fade, jp_rc_fade, plr_j, jplcpf, jprcpf);
+         FM(ip_lc_fade, ip_rc_fade, plr_i, iplcpf, iprcpf);
+
          if (fabs(*lplcp) > left_peak)          /* peak levels used for song cut-off */
             left_peak = fabs(*lplcp);
          if (fabs(*lprcp) > left_peak)
@@ -884,42 +858,11 @@ void process_audio(jack_nframes_t nframes)
 
             /* No ducking but headroom still must apply */
             df = db2level(current_headroom);
-            
-            if (plr_l->fadeindex < FB_SIZE)
-               {
-               lp_lc_fade = fade_table[plr_l->fadeindex] * *lplcpf++; 
-               lp_rc_fade = fade_table[plr_l->fadeindex] * *lprcpf++;
-               plr_l->fadeindex += plr_l->fadeoutstep;
-               }
-            else
-               lp_lc_fade = lp_rc_fade = 0.0;
-               
-            if (plr_r->fadeindex < FB_SIZE)
-               {
-               rp_lc_fade = fade_table[plr_r->fadeindex] * *rplcpf++; 
-               rp_rc_fade = fade_table[plr_r->fadeindex] * *rprcpf++;
-               plr_r->fadeindex += plr_r->fadeoutstep;
-               }
-            else
-               rp_lc_fade = rp_rc_fade = 0.0;
-            
-            if (plr_j->fadeindex < FB_SIZE)
-               {
-               jp_lc_fade = fade_table[plr_j->fadeindex] * *jplcpf++; 
-               jp_rc_fade = fade_table[plr_j->fadeindex] * *jprcpf++;
-               plr_j->fadeindex += plr_j->fadeoutstep;
-               }
-            else
-               jp_lc_fade = jp_rc_fade = 0.0;
-               
-            if (plr_i->fadeindex < FB_SIZE)
-               {
-               ip_lc_fade = fade_table[plr_i->fadeindex] * *iplcpf++; 
-               ip_rc_fade = fade_table[plr_i->fadeindex] * *iprcpf++;
-               plr_i->fadeindex += plr_i->fadeoutstep;
-               }
-            else
-               ip_lc_fade = ip_rc_fade = 0.0;
+
+            FM(lp_lc_fade, lp_rc_fade, plr_l, lplcpf, lprcpf);
+            FM(rp_lc_fade, rp_rc_fade, plr_r, rplcpf, rprcpf);
+            FM(jp_lc_fade, jp_rc_fade, plr_j, jplcpf, jprcpf);
+            FM(ip_lc_fade, ip_rc_fade, plr_i, iplcpf, iprcpf);
             
             /* do the phone send mix */
             *lpsp = lc_s_micmix + (*jplcp * jp_lc_str) + (jp_lc_fade * jp_lc_strf);
@@ -1044,42 +987,11 @@ void process_audio(jack_nframes_t nframes)
                
                /* No ducking */
                df = 1.0;
-               
-               if (plr_l->fadeindex < FB_SIZE)
-                  {
-                  lp_lc_fade = fade_table[plr_l->fadeindex] * *lplcpf++; 
-                  lp_rc_fade = fade_table[plr_l->fadeindex] * *lprcpf++;
-                  plr_l->fadeindex += plr_l->fadeoutstep;
-                  }
-               else
-                  lp_lc_fade = lp_rc_fade = 0.0;
-                  
-               if (plr_r->fadeindex < FB_SIZE)
-                  {
-                  rp_lc_fade = fade_table[plr_r->fadeindex] * *rplcpf++; 
-                  rp_rc_fade = fade_table[plr_r->fadeindex] * *rprcpf++;
-                  plr_r->fadeindex += plr_r->fadeoutstep;
-                  }
-               else
-                  rp_lc_fade = rp_rc_fade = 0.0;
-               
-               if (plr_j->fadeindex < FB_SIZE)
-                  {
-                  jp_lc_fade = fade_table[plr_j->fadeindex] * *jplcpf++; 
-                  jp_rc_fade = fade_table[plr_j->fadeindex] * *jprcpf++;
-                  plr_j->fadeindex += plr_j->fadeoutstep;
-                  }
-               else
-                  jp_lc_fade = jp_rc_fade = 0.0;
-                  
-               if (plr_i->fadeindex < FB_SIZE)
-                  {
-                  ip_lc_fade = fade_table[plr_i->fadeindex] * *iplcpf++; 
-                  ip_rc_fade = fade_table[plr_i->fadeindex] * *iprcpf++;
-                  plr_i->fadeindex += plr_i->fadeoutstep;
-                  }
-               else
-                  ip_lc_fade = ip_rc_fade = 0.0;
+
+               FM(lp_lc_fade, lp_rc_fade, plr_l, lplcpf, lprcpf);
+               FM(rp_lc_fade, rp_rc_fade, plr_r, rplcpf, rprcpf);
+               FM(jp_lc_fade, jp_rc_fade, plr_j, jplcpf, jprcpf);
+               FM(ip_lc_fade, ip_rc_fade, plr_i, iplcpf, iprcpf);
 
                if (fabs(*lplcp) > left_peak)            /* peak levels used for song cut-off */
                   left_peak = fabs(*lplcp);
@@ -1206,42 +1118,11 @@ void process_audio(jack_nframes_t nframes)
                       float hr = db2level(current_headroom);
                       df = (df < hr) ? df : hr;
                   }
-                     
-                  if (plr_l->fadeindex < FB_SIZE)
-                     {
-                     lp_lc_fade = fade_table[plr_l->fadeindex] * *lplcpf++; 
-                     lp_rc_fade = fade_table[plr_l->fadeindex] * *lprcpf++;
-                     plr_l->fadeindex += plr_l->fadeoutstep;
-                     }
-                  else
-                     lp_lc_fade = lp_rc_fade = 0.0;
-                     
-                  if (plr_r->fadeindex < FB_SIZE)
-                     {
-                     rp_lc_fade = fade_table[plr_r->fadeindex] * *rplcpf++; 
-                     rp_rc_fade = fade_table[plr_r->fadeindex] * *rprcpf++;
-                     plr_r->fadeindex += plr_r->fadeoutstep;
-                     }
-                  else
-                     rp_lc_fade = rp_rc_fade = 0.0;
-                  
-                  if (plr_j->fadeindex < FB_SIZE)
-                     {
-                     jp_lc_fade = fade_table[plr_j->fadeindex] * *jplcpf++; 
-                     jp_rc_fade = fade_table[plr_j->fadeindex] * *jprcpf++;
-                     plr_j->fadeindex += plr_j->fadeoutstep;
-                     }
-                  else
-                     jp_lc_fade = jp_rc_fade = 0.0;
-                     
-                  if (plr_i->fadeindex < FB_SIZE)
-                     {
-                     ip_lc_fade = fade_table[plr_i->fadeindex] * *iplcpf++; 
-                     ip_rc_fade = fade_table[plr_i->fadeindex] * *iprcpf++;
-                     plr_i->fadeindex += plr_i->fadeoutstep;
-                     }
-                  else
-                     ip_lc_fade = ip_rc_fade = 0.0;
+
+                  FM(lp_lc_fade, lp_rc_fade, plr_l, lplcpf, lprcpf);
+                  FM(rp_lc_fade, rp_rc_fade, plr_r, rplcpf, rprcpf);
+                  FM(jp_lc_fade, jp_rc_fade, plr_j, jplcpf, jprcpf);
+                  FM(ip_lc_fade, ip_rc_fade, plr_i, iplcpf, iprcpf);
 
                   if (fabs(*lplcp) > left_peak)         /* peak levels used for song cut-off */
                      left_peak = fabs(*lplcp);
@@ -1638,24 +1519,6 @@ int main(int argc, char **argv)
          }
       }
          
-   /* computes the decay curve for track fadeouts */
-   if (!(fade_table = malloc(FB_SIZE * sizeof(float))))
-      {
-      fprintf(stderr, "Failed to allocate space for fade table\n");
-      exit(5);
-      }
-   else
-      {
-      plr_l->fadeindex = FB_SIZE;
-      plr_r->fadeindex = FB_SIZE;
-      plr_j->fadeindex = FB_SIZE;
-      plr_i->fadeindex = FB_SIZE;
-
-      float f = powf(10.0f, -441.0f/((FB_SIZE) * 200.0f));
-      for (unsigned i = 0; i < FB_SIZE; i++)
-         fade_table[i] = powf(f, i);
-      }
-
    str_pf_l = peakfilter_create(115e-6f, sr);
    str_pf_r = peakfilter_create(115e-6f, sr);
 
@@ -2096,7 +1959,6 @@ int main(int argc, char **argv)
    jack_deactivate(client);
    jack_client_close(client);
    client = NULL;
-   free(fade_table);
    free(eot_alarm_table);
    free_signallookup_table();
    free_dblookup_table();

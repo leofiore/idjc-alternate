@@ -98,17 +98,7 @@ float *xlplayer_make_audio_to_float(struct xlplayer *self, float *buffer, uint8_
 /* used to fade in the audio when not starting from the beginning */
 sample_t xlplayer_get_next_gain(struct xlplayer *self)
    {
-   float val;
-   extern float *fade_table;
-
-   if (self->fadein_index >= 0)
-      {
-      val = fade_table[self->fadein_index];
-      self->fadein_index -= self->fadeinstep;
-      return val * self->gain;
-      }
-   else
-      return self->gain;
+   return fade_get(self->fadein) * self->gain;
    }
 
 /* xlplayer_demux_channel_data: this is where down/upmixing is performed - audio split to 2 channels */
@@ -333,7 +323,7 @@ static void *xlplayer_main(struct xlplayer *self)
                self->pause = 0;
                self->samples_written = 0;
                self->sleep_samples = 0;
-               self->fadein_index = (self->seek_s || self->fade_mode) ? fb_size - 1 : -1;
+               fade_set(self->fadein, (self->seek_s || self->fade_mode) ? FADE_SET_LOW : FADE_SET_HIGH, -1.0f, FADE_IN);
                self->silence = 0.0f;
                self->dec_init(self);
                if (self->command != CMD_COMPLETE)
@@ -474,6 +464,7 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
    {
    struct xlplayer *self;
    int error;
+   const float minlevel = 1.0f/10000.0f;
    
    if (!(self = malloc(sizeof (struct xlplayer))))
       {
@@ -527,6 +518,8 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
       fprintf(stderr, "xlplayer: failed initialising metadata_mutex\n");
       exit(5);
       }
+   self->fadein = fade_init(samplerate, minlevel);
+   self->fadeout = fade_init(samplerate, minlevel);
    self->pbsrb_l = malloc(PBSPEED_INPUT_BUFFER_SIZE);
    self->pbsrb_r = malloc(PBSPEED_INPUT_BUFFER_SIZE);
    self->pbsrb_lf = malloc(PBSPEED_INPUT_BUFFER_SIZE);
@@ -541,10 +534,8 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
    self->have_data_f = self->have_swapped_buffers_f = 0;
    self->pause = 0;
    self->jack_flush = self->jack_is_flushed = 0;
-   self->fadeindex = -1;
    self->fade_mode = 0;
    self->fadeout_f = 0;
-   self->fadein_index = -1;
    self->dither = 0;
    self->seed = 17234;
    self->samplerate = samplerate;
@@ -585,6 +576,8 @@ void xlplayer_destroy(struct xlplayer *self)
       free(self->pbsrb_r);
       free(self->pbsrb_lf);
       free(self->pbsrb_rf);
+      fade_destroy(self->fadein);
+      fade_destroy(self->fadeout);
       src_delete(self->pbspeed_conv_l);
       src_delete(self->pbspeed_conv_r);
       src_delete(self->pbspeed_conv_lf);
@@ -702,11 +695,10 @@ void xlplayer_eject(struct xlplayer *self)
 
 void xlplayer_set_fadesteps(struct xlplayer *self, int fade_mode)
    {
-   static int a[] = { 10, 2, 1 };
-   static int b[] = { 200, 2, 1 };
-
-   self->fadeoutstep = a[fade_mode];
-   self->fadeinstep = b[fade_mode];
+   static float a[] = { 1.0f, 5.0f, 10.0f };
+   static float b[] = { 1.0f/20.0f, 5.0f, 10.0f };
+   fade_set(self->fadeout, FADE_SET_SAME, a[fade_mode], FADE_DIRECTION_UNCHANGED);
+   fade_set(self->fadein, FADE_SET_SAME, b[fade_mode], FADE_DIRECTION_UNCHANGED);
    }
 
 /* version supporting playback speed variance */
@@ -748,7 +740,7 @@ size_t read_from_player_sv(struct xlplayer *self, sample_t *left_buf, sample_t *
             self->right_ch = self->right_fade;
             self->right_fade = swap;
             /* initialisations for fade */
-            self->fadeindex = 0;
+            fade_set(self->fadeout, FADE_SET_HIGH, -1.0f, FADE_OUT);
             self->have_swapped_buffers_f = TRUE;
             }
          /* buffer flushing */
@@ -823,7 +815,7 @@ size_t read_from_player(struct xlplayer *self, sample_t *left_buf, sample_t *rig
             swap = self->right_ch;
             self->right_ch = self->right_fade;
             self->right_fade = swap;
-            self->fadeindex = 0;
+            fade_set(self->fadeout, FADE_SET_HIGH, -1.0f, FADE_OUT);
             self->have_swapped_buffers_f = TRUE;
             }
          jack_ringbuffer_reset(self->left_ch);
@@ -893,3 +885,4 @@ void xlplayer_set_dynamic_metadata(struct xlplayer *xlplayer, enum metadata_t ty
    dm->rbdelay = delay;
    pthread_mutex_unlock(&(dm->meta_mutex));
    }
+
