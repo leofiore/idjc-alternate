@@ -24,10 +24,10 @@
 #include <unistd.h>
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
-#include <signal.h>
 #include "sourceclient.h"
 #include "kvpparse.h"
 #include "live_ogg_encoder.h"
+#include "sigmask.h"
 
 int keepalive = FALSE;
 int timeout_duration = 15;
@@ -40,6 +40,7 @@ static int threads_init(struct threads_info *ti, struct universal_vars *uv, void
    struct threads_vars *tv = other;
    int i;
    
+   sigmask_init();
    ti->n_encoders = atoi(tv->num_encoders);
    ti->n_streamers = atoi(tv->num_streamers);
    ti->n_recorders = atoi(tv->num_recorders);
@@ -90,9 +91,9 @@ static void threads_shutdown(struct threads_info *ti)
    
    if (threads_up)
       {
-      fprintf(stderr, "threads_shutdown commencing\n");
+      fprintf(stderr, "sourceclient threads_shutdown commencing\n");
+      audio_feed_deactivate(ti->audio_feed);
       watchdog_destroy(ti->watchdog);
-      audio_feed_destroy(ti->audio_feed);
       for (i = 0; i < ti->n_recorders; i++)
          recorder_destroy(ti->recorder[i]);
       for (i = 0; i < ti->n_streamers; i++)
@@ -102,8 +103,8 @@ static void threads_shutdown(struct threads_info *ti)
       free(ti->recorder);
       free(ti->streamer);
       free(ti->encoder);
+      audio_feed_destroy(ti->audio_feed);
       }
-   fprintf(stderr, "threads_shutdown finished\n");
    }
 
 static int get_report(struct threads_info *ti, struct universal_vars *uv, void *other)

@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <jack/ringbuffer.h>
 #include "sourceclient.h"
+#include "sigmask.h"
 #include "live_ogg_encoder.h"
 #include "live_mp3_encoder.h"
 #include "live_oggflac_encoder.h"
@@ -451,6 +452,7 @@ void *encoder_main(void *args)
    struct encoder *self = args;
    struct timespec ms10 = { 0, 10000000 };      /* ten milliseconds */
 
+   sigmask_perform();
    while(!self->thread_terminate_f)
       {
       pthread_mutex_lock(&self->flush_mutex);

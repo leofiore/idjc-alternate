@@ -35,6 +35,7 @@
 #include "sndfiledecode.h"
 #include "avcodecdecode.h"
 #include "bsdcompat.h"
+#include "sigmask.h"
 
 #define TRUE 1
 #define FALSE 0
@@ -258,6 +259,7 @@ static void *xlplayer_main(struct xlplayer *self)
    {
    char *extension;
    
+   sigmask_perform();
    for(self->up = TRUE; self->command != CMD_THREADEXIT; self->watchdog_timer = 0)
       {
       switch (self->command)

@@ -35,6 +35,7 @@ struct audio_feed
    };
 
 struct audio_feed *audio_feed_init(struct threads_info *ti);
+void audio_feed_deactivate(struct audio_feed *self);
 void audio_feed_destroy(struct audio_feed *self);
 int audio_feed_jack_samplerate_request(struct threads_info *ti, struct universal_vars *uv, void *param);
 

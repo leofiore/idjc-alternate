@@ -30,6 +30,7 @@
    #include <shout.h>
 #endif /* SHOUT_SHOUT_H */
 #include "sourceclient.h"
+#include "sigmask.h"
 
 /* other versions of libshout define SHOUT_FORMAT_VORBIS instead */
 #ifndef SHOUT_FORMAT_OGG
@@ -53,6 +54,7 @@ static void *streamer_main(void *args)
       return buffer;
       }
       
+   sigmask_perform();
    while (!self->thread_terminate_f)
       {
       nanosleep(&ms10, NULL);
