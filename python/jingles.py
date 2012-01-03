@@ -48,7 +48,7 @@ class Jingles(object):
 
    def cleanup(self):
       self.stop.clicked()
-      self.saved_interlude = self.interlude_player_track
+      #self.saved_interlude = self.interlude_player_track
       self.interlude.set_active(False)
    
    def cb_doubleclick(self, treeview, path, column, user_data):

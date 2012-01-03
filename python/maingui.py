@@ -1789,7 +1789,9 @@ class MainWindow:
    def cb_menu_select(self, widget, data):
       print ("%s was chosen from the menu" % data)   
 
-   def save_session(self):
+   def save_session(self, sig=None, frame=None):
+      print "saving session"
+
       try:
          fh = open(self.session_filename, "w")
          fh.write("deckvol=" + str(self.deckadj.get_value()) + "\n")
@@ -1814,7 +1816,7 @@ class MainWindow:
          fh.write("treecols=" + self.topleftpane.getcolwidths(self.topleftpane.treecols) + "\n")
          fh.write("flatcols=" + self.topleftpane.getcolwidths(self.topleftpane.flatcols) + "\n")
          fh.write("dbpage=" + str(self.topleftpane.notebook.get_current_page()) + "\n")
-         fh.write("interlude=" + self.jingles.saved_interlude + "\n")
+         fh.write("interlude=" + self.jingles.interlude_player_track + "\n")
          fh.close()
          
          # Save a list of files played and timestamps.
@@ -1827,17 +1829,23 @@ class MainWindow:
          pickle.Pickler(fh).dump(recent)
          fh.close()
          
-      except:
-         print "Error writing out main session data"
-         raise
+      except Exception as e:
+         print "Error writing out main session data", e
+
       try:
          fh = open(self.session_filename + "_tracks", "w")
          start, end = self.history_buffer.get_bounds()
          text = self.history_buffer.get_text(start, end)
          fh.write(text)
          fh.close()
-      except:
-         print "Error writing out tracks played data"
+      except Exception as e:
+         print "Error writing out tracks played data", e
+         
+      self.prefs_window.save_player_prefs()
+      self.controls.save_prefs()
+      self.server_window.save_session_settings()
+      
+      return True  # This is also a timeout routine
 
    def restore_session(self):
       try:
@@ -1928,9 +1936,6 @@ class MainWindow:
    def destroy_hard(self, widget=None, data=None):
       if self.session_loaded:
          self.save_session()
-         self.prefs_window.save_player_prefs()
-         self.controls.save_prefs()
-         self.server_window.save_session_settings()
       try:
          gtk.main_quit()
       except:
@@ -1940,7 +1945,7 @@ class MainWindow:
       sys.exit(0)
 
    def destroy(self, widget=None, data=None):
-      signal.signal(signal.SIGINT, self.destroy_hard)
+      self.save_session()
       if self.crosspass:
          gobject.source_remove(self.crosspass)
       self.server_window.cleanup()
@@ -1953,12 +1958,9 @@ class MainWindow:
       self.send_new_mixer_stats()
       gobject.source_remove(self.statstimeout)
       gobject.source_remove(self.vutimeout)
+      gobject.source_remove(self.savetimeout)
       self.server_window.source_client_close()
       self.mixer_ctrl.close()
-      self.save_session()
-      self.prefs_window.save_player_prefs()
-      self.controls.save_prefs()
-      self.server_window.save_session_settings()
       if gtk.main_level():
          gtk.main_quit()
       time.sleep(0.3)   # Allow time for all subthreads/programs time to exit 
@@ -3242,10 +3244,17 @@ class MainWindow:
       self.prefs_window = mixprefs(self)
       self.prefs_window.load_player_prefs()
       self.prefs_window.apply_player_prefs()
+
       self.vutimeout = gobject.timeout_add(50, self.vu_update)
       self.statstimeout = gobject.timeout_add(100, self.stats_update)
+      self.savetimeout = gobject.timeout_add_seconds(60, threadslock(self.save_session));
       
-      signal.signal(signal.SIGINT, self.destroy)
+      for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+         signal.signal(sig, self.destroy)
+
+      signal.signal(signal.SIGUSR1, self.save_session)
+      signal.signal(signal.SIGUSR2, signal.SIG_IGN)
+      
       (self.full_wst, self.min_wst)[bool(self.simplemixer)].apply()
       self.window.connect("configure_event", self.configure_event)
       self.jingles.wst.apply()
