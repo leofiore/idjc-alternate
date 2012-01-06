@@ -2453,6 +2453,10 @@ class MainWindow:
       self.rightpane = gtk.HBox(False, 0)
       self.paned.pack2(self.rightpane, True, False)
       self.vbox8 = gtk.VBox(False, 0)
+      self.menubar = gtk.MenuBar()
+      self.menubar.set_border_width(6)
+      self.vbox8.pack_start(self.menubar, False)
+      self.menubar.show()
       self.rightpane.pack_start(self.vbox8, True, True ,0)
       self.window.add(self.paned)
       self.rightpane.show()
@@ -2477,7 +2481,13 @@ class MainWindow:
       
       # show box 8 now that it's finished
       self.vbox8.show()            
-      
+
+      for name, text in (("filemenu", _('File')), ("viewmenu", _('View')), ("jackmenu", _('JACK Ports')), ("helpmenu", _('Help'))):
+         mi = gtk.MenuItem(text)
+         self.menubar.append(mi)
+         mi.show()
+         setattr(self, name, mi)
+
       wbsg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
 
       self.window_button = gtk.Button()
