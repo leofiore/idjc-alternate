@@ -63,6 +63,46 @@ set_tip = main_tips.set_tip
 METER_TEXT_SIZE = 8000
 
 
+class MenuMixin(object):
+   def build(self, menu, autowipe=False):
+      def mkitems(x, how=gtk.MenuItem):
+         for name, text in x:
+            print name
+            mi = how(text)
+            menu.append(mi)
+            mi.show()
+            setattr(self, name + "menu_i", mi)
+            if autowipe:
+               mi.connect("activate", self.cb_autowipe)
+      return mkitems
+      
+   def submenu(self, mi, name):
+      m = gtk.Menu()
+      mi.set_submenu(m)
+      m.show()
+      setattr(self, name + "menu", m)
+      return m
+      
+   def cb_autowipe(self, mi):
+      mi.get_submenu().foreach(lambda w: w.destroy())
+
+
+class MainMenu(gtk.MenuBar, MenuMixin):
+   def __init__(self):
+      gtk.MenuBar.__init__(self)
+
+      self.build(self)((("file", _('File')), ("view", _('View')), ("jack", _('JACK Ports')), ("help", _('Help'))))
+      self.submenu(self.filemenu_i, "file")
+      self.build(self.filemenu, autowipe=True)((("streams", _('Streams')), ("recorders", _('Recorders'))))
+      smi = gtk.SeparatorMenuItem()
+      self.filemenu.append(smi)
+      smi.show()
+      self.build(self.filemenu)((("quit", gtk.STOCK_QUIT),), gtk.ImageMenuItem)
+
+      for each in ("streams", "recorders"):
+         m = self.submenu(getattr(self, each + "menu_i"), each)
+
+
 class ColouredArea(gtk.DrawingArea):
    def __init__(self, colour=gtk.gdk.Color()):
       gtk.DrawingArea.__init__(self)
@@ -2453,10 +2493,11 @@ class MainWindow:
       self.rightpane = gtk.HBox(False, 0)
       self.paned.pack2(self.rightpane, True, False)
       self.vbox8 = gtk.VBox(False, 0)
-      self.menubar = gtk.MenuBar()
-      self.menubar.set_border_width(6)
-      self.vbox8.pack_start(self.menubar, False)
-      self.menubar.show()
+      self.menu = MainMenu()
+      self.menu.quitmenu_i.connect_object("activate", self.delete_event, self.window, None)
+      self.menu.set_border_width(6)
+      self.vbox8.pack_start(self.menu, False)
+      self.menu.show()
       self.rightpane.pack_start(self.vbox8, True, True ,0)
       self.window.add(self.paned)
       self.rightpane.show()
@@ -2481,12 +2522,6 @@ class MainWindow:
       
       # show box 8 now that it's finished
       self.vbox8.show()            
-
-      for name, text in (("filemenu", _('File')), ("viewmenu", _('View')), ("jackmenu", _('JACK Ports')), ("helpmenu", _('Help'))):
-         mi = gtk.MenuItem(text)
-         self.menubar.append(mi)
-         mi.show()
-         setattr(self, name, mi)
 
       wbsg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
 
