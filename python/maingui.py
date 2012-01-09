@@ -103,6 +103,7 @@ class MainMenu(gtk.MenuBar, MenuMixin):
       self.build(self)((("file", _('File')), ("view", _('View')), ("jack", _('JACK Ports')), ("help", _('Help'))))
       self.submenu(self.filemenu_i, "file")
       self.build(self.filemenu, autowipe=True)((("streams", _('Streams')), ("recorders", _('Recorders'))))
+
       self.sep(self.filemenu)
       self.build(self.filemenu)((("quit", gtk.STOCK_QUIT),), gtk.ImageMenuItem)
 
@@ -3129,6 +3130,10 @@ class MainWindow:
       self.metadata_right_ctrl = slot_object(0)
       self.player_left.silence = slot_object(0.0)
       self.player_right.silence = slot_object(0.0)
+      
+      self.feature_set = gtk.ToggleButton()
+      self.feature_set.set_active(True)
+      self.feature_set.connect("toggled", self.callback, "Features")
 
       self.full_wst = WindowSizeTracker(self.window, True)
       self.min_wst = WindowSizeTracker(self.window, False)

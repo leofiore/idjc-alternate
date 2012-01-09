@@ -1771,7 +1771,7 @@ class IDJC_Media_Player:
          self.oldstatusbartext = newtext
 
    def check_mixer_signal(self):
-      if self.parent.menu_feature_set.get_active() and self.progress_press == False and self.progressadj.upper - self.progress_current_figure < float(self.silence) and self.progressadj.upper > 10.0:
+      if self.parent.feature_set.get_active() and self.progress_press == False and self.progressadj.upper - self.progress_current_figure < float(self.silence) and self.progressadj.upper > 10.0:
          if self.mixer_signal_f.value == 0 and int(self.mixer_cid) == self.player_cid + 1 and self.parent.prefs_window.silence_killer.get_active() and self.eos_inspect() == False:
             print "termination by check mixer signal"
             self.invoke_end_of_track_policy()
@@ -1809,7 +1809,7 @@ class IDJC_Media_Player:
             return False
          if self.mixer_signal_f.value == False:
             self.silence_count += 1
-            if self.parent.menu_feature_set.get_active() and self.silence_count >= 120 and self.playtime_elapsed.value > 15 and self.parent.prefs_window.bonus_killer.get_active():
+            if self.parent.feature_set.get_active() and self.silence_count >= 120 and self.playtime_elapsed.value > 15 and self.parent.prefs_window.bonus_killer.get_active():
                print "termination due to excessive silence"
                self.invoke_end_of_track_policy()
                return False

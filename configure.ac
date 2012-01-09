@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([idjc], [0.8.7_development], 
+AC_INIT([idjc], [0.8.8_development], 
                 [https://sourceforge.net/tracker/?group_id=135773])
 AC_SUBST(COPYRIGHT_YEAR, [2011])
 AC_CONFIG_SRCDIR([config.h.in])

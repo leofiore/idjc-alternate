@@ -2219,6 +2219,7 @@ class RecordTab(Tab):
    def __init__(self, scg, numeric_id, indicator_lookup):
       Tab.__init__(self, scg, numeric_id, indicator_lookup)
       self.scg = scg
+      self.numeric_id = numeric_id
       self.show_indicator("clear")
       self.tab_type = "recorder"
       hbox = gtk.HBox()
@@ -2236,6 +2237,7 @@ class RecordTab(Tab):
       self.record_buttons.show()
       self.objects = {  "recording_source": (self.source_dest.source_combo, "active"),
                         "recording_directory": (self.source_dest.file_dialog, "directory") }
+
 
 class TabFrame(ModuleFrame):
    def __init__(self, scg, frametext, q_tabs, tabtype, indicatorlist, tab_tip_text):
@@ -2816,6 +2818,31 @@ class SourceClientGui:
                tab.metadata.set_text(text)
             tab.metadata_update.clicked()
 
+   def cb_populate_recorder_menu(self, mi, tabs):
+      menu = mi.get_submenu()
+      
+      def none(text):
+         mi = gtk.MenuItem(text)
+         mi.set_sensitive(False)
+         menu.append(mi)
+         mi.show()
+      
+      if not tabs:
+         none(_('Recording Facility Unavailable'))
+      elif not any(tab.record_buttons.record_button.get_sensitive() for tab in tabs):
+         none(_('No Recorders Are Correctly Configured'))
+      else:
+         for tab in tabs:
+            rec = tab.record_buttons.record_button
+            stop = tab.record_buttons.stop_button
+            sens = rec.get_sensitive()
+            mi = gtk.CheckMenuItem(str(tab.numeric_id + 1) + ("" if sens else " " + _('Misconfigured')))
+            mi.set_active(rec.get_active())
+            mi.set_sensitive(sens)
+            menu.append(mi)
+            mi.show()
+            mi.connect("activate", lambda w, r, s: r.set_active(r.get_sensitive()) if w.get_active() else s.clicked(), rec, stop)
+
    def __init__(self, parent):
       self.parent = parent
       parent.server_window = self
@@ -2857,6 +2884,9 @@ class SourceClientGui:
       self.streamtabframe.show()
       for rectab in self.recordtabframe.tabs:
          rectab.source_dest.populate_stream_selector(_(' Stream '), self.streamtabframe.tabs)
+            
+      self.parent.menu.recordersmenu_i.connect("activate", self.cb_populate_recorder_menu, self.recordtabframe.tabs)
+
       vbox.pack_start(self.recordtabframe, False, False, 0)
       if PGlobs.num_recorders:
          self.recordtabframe.show()

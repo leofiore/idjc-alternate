@@ -741,11 +741,11 @@ class mixprefs:
    def callback(self, widget, data):
       parent = self.parent
       if data == "basic streamer":
-         if parent.menu_feature_set.get_active():
-            parent.menu_feature_set.set_active(False)
+         if parent.feature_set.get_active():
+            parent.feature_set.set_active(False)
       if data == "fully featured":
-         if parent.menu_feature_set.get_active() == False:
-            parent.menu_feature_set.set_active(True)
+         if not parent.feature_set.get_active():
+            parent.feature_set.set_active(True)
       if data == "enhanced-crossfader":
          if widget.get_active():
             parent.listen.show()
