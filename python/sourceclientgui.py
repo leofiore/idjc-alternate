@@ -2843,6 +2843,45 @@ class SourceClientGui:
             mi.show()
             mi.connect("activate", lambda w, r, s: r.set_active(r.get_sensitive()) if w.get_active() else s.clicked(), rec, stop)
 
+   def cb_populate_streams_menu(self, mi, tabs):
+      menu = mi.get_submenu()
+      
+      def none(text):
+         mi = gtk.MenuItem(text)
+         mi.set_sensitive(False)
+         menu.append(mi)
+         mi.show()
+      
+      if not tabs:
+         none(_('Streaming Facility Unavailable'))
+      elif not any(tab.server_connect.get_sensitive() for tab in tabs):
+         none(_('No Streams Are Currently Configured'))
+      else:
+         sens = any(x.get_active() for x in self.streamtabframe.togglelist)
+         mi = gtk.MenuItem(_('Group Connect'))
+         mi.set_sensitive(sens)
+         menu.append(mi)
+         mi.show()
+         mi.connect("activate", lambda w: self.streamtabframe.connect_group.clicked())
+         mi = gtk.MenuItem(_('Group Disconnect'))
+         mi.set_sensitive(sens)
+         menu.append(mi)
+         mi.show()
+         mi.connect("activate", lambda w: self.streamtabframe.disconnect_group.clicked())
+         spc = gtk.SeparatorMenuItem()
+         menu.append(spc)
+         spc.show()
+         
+         
+         for tab in tabs:
+            sc = tab.server_connect
+            if sc.get_sensitive():
+               mi = gtk.CheckMenuItem(str(tab.numeric_id + 1) + " %s" % sc.get_children()[0].get_label())
+               mi.set_active(sc.get_active())
+               menu.append(mi)
+               mi.show()
+               mi.connect("activate", lambda w, b: b.set_active(w.get_active()), sc)
+
    def __init__(self, parent):
       self.parent = parent
       parent.server_window = self
@@ -2886,6 +2925,8 @@ class SourceClientGui:
          rectab.source_dest.populate_stream_selector(_(' Stream '), self.streamtabframe.tabs)
             
       self.parent.menu.recordersmenu_i.connect("activate", self.cb_populate_recorder_menu, self.recordtabframe.tabs)
+      self.parent.menu.streamsmenu_i.connect("activate", self.cb_populate_streams_menu, self.streamtabframe.tabs)
+      
 
       vbox.pack_start(self.recordtabframe, False, False, 0)
       if PGlobs.num_recorders:

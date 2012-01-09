@@ -67,7 +67,6 @@ class MenuMixin(object):
    def build(self, menu, autowipe=False):
       def mkitems(x, how=gtk.MenuItem):
          for name, text in x:
-            print name
             mi = how(text)
             menu.append(mi)
             mi.show()
@@ -116,7 +115,7 @@ class MainMenu(gtk.MenuBar, MenuMixin):
             (_('Output'), _('Preferences'), _('Jingles'), _('Profiles'))))
       self.sep(self.viewmenu)
       mkitems(zip("songdb chmeters strmeters".split(" "),
-            (_('Song DB'), _('Ch Meters'), _('Str Meters'))), gtk.CheckMenuItem)
+            (_('Music Database'), _('Channel Meters'), _('Output Meters'))), gtk.CheckMenuItem)
 
 
 class ColouredArea(gtk.DrawingArea):
@@ -3024,7 +3023,7 @@ class MainWindow:
       self.str_l_peak = peakholdmeter()
       self.str_r_peak = peakholdmeter()
       # TC: This text appears above the stream mix peak level meter.
-      self.stream_peak_box = make_meter_unit(_('Str Peak'), self.str_l_peak, self.str_r_peak)
+      self.stream_peak_box = make_meter_unit(_('Peak'), self.str_l_peak, self.str_r_peak)
       self.streammeterbox.pack_start(self.stream_peak_box)
       self.stream_peak_box.show()
       set_tip(self.stream_peak_box, _('A peak hold meter indicating the signal strength of the stream audio.'))
@@ -3046,7 +3045,7 @@ class MainWindow:
       self.str_l_rms_vu = vumeter()
       self.str_r_rms_vu = vumeter()
       # TC: This text appears above the stream mix VU meter.
-      stream_vu_box = make_meter_unit(_('Str VU'), self.str_l_rms_vu, self.str_r_rms_vu)
+      stream_vu_box = make_meter_unit(_('VU'), self.str_l_rms_vu, self.str_r_rms_vu)
       self.streammeterbox.pack_start(stream_vu_box)
       stream_vu_box.show()
       set_tip(stream_vu_box, _('A VU meter for the stream audio.'))
