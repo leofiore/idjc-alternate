@@ -74,6 +74,10 @@ class MenuMixin(object):
             setattr(self, name + "menu_i", mi)
             if autowipe:
                mi.connect("activate", self.cb_autowipe)
+            if issubclass(how, gtk.CheckMenuItem):
+               a = gtk.ToggleAction(None, text, None, None)
+               a.connect_proxy(mi)
+               setattr(self, name + "menu_a", a)
       return mkitems
       
    def submenu(self, mi, name):
@@ -82,6 +86,11 @@ class MenuMixin(object):
       m.show()
       setattr(self, name + "menu", m)
       return m
+
+   def sep(self, menu):
+      s = gtk.SeparatorMenuItem()
+      menu.append(s)
+      s.show()
       
    def cb_autowipe(self, mi):
       mi.get_submenu().foreach(lambda w: w.destroy())
@@ -94,13 +103,19 @@ class MainMenu(gtk.MenuBar, MenuMixin):
       self.build(self)((("file", _('File')), ("view", _('View')), ("jack", _('JACK Ports')), ("help", _('Help'))))
       self.submenu(self.filemenu_i, "file")
       self.build(self.filemenu, autowipe=True)((("streams", _('Streams')), ("recorders", _('Recorders'))))
-      smi = gtk.SeparatorMenuItem()
-      self.filemenu.append(smi)
-      smi.show()
+      self.sep(self.filemenu)
       self.build(self.filemenu)((("quit", gtk.STOCK_QUIT),), gtk.ImageMenuItem)
 
       for each in ("streams", "recorders"):
          m = self.submenu(getattr(self, each + "menu_i"), each)
+         
+      self.submenu(self.viewmenu_i, "view")
+      mkitems = self.build(self.viewmenu)
+      mkitems(zip("output prefs jingles profiles".split(" "),
+            (_('Output'), _('Preferences'), _('Jingles'), _('Profiles'))))
+      self.sep(self.viewmenu)
+      mkitems(zip("songdb chmeters strmeters".split(" "),
+            (_('Song DB'), _('Ch Meters'), _('Str Meters'))), gtk.CheckMenuItem)
 
 
 class ColouredArea(gtk.DrawingArea):
@@ -2344,13 +2359,7 @@ class MainWindow:
          self.player_left.reselect_cursor_please = True
       if self.player_right.is_playing:
          self.player_right.reselect_cursor_please = True
-         
-   def menu_activate(self, widget, event):
-      if event.type == gtk.gdk.BUTTON_PRESS and event.button == 3:
-         widget.popup(None, None, None, event.button, event.time)
-         return True
-      return False
-   
+
    # when a second instance of idjc is launched the program launcher will signal the running instance with SIGUSR2
    def second_instance_handler(self, arg1, arg2):
       print "the launch of a second instance of idjc was detected"
@@ -2494,7 +2503,6 @@ class MainWindow:
       self.paned.pack2(self.rightpane, True, False)
       self.vbox8 = gtk.VBox(False, 0)
       self.menu = MainMenu()
-      self.menu.quitmenu_i.connect_object("activate", self.delete_event, self.window, None)
       self.menu.set_border_width(6)
       self.vbox8.pack_start(self.menu, False)
       self.menu.show()
@@ -2524,59 +2532,6 @@ class MainWindow:
       self.vbox8.show()            
 
       wbsg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
-
-      self.window_button = gtk.Button()
-      appbox = gtk.HBox()
-      self.window_button.add(appbox)
-      appbox.show()
-      pb = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "app_window.png", 20, 20)
-      image = gtk.image_new_from_pixbuf(pb)
-      image.set_padding(1, 0)
-      image.set_alignment(1.0, 0.5)
-      appbox.pack_start(image, False)
-      image.show()
-      arrow = gtk.Arrow(gtk.ARROW_DOWN, gtk.SHADOW_ETCHED_IN)
-      arrow.set_size_request(12, -1)
-      arrow.set_alignment(1.0, 0.93)
-      appbox.pack_start(arrow, False)
-      arrow.show()
-      self.hbox10.pack_start(self.window_button, False)
-      self.window_button.show()
-      set_tip(self.window_button, _('Open various application windows.'))
-      
-      def positioner(menu):
-         w = self.window_button
-         r1 = w.get_allocation()
-         r2 = w.get_toplevel().get_position()
-         return(r1.x + r2[0] + r1.width * 1000 // 1618, r1.y + r2[1] + r1.height - 4, True)
-      
-      def menu_callback(widget, event):
-         window_menu = gtk.Menu()
-
-         windows = (self.prefs_window.window, self.server_window.window,
-                                 self.jingles.window, pm.profile_dialog)
-         for i, (label, show_cmd) in enumerate(zip((_('Preferences'), _('Output'),
-                              _('Jingles'), _('Profiles')), windows)):
-            if i == 2 and self.simplemixer:
-               continue
-            mi = gtk.MenuItem(label)
-            mi.connect_object("activate", lambda w: w.present(), show_cmd)
-            window_menu.append(mi)
-
-         mi = gtk.SeparatorMenuItem()
-         window_menu.append(mi)
-
-         mi = gtk.ImageMenuItem(gtk.STOCK_CLOSE)
-         def hide(menuitem):
-            for each in windows:
-               each.hide()
-         mi.connect("activate", hide)
-         window_menu.append(mi)
-
-         window_menu.show_all()
-         window_menu.popup(None, None, positioner, event.button, event.time)
-         
-      self.window_button.connect("button-press-event", menu_callback)
             
       phonebox = gtk.HBox()
       phonebox.viewlevels = (5,)       
@@ -3123,70 +3078,6 @@ class MainWindow:
                each.show()
       
       set_tip(self.micmeterbox, _('A peak hold meter indicating the microphone signal strength and a meter indicating attenuation levels in the microphone signal processing system. Green indicates attenuation from the noise gate, yellow from the de-esser, red from the limiter.'))
-
-      # Main window context menu
-      self.app_menu = gtk.Menu()
-      self.app_menu.show()
-      self.window.connect_object("event", self.menu_activate, self.app_menu)
-      
-      menu_about = gtk.ImageMenuItem(gtk.STOCK_ABOUT)
-      menu_about.connect("activate", self.callback, "Show about")
-      menu_about.show()
-      # TC: Menu item to show the standard application "About" feature.
-      menu_about.set_label(_("About"))
-      self.app_menu.append(menu_about)
-      
-      sep = gtk.SeparatorMenuItem()
-      sep.show()
-      self.app_menu.append(sep)
-
-      # TC: The View submenu text, allows certain user interface features to be shown/hidden from view.
-      menu_view = gtk.MenuItem(_("View"))
-      menu_view.show()
-      self.app_menu.append(menu_view)
-     
-      sep = gtk.SeparatorMenuItem()
-      sep.show()
-      self.app_menu.append(sep)
-      
-      menu_quit = gtk.ImageMenuItem(gtk.STOCK_QUIT)
-      # TC: Menu item to Quit the program.
-      menu_quit.set_label(_("Quit"))
-      menu_quit.connect_object("activate", self.delete_event, self.window, None)
-      menu_quit.show()
-      self.app_menu.append(menu_quit)
-
-      # The view submenu of app_menu
-      view_menu = gtk.Menu()
-      view_menu.show()
-      menu_view.set_submenu(view_menu)
-      
-      menu_str_meters = gtk.CheckMenuItem()
-      menu_str_meters.show()
-      view_menu.append(menu_str_meters)
-      # TC: Menu text for toggling the visibility of information display widgets pertaining to this set of items.
-      # TC: Part of the View submenu.
-      self.str_meters_action = gtk.ToggleAction(None, _('Stream audio levels, connections, and listener figures'), None, None)
-      self.str_meters_action.connect_proxy(menu_str_meters)
-
-      menu_mic_meters = gtk.CheckMenuItem()
-      menu_mic_meters.show()
-      view_menu.append(menu_mic_meters)
-      # TC: Menu text for toggling the visibility of the audio levels of the microphones.
-      # TC: Part of the View submenu.
-      self.mic_meters_action = gtk.ToggleAction(None, _('Channels'), None, None)
-      self.mic_meters_action.connect_proxy(menu_mic_meters)
-      
-      sep = gtk.SeparatorMenuItem()
-      sep.show()
-      view_menu.append(sep)
-
-      # TC: Menu item that allows toggling in and out of fully featured mode.
-      self.menu_feature_set = gtk.CheckMenuItem(_('Fully Featured'))
-      self.menu_feature_set.set_active(True)
-      self.menu_feature_set.connect("activate", self.callback, "Features")
-      self.menu_feature_set.show()
-      view_menu.append(self.menu_feature_set)
       
       # Create the jingles player
       self.jingles = Jingles(self)
@@ -3326,6 +3217,12 @@ class MainWindow:
       self.window.connect("key-press-event", self.cb_key_capture)
       self.window.connect("key-release-event", self.cb_key_capture)
      
+      self.menu.quitmenu_i.connect_object("activate", self.delete_event, self.window, None)
+      self.menu.outputmenu_i.connect("activate", lambda w: self.server_window.window.present())
+      self.menu.prefsmenu_i.connect("activate", lambda w: self.prefs_window.window.present())
+      self.menu.jinglesmenu_i.connect("activate", lambda w: self.jingles.window.present())
+      self.menu.profilesmenu_i.connect("activate", lambda w: pm.profile_dialog.present())
+
       self.window.show()
       self.prefs_window.window.realize()  # Prevent first-time-show delay.
       

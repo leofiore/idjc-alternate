@@ -982,7 +982,6 @@ class mixprefs:
       self.show_stream_meters = gtk.CheckButton()
       self.show_stream_meters.set_active(True)
       self.show_stream_meters.connect("toggled", showhide, parent.streammeterbox)
-      parent.str_meters_action.connect_proxy(self.show_stream_meters)
       vbox.pack_start(self.show_stream_meters, False, False)
       self.show_stream_meters.show()
       
@@ -992,7 +991,6 @@ class mixprefs:
       self.show_microphones = gtk.CheckButton()
       self.show_microphones.set_active(True)
       self.show_microphones.connect("toggled", showhide, parent.micmeterbox)
-      parent.mic_meters_action.connect_proxy(self.show_microphones)
       hbox.pack_start(self.show_microphones, False, False)
       self.show_microphones.show()            
       
@@ -1311,6 +1309,8 @@ class mixprefs:
       self.p3prefs = p3db.Prefs(self.parent)
       outervbox.pack_start(self.p3prefs, False, False, 0)
       self.p3prefs.show()
+      self.parent.menu.songdbmenu_a.connect_proxy(self.p3prefs.proktoggle)
+
       
       # Session to be saved, or initial settings preferences.
       frame = gtk.Frame(" %s " % _('Player Settings At Startup'))
@@ -1646,6 +1646,9 @@ class mixprefs:
          t.button_text.set_text("Aux")
          t.icb.set_filename(FGlobs.pkgdatadir / "jack2.png")
          t.open_triggers.values()[2].set_active(True)
+
+      self.parent.menu.strmetersmenu_a.connect_proxy(self.show_stream_meters)
+      self.parent.menu.chmetersmenu_a.connect_proxy(self.show_microphones)
 
       self.show_stream_meters.set_active(True)
       self.show_microphones.set_active(True)
