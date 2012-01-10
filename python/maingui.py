@@ -117,6 +117,9 @@ class MainMenu(gtk.MenuBar, MenuMixin):
       mkitems(zip("songdb chmeters strmeters".split(" "),
             (_('Music Database'), _('Channel Meters'), _('Output Meters'))), gtk.CheckMenuItem)
 
+      self.submenu(self.helpmenu_i, "help")
+      self.build(self.helpmenu)((("about", gtk.STOCK_ABOUT),), gtk.ImageMenuItem)
+
 
 class ColouredArea(gtk.DrawingArea):
    def __init__(self, colour=gtk.gdk.Color()):
@@ -1841,9 +1844,6 @@ class MainWindow:
       #print "Hello there, the volume control was moved, value = %d" % gain.value
       self.send_new_mixer_stats()
 
-   def cb_menu_select(self, widget, data):
-      print ("%s was chosen from the menu" % data)   
-
    def save_session(self, sig=None, frame=None):
       print "saving session"
 
@@ -3226,6 +3226,7 @@ class MainWindow:
       self.menu.prefsmenu_i.connect("activate", lambda w: self.prefs_window.window.present())
       self.menu.jinglesmenu_i.connect("activate", lambda w: self.jingles.window.present())
       self.menu.profilesmenu_i.connect("activate", lambda w: pm.profile_dialog.present())
+      self.menu.aboutmenu_i.connect("activate", lambda w: self.prefs_window.show_about())
 
       self.window.show()
       self.prefs_window.window.realize()  # Prevent first-time-show delay.

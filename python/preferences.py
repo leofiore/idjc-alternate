@@ -849,6 +849,10 @@ class mixprefs:
    def cb_realize(self, window):
       self.wst.apply()
          
+   def show_about(self):
+      self.notebook.set_current_page(self.notebook.page_num(self.aboutframe))
+      self.window.present()
+         
    def __init__(self, parent):
       self.parent = parent
       self.parent.prefs_window = self
@@ -1538,10 +1542,10 @@ class mixprefs:
 
       # about tab
       
-      frame = gtk.Frame()
+      self.aboutframe = gtk.Frame()
       frame.set_border_width(9)
       vbox = gtk.VBox()
-      frame.add(vbox)
+      self.aboutframe.add(vbox)
       label = gtk.Label()
       label.set_markup('<span font_desc="sans italic 20">' + self.parent.appname + '</span>')
       vbox.pack_start(label, False, False, 13)
@@ -1609,9 +1613,9 @@ class mixprefs:
       vbox.show()
 
       aboutlabel = gtk.Label(_('About'))
-      self.notebook.append_page(frame, aboutlabel)
+      self.notebook.append_page(self.aboutframe, aboutlabel)
       aboutlabel.show()
-      frame.show()
+      self.aboutframe.show()
       
       self.notebook.show()
 
