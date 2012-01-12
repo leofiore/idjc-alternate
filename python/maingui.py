@@ -117,6 +117,14 @@ class MainMenu(gtk.MenuBar, MenuMixin):
       mkitems(zip("songdb chmeters strmeters".split(" "),
             (_('Music Database'), _('Channel Meters'), _('Output Meters'))), gtk.CheckMenuItem)
 
+      self.submenu(self.jackmenu_i, "jack")
+      self.build(self.jackmenu)(zip("channels voip dsp mix".split(), (_('Channels'), _('VoIP'), _('DSP'), _('Mix'))))
+      self.submenu(self.channelsmenu_i, "channels")
+      self.submenu(self.voipmenu_i, "voip")
+      self.submenu(self.dspmenu_i, "dsp")
+      self.submenu(self.mixmenu_i, "mix")
+      self.build(self.dspmenu)((("dspenable", _('Enable')),), gtk.CheckMenuItem)
+
       self.submenu(self.helpmenu_i, "help")
       self.build(self.helpmenu)((("about", gtk.STOCK_ABOUT),), gtk.ImageMenuItem)
 
