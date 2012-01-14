@@ -64,19 +64,30 @@ METER_TEXT_SIZE = 8000
 
 
 class MenuMixin(object):
-   def build(self, menu, autowipe=False):
+   def build(self, menu, autowipe=False, monospace=False):
       def mkitems(x, how=gtk.MenuItem):
          for name, text in x:
-            mi = how(text)
+            if monospace == False:
+               mi = how(text)
+            else:
+               mi = how()
+               label = gtk.Label()
+               label.set_alignment(0.0, 0.5)
+               label.set_markup("<span font='monospace'>%s</span>" % text)
+               mi.add(label)
+               label.show()
+
             menu.append(mi)
             mi.show()
             setattr(self, name + "menu_i", mi)
             if autowipe:
                mi.connect("activate", self.cb_autowipe)
+
             if issubclass(how, gtk.CheckMenuItem):
                a = gtk.ToggleAction(None, text, None, None)
                a.connect_proxy(mi)
                setattr(self, name + "menu_a", a)
+
       return mkitems
       
    def submenu(self, mi, name):
@@ -93,6 +104,17 @@ class MenuMixin(object):
       
    def cb_autowipe(self, mi):
       mi.get_submenu().foreach(lambda w: w.destroy())
+
+
+class JackMenu(MenuMixin):
+   def __init__(self):
+      self.ports = []
+      
+   def add_port(self, menu, port):
+      self.ports.append(port)
+      self.build(menu, autowipe=True, monospace=True)(((port, port),))
+      mi = getattr(self, port + "menu_i")
+      sub = self.submenu(mi, port)
 
 
 class MainMenu(gtk.MenuBar, MenuMixin):
@@ -118,15 +140,35 @@ class MainMenu(gtk.MenuBar, MenuMixin):
             (_('Music Database'), _('Channel Meters'), _('Output Meters'))), gtk.CheckMenuItem)
 
       self.submenu(self.jackmenu_i, "jack")
-      self.build(self.jackmenu)(zip("channels voip dsp mix".split(), (_('Channels'), _('VoIP'), _('DSP'), _('Mix'))))
+      self.build(self.jackmenu)(zip("channels voip dsp mix midi".split(), (_('Channels'), _('VoIP'), _('DSP'), _('Mix'), _('MIDI'))))
       self.submenu(self.channelsmenu_i, "channels")
       self.submenu(self.voipmenu_i, "voip")
       self.submenu(self.dspmenu_i, "dsp")
       self.submenu(self.mixmenu_i, "mix")
-      self.build(self.dspmenu)((("dspenable", _('Enable')),), gtk.CheckMenuItem)
+      self.submenu(self.midimenu_i, "midi")
 
       self.submenu(self.helpmenu_i, "help")
       self.build(self.helpmenu)((("about", gtk.STOCK_ABOUT),), gtk.ImageMenuItem)
+      
+      self.jack = JackMenu()
+      
+      out2_in2 = itertools.cycle(("_out_",)*2 + ("_in_",)*2)
+      lr = itertools.cycle("lr")
+      dj2_str2 = itertools.cycle(("dj",)*2 + ("str",)*2)
+   
+      for each in zip(("voip",)*4, out2_in2, lr):
+         self.jack.add_port(self.voipmenu, "".join(each))
+
+      for each in zip(("dsp",)*4, out2_in2, lr):
+         self.jack.add_port(self.dspmenu, "".join(each))
+         
+      for each in zip(dj2_str2, ("_out_",)*4, lr):
+         self.jack.add_port(self.mixmenu, "".join(each))
+         
+      self.jack.add_port(self.midimenu, "midi_control")
+      
+      for i in range(1, PGlobs.num_micpairs * 2 + 1):
+         self.jack.add_port(self.channelsmenu, "ch_in_" + str(i))
 
 
 class ColouredArea(gtk.DrawingArea):
