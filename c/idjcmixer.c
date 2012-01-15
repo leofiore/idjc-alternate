@@ -216,6 +216,7 @@ char *rg_db, *headroom;
 char *flag;
 char *channel_mode_string;
 char *use_jingles_vol_2;
+char *jackport, *jackport2, *jackfilter;
 
 /* dictionary look-up type thing used by the parse routine */
 struct kvpdict kvpdict[] = {
@@ -255,6 +256,9 @@ struct kvpdict kvpdict[] = {
          { "HEAD", &headroom, NULL },
          { "FLAG", &flag, NULL },
          { "CMOD", &channel_mode_string, NULL },
+         { "JFIL", &jackfilter, NULL },
+         { "JPRT", &jackport, NULL },
+         { "JPT2", &jackport2, NULL },
          { "ACTN", &action, NULL },                   /* Action to take */
          { "", NULL, NULL }};
 
@@ -1318,6 +1322,44 @@ void display_info_to_stderr(const char *message)
    {
    fprintf(stderr, "JACK INFO MESSAGE: %s\n", message);
    }
+   
+static void jackportread(const char *portname, const char *filter)
+   {
+   unsigned long flags = 0;
+   const char *type = JACK_DEFAULT_AUDIO_TYPE;
+   const char **ports;
+   const jack_port_t *port = jack_port_by_name(client, portname);
+   int i;
+
+   if (!strcmp(filter, "inputs"))
+      flags = JackPortIsInput;
+   else
+      {
+      if (!strcmp(filter, "outputs"))
+         flags = JackPortIsOutput;
+      else
+         if (!strcmp(filter, "midioutputs"))
+            {
+            flags = JackPortIsOutput;
+            type = JACK_DEFAULT_MIDI_TYPE;
+            }
+      }
+
+   ports = jack_get_ports(client, NULL, type, flags);
+   fputs("jackports=", stdout);
+   for (i = 0; ports && ports[i]; ++i)
+      {
+      if (i)
+         fputs(" ", stdout);
+      if (jack_port_connected_to(port, ports[i]))
+         fputs("@", stdout);
+      fputs(ports[i], stdout);
+      }
+   fputs("\n", stdout);
+   fflush(stdout);
+   if (ports)
+      jack_free(ports);
+   }
   
 int main(int argc, char **argv)
    {
@@ -1537,6 +1579,22 @@ int main(int argc, char **argv)
          }
       if (sync == FALSE)
          continue;
+
+      if (!strcmp(action, "jackportread"))
+         jackportread(jackport, jackfilter);
+
+      void dis_connect(char *str, int (*fn)(jack_client_t *, const char *, const char *))
+         {
+         if (!strcmp(action, str))
+            {
+            if (jack_port_flags(jack_port_by_name(client, jackport)) & JackPortIsOutput)
+               fn(client, jackport, jackport2);
+            else
+               fn(client, jackport2, jackport);
+            }
+         }
+      dis_connect("jackconnect", jack_connect);
+      dis_connect("jackdisconnect", jack_disconnect);
 
       if (!strcmp(action, "mp3status"))
          {

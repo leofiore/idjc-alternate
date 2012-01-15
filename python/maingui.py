@@ -83,7 +83,7 @@ class MenuMixin(object):
             if autowipe:
                mi.connect("activate", self.cb_autowipe)
 
-            if issubclass(how, gtk.CheckMenuItem):
+            if issubclass(how, gtk.CheckMenuItem) and not monospace:
                a = gtk.ToggleAction(None, text, None, None)
                a.connect_proxy(mi)
                setattr(self, name + "menu_a", a)
@@ -107,18 +107,54 @@ class MenuMixin(object):
 
 
 class JackMenu(MenuMixin):
-   def __init__(self):
+   def __init__(self, write, read):
+      self.mixer_write = write
+      self.mixer_read = read
       self.ports = []
+      self.prefix = os.environ["mx_client_id"] + ":"
       
    def add_port(self, menu, port):
-      self.ports.append(port)
+      self.ports.append(self.prefix + port)
       self.build(menu, autowipe=True, monospace=True)(((port, port),))
       mi = getattr(self, port + "menu_i")
       sub = self.submenu(mi, port)
+      mi.connect("activate", self.cb_port_connections, self.prefix + port, sub)
+      
+   def cb_port_connections(self, mi, port, menu):
+      reply = ""
+      
+      if "_in_" in port:
+         filter_ = "outputs"
+      elif "_out_" in port:
+         filter_ = "inputs"
+      elif "midi" in port:
+         filter_ = "midioutputs"
+      else:
+         print "JackMenu.port_connections: unknown port type"
+         return
+         
+      self.mixer_write("portread", "JFIL=%s\nJPRT=%s\nend\n" % (filter_, port))
+      while not reply.startswith("jackports="):
+         reply = self.mixer_read()
+      reply = reply[10:].rstrip().split()
+      if not reply:
+         self.build(menu)((("noports", _('No compatible ports available.')),))
+         self.noportsmenu_i.set_sensitive(False)
+      else:
+         for destport in reply:
+            self.build(menu, monospace=True)((("targetport", destport.lstrip("@")),), how=gtk.CheckMenuItem)
+            mi = getattr(self, "targetportmenu_i")
+            if destport.startswith("@"):
+               mi.set_active(True)
+            mi.connect("activate", self.cb_activate, port, destport.lstrip("@"))
+
+   def cb_activate(self, mi, local, dest):
+      cmd = "connect" if mi.get_active() else "disconnect"
+      self.mixer_write(cmd, "JPRT=%s\nJPT2=%s\nend\n" % (local, dest))
 
 
 class MainMenu(gtk.MenuBar, MenuMixin):
-   def __init__(self):
+   def __init__(self, *args):
       gtk.MenuBar.__init__(self)
 
       self.build(self)((("file", _('File')), ("view", _('View')), ("jack", _('JACK Ports')), ("help", _('Help'))))
@@ -150,7 +186,7 @@ class MainMenu(gtk.MenuBar, MenuMixin):
       self.submenu(self.helpmenu_i, "help")
       self.build(self.helpmenu)((("about", gtk.STOCK_ABOUT),), gtk.ImageMenuItem)
       
-      self.jack = JackMenu()
+      self.jack = JackMenu(*args)
       
       out2_in2 = itertools.cycle(("_out_",)*2 + ("_in_",)*2)
       lr = itertools.cycle("lr")
@@ -2552,7 +2588,7 @@ class MainWindow:
       self.rightpane = gtk.HBox(False, 0)
       self.paned.pack2(self.rightpane, True, False)
       self.vbox8 = gtk.VBox(False, 0)
-      self.menu = MainMenu()
+      self.menu = MainMenu(lambda s, r: self.mixer_write("ACTN=jack%s\n%s" % (s, r), True), lambda: self.mixer_read())
       self.menu.set_border_width(6)
       self.vbox8.pack_start(self.menu, False)
       self.menu.show()
