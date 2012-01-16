@@ -30,6 +30,7 @@ import time
 import gettext
 import itertools
 import collections
+import json
 
 import glib
 import gobject
@@ -64,26 +65,18 @@ METER_TEXT_SIZE = 8000
 
 
 class MenuMixin(object):
-   def build(self, menu, autowipe=False, monospace=False):
+   def build(self, menu, autowipe=False, use_underline=True):
       def mkitems(x, how=gtk.MenuItem):
          for name, text in x:
-            if monospace == False:
-               mi = how(text)
-            else:
-               mi = how()
-               label = gtk.Label()
-               label.set_alignment(0.0, 0.5)
-               label.set_markup("<span font='monospace'>%s</span>" % text)
-               mi.add(label)
-               label.show()
-
+            mi = how(text)
+            mi.set_use_underline(use_underline)
             menu.append(mi)
             mi.show()
             setattr(self, name + "menu_i", mi)
             if autowipe:
                mi.connect("activate", self.cb_autowipe)
 
-            if issubclass(how, gtk.CheckMenuItem) and not monospace:
+            if issubclass(how, gtk.CheckMenuItem) and use_underline == True:
                a = gtk.ToggleAction(None, text, None, None)
                a.connect_proxy(mi)
                setattr(self, name + "menu_a", a)
@@ -107,15 +100,39 @@ class MenuMixin(object):
 
 
 class JackMenu(MenuMixin):
+   default_pathname = pm.basedir / "jack_port_connections"
+   
+   cons51 = """[
+      ["@:ch_in_1", ["system:capture_1"]],
+      ["@:ch_in_2", ["system:capture_2"]],
+      ["@:dj_out_l", ["system:playback_1"]],
+      ["@:dj_out_r", ["system:playback_2"]],
+      ["@:str_out_l", ["system:playback_3", "#:str_in_l"]],
+      ["@:str_out_r", ["system:playback_4", "#:str_in_r"]]] """
+
+   cons71 = """[
+      ["@:ch_in_1", ["system:capture_1"]],
+      ["@:ch_in_2", ["system:capture_2"]],
+      ["@:dj_out_l", ["system:playback_1"]],
+      ["@:dj_out_r", ["system:playback_2"]],
+      ["@:str_out_l", ["system:playback_5", "#:str_in_l"]],
+      ["@:str_out_r", ["system:playback_6", "#:str_in_r"]]] """
+   
    def __init__(self, write, read):
       self.mixer_write = write
       self.mixer_read = read
       self.ports = []
       self.prefix = os.environ["mx_client_id"] + ":"
+      self.got_sigusr1 = False
+      
+      cons = (self.cons71 if self.get_playback_port_qty() >= 8 else self.cons51)
+      cons = cons.replace("@", os.environ["mx_client_id"])
+      cons = cons.replace("#", os.environ["sc_client_id"])
+      self.connections = eval(cons)
       
    def add_port(self, menu, port):
       self.ports.append(self.prefix + port)
-      self.build(menu, autowipe=True, monospace=True)(((port, port),))
+      self.build(menu, autowipe=True, use_underline=False)(((port, port),))
       mi = getattr(self, port + "menu_i")
       sub = self.submenu(mi, port)
       mi.connect("activate", self.cb_port_connections, self.prefix + port, sub)
@@ -142,7 +159,7 @@ class JackMenu(MenuMixin):
          self.noportsmenu_i.set_sensitive(False)
       else:
          for destport in reply:
-            self.build(menu, monospace=True)((("targetport", destport.lstrip("@")),), how=gtk.CheckMenuItem)
+            self.build(menu, use_underline=False)((("targetport", destport.lstrip("@")),), how=gtk.CheckMenuItem)
             mi = getattr(self, "targetportmenu_i")
             if destport.startswith("@"):
                mi.set_active(True)
@@ -151,6 +168,63 @@ class JackMenu(MenuMixin):
    def cb_activate(self, mi, local, dest):
       cmd = "connect" if mi.get_active() else "disconnect"
       self.mixer_write(cmd, "JPRT=%s\nJPT2=%s\nend\n" % (local, dest))
+      self.save()
+
+   def get_playback_port_qty(self):
+      self.mixer_write("portread", "JFIL=\nJPRT=\nend\n")
+      reply = ""
+      while not reply.startswith("jackports="):
+         reply = self.mixer_read()
+         
+      pbports = len([x for x in reply[10:].strip().split() if x.startswith("system:playback_")])
+      print "counted %d playback ports" % pbports
+      return pbports
+      
+   def save(self):
+      if not self.got_sigusr1:
+         self._save()
+      
+   def save_on_sigusr1(self, sig, frame):
+      """SIGUSR1 triggers the saving of JACK port connections.
+      
+      Automatic saving is also turned off at the same time.
+      """
+
+      self.got_sigusr1 = True
+      self._save()
+
+   def _save(self):
+      total = []
+      for port in self.ports:
+         element = [port]
+         self.mixer_write("portread", "JFIL=\nJPRT=%s\nend\n" % port)
+         reply = ""
+         while not reply.startswith("jackports="):
+            reply = self.mixer_read()
+         
+         element.append([x.lstrip("@") for x in reply[10:].rstrip().split() if x.startswith("@")])
+         total.append(element)
+      
+      try:
+         with open(self.default_pathname, "w") as f:
+            json.dump(total, f)
+      except Exception as e:
+         print "problem writing jack port connections file"
+      else:
+         print "JACK port connections saved"
+      
+      
+   def load(self, restrict=""):
+      try:
+         with open(self.default_pathname) as f:
+            self.connections = json.load(f)
+      except Exception:
+         print "problem reading jack port connections file"
+
+      for port, targets in self.connections:
+         for target in targets:
+            if target.startswith(restrict):
+               self.mixer_write("connect", "JPRT=%s\nJPT2=%s\nend\n" % (port, target))
 
 
 class MainMenu(gtk.MenuBar, MenuMixin):
@@ -1620,7 +1694,7 @@ class MainWindow:
                                                 self.prefs_window.speed_variance.get_active(),
                                                 self.prefs_window.dj_aud_adj.get_value(),
                                                 self.crosspattern.get_active(),
-                                                self.prefs_window.use_dsp.get_active(), 
+                                                self.dsp_button.get_active(), 
                                                 self.prefs_window.twodblimit.get_active(),
                                                 )
       self.mixer_write("MIXR=%s\nACTN=mixstats\nend\n" % string_to_send, True)
@@ -1930,7 +2004,7 @@ class MainWindow:
       #print "Hello there, the volume control was moved, value = %d" % gain.value
       self.send_new_mixer_stats()
 
-   def save_session(self, sig=None, frame=None):
+   def save_session(self):
       print "saving session"
 
       try:
@@ -1985,6 +2059,7 @@ class MainWindow:
       self.prefs_window.save_player_prefs()
       self.controls.save_prefs()
       self.server_window.save_session_settings()
+      self.menu.jack.save()
       
       return True  # This is also a timeout routine
 
@@ -2177,8 +2252,6 @@ class MainWindow:
          
          self.send_new_mixer_stats()                    # restore previous settings to the mixer
          self.prefs_window.send_new_normalizer_stats()
-         self.prefs_window.bind_jack_ports()
-         self.mixer_write("ACTN=serverbind\n", True)    # tell mixer to bind audio with the sourceclient module
          self.player_left.next.clicked()
          self.player_right.next.clicked()
          self.jingles.stop.clicked()
@@ -2186,6 +2259,7 @@ class MainWindow:
             self.jingles.start_interlude_player(self.jingles.interlude_player_track)
          if self.last_chance == False:
             self.mixer_write(message, flush)            # resume what we were doing
+         self.menu.jack.load()
       else:
          self.last_chance = False
 
@@ -2617,7 +2691,14 @@ class MainWindow:
       # show box 8 now that it's finished
       self.vbox8.show()            
 
-      wbsg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
+      self.dsp_button = gtk.ToggleButton()
+      label = gtk.Label()
+      label.set_markup("<span weight='bold' size='9000' foreground='#333'>%s</span>" % _('DSP'))
+      self.dsp_button.add(label)
+      label.show()
+      self.dsp_button.connect("toggled", lambda w: self.send_new_mixer_stats())
+      self.hbox10.pack_start(self.dsp_button, False)
+      self.dsp_button.show()
             
       phonebox = gtk.HBox()
       phonebox.viewlevels = (5,)       
@@ -3278,7 +3359,7 @@ class MainWindow:
       for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
          signal.signal(sig, self.destroy)
 
-      signal.signal(signal.SIGUSR1, self.save_session)
+      signal.signal(signal.SIGUSR1, self.menu.jack.save_on_sigusr1)
       signal.signal(signal.SIGUSR2, signal.SIG_IGN)
       
       (self.full_wst, self.min_wst)[bool(self.simplemixer)].apply()
@@ -3313,6 +3394,7 @@ class MainWindow:
       self.menu.jinglesmenu_i.connect("activate", lambda w: self.jingles.window.present())
       self.menu.profilesmenu_i.connect("activate", lambda w: pm.profile_dialog.present())
       self.menu.aboutmenu_i.connect("activate", lambda w: self.prefs_window.show_about())
+      self.menu.jack.load()
 
       self.window.show()
       self.prefs_window.window.realize()  # Prevent first-time-show delay.

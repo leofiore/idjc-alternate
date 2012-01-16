@@ -612,60 +612,11 @@ class mixprefs:
    def cb_dj_aud(self, widget):
       self.parent.send_new_mixer_stats()
       
-   def cb_use_dsp(self, widget):
-      self.parent.send_new_mixer_stats()
-      
    def cb_restore_session(self, widget, data=None):
       state = not widget.get_active()
       for each in (self.lpconfig, self.rpconfig, self.misc_session_frame):
          each.set_sensitive(state)
-   
-   jack_ports= ("audl", "audr", "strl", "strr", "midi", "dol", "dor", "dil", "dir")
-
-   def load_jack_port_settings(self):
-      for port in self.jack_ports:
-         try:
-            with open(pm.basedir / port) as f:
-               getattr(self, port+"entry").set_text(f.readline()[:-1])
-               getattr(self, port+"check").set_active(f.readline() == "1\n")
-         except:
-            pass
-            
-      for i, mic in enumerate(self.mic_jack_data):
-         try:
-            with open(pm.basedir / ("mic" + str(i + 1))) as f:
-               mic[1].set_text(f.readline()[:-1])
-               mic[0].set_active(f.readline() == "1\n")
-         except:
-            pass
-   
-   def auto_click(self, widget, data):
-      data.set_sensitive(not widget.get_active())
-   
-   def save_click(self, widget, data):
-      filename = data[0].lower()
-      if data[2] is not None:
-         filename += str(data[2] + 1)
-      try:
-         with open(pm.basedir / filename, "w") as f:
-            if data[1].flags() & gtk.SENSITIVE:
-               f.write(data[1].get_text() + "\n" + "0\n")
-            else:
-               f.write(data[1].get_text() + "\n" + "1\n")
-      except:
-         pass
-   
-   def update_click(self, widget, (code, entry, index)):
-      if entry.flags() & gtk.SENSITIVE:
-         entrytext = entry.get_text()
-      else:
-         entrytext = "default"
-      if index is None:
-         buffer = "ACTN=remake%s\n%s=%s\nend\n" % (code.lower(), code, entrytext)
-      else:
-         buffer = "ACTN=remake%s\n%s=%s\nINDX=%d\nend\n" % (code.lower(), code, entrytext, index)
-      self.parent.mixer_write(buffer, True)
-      
+         
    def delete_event(self, widget, event, data=None):
       self.window.hide()
       return True
@@ -829,12 +780,6 @@ class mixprefs:
       self.parent.str_r_rms_vu.set_line(level)
       self.parent.send_new_mixer_stats()
       
-   def bind_jack_ports(self):
-      for port in self.jack_ports:
-         getattr(self, port+"update").clicked()
-      for mic_entry_line in self.mic_jack_data:
-         mic_entry_line[2].clicked()
-
    def cb_rg_indicate(self, widget):
       left = self.parent.player_left
       right = self.parent.player_right
@@ -1430,107 +1375,6 @@ class mixprefs:
       label = gtk.Label(_('Channels'))
       self.notebook.append_page(scrolled_window, label)
       label.show()
-       
-      # Jack settings tab      
-                 
-      scrolled = gtk.ScrolledWindow()
-      scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
-      jack_vbox = gtk.VBox()
-      scrolled.add_with_viewport(jack_vbox)
-      scrolled.child.set_shadow_type(gtk.SHADOW_NONE)
-      jack_vbox.set_spacing(3)
-      #jack_vbox.set_border_width(4)
-      jack_vbox.show()
-      
-      jackname = os.environ["jack_server_name"]
-      if jackname != "default":
-         label = gtk.Label(_('Using named JACK server: %s') % jackname)
-         jack_vbox.add(label)
-         label.show()
-      
-      frame = gtk.Frame()
-      frame.set_border_width(5)
-      vbox = gtk.VBox(False, 0)
-      frame.add(vbox)
-      frame.show()
-      
-      self.mic_jack_data = []
-      for i in range(1, PGlobs.num_micpairs * 2 + 1):
-         n = str(i)
-         box, check, entry, update = make_entry_line(self, "ch_in_" + n + ": ", "MIC", True, i - 1)
-         vbox.add(box)
-         self.mic_jack_data.append((check, entry, update))
-         if i < 5:
-            entry.set_text("system:capture_%d" % i)
-      jack_vbox.pack_start(frame, False)
-      vbox.show()
-      
-      frame = gtk.Frame()
-      frame.set_border_width(5)
-      vbox = gtk.VBox(False, 0)
-      frame.add(vbox)
-      frame.show()
-      box, self.midicheck, self.midientry, self.midiupdate = make_entry_line(self, "midi_control: ", "MIDI", False)
-      vbox.add(box)
-      jack_vbox.pack_start(frame, False)
-      vbox.show()
-     
-      frame = gtk.Frame()
-      frame.set_border_width(5)
-      vbox = gtk.VBox(False, 0)
-      frame.add(vbox)
-      frame.show()
-      box, self.audlcheck, self.audlentry, self.audlupdate = make_entry_line(self, "dj_out_l: ", "AUDL", True)
-      vbox.add(box)
-      box, self.audrcheck, self.audrentry, self.audrupdate = make_entry_line(self, "dj_out_r: ", "AUDR", True)
-      vbox.add(box)
-      jack_vbox.pack_start(frame, False)
-      vbox.show()
-      self.audlentry.set_text("system:playback_1")
-      self.audrentry.set_text("system:playback_2")
-      
-      frame = gtk.Frame()
-      frame.set_border_width(5)
-      vbox = gtk.VBox(False, 0)
-      frame.add(vbox)
-      frame.show()
-      box, self.strlcheck, self.strlentry, self.strlupdate = make_entry_line(self, "str_out_l: ", "STRL", True)
-      vbox.add(box)
-      box, self.strrcheck, self.strrentry, self.strrupdate = make_entry_line(self, "str_out_r: ", "STRR", True)
-      vbox.add(box)
-      jack_vbox.pack_start(frame, False)
-      vbox.show()
-      self.strlentry.set_text("system:playback_5")
-      self.strrentry.set_text("system:playback_6")
-      
-      frame = gtk.Frame()
-      frame.set_border_width(5)
-      self.use_dsp = gtk.CheckButton(_('Route audio through the DSP interface'))
-      self.use_dsp.connect("toggled", self.cb_use_dsp)
-      frame.set_label_widget(self.use_dsp)
-      self.use_dsp.show()
-      vbox = gtk.VBox(False, 0)
-      frame.add(vbox)
-      frame.show()
-      box, self.dolcheck, self.dolentry, self.dolupdate = make_entry_line(self, "dsp_out_l: ", "DOL", False)
-      vbox.add(box)
-      self.dolentry.set_text("jamin:in_L")
-      box, self.dorcheck, self.dorentry, self.dorupdate = make_entry_line(self, "dsp_out_r: ", "DOR", False)
-      vbox.add(box)
-      self.dorentry.set_text("jamin:in_R")
-      box, self.dilcheck, self.dilentry, self.dilupdate = make_entry_line(self, "dsp_in_l: ", "DIL", False)
-      vbox.add(box)
-      self.dilentry.set_text("jamin:out_L")
-      box, self.dircheck, self.direntry, self.dirupdate = make_entry_line(self, "dsp_in_r: ", "DIR", False)
-      self.direntry.set_text("jamin:out_R")
-      vbox.add(box)
-      jack_vbox.pack_start(frame, False)
-      vbox.show()
-      
-      jacklabel = gtk.Label(_('JACK Ports'))
-      self.notebook.append_page(scrolled, jacklabel)
-      jacklabel.show()
-      scrolled.show()
 
       # Controls tab
       tab= midicontrols.ControlsUI(self.parent.controls)
@@ -1656,12 +1500,10 @@ class mixprefs:
 
       self.show_stream_meters.set_active(True)
       self.show_microphones.set_active(True)
-      
-      self.load_jack_port_settings()
-      self.bind_jack_ports()
-      
+
       self.activedict = {       # Settings of these will be saved in the config file 
          "startmini"     : self.startmini,
+         "dsp_toggle"    : self.parent.dsp_button,
          "djalarm"       : self.djalarm,
          "trxpld"        : self.tracks_played,
          "strmon"        : self.stream_mon,

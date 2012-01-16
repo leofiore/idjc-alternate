@@ -2516,6 +2516,7 @@ class SourceClientGui:
          if reply == "" or reply == "Segmentation Fault\n":
             self.comms_reply_pending = False
             return "failed"
+
    def send(self, string_to_send):
       while self.comms_reply_pending:   # dump unused replies from previous send
          self.receive()
@@ -2535,6 +2536,8 @@ class SourceClientGui:
             print "idjcsourceclient is crashing repeatedly - exiting\n"
             self.app_exit()
          self.source_client_open()
+         self.receive()
+         self.parent.menu.jack.load(restrict=os.environ["sc_client_id"] + ":")
          self.comms_reply_pending = False
       else:
          if self.source_client_crash_count:

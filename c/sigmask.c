@@ -30,7 +30,7 @@ static void interrupt_handler(int sig)
    
    if (sig == SIGINT || sig == SIGTERM)
       {
-      if (++count > 1)
+      if (++count >= 1)
          exit(ec);
       }
    else

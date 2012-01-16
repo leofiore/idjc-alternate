@@ -1,6 +1,6 @@
 /*
 #   audiofeed.c: jack connectivity for the streaming module of idjc
-#   Copyright (C) 2007-2010 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2007-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -146,12 +146,10 @@ struct audio_feed *audio_feed_init(struct threads_info *ti)
       return NULL;
       }
       
-   self->mx_port_l = str_join(getenv("mx_client_id"), ":str_out_l");
-   self->mx_port_r = str_join(getenv("mx_client_id"), ":str_out_r");
    self->sc_port_l = str_join(getenv("sc_client_id"), ":str_in_l");
    self->sc_port_r = str_join(getenv("sc_client_id"), ":str_in_r");
 
-   if (!(self->mx_port_l && self->mx_port_r && self->sc_port_l && self->sc_port_r))
+   if (!(self->sc_port_l && self->sc_port_r))
       return NULL;
       
    if (!(self->jack_client_name = strdup(getenv("sc_client_id"))))
@@ -182,8 +180,6 @@ struct audio_feed *audio_feed_init(struct threads_info *ti)
       fprintf(stderr, "audio_feed_init: could not activate jack client\n");
       return NULL;
       }
-   jack_connect(self->jack_h, self->mx_port_l, self->sc_port_l);
-   jack_connect(self->jack_h, self->mx_port_r, self->sc_port_r);
    return self;
    }
 
@@ -198,8 +194,6 @@ void audio_feed_destroy(struct audio_feed *self)
    jack_client_close(self->jack_h);
    self->threads_info->audio_feed = NULL;
    free(self->jack_client_name);
-   free(self->mx_port_l);
-   free(self->mx_port_r);
    free(self->sc_port_l);
    free(self->sc_port_r);
    free(self);

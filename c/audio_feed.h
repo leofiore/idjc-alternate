@@ -28,7 +28,7 @@ struct audio_feed
    struct threads_info *threads_info;
    jack_client_t *jack_h;
    char *jack_client_name;
-   char *mx_port_l, *mx_port_r, *sc_port_l, *sc_port_r;
+   char *sc_port_l, *sc_port_r;
    jack_port_t *input_port[2];
    jack_port_t *output_port[2];
    jack_nframes_t sample_rate;

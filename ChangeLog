@@ -1,5 +1,7 @@
 * Changes in version 0.8.8 *
 
+Added ladish [L0] and [L1] support.
+
 The main menu is the new method for connecting JACK ports and it can also be used to check the various connections.
 
 The session is saved every minute. Users no longer need to close and restart to lock in settings in case IDJC freezes.
