@@ -2537,7 +2537,7 @@ class SourceClientGui:
             self.app_exit()
          self.source_client_open()
          self.receive()
-         self.parent.menu.jack.load(restrict=os.environ["sc_client_id"] + ":")
+         self.parent.jack.load(restrict=os.environ["sc_client_id"] + ":")
          self.comms_reply_pending = False
       else:
          if self.source_client_crash_count:
