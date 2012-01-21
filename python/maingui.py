@@ -134,7 +134,7 @@ class MainMenu(gtk.MenuBar, MenuMixin):
       """
 
 
-class MixerJackMenu(MenuMixin):
+class JackMenu(MenuMixin):
    default_pathname = pm.basedir / "jack_port_connections"
    
    def __init__(self, menu, write, read):
@@ -144,41 +144,41 @@ class MixerJackMenu(MenuMixin):
       self.ports = []
       self.got_sigusr1 = False
 
-      if self.get_playback_port_qty() < 8:
-         cons = """[
+      cons = """[
             ["{mx}:ch_in_1", ["system:capture_1"]],
             ["{mx}:ch_in_2", ["system:capture_2"]],
             ["{mx}:dj_out_l", ["system:playback_1"]],
             ["{mx}:dj_out_r", ["system:playback_2"]],
+            ["{sc}:str_in_l", ["{mx}:str_out_l"]],
+            ["{sc}:str_in_r", ["{mx}:str_out_r"]], """
+
+      if self.get_playback_port_qty() < 8:
+         cons += """
             ["{mx}:str_out_l", ["system:playback_3", "{sc}:str_in_l"]],
             ["{mx}:str_out_r", ["system:playback_4", "{sc}:str_in_r"]]] """
       else:
-         cons = """[
-            ["{mx}:ch_in_1", ["system:capture_1"]],
-            ["{mx}:ch_in_2", ["system:capture_2"]],
-            ["{mx}:dj_out_l", ["system:playback_1"]],
-            ["{mx}:dj_out_r", ["system:playback_2"]],
+         cons += """
             ["{mx}:str_out_l", ["system:playback_5", "{sc}:str_in_l"]],
             ["{mx}:str_out_r", ["system:playback_6", "{sc}:str_in_r"]]] """
 
       self.connections = eval(cons.format(mx=os.environ["mx_client_id"], sc=os.environ["sc_client_id"]))
-      self.prefix = os.environ["mx_client_id"] + ":"
       
-      self.build(menu.jackmenu)(zip("channels voip dsp mix midi output".split(), (_('Channels'), _('VoIP'), _('DSP'), _('Mix'), _('MIDI'))))
+      self.build(menu.jackmenu)(zip("channels voip dsp mix midi output".split(), (_('Channels'), _('VoIP'), _('DSP'), _('Mix'), _('MIDI'), _('Output'))))
       self.submenu(self.channelsmenu_i, "channels")
       self.submenu(self.voipmenu_i, "voip")
       self.submenu(self.dspmenu_i, "dsp")
       self.submenu(self.mixmenu_i, "mix")
       self.submenu(self.midimenu_i, "midi")
+      self.submenu(self.outputmenu_i, "output")
       
       out2_in2 = itertools.cycle(("_out_",)*2 + ("_in_",)*2)
       lr = itertools.cycle("lr")
       dj2_str2 = itertools.cycle(("dj",)*2 + ("str",)*2)
    
-      for each in zip(("voip",)*4, out2_in2, lr):
+      for each in zip(("voip",) * 4, out2_in2, lr):
          self.add_port(self.voipmenu, "".join(each))
 
-      for each in zip(("dsp",)*4, out2_in2, lr):
+      for each in zip(("dsp",) * 4, out2_in2, lr):
          self.add_port(self.dspmenu, "".join(each))
          
       for each in zip(dj2_str2, ("_out_",)*4, lr):
@@ -189,9 +189,12 @@ class MixerJackMenu(MenuMixin):
       for i in range(1, PGlobs.num_micpairs * 2 + 1):
          self.add_port(self.channelsmenu, "ch_in_" + str(i))
 
+      for each in zip(("str_in_",) * 2, lr):
+         self.add_port(self.outputmenu, "".join(each), "sc")
 
-   def add_port(self, menu, port):
-      pport = self.prefix + port
+
+   def add_port(self, menu, port, prefix="mx"):
+      pport = os.environ["%s_client_id" % prefix] + ":" + port
       self.ports.append(pport)
       self.build(menu, autowipe=True, use_underline=False)(((port, pport),))
       mi = getattr(self, port + "menu_i")
@@ -272,7 +275,7 @@ class MixerJackMenu(MenuMixin):
       except Exception as e:
          print "problem writing", self.default_pathname
       else:
-         print "%s connections saved" % self.prefix[:-1]
+         print "jack connections saved"
       
       
    def load(self, restrict=""):
@@ -288,26 +291,6 @@ class MixerJackMenu(MenuMixin):
                self.write("connect", "JPRT=%s\nJPT2=%s\nend\n" % (port, target))
 
 
-class JackMenuWrapper(list):
-   def __init__(self, *args):
-      list.__init__(self)
-      for each in args:
-         if not isinstance(each, MixerJackMenu):
-            raise TypeError("%s is not an instance of %s" % (repr(each), repr(MixerJackMenu)))
-         self.append(each)
-
-   def load(self, *args):
-      for each in self:
-         each.load(*args)
-         
-   def save(self):
-      for each in self:
-         each.save()
-         
-   def save_on_sigusr1(self, *args):
-      for each in self:
-         each.save_on_sigusr1(*args)
- 
  
 class ColouredArea(gtk.DrawingArea):
    def __init__(self, colour=gtk.gdk.Color()):
@@ -3422,9 +3405,7 @@ class MainWindow:
       self.menu.profilesmenu_i.connect("activate", lambda w: pm.profile_dialog.present())
       self.menu.aboutmenu_i.connect("activate", lambda w: self.prefs_window.show_about())
 
-      self.mixer_jack_menu = MixerJackMenu(self.menu, lambda s, r: self.mixer_write("ACTN=jack%s\n%s" % (s, r), True), lambda: self.mixer_read())
-
-      self.jack = JackMenuWrapper(self.mixer_jack_menu)
+      self.jack = JackMenu(self.menu, lambda s, r: self.mixer_write("ACTN=jack%s\n%s" % (s, r), True), lambda: self.mixer_read())
       signal.signal(signal.SIGUSR1, self.jack.save_on_sigusr1)
       self.jack.load()
 
