@@ -3374,7 +3374,7 @@ class MainWindow:
       self.savetimeout = gobject.timeout_add_seconds(60, threadslock(self.save_session));
       
       for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
-         signal.signal(sig, lambda s, f: glib.timeout_add(100, threadslock(self.destroy)))
+         signal.signal(sig, lambda s, f: glib.idle_add(threadslock(self.destroy)))
       
       (self.full_wst, self.min_wst)[bool(self.simplemixer)].apply()
       self.window.connect("configure_event", self.configure_event)
@@ -3410,7 +3410,7 @@ class MainWindow:
       self.menu.aboutmenu_i.connect("activate", lambda w: self.prefs_window.show_about())
 
       self.jack = JackMenu(self.menu, lambda s, r: self.mixer_write("ACTN=jack%s\n%s" % (s, r), True), lambda: self.mixer_read())
-      signal.signal(signal.SIGUSR1, lambda s, f: glib.idle_add(self.sigusr1_idle_save, s, priority=glib.PRIORITY_HIGH_IDLE))
+      signal.signal(signal.SIGUSR1, lambda s, f: glib.idle_add(self.jack.sigusr1_idle_save, s, priority=glib.PRIORITY_HIGH_IDLE))
       self.jack.load()
 
       self.window.show()
