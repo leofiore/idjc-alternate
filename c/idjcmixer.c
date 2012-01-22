@@ -1585,12 +1585,31 @@ int main(int argc, char **argv)
 
       void dis_connect(char *str, int (*fn)(jack_client_t *, const char *, const char *))
          {
+         const char **jackports, **jp;
+         
          if (!strcmp(action, str))
             {
-            if (jack_port_flags(jack_port_by_name(client, jackport)) & JackPortIsOutput)
-               fn(client, jackport, jackport2);
+            if (strlen(jackport2))
+               {
+               if (jack_port_flags(jack_port_by_name(client, jackport)) & JackPortIsOutput)
+                  fn(client, jackport, jackport2);
+               else
+                  fn(client, jackport2, jackport);
+               }
             else
-               fn(client, jackport2, jackport);
+               {
+               /* do regular expression lookup of ports then disconnect them */
+               if (!strcmp(str, "jackdisconnect"))
+                  {
+                  if ((jackports = jack_get_ports(client, jackport, NULL, 0L)))
+                     {
+                     for (jp = jackports; *jp; ++jp)
+                        jack_port_disconnect(client, jack_port_by_name(client, *jp));
+
+                     jack_free(jackports);
+                     }
+                  }
+               }
             }
          }
       dis_connect("jackconnect", jack_connect);
