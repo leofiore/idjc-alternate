@@ -28,13 +28,8 @@ static void interrupt_handler(int sig)
    static int count = 0;
    int ec = (sig == SIGINT) ? 130 : 5;
    
-   if (sig == SIGINT || sig == SIGTERM)
-      {
-      if (++count >= 1)
-         exit(ec);
-      }
-   else
-      exit(5);  // SIGHUP and whatever else
+   if (++count > 1)
+      exit(ec);
    }
 
 #define A(s) && sigaddset(&mask, s)
