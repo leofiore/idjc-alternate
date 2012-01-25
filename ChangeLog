@@ -1,5 +1,7 @@
 * Changes in version 0.8.8 *
 
+BSB compat fix. The runtime dynamic linking functions are in the C standard library in BSD.
+
 Added ladish [L0] and [L1] support.
 
 The main menu is the new method for connecting JACK ports and it can also be used to check the various connections.

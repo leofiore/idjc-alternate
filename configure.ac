@@ -218,7 +218,7 @@ else
 fi
 
 if test x$DYNAMIC = "x1" ; then
-   AC_SUBST([DYN_LIBS], [-ldl])
+   AC_CHECK_FUNCS([dlopen], :, AC_CHECK_LIB([dl], [dlopen], AC_SUBST([DYN_LIBS], [-ldl]), AC_MSG_ERROR([Runtime linking functions not found])))
    AC_SUBST([DYN_LDFLAGS], [-rdynamic])
 fi
 
