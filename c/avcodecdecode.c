@@ -157,7 +157,7 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
       {
       out_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
       pthread_mutex_lock(&mutex);
-#ifdef DECODE_AUDIO_3
+#ifdef AVCODEC_DECODE_AUDIO3
       len = avcodec_decode_audio3(self->c, (short *)self->outbuf, &out_size, &pktcopy);
 #else
       len = avcodec_decode_audio2(self->c, (short *)self->outbuf, &out_size, inbuf_ptr, size);
@@ -259,7 +259,11 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
       }
    
    pthread_mutex_lock(&mutex);
+#ifdef AVCODEC_OPEN2
+   if (avcodec_open2(self->c, self->codec, NULL) < 0)
+#else
    if (avcodec_open(self->c, self->codec) < 0)
+#endif
       {
       pthread_mutex_unlock(&mutex);
       fprintf(stderr, "avcodecdecode_reg: could not open codec\n");

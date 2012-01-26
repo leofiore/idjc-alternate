@@ -40,7 +40,8 @@ class FGlobs(object):
 
    __metaclass__ = FixedAttributes
 
-    
+
+   datarootdir = PathStr("""@datarootdir@""")
    libexecdir = PathStr("""@libexecdir@""")
    pkgdatadir = PathStr("""${pkgdatadir}""")
    localedir = PathStr("""@localedir@""")

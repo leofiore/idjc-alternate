@@ -42,10 +42,6 @@
                                      buf[base]=(val)&0xff; \
                                  }while(0)
 
-#ifndef HAVE_SPEEX_HEADER_FREE
-#define speex_header_free(h) speex_free(h)
-#endif
-
 static char *prepend(char *before, char *after)
    {
    char *new;

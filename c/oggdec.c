@@ -868,7 +868,7 @@ static struct oggdec_vars *oggdecode_get_metadata(char *pathname)
             samplerate = vorbis_get_samplerate(self);
             break;
          case ST_FLAC:
-#ifdef HAVE_FLAC
+#ifdef HAVE_OGGFLAC
             fseeko(self->fp, self->bos_offset[i], SEEK_SET);
             samplerate = flac_get_samplerate(self);
 #endif

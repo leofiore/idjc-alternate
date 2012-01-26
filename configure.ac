@@ -64,7 +64,9 @@ if test $makelibav != "no" ; then
                 AC_MSG_RESULT([no])
             fi
             
-            AC_CHECK_LIB([avcodec],[avcodec_decode_audio3], AC_DEFINE(DECODE_AUDIO_3, 1,[Used in avcodecdecode.c]))],
+            AC_CHECK_LIB([avcodec],[avcodec_decode_audio3], AC_DEFINE(AVCODEC_DECODE_AUDIO3, 1,[Used in avcodecdecode.c]))
+            AC_CHECK_LIB([avcodec],[avcodec_open2], AC_DEFINE(AVCODEC_OPEN2, 1,[Used in avcodecdecode.c]))
+            ],
             AC_SUBST(HAVE_AVCODEC, 0)
 
             if test $makelibav = "yes" ; then
@@ -105,8 +107,6 @@ AC_ARG_ENABLE([speex],
 if test $makespeex != "no" ; then
    PKG_CHECK_MODULES([LIBSPEEX], [speex],
             [
-            AC_CHECK_LIB([speex], [speex_header_free],
-                     [AC_DEFINE(HAVE_SPEEX_HEADER_FREE, 1, [Set if speex_header_free was found])])
             AC_DEFINE(HAVE_SPEEX, 1, [Set if libspeex was found])
             AC_SUBST(HAVE_SPEEX, 1)],
             [AC_SUBST(HAVE_SPEEX, 0),

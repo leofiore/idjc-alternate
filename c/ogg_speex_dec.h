@@ -26,10 +26,6 @@
 #include <speex/speex_stereo.h>
 #include <speex/speex_callbacks.h>
 
-#ifndef HAVE_SPEEX_HEADER_FREE
-#define speex_header_free(h) speex_free(h)
-#endif
-
 #include "xlplayer.h"
 
 struct speexdec_vars
