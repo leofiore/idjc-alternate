@@ -1376,8 +1376,6 @@ int main(int argc, char **argv)
    double length;
    int sync = FALSE;
    int use_dsp;
-   jack_status_t status;
-   char *server_name = getenv("jack_server_name");
    char midi_output[MIDI_QUEUE_SIZE];
    char *our_sc_str_in_l;
    char *our_sc_str_in_r;
@@ -1398,7 +1396,7 @@ int main(int argc, char **argv)
    have_mad = 1;
 #endif /* DYN_MAD */
 
-   if((client = jack_client_open(getenv("mx_client_id"), JackUseExactName | JackServerName, &status, server_name)) == 0)
+   if((client = jack_client_open(getenv("mx_client_id"), JackUseExactName | JackServerName, NULL, getenv("jack_parameter"))) == 0)
       {
       printf("IDJC: Error\n");
       fflush(stdout);

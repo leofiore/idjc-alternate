@@ -135,14 +135,13 @@ class MainMenu(gtk.MenuBar, MenuMixin):
 
 
 class JackMenu(MenuMixin):
-   default_pathname = pm.basedir / "jack_port_connections"
-   
    def __init__(self, menu, write, read):
       self.menu = menu
       self.write = write
       self.read = read
       self.ports = []
       self.got_sigusr1 = False
+      self.pathname = pm.session_pathname
 
       cons = """[
             ["{mx}:ch_in_1", ["system:capture_1"]],
@@ -191,7 +190,6 @@ class JackMenu(MenuMixin):
 
       for each in zip(("str_in_",) * 2, lr):
          self.add_port(self.outputmenu, "".join(each), "sc")
-
 
    def add_port(self, menu, port, prefix="mx"):
       pport = os.environ["%s_client_id" % prefix] + ":" + port
@@ -271,20 +269,20 @@ class JackMenu(MenuMixin):
          total.append(element)
       
       try:
-         with open(self.default_pathname, "w") as f:
+         with open(self.pathname, "w") as f:
             json.dump(total, f)
       except Exception as e:
-         print "problem writing", self.default_pathname
+         print "problem writing", self.pathname
       else:
          print "jack connections saved"
       
       
    def load(self, restrict=""):
       try:
-         with open(self.default_pathname) as f:
+         with open(self.pathname) as f:
             self.connections = json.load(f)
       except Exception:
-         print "problem reading", self.default_pathname
+         print "problem reading", self.pathname
       else:
          for each in (os.environ["mx_client_id"], os.environ["sc_client_id"]):
             self.write("disconnect", "JPRT=%s:.+\nJPT2=\nend\n" % each)
@@ -2599,9 +2597,9 @@ class MainWindow:
          pass
       
       if args.jackserver is not None:
-         os.environ["jack_server_name"] = args.jackserver[0]
+         os.environ["jack_parameter"] = args.jackserver[0]
       else:
-         os.environ["jack_server_name"] = "default"
+         os.environ["jack_parameter"] = "default"
             
       os.environ["mx_client_id"] = mx_id = "idjc-mx_" + pm.profile
       os.environ["sc_client_id"] = sc_id = "idjc-sc_" + pm.profile
@@ -3410,7 +3408,8 @@ class MainWindow:
       self.menu.aboutmenu_i.connect("activate", lambda w: self.prefs_window.show_about())
 
       self.jack = JackMenu(self.menu, lambda s, r: self.mixer_write("ACTN=jack%s\n%s" % (s, r), True), lambda: self.mixer_read())
-      signal.signal(signal.SIGUSR1, lambda s, f: glib.idle_add(self.jack.sigusr1_idle_save, s, priority=glib.PRIORITY_HIGH_IDLE))
+      if pm.session_type == "L1":
+         signal.signal(signal.SIGUSR1, lambda s, f: glib.idle_add(self.jack.sigusr1_idle_save, s, priority=glib.PRIORITY_HIGH_IDLE))
       self.jack.load()
 
       self.window.show()

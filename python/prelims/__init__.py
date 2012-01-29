@@ -119,6 +119,9 @@ class ArgumentParserImplementation(object):
       sp_run.add_argument("-j", "--jackserver", dest="jackserver", nargs=1,
             # TC: command line help placeholder.
             metavar=_("server_name"), help=_("the named jack sound-server to connect with"))
+      sp_run.add_argument("-S", "--session", dest="session", nargs=1,
+            # TC: command line help placeholder.
+            metavar=_("details"), help=_("e.g. 'L1:filename' for a Ladish [L1] session with a specific session filename"))
       group = sp_run.add_argument_group(_("user interface settings"))
       group.add_argument("-c", "--channels", dest="channels", nargs="+", metavar="c",
             help=_("the audio channels to have open at startup"))
@@ -319,6 +322,8 @@ class ProfileManager(object):
          if args.dialog is not None:
             dialog_selects = args.dialog[0] == "true"
          
+         self._parse_session(ap, args)
+        
          self._uprep = DBusUptimeReporter()
          self._profile_dialog = self._get_profile_dialog()
          self._profile_dialog.connect("delete", self._cb_delete_profile)
@@ -377,6 +382,20 @@ class ProfileManager(object):
       
       
    @property
+   def session_type(self):
+      """Ssession mode e.g. ladish ([L0], [L1])."""
+
+      return self._session_type
+
+
+   @property
+   def session_pathname(self):
+      """Where to save jack session to."""
+      
+      return self.basedir / ("ports_" + self._session_filename)
+
+
+   @property
    def title_extra(self):
       """Window title text indicating which profile is in use."""
       
@@ -415,6 +434,32 @@ class ProfileManager(object):
          return time.time() - self._init_time
       else:
          return 0.0
+
+
+   def _parse_session(self, ap, args):
+      default = "default"
+      
+      if args.session is None:
+         s = ["L1", default]  # Default to allowing SIGUSR1 to initiate session save.
+      else:
+         s = args.session[0].split(":")
+
+      self._session_type = s[0].upper()
+
+      if self._session_type in ("L0", "L1"):
+         if len(s) == 2:
+            if s[1].isalnum():
+               sf = s[1]
+            else:
+               ap.error(_("unsupported session name -- must be alphanumeric: %s") % s[1])
+         elif len(s) == 1:
+            sf = default
+         else:
+            ap.error(_('too many parameters for session type %s') % self._session_type)
+      else:
+         ap.error(_("unsupported session mode: %s") % s[0])
+            
+      self._session_filename = sf
 
 
    def _autoloadprofilename(self):
