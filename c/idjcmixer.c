@@ -839,7 +839,7 @@ int process_audio(jack_nframes_t nframes, void *arg)
                rc_s_micmix += (*micp)->mrcm;
                lc_s_auxmix += (*micp)->alcm;
                rc_s_auxmix += (*micp)->arcm;
-               d_micmix += (*micp)->munpm;
+               d_micmix += (*micp)->munpmdj;
                }
 
             /* No ducking but headroom still must apply */
