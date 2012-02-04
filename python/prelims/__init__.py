@@ -122,6 +122,8 @@ class ArgumentParserImplementation(object):
       sp_run.add_argument("-S", "--session", dest="session", nargs=1,
             # TC: command line help placeholder.
             metavar=_("details"), help=_("e.g. 'L1:filename' for a Ladish [L1] session with a specific session filename"))
+      sp_run.add_argument("--no-jack-connections", dest="no_jack_connections", action="store_true",
+            help=_('At start-up do not make any JACK connections.'))
       group = sp_run.add_argument_group(_("user interface settings"))
       group.add_argument("-c", "--channels", dest="channels", nargs="+", metavar="c",
             help=_("the audio channels to have open at startup"))
@@ -383,16 +385,20 @@ class ProfileManager(object):
       
    @property
    def session_type(self):
-      """Ssession mode e.g. ladish ([L0], [L1])."""
+      """Session mode: L0 for none, L1 for Ladish L1 mode."""
 
       return self._session_type
 
 
    @property
    def session_pathname(self):
-      """Where to save jack session to."""
+      """Where to save jack session to and load it from."""
       
-      return self.basedir / ("ports_" + self._session_filename)
+      if self._session_filename.startswith("/"):
+         return self._session_filename
+      else:
+         # With no absolute path we shall use the profile directory.
+         return self.basedir / "_".join(("ports", self._session_type, self._session_filename))
 
 
    @property
@@ -440,25 +446,26 @@ class ProfileManager(object):
       default = "default"
       
       if args.session is None:
-         s = ["L1", default]  # Default to allowing SIGUSR1 to initiate session save.
+         s = ["L0", default]
       else:
          s = args.session[0].split(":")
 
-      self._session_type = s[0].upper()
+      try:
+         self._session_type = {"l0":"L0", "l1":"L1"}[s[0].lower()]
+      except KeyError:
+         ap.error(_("unsupported session mode: %s") % s[0])
 
       if self._session_type in ("L0", "L1"):
          if len(s) == 2:
-            if s[1].isalnum():
+            if s[1].startswith("/") or s[1].isalnum():
                sf = s[1]
             else:
-               ap.error(_("unsupported session name -- must be alphanumeric: %s") % s[1])
+               ap.error(_("unsupported session name -- must be either alphanumeric or an absolute pathname: %s") % s[1])
          elif len(s) == 1:
             sf = default
          else:
             ap.error(_('too many parameters for session type %s') % self._session_type)
-      else:
-         ap.error(_("unsupported session mode: %s") % s[0])
-            
+           
       self._session_filename = sf
 
 

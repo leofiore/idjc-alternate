@@ -140,8 +140,8 @@ class JackMenu(MenuMixin):
       self.write = write
       self.read = read
       self.ports = []
-      self.got_sigusr1 = False
       self.pathname = pm.session_pathname
+      self.session_type = pm.session_type
 
       cons = """[
             ["{mx}:ch_in_1", ["system:capture_1"]],
@@ -239,22 +239,19 @@ class JackMenu(MenuMixin):
          reply = self.read()
          
       pbports = len([x for x in reply[10:].strip().split() if x.startswith("system:playback_")])
-      print "counted %d playback ports" % pbports
       return pbports
       
    def save(self):
-      if not self.got_sigusr1:
+      if self.session_type == "L0":
          self._save()
-      
+
    @threadslock
    def sigusr1_idle_save(self, sig):
-      """SIGUSR1 triggers the saving of JACK port connections.
-      
-      Automatic saving is also turned off at the same time.
-      """
-
-      self.got_sigusr1 = True
-      self._save()
+      if self.session_type == "L1":
+         print "got SIGUSR1"
+         self._save()
+      else:
+         print "ignoring SIGUSR1"
 
    def _save(self):
       total = []
@@ -277,20 +274,18 @@ class JackMenu(MenuMixin):
          print "jack connections saved"
       
       
-   def load(self, restrict=""):
+   def load(self, restrict="", startup=False):
       try:
          with open(self.pathname) as f:
             self.connections = json.load(f)
       except Exception:
          print "problem reading", self.pathname
-      else:
-         for each in (os.environ["mx_client_id"], os.environ["sc_client_id"]):
-            self.write("disconnect", "JPRT=%s:.+\nJPT2=\nend\n" % each)
 
-      for port, targets in self.connections:
-         for target in targets:
-            if target.startswith(restrict):
-               self.write("connect", "JPRT=%s\nJPT2=%s\nend\n" % (port, target))
+      if not startup or not args.no_jack_connections:
+         for port, targets in self.connections:
+            for target in targets:
+               if target.startswith(restrict):
+                  self.write("connect", "JPRT=%s\nJPT2=%s\nend\n" % (port, target))
 
 
  
@@ -2018,7 +2013,7 @@ class MainWindow:
       self.send_new_mixer_stats()
 
    def save_session(self):
-      print "saving session"
+      print "saving profile settings"
 
       try:
          fh = open(self.session_filename, "w")
@@ -3408,9 +3403,8 @@ class MainWindow:
       self.menu.aboutmenu_i.connect("activate", lambda w: self.prefs_window.show_about())
 
       self.jack = JackMenu(self.menu, lambda s, r: self.mixer_write("ACTN=jack%s\n%s" % (s, r), True), lambda: self.mixer_read())
-      if pm.session_type == "L1":
-         signal.signal(signal.SIGUSR1, lambda s, f: glib.idle_add(self.jack.sigusr1_idle_save, s, priority=glib.PRIORITY_HIGH_IDLE))
-      self.jack.load()
+      signal.signal(signal.SIGUSR1, lambda s, f: glib.idle_add(self.jack.sigusr1_idle_save, s, priority=glib.PRIORITY_HIGH_IDLE))
+      self.jack.load(startup=True)
 
       self.window.show()
       self.prefs_window.window.realize()  # Prevent first-time-show delay.
