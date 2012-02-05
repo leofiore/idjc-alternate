@@ -19,33 +19,45 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <signal.h>
 
 static sigset_t mask;
 static int working;
+static volatile sig_atomic_t sigusr1count, sigusr1oldcount;
 
-static void interrupt_handler(int sig)
+static void interrupt_absorber(int sig)
    {
    static int count = 0;
-   int ec = (sig == SIGINT) ? 130 : 5;
    
    if (++count > 1)
-      exit(ec);
+      exit(5);
+      
+   signal(sig, interrupt_absorber);
+   }
+
+static void usr1_handler(int sig)
+   {
+   ++sigusr1count;
+   signal(sig, usr1_handler);
    }
 
 #define A(s) && sigaddset(&mask, s)
 
 void sigmask_init()
    {
-   if (sigemptyset(&mask) A(SIGINT) A(SIGTERM) A(SIGHUP) A(SIGALRM) A(SIGSEGV))
+   if (sigemptyset(&mask) A(SIGINT) A(SIGTERM) A(SIGHUP) A(SIGALRM) A(SIGSEGV) A(SIGUSR1) A(SIGUSR2))
       fprintf(stderr, "sigmask_init: mask creation failed\n");
    else
       {
       working = 1;
-      signal(SIGINT, interrupt_handler);
-      signal(SIGTERM, interrupt_handler);
-      signal(SIGHUP, interrupt_handler);
-      signal(SIGUSR1, SIG_IGN);
+      signal(SIGINT, interrupt_absorber);
+      signal(SIGTERM, interrupt_absorber);
+      signal(SIGHUP, interrupt_absorber);
+      if (!strcmp(getenv("session_type"), "L1"))
+         signal(SIGUSR1, usr1_handler);
+      else
+         signal(SIGUSR1, SIG_IGN);
       signal(SIGUSR2, SIG_IGN);
       }
    }
@@ -56,4 +68,14 @@ void sigmask_perform()
    {
    if (working && pthread_sigmask(SIG_BLOCK, &mask, NULL))
       fprintf(stderr, "sigmask_perform: pthread_sigmask() failed\n");
+   }
+
+int sigmask_recent_usr1()
+   {
+   if (sigusr1count != sigusr1oldcount)
+      {
+      sigusr1oldcount = sigusr1count;
+      return 1;
+      }
+   return 0;
    }

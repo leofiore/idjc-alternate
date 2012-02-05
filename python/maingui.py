@@ -241,19 +241,18 @@ class JackMenu(MenuMixin):
       pbports = len([x for x in reply[10:].strip().split() if x.startswith("system:playback_")])
       return pbports
       
-   def save(self):
+   def standard_save(self):
       if self.session_type == "L0":
          self._save()
 
-   @threadslock
-   def sigusr1_idle_save(self, sig):
-      if self.session_type == "L1":
-         print "got SIGUSR1"
-         self._save()
-      else:
-         print "ignoring SIGUSR1"
+   def session_save(self, where=None):
+      self._save(where)
+      try:
+         subprocess.call(["notify-send", "%s:%s %s Session Saved" % (PGlobs.app_shortform, pm.profile, self.session_type)])
+      except OSError:
+         pass
 
-   def _save(self):
+   def _save(self, where=None):
       total = []
       for port in self.ports:
          element = [port]
@@ -266,17 +265,16 @@ class JackMenu(MenuMixin):
          total.append(element)
       
       try:
-         with open(self.pathname, "w") as f:
+         with open(where or self.pathname, "w") as f:
             json.dump(total, f)
       except Exception as e:
          print "problem writing", self.pathname
       else:
          print "jack connections saved"
-      
-      
-   def load(self, restrict="", startup=False):
+         
+   def load(self, where=None, restrict="", startup=False):
       try:
-         with open(self.pathname) as f:
+         with open(where or self.pathname) as f:
             self.connections = json.load(f)
       except Exception:
          print "problem reading", self.pathname
@@ -2067,7 +2065,7 @@ class MainWindow:
       self.prefs_window.save_player_prefs()
       self.controls.save_prefs()
       self.server_window.save_session_settings()
-      self.jack.save()
+      self.jack.standard_save()
       
       return True  # This is also a timeout routine
 
@@ -2431,7 +2429,7 @@ class MainWindow:
                gtk.gdk.threads_leave()
             return True
 
-         midis= ''
+         session_cmd = midis = ''
          while 1:
             line = self.mixer_read().rstrip()
             if line == "":
@@ -2448,6 +2446,11 @@ class MainWindow:
             if key == "midi":
                midis= value
                continue
+               
+            if key == "session_command":
+               session_cmd = value
+               continue
+               
             if key.startswith("silence_"):
                try:
                   value = float(value)
@@ -2479,15 +2482,17 @@ class MainWindow:
                   self.update_songname(self.player_right, line, self.metadata_right_ctrl.get_value())
                   break
 
-         # Carry out MIDI-triggered actions *after* reading them from the
-         # response to requestlevels. This is so that any trailing lines after the
-         # actions don't interfere with mixer_write/read cycles caused by the
-         # control commands themselves.
+         # Carry out certain triggered actions *after* exhausting the reply queue
+         # specifically any which could result in a newly issued mixer command.
          #
-         if midis!='':
+         if midis:
             for midi in midis.split(','):
                input, _, value = midi.partition(':')
                self.controls.input(input, int(value, 16))
+               
+         if session_cmd:
+            if session_cmd == "save_L1" and pm.session_type == "L1":
+               self.jack.session_save()
 
       except:
          if locking:    # ensure unlocking occurs whenever there is an exception
@@ -3362,6 +3367,16 @@ class MainWindow:
       self.prefs_window.load_player_prefs()
       self.prefs_window.apply_player_prefs()
 
+      self.menu.quitmenu_i.connect_object("activate", self.delete_event, self.window, None)
+      self.menu.outputmenu_i.connect("activate", lambda w: self.server_window.window.present())
+      self.menu.prefsmenu_i.connect("activate", lambda w: self.prefs_window.window.present())
+      self.menu.jinglesmenu_i.connect("activate", lambda w: self.jingles.window.present())
+      self.menu.profilesmenu_i.connect("activate", lambda w: pm.profile_dialog.present())
+      self.menu.aboutmenu_i.connect("activate", lambda w: self.prefs_window.show_about())
+
+      self.jack = JackMenu(self.menu, lambda s, r: self.mixer_write("ACTN=jack%s\n%s" % (s, r), True), lambda: self.mixer_read())
+      self.jack.load(startup=True)
+
       self.vutimeout = gobject.timeout_add(50, self.vu_update)
       self.statstimeout = gobject.timeout_add(100, self.stats_update)
       self.savetimeout = gobject.timeout_add_seconds(60, threadslock(self.save_session));
@@ -3395,19 +3410,8 @@ class MainWindow:
       self.window.connect("key-press-event", self.cb_key_capture)
       self.window.connect("key-release-event", self.cb_key_capture)
      
-      self.menu.quitmenu_i.connect_object("activate", self.delete_event, self.window, None)
-      self.menu.outputmenu_i.connect("activate", lambda w: self.server_window.window.present())
-      self.menu.prefsmenu_i.connect("activate", lambda w: self.prefs_window.window.present())
-      self.menu.jinglesmenu_i.connect("activate", lambda w: self.jingles.window.present())
-      self.menu.profilesmenu_i.connect("activate", lambda w: pm.profile_dialog.present())
-      self.menu.aboutmenu_i.connect("activate", lambda w: self.prefs_window.show_about())
-
-      self.jack = JackMenu(self.menu, lambda s, r: self.mixer_write("ACTN=jack%s\n%s" % (s, r), True), lambda: self.mixer_read())
-      signal.signal(signal.SIGUSR1, lambda s, f: glib.idle_add(self.jack.sigusr1_idle_save, s, priority=glib.PRIORITY_HIGH_IDLE))
-      self.jack.load(startup=True)
-
       self.window.show()
-      self.prefs_window.window.realize()  # Prevent first-time-show delay.
+      gobject.idle_add(lambda: self.prefs_window.window.realize() and False)
       
       self.player_left.treeview.emit("cursor-changed")
       self.player_right.treeview.emit("cursor-changed")

@@ -121,7 +121,8 @@ class ArgumentParserImplementation(object):
             metavar=_("server_name"), help=_("the named jack sound-server to connect with"))
       sp_run.add_argument("-S", "--session", dest="session", nargs=1,
             # TC: command line help placeholder.
-            metavar=_("details"), help=_("e.g. 'L1:filename' for a Ladish [L1] session with a specific session filename"))
+            metavar=_("session_details"),
+            help=_("e.g. 'L1:name' for a named Ladish [L1] session called 'name' -- refer to the 'idjc' man page for more details"))
       sp_run.add_argument("--no-jack-connections", dest="no_jack_connections", action="store_true",
             help=_('At start-up do not make any JACK connections.'))
       group = sp_run.add_argument_group(_("user interface settings"))
@@ -448,25 +449,32 @@ class ProfileManager(object):
       if args.session is None:
          s = ["L0", default]
       else:
-         s = args.session[0].split(":")
+         s = args.session[0].split(":", 1)
 
       try:
          self._session_type = {"l0":"L0", "l1":"L1"}[s[0].lower()]
       except KeyError:
          ap.error(_("unsupported session mode: %s") % s[0])
 
+      os.environ["session_type"] = self._session_type
+
       if self._session_type in ("L0", "L1"):
          if len(s) == 2:
-            if s[1].startswith("/") or s[1].isalnum():
+            if s[1][0] in list("/~."):
+               sf = os.path.realpath(os.path.expanduser(s[1]))
+               if os.path.exists(sf) and not os.path.isfile(sf):
+                  ap.error(_('session pathname exists but is not a file: %s') % sf)
+               print "session pathname is", sf
+            elif not any(True for x in s[1] if x in ("/", " ")):
                sf = s[1]
+               print "session name is", sf
             else:
-               ap.error(_("unsupported session name -- must be either alphanumeric or an absolute pathname: %s") % s[1])
+               ap.error(_("unsupported session name or session pathname -- pathnames must start with one of '/~.' -- names must not contain / characters or spaces: %s") % s[1])
          elif len(s) == 1:
             sf = default
-         else:
-            ap.error(_('too many parameters for session type %s') % self._session_type)
            
       self._session_filename = sf
+      print "session type is", self._session_type
 
 
    def _autoloadprofilename(self):

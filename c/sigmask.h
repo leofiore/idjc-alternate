@@ -19,4 +19,4 @@
 
 void sigmask_init();
 void sigmask_perform();
-void sigmask_interrupt_handler(int sig);
+int sigmask_recent_usr1();

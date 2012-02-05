@@ -1381,6 +1381,7 @@ int main(int argc, char **argv)
    char *our_sc_str_in_r;
    char *sc_client_name = getenv("sc_client_id");
    int l;
+   char *session_command;
 
    setenv("LC_ALL", "C", 1);            /* ensure proper sscanf operation */
 
@@ -1812,6 +1813,11 @@ int main(int argc, char **argv)
          midi_nqueued= 0;
          pthread_mutex_unlock(&midi_mutex);
 
+         if (sigmask_recent_usr1())
+            session_command = "save_L1";
+         else
+            session_command = "";
+
          fprintf(stdout, 
                    "str_l_peak=%d\nstr_r_peak=%d\n"
                    "str_l_rms=%d\nstr_r_rms=%d\n"
@@ -1834,6 +1840,7 @@ int main(int argc, char **argv)
                    "midi=%s\n"
                    "silence_l=%f\n"
                    "silence_r=%f\n"
+                   "session_command=%s\n"
                    "end\n",
                    str_l_peak_db, str_r_peak_db,
                    str_l_rms_db, str_r_rms_db,
@@ -1855,7 +1862,8 @@ int main(int argc, char **argv)
                    plr_r->dynamic_metadata.data_type,
                    midi_output,
                    plr_l->silence,
-                   plr_r->silence);
+                   plr_r->silence,
+                   session_command);
                    
          /* tell the jack mixer it can reset its vu stats now */
          reset_vu_stats_f = TRUE;
