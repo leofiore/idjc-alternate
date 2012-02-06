@@ -27,6 +27,7 @@ import tempfile
 import time
 import math
 import fcntl
+import re
 import subprocess
 from functools import partial
 from collections import defaultdict
@@ -53,11 +54,10 @@ _ = t.gettext
 default = "default"
 
 
-# Yes there are too many of these.
+# Regular expressions of files to copy when cloning a profile.
 config_files = ("config", "controls", "left_session", "main_session",
    "main_session_files_played", "main_session_tracks", "playerdefaults",
-   "right_session", "s_data", "mic1", "mic2", "mic3", "mic4", "mic5",
-   "mic6", "mic7", "mic8", "mic9", "mic10", "mic11", "mic12")
+   "right_session", "s_data", "ports_.+_.+")
 
 
 class ArgumentParserError(Exception):
@@ -91,22 +91,24 @@ class ArgumentParserImplementation(object):
 
       if description is None:
          description = PGlobs.app_longform
-
-      ap = self._ap = ArgumentParser(description=description, epilog=epilog)
-      ap.add_argument("-v", "--version", action='version', version=
-                     FGlobs.package_name + " " + FGlobs.package_version)
-      sp = self._sp = ap.add_subparsers(
-                     # TC: command line switch info from $ idjc --help
-                     help=_("sub-option -h for more info"))
+         
+      ap = self._ap = ArgumentParser(description=description, epilog=epilog, add_help=False)
+      ap.add_argument("-h", "--help", action="help", help=_('show this help message and exit -- additional help is available on each of the sub-commands for example: "%(prog)s run --help" shows the help for the run command'))
+      ap.add_argument("-v", "--version", action='version', 
+                     version=FGlobs.package_name + " " + FGlobs.package_version,
+                     # TC: a command line option help string.
+                     help=_("show this program's version number and exit"))
+      sp = self._sp = ap.add_subparsers()
       # TC: a command line option help string.
-      sp_run = sp.add_parser("run", help=_("the default command"),
+      sp_run = sp.add_parser("run", add_help=False, help=_("run the main idjc application -- this is the default when no command line options are specified"),
          # TC: do not translate run.
          description=description + " " + _("-- sub-command: run"), epilog=epilog)
       # TC: a command line option help string.
-      sp_mp = sp.add_parser("generateprofile", help=_("make a new profile"),
+      sp_mp = sp.add_parser("generateprofile", add_help=False, help=_("make a new profile for idjc using the command line"),
          # TC: do not translate generateprofile.
          description=description + " " + _("-- sub-command: generateprofile"), epilog=epilog)
 
+      sp_run.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
       sp_run.add_argument("-d", "--dialog", dest="dialog", nargs=1, 
             choices=("true", "false"), 
             help=_("""force the appearance or non-appearance of the
@@ -137,6 +139,7 @@ class ArgumentParserImplementation(object):
             help=_("attempt connection with the specified servers"))
       group.add_argument("-x", "--crossfader", dest="crossfader", choices=("1", "2"), 
             help=_("position the crossfader for the specified player"))
+      sp_mp.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
       # TC: command line help placeholder.
       sp_mp.add_argument("newprofile", metavar=_("profile_name"),
             help=_("""new profile name -- will form part of the dbus
@@ -605,11 +608,16 @@ class ProfileManager(object):
                
                tdir = PGlobs.profile_dir / template
                if os.path.isdir(tdir):
-                  for x in self._optionals + config_files:
-                     try:
-                        shutil.copyfile(tdir / x, tmp / x)
-                     except EnvironmentError:
-                        pass
+                  for top, dirs, files in os.walk(tdir):
+                     for filename in files:
+                        for expr in self._optionals + config_files:
+                           mo = re.match(expr, filename)
+                           if mo is not None and mo.group(0) == filename:
+                              try:
+                                 shutil.copyfile(tdir / filename, tmp / filename)
+                              except EnvironmentError as e:
+                                 print e
+
                   shutil.copytree(tdir / "jingles", tmp / "jingles")
                else:
                   raise ProfileError(

@@ -1,4 +1,4 @@
-.TH "IDJC" 1 "2012-02-05" "VERSION" "Internet DJ Console"
+.TH "IDJC" 1 "2012-02-06" "VERSION" "Internet DJ Console"
 .SH NAME
 idjc - be a dj on the internet
 .SH SYNOPSIS
@@ -9,11 +9,11 @@ idjc run --help
 idjc generateprofile --help
 .SH DESCRIPTION
 .B idjc
-is a powerful yet easy to use source-client for individuals interested in streaming live radio shows over the Internet using Shoutcast or Icecast servers or for making static recordings.
+is a powerful yet easy to use application for individuals interested in streaming live radio shows over the Internet via Shoutcast or Icecast servers or for making podcasts.
 
 Features include two main media players with a crossfader, a jingles player, microphone signal processing (limiter, noise gate, etc.), IRC announcements, automatic stream start/stop and reconnection, simultaneous mp3 and Ogg streaming, up to 12 mono or 6 stereo audio input channels, a DSP interface, a VoIP integration feature, MIDI control surface support, audio level meters.
 
-It uses GTK+ for the user interface and JACK Audio Connection Kit for the audio back-end permitting the inclusion of third-party audio components into the mix.
+It uses GTK+ for the user interface and JACK Audio Connection Kit to facilitate the inclusion of third-party audio applications that also support JACK within the audio chain.
 .SH ENVIRONMENT
 If the
 .I ~/.jackdrc
@@ -22,7 +22,7 @@ file is not present unless otherwise configured with a tool like
 or
 .I QjackCtl
 .B idjc
-will start but configure itself with a sample rate of 48000 which is suboptimal for streaming CD audio. It is recommended to create such a file by this method within a console or use the aforementioned tools (some installation required).
+will start but will be configured with a sample rate of 48000 which is suboptimal for streaming CD audio. It is recommended to create such a file by this method within a console or use the aforementioned tools which may require installation.
 .PP
 .B $
 echo "/usr/bin/jackd \-d alsa \-r 44100 \-p 2048" > ~/.jackdrc
@@ -34,21 +34,19 @@ If you prefer to start the JACK sound server manually you can do so like this.
 .RB Refer\ to\  jackd (1)\ for\ further\ details.
 .PP
 .B idjc
-has native language support built in and takes account of the
+has native language support and takes account of the
 .I LANG
 and
 .I LANGUAGE
 environment variables.
 .SH SESSION SUPPORT
 .B idjc
-supports
-.I Ladish
-[L0] and [L1] session modes. On the command line specify --session=L1, --session=L1:name, or --session=L1:/path/to/sessionfile. Paths may begin with ./ for a relative path or begin with ~ meaning the user's home directory. If you use a name the session file will be stored in the profile directory.
-L0 mode is the default and does periodic saving as well as save at exit. You may specify a name or pathname for L0 mode also.
+supports Ladish [L0] and [L1] session modes. On the command line you could specify --session=L1, --session=L1:session-name, or --session=L1:./relative-pathname. Relative pathnames are useful for storing the session file in the Ladish room directory.
+The default mode is L0 which does periodic saving and also saves at exit. You may specify a name or pathname for L0 mode also.
 .PP
-When using L1 mode in Gladish if you choose "Save Studio" from the main menu
+When using L1 mode in Gladish if you choose "Studio/Save Studio" or "Project/Save Project" from the main menu
 .B idjc
-will save the JACK connection configuration.
+will save the JACK connection configuration in the session file.
 .SH REPORTING BUGS
 Send your bug reports, feature requests, general comments, patches etc. to <http://www.sourceforge.net/projects/idjc>
 .PP
