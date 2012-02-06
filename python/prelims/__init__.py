@@ -126,7 +126,9 @@ class ArgumentParserImplementation(object):
             metavar=_("session_details"),
             help=_("e.g. 'L1:name' for a named Ladish [L1] session called 'name' -- refer to the 'idjc' man page for more details"))
       sp_run.add_argument("--no-jack-connections", dest="no_jack_connections", action="store_true",
-            help=_('At start-up do not make any JACK connections.'))
+            help=_('At start-up do not make any JACK connections. This option delegates all control over restored connections to the session handler.'))
+      sp_run.add_argument("-C", "--no-default-jack-connections", dest="no_default_jack_connections", action="store_true",
+            help=_('No JACK ports will be connected except those listed in the session file.'))
       group = sp_run.add_argument_group(_("user interface settings"))
       group.add_argument("-c", "--channels", dest="channels", nargs="+", metavar="c",
             help=_("the audio channels to have open at startup"))

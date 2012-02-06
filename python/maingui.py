@@ -143,25 +143,6 @@ class JackMenu(MenuMixin):
       self.pathname = pm.session_pathname
       self.session_type = pm.session_type
 
-      cons = """[
-            ["{mx}:ch_in_1", ["system:capture_1"]],
-            ["{mx}:ch_in_2", ["system:capture_2"]],
-            ["{mx}:dj_out_l", ["system:playback_1"]],
-            ["{mx}:dj_out_r", ["system:playback_2"]],
-            ["{sc}:str_in_l", ["{mx}:str_out_l"]],
-            ["{sc}:str_in_r", ["{mx}:str_out_r"]], """
-
-      if self.get_playback_port_qty() < 8:
-         cons += """
-            ["{mx}:str_out_l", ["system:playback_3", "{sc}:str_in_l"]],
-            ["{mx}:str_out_r", ["system:playback_4", "{sc}:str_in_r"]]] """
-      else:
-         cons += """
-            ["{mx}:str_out_l", ["system:playback_5", "{sc}:str_in_l"]],
-            ["{mx}:str_out_r", ["system:playback_6", "{sc}:str_in_r"]]] """
-
-      self.connections = eval(cons.format(mx=os.environ["mx_client_id"], sc=os.environ["sc_client_id"]))
-      
       self.build(menu.jackmenu)(zip("channels voip dsp mix midi output".split(), (_('Channels'), _('VoIP'), _('DSP'), _('Mix'), _('MIDI'), _('Output'))))
       self.submenu(self.channelsmenu_i, "channels")
       self.submenu(self.voipmenu_i, "voip")
@@ -275,12 +256,33 @@ class JackMenu(MenuMixin):
    def load(self, where=None, restrict="", startup=False):
       try:
          with open(where or self.pathname) as f:
-            self.connections = json.load(f)
+            cons = json.load(f)
       except Exception:
          print "problem reading", self.pathname
+         if args.no_default_jack_connections:
+            cons = []
+         else:
+            cons = """[
+               ["{mx}:ch_in_1", ["system:capture_1"]],
+               ["{mx}:ch_in_2", ["system:capture_2"]],
+               ["{mx}:dj_out_l", ["system:playback_1"]],
+               ["{mx}:dj_out_r", ["system:playback_2"]],
+               ["{sc}:str_in_l", ["{mx}:str_out_l"]],
+               ["{sc}:str_in_r", ["{mx}:str_out_r"]], """
+
+            if self.get_playback_port_qty() < 8:
+               cons += """
+                  ["{mx}:str_out_l", ["system:playback_3", "{sc}:str_in_l"]],
+                  ["{mx}:str_out_r", ["system:playback_4", "{sc}:str_in_r"]]] """
+            else:
+               cons += """
+                  ["{mx}:str_out_l", ["system:playback_5", "{sc}:str_in_l"]],
+                  ["{mx}:str_out_r", ["system:playback_6", "{sc}:str_in_r"]]] """
+
+            cons = eval(cons.format(mx=os.environ["mx_client_id"], sc=os.environ["sc_client_id"]))
 
       if not startup or not args.no_jack_connections:
-         for port, targets in self.connections:
+         for port, targets in cons:
             for target in targets:
                if target.startswith(restrict):
                   self.write("connect", "JPRT=%s\nJPT2=%s\nend\n" % (port, target))
