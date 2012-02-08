@@ -1,6 +1,6 @@
 /*
-#   sigmask.h: global signal masking for pthreads + general handling
-#   Copyright (C) 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   sig.h: signal masking for pthreads + general handling
+#   Copyright (C) 2011-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -17,6 +17,6 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
-void sigmask_init();
-void sigmask_perform();
-int sigmask_recent_usr1();
+void sig_init();
+void sig_mask_thread();
+int sig_recent_usr1();

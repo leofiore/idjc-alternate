@@ -27,7 +27,7 @@
 #include "sourceclient.h"
 #include "kvpparse.h"
 #include "live_ogg_encoder.h"
-#include "sigmask.h"
+#include "sig.h"
 
 int keepalive = FALSE;
 int timeout_duration = 15;
@@ -40,7 +40,7 @@ static int threads_init(struct threads_info *ti, struct universal_vars *uv, void
    struct threads_vars *tv = other;
    int i;
    
-   sigmask_init();
+   sig_init();
    ti->n_encoders = atoi(tv->num_encoders);
    ti->n_streamers = atoi(tv->num_streamers);
    ti->n_recorders = atoi(tv->num_recorders);

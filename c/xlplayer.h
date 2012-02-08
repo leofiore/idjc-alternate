@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <samplerate.h>
 #include <sndfile.h>
+#include <signal.h>
 
 #ifdef HAVE_FLAC
 #include <FLAC/all.h>
@@ -105,7 +106,7 @@ struct xlplayer
    int rsqual;                          /* resample quality */   
    int noflush;                         /* suppresses ringbuffer flushes for gapless playback */
    int *jack_shutdown_f;                /* inidcator that jack has shut down */
-   int watchdog_timer;
+   volatile sig_atomic_t watchdog_timer;
    int up;                              /* set to true when the player is fully initialised */
    double pbspeed;                      /* the playback speed as a factor */
    float newpbspeed;                    /* the value the above is updated with */

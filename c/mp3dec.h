@@ -1,6 +1,6 @@
 /*
 #   mp3dec.h: decodes mp3 file format for xlplayer
-#   Copyright (C) 2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2007-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -43,4 +43,7 @@ struct mp3decode_vars
    int errors;
    };
 
+/* register mp3 decoder */
 int mp3decode_reg(struct xlplayer *xlplayer);
+/* returns true if we can decode mp3 */
+int mp3decode_cap();

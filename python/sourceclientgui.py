@@ -2537,14 +2537,35 @@ class SourceClientGui:
             self.app_exit()
          self.source_client_open()
          self.receive()
-         self.parent.jack.load(restrict=os.environ["sc_client_id"] + ":")
+         self.parent.jack.restore(restrict=os.environ["sc_client_id"] + ":")
          self.comms_reply_pending = False
+         self.restart_streams_and_recorders()
       else:
          if self.source_client_crash_count:
             if time.time() > self.uptime + 15.0:
                self.source_client_crash_count -= 1
                self.uptime = time.time()
-         
+            
+   def restart_streams_and_recorders(self):
+      whichstreams = []
+      whichrecorders = []
+      
+      s = self.streamtabframe.tabs
+      for each in s:
+         whichstreams.append(each.server_connect.get_active())
+         each.server_connect.set_active(False)
+      
+      r = self.recordtabframe.tabs
+      for each in r:
+         whichrecorders.append(each.record_buttons.record_button.get_active())
+         each.record_buttons.stop_button.clicked()
+
+      for each in s:
+         each.server_connect.set_active(whichstreams.pop(0))
+
+      for each in r:
+         each.record_buttons.record_button.set_active(whichrecorders.pop(0))
+            
    def new_metadata(self, artist, title, album, songname):
       if artist:
          artist_title = artist + " - " + title

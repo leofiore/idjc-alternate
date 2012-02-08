@@ -1,5 +1,13 @@
 * Changes in version 0.8.8 *
 
+Improved lockup handling code.
+
+Lots of global variables in mixer declared static.
+
+Recorders restart when sourceclient module goes down.
+
+Improved restart for streams when sourceclient module goes down.
+
 The 'Green Phone' VoIP mode now respects the 'In DJ's Mix' setting.
 
 BSB compat fix. The runtime dynamic linking functions are in the C standard library in BSD.

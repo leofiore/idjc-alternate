@@ -1,6 +1,6 @@
 /*
-#   sigmask.c: global signal masking for pthreads + general handling
-#   Copyright (C) 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   sig.c: signal masking for pthreads + general handling
+#   Copyright (C) 2011-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -26,14 +26,9 @@ static sigset_t mask;
 static int working;
 static volatile sig_atomic_t sigusr1count, sigusr1oldcount;
 
-static void interrupt_absorber(int sig)
+static void do_exit(int sig)
    {
-   static int count = 0;
-   
-   if (++count > 1)
-      exit(5);
-      
-   signal(sig, interrupt_absorber);
+   exit(5);
    }
 
 static void usr1_handler(int sig)
@@ -44,16 +39,16 @@ static void usr1_handler(int sig)
 
 #define A(s) && sigaddset(&mask, s)
 
-void sigmask_init()
+void sig_init()
    {
    if (sigemptyset(&mask) A(SIGINT) A(SIGTERM) A(SIGHUP) A(SIGALRM) A(SIGSEGV) A(SIGUSR1) A(SIGUSR2))
       fprintf(stderr, "sigmask_init: mask creation failed\n");
    else
       {
       working = 1;
-      signal(SIGINT, interrupt_absorber);
-      signal(SIGTERM, interrupt_absorber);
-      signal(SIGHUP, interrupt_absorber);
+      signal(SIGINT, do_exit);
+      signal(SIGTERM, do_exit);
+      signal(SIGHUP, do_exit);
       if (!strcmp(getenv("session_type"), "L1"))
          signal(SIGUSR1, usr1_handler);
       else
@@ -61,16 +56,16 @@ void sigmask_init()
       signal(SIGUSR2, SIG_IGN);
       }
    }
-   
+
 #undef A  
 
-void sigmask_perform()
+void sig_mask_thread()
    {
    if (working && pthread_sigmask(SIG_BLOCK, &mask, NULL))
-      fprintf(stderr, "sigmask_perform: pthread_sigmask() failed\n");
+      fprintf(stderr, "sig_mask_thread: pthread_sigmask() failed\n");
    }
 
-int sigmask_recent_usr1()
+int sig_recent_usr1()
    {
    if (sigusr1count != sigusr1oldcount)
       {

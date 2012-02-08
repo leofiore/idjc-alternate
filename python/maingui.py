@@ -171,6 +171,8 @@ class JackMenu(MenuMixin):
 
       for each in zip(("str_in_",) * 2, lr):
          self.add_port(self.outputmenu, "".join(each), "sc")
+         
+      self._port_data = []
 
    def add_port(self, menu, port, prefix="mx"):
       pport = os.environ["%s_client_id" % prefix] + ":" + port
@@ -211,7 +213,7 @@ class JackMenu(MenuMixin):
    def cb_activate(self, mi, local, dest):
       cmd = "connect" if mi.get_active() else "disconnect"
       self.write(cmd, "JPRT=%s\nJPT2=%s\nend\n" % (local, dest))
-      self.save()
+      self.standard_save()
 
    def get_playback_port_qty(self):
       self.write("portread", "JFIL=\nJPRT=\nend\n")
@@ -223,17 +225,21 @@ class JackMenu(MenuMixin):
       return pbports
       
    def standard_save(self):
+      self._port_data = self._get_port_data()
+
       if self.session_type == "L0":
-         self._save()
+         self._save(self._port_data)
 
    def session_save(self, where=None):
+      self._port_data = self._get_port_data()
+
       self._save(where)
       try:
          subprocess.call(["notify-send", "%s:%s %s Session Saved" % (PGlobs.app_shortform, pm.profile, self.session_type)])
       except OSError:
          pass
 
-   def _save(self, where=None):
+   def _get_port_data(self):
       total = []
       for port in self.ports:
          element = [port]
@@ -244,16 +250,18 @@ class JackMenu(MenuMixin):
          
          element.append([x.lstrip("@") for x in reply[10:].rstrip().split() if x.startswith("@")])
          total.append(element)
+      return total
       
+   def _save(self, data, where=None):
       try:
          with open(where or self.pathname, "w") as f:
-            json.dump(total, f)
+            json.dump(data, f)
       except Exception as e:
          print "problem writing", self.pathname
       else:
          print "jack connections saved"
          
-   def load(self, where=None, restrict="", startup=False):
+   def load(self, where=None , startup=False):
       try:
          with open(where or self.pathname) as f:
             cons = json.load(f)
@@ -281,13 +289,16 @@ class JackMenu(MenuMixin):
 
             cons = eval(cons.format(mx=os.environ["mx_client_id"], sc=os.environ["sc_client_id"]))
 
+      self._port_data = cons
       if not startup or not args.no_jack_connections:
-         for port, targets in cons:
-            for target in targets:
-               if target.startswith(restrict):
-                  self.write("connect", "JPRT=%s\nJPT2=%s\nend\n" % (port, target))
-
-
+         self.restore(cons)
+                  
+   def restore(self, cons=None, restrict=""):
+      cons = cons or self._port_data
+      for port, targets in cons:
+         for target in targets:
+            if port.startswith(restrict):
+               self.write("connect", "JPRT=%s\nJPT2=%s\nend\n" % (port, target))
  
 class ColouredArea(gtk.DrawingArea):
    def __init__(self, colour=gtk.gdk.Color()):
@@ -2267,7 +2278,7 @@ class MainWindow:
             self.jingles.start_interlude_player(self.jingles.interlude_player_track)
          if self.last_chance == False:
             self.mixer_write(message, flush)            # resume what we were doing
-         self.jack.load(restrict=os.environ["mx_client_id"] + ":")
+         self.jack.restore(restrict=os.environ["mx_client_id"] + ":")
       else:
          self.last_chance = False
 

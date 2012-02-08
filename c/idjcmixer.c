@@ -1,6 +1,6 @@
 /*
 #   idjcmixer.c: central core of IDJC's mixer.
-#   Copyright (C) 2005-2010 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2005-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -40,6 +40,7 @@
 #include "dbconvert.h"
 #include "compressor.h"
 #include "xlplayer.h"
+#include "mp3dec.h"
 #include "ialloc.h"
 #include "speextag.h"
 #include "sndfileinfo.h"
@@ -49,15 +50,13 @@
 #include "bsdcompat.h"
 #include "dyn_mad.h"
 #include "peakfilter.h"
-#include "sigmask.h"
+#include "sig.h"
 
 #define TRUE 1
 #define FALSE 0
 
-/* playlength of ring buffer contents */
+/* playlength of ring buffer contents in seconds */
 #define RB_SIZE 10.0
-/* number of samples in the fade (ring) buffer */
-#define FB_SIZE (size_t)(RB_SIZE * sr)
 /* number of bytes in the MIDI queue buffer */
 #define MIDI_QUEUE_SIZE 1024
 
@@ -69,78 +68,68 @@
 typedef jack_default_audio_sample_t sample_t;
 
 /* values of the volume sliders in the GUI */
-int volume, volume2, crossfade, jinglesvolume, jinglesvolume2, interludevol, mixbackvol, crosspattern;
+static int volume, volume2, crossfade, jinglesvolume, jinglesvolume2, interludevol, mixbackvol, crosspattern;
 /* back and forth status indicators re. jingles */
-int jingles_playing, jingles_audio_f;
+static int jingles_playing, jingles_audio_f;
 /* used for gapless playback to indicate an almost empty buffer */
-int left_audio_runout = 0, right_audio_runout = 0;
+static int left_audio_runout = 0, right_audio_runout = 0;
 /* the main-player unmute buttons */
-int left_stream = 1, left_audio = 1, right_stream = 1, right_audio = 1;
+static int left_stream = 1, left_audio = 1, right_stream = 1, right_audio = 1;
 /* status variables for the button cluster in lower right of main window */
-int mic_on, mixermode = NO_PHONE;
+static int mic_on, mixermode = NO_PHONE;
 /* simple mixer mode: uses less space on the screen and less cpu as well */
-int simple_mixer;
+static int simple_mixer;
 /* currentvolumes are used to implement volume smoothing */
-int current_volume, current_volume2, current_jingles_volume, current_jingles_volume2, 
+static int current_volume, current_volume2, current_jingles_volume, current_jingles_volume2, 
     current_interlude_volume, current_crossfade, currentmixbackvol, current_crosspattern;
-/* the id. number microphone filter we are using */
-int mic_filter;
 /* value of the stream mon. button */
-int stream_monitor = 0;
+static int stream_monitor = 0;
 /* when this is set the end of track alarm is started */
-int eot_alarm_set = 0;
+static int eot_alarm_set = 0;
 /* set when end of track alarm is active */
-int eot_alarm_f = 0;
+static int eot_alarm_f = 0;
 /* threshold values for a premature indicator that a player is about to finish */
-unsigned jingles_samples_cutoff;
-unsigned player_samples_cutoff;
-/* the number of samples processed this song - used to calculate the player progress bars */
-int left_samples_total, right_samples_total;
+static unsigned jingles_samples_cutoff;
+static unsigned player_samples_cutoff;
 /* used to implement interlude player fade in/out: true when playing a track */
-int main_play;
-/* if the main app segfaults or similar this counter will see that the mixer terminates */
-int timeout;
-int g_shutdown;
+static int main_play;
+/* if the main gui get stuck this counter will see that the mixer terminates */
+static volatile sig_atomic_t main_timeout;
+/* application shutdown flag */
+static volatile sig_atomic_t app_shutdown;
 /* flag set when jack closes the client thread for example when the jackd is closed */
-int jack_closed_f;
+static int jack_closed_f;
 /* flag to indicate whether to use the player reading function which supports speed variance */
-int speed_variance;
+static int speed_variance;
 /* buffers that process_audio uses when reading media player data */
-sample_t *lp_lc, *lp_rc, *rp_lc, *rp_rc, *jp_lc, *jp_rc, *ip_lc, *ip_rc;
-sample_t *lp_lcf, *lp_rcf, *rp_lcf, *rp_rcf, *jp_lcf, *jp_rcf, *ip_lcf, *ip_rcf;
+static sample_t *lp_lc, *lp_rc, *rp_lc, *rp_rc, *jp_lc, *jp_rc, *ip_lc, *ip_rc;
+static sample_t *lp_lcf, *lp_rcf, *rp_lcf, *rp_rcf, *jp_lcf, *jp_rcf, *ip_lcf, *ip_rcf;
 /* used for signal level silence threshold tracking */
-sample_t left_peak = -1.0F, right_peak = -1.0F;
+static sample_t left_peak = -1.0F, right_peak = -1.0F;
 /* handle for beat processing */
 /*struct beatproc *beat_lp, *beat_rp;*/
 /* flag to indicate if audio is routed via dsp interface */
-int using_dsp;
+static int using_dsp;
 /* flag to indicate that stream audio be reduced for improved encode quality */
-int twodblimit;
+static int twodblimit;
 /* handles for microphone */
-struct mic **mics;
-/* flag for mp3 decode capability */
-int have_mad;
-/* size of the fade buffer */
-size_t fb_size;
+static struct mic **mics;
 /* peakfilter handles for stream peak */
-struct peakfilter *str_pf_l, *str_pf_r;
+static struct peakfilter *str_pf_l, *str_pf_r;
 
-/* the number of samples worth of data in the fadeout buffer */
-jack_nframes_t alarm_size;
+static jack_nframes_t alarm_size;
 
-float headroom_db;                      /* player muting level when mic is open */
-float str_lpeak, str_rpeak;             /* used to store the peak levels */
-float str_l_tally, str_r_tally;  /* used to calculate rms value */
-int rms_tally_count;
-float str_l_meansqrd, str_r_meansqrd;
-int reset_vu_stats_f;                   /* when set the mixer will reset the above */
-float *dblookup, *antidblookup;         /* a table for speeding up log / antilog operations */
-float dfmod;                            /* used to reduce the ducking factor */
-float dj_audio_level;                   /* used to reduce the level of dj audio */
-float dj_audio_gain = 1.0;              /* same as above but not in dB */
-float current_dj_audio_level = 0.0;
+static float headroom_db;                      /* player muting level when mic is open */
+static float str_l_tally, str_r_tally;  /* used to calculate rms value */
+static int rms_tally_count;
+static float str_l_meansqrd, str_r_meansqrd;
+static int reset_vu_stats_f;                   /* when set the mixer will reset the above */
+static float dfmod;                            /* used to reduce the ducking factor */
+static float dj_audio_level;                   /* used to reduce the level of dj audio */
+static float dj_audio_gain = 1.0;              /* same as above but not in dB */
+static float current_dj_audio_level = 0.0;
 
-struct compressor stream_limiter =
+static struct compressor stream_limiter =
    {
    0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0, 0.0
    }, audio_limiter =
@@ -151,75 +140,73 @@ struct compressor stream_limiter =
    0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0, 0.0
    };
 
-struct normalizer str_normalizer =
+static struct normalizer str_normalizer =
    {
    0, 0.0F, -12.0F, 1.0F/120000.0F, 1.0F/90000.0F, 12.0
    }, new_normalizer;
 
-int new_normalizer_stats = FALSE;
+static int new_normalizer_stats = FALSE;
 
 /* the different player's gain factors */
 /* lp=left player, rp=right player, jp=jingles player, ip=interlude player */ 
 /* lc=left channel, rc=right channel */
 /* aud = the DJs audio, str = the listeners (stream) audio */
 /* the initial settings are 'very' temporary */
-sample_t lp_lc_aud = 1.0, lp_rc_aud = 1.0, rp_lc_aud = 1.0, rp_rc_aud = 1.0;
-sample_t lp_lc_str = 1.0, lp_rc_str = 1.0, rp_lc_str = 0.0, rp_rc_str = 0.0;
-sample_t jp_lc_str = 0.0, jp_rc_str = 0.0, jp_lc_aud = 0.0, jp_rc_aud = 0.0;
-sample_t ip_lc_str = 0.0, ip_rc_str = 0.0, ip_lc_aud = 0.0, ip_rc_aud = 0.0;
+static sample_t lp_lc_aud = 1.0, lp_rc_aud = 1.0, rp_lc_aud = 1.0, rp_rc_aud = 1.0;
+static sample_t lp_lc_str = 1.0, lp_rc_str = 1.0, rp_lc_str = 0.0, rp_rc_str = 0.0;
+static sample_t jp_lc_str = 0.0, jp_rc_str = 0.0, jp_lc_aud = 0.0, jp_rc_aud = 0.0;
+static sample_t ip_lc_str = 0.0, ip_rc_str = 0.0, ip_lc_aud = 0.0, ip_rc_aud = 0.0;
                                 /* like above but for fade */
-sample_t lp_lc_audf = 1.0, lp_rc_audf = 1.0, rp_lc_audf = 1.0, rp_rc_audf = 1.0;
-sample_t lp_lc_strf = 1.0, lp_rc_strf = 1.0, rp_lc_strf = 1.0, rp_rc_strf = 1.0;
-sample_t jp_lc_strf = 1.0, jp_rc_strf = 1.0, jp_lc_audf = 1.0, jp_rc_audf = 1.0;
-sample_t ip_lc_strf = 1.0, ip_rc_strf = 1.0, ip_lc_audf = 0.0, ip_rc_audf = 0.0;
+static sample_t lp_lc_audf = 1.0, lp_rc_audf = 1.0, rp_lc_audf = 1.0, rp_rc_audf = 1.0;
+static sample_t lp_lc_strf = 1.0, lp_rc_strf = 1.0, rp_lc_strf = 1.0, rp_rc_strf = 1.0;
+static sample_t jp_lc_strf = 1.0, jp_rc_strf = 1.0, jp_lc_audf = 1.0, jp_rc_audf = 1.0;
+static sample_t ip_lc_strf = 1.0, ip_rc_strf = 1.0, ip_lc_audf = 0.0, ip_rc_audf = 0.0;
          
-/* used to apply the stereo mix of the microphones */
-sample_t mic_l_lc = 1.0, mic_l_rc = 0.0, mic_r_lc = 0.0, mic_r_rc = 1.0;
 /* media player mixback level for when in RedPhone mode */
-sample_t mb_lc_aud = 1.0, mb_rc_aud = 1.0;
-sample_t current_headroom;      /* the amount of mic headroom being applied */
-sample_t *eot_alarm_table;      /* the wave table for the DJ alarm */
+static sample_t mb_lc_aud = 1.0, mb_rc_aud = 1.0;
+static sample_t current_headroom;      /* the amount of mic headroom being applied */
+static sample_t *eot_alarm_table;      /* the wave table for the DJ alarm */
          
-jack_client_t *client;          /* client handle to JACK */
-jack_port_t *audio_left_port;   /* handles for the various jack ports */
-jack_port_t *audio_right_port;
-jack_port_t *dspout_left_port;   /* used for adding audio effects via external program */
-jack_port_t *dspout_right_port;
-jack_port_t *dspin_left_port;
-jack_port_t *dspin_right_port;
-jack_port_t *stream_left_port;
-jack_port_t *stream_right_port;
-jack_port_t *phone_left_send;   /* used for VOIP */
-jack_port_t *phone_right_send;
-jack_port_t *phone_left_recv;
-jack_port_t *phone_right_recv;
-jack_port_t *midi_port; /* midi_control */
+static jack_client_t *client;          /* client handle to JACK */
+static jack_port_t *audio_left_port;   /* handles for the various jack ports */
+static jack_port_t *audio_right_port;
+static jack_port_t *dspout_left_port;   /* used for adding audio effects via external program */
+static jack_port_t *dspout_right_port;
+static jack_port_t *dspin_left_port;
+static jack_port_t *dspin_right_port;
+static jack_port_t *stream_left_port;
+static jack_port_t *stream_right_port;
+static jack_port_t *phone_left_send;   /* used for VOIP */
+static jack_port_t *phone_right_send;
+static jack_port_t *phone_left_recv;
+static jack_port_t *phone_right_recv;
+static jack_port_t *midi_port; /* midi_control */
 
-char midi_queue[MIDI_QUEUE_SIZE];
-size_t midi_nqueued= 0;
-pthread_mutex_t midi_mutex;
+static char midi_queue[MIDI_QUEUE_SIZE];
+static size_t midi_nqueued= 0;
+static pthread_mutex_t midi_mutex;
 
-unsigned long sr;               /* the sample rate reported by JACK */
+static unsigned long sr;               /* the sample rate reported by JACK */
 
-struct xlplayer *plr_l, *plr_r, *plr_j, *plr_i; /* pipe reader instance stuctures */
+static struct xlplayer *plr_l, *plr_r, *plr_j, *plr_i; /* player instance stuctures */
 
 /* these are set in the parse routine - the contents coming from the GUI */
-char *mixer_string, *compressor_string, *gate_string, *microphone_string, *item_index;
-char *normalizer_string, *new_mic_string;
-char *micl, *micr, *midi, *audl, *audr, *strl, *strr, *action;
-char *target_port_name;
-char *dol, *dor, *dil, *dir;
-char *oggpathname, *sndfilepathname, *avformatpathname, *speexpathname, *speextaglist, *speexcreatedby;
-char *playerpathname, *seek_s, *size, *playerplaylist, *loop, *resamplequality;
-char *mic_param, *fade_mode;
-char *rg_db, *headroom;
-char *flag;
-char *channel_mode_string;
-char *use_jingles_vol_2;
-char *jackport, *jackport2, *jackfilter;
+static char *mixer_string, *compressor_string, *gate_string, *microphone_string, *item_index;
+static char *normalizer_string, *new_mic_string;
+static char *midi, *audl, *audr, *strl, *strr, *action;
+static char *target_port_name;
+static char *dol, *dor, *dil, *dir;
+static char *oggpathname, *sndfilepathname, *avformatpathname, *speexpathname, *speextaglist, *speexcreatedby;
+static char *playerpathname, *seek_s, *size, *playerplaylist, *loop, *resamplequality;
+static char *mic_param, *fade_mode;
+static char *rg_db, *headroom;
+static char *flag;
+static char *channel_mode_string;
+static char *use_jingles_vol_2;
+static char *jackport, *jackport2, *jackfilter;
 
 /* dictionary look-up type thing used by the parse routine */
-struct kvpdict kvpdict[] = {
+static struct kvpdict kvpdict[] = {
          { "PLRP", &playerpathname, NULL },   /* The media-file pathname for playback */
          { "RGDB", &rg_db, NULL },            /* Replay Gain volume level controlled at the player end */
          { "SEEK", &seek_s, NULL },           /* Playback initial seek time in seconds */
@@ -262,11 +249,8 @@ struct kvpdict kvpdict[] = {
          { "ACTN", &action, NULL },                   /* Action to take */
          { "", NULL, NULL }};
 
-/* the rms filter currently in use */
-struct rms_calc *lm_rms_filter, *rm_rms_filter;
-
 /* handle_mute_button: soft on/off for the mute buttons */
-void handle_mute_button(sample_t *gainlevel, int switchlevel)
+static void handle_mute_button(sample_t *gainlevel, int switchlevel)
    {
    if (switchlevel)
       {
@@ -289,7 +273,7 @@ void handle_mute_button(sample_t *gainlevel, int switchlevel)
    }
 
 /* update_smoothed_volumes: stuff that gets run once every 32 samples */
-void update_smoothed_volumes()
+static void update_smoothed_volumes()
    {
    static sample_t vol_rescale = 1.0F, vol2_rescale = 1.0F, jingles_vol_rescale = 1.0F;
    static sample_t jingles_vol_rescale2 = 1.0F, interlude_vol_rescale = 1.0F;
@@ -302,7 +286,7 @@ void update_smoothed_volumes()
    const float bias = 0.35386f;
    const float pat3 = 0.9504953575f;
 
-   timeout++;
+   main_timeout++;
    
    if (dj_audio_level != current_dj_audio_level)
       {
@@ -321,7 +305,6 @@ void update_smoothed_volumes()
 
       if (current_crosspattern == 0)
          {
-         /* This crossfader is based on a linear potentiometer with a pull-up resistor (bias) */
          xprop = current_crossfade * 0.01F;
          yprop = -xprop + 1.0F;
          cross_left = yprop / ((xprop * bias) / (xprop + bias) + yprop);
@@ -477,7 +460,7 @@ void update_smoothed_volumes()
    }
 
 /* process_audio: the JACK callback routine */
-int process_audio(jack_nframes_t nframes, void *arg)
+static int process_audio(jack_nframes_t nframes, void *arg)
    {
    int samples_todo;            /* The samples remaining counter in the main loop */
    static float df = 1.0;       /* the ducking factor - generated by the compressor */
@@ -509,17 +492,19 @@ int process_audio(jack_nframes_t nframes, void *arg)
    int pitch_wheel;
    struct mic **micp;
 
-   if (timeout > 8000)
+   if (main_timeout > 8000)
       {
-      if (!g_shutdown)
+      if (!app_shutdown)
          {
-         fprintf(stderr, "timeout exceeded\n");
-         g_shutdown = TRUE;
+         alarm(1);
+         fprintf(stderr, "main thread timeout exceeded\n");
+         app_shutdown = TRUE;
          }
       plr_l->command = CMD_COMPLETE;
       plr_r->command = CMD_COMPLETE;
       plr_j->command = CMD_COMPLETE;
       plr_i->command = CMD_COMPLETE;
+      return -1;
       }
 
    /* midi_control. read incoming commands forward to gui */
@@ -613,15 +598,17 @@ int process_audio(jack_nframes_t nframes, void *arg)
    if (!(lp_lc && lp_rc && rp_lc && rp_rc && jp_lc && jp_rc && ip_lc && ip_rc &&
          lp_lcf && lp_rcf && rp_lcf && rp_rcf && jp_lcf && jp_rcf && ip_lcf && ip_rcf))
       {
-      if (!g_shutdown)
+      if (!app_shutdown)
          {
+         alarm(1);
          printf("Malloc failure in process audio\n");
-         g_shutdown = TRUE;
+         app_shutdown = TRUE;
          }
       plr_l->command = CMD_COMPLETE;
       plr_r->command = CMD_COMPLETE;
       plr_j->command = CMD_COMPLETE;
       plr_i->command = CMD_COMPLETE;
+      return -1;
       }  
 
    if (speed_variance)
@@ -1244,7 +1231,7 @@ int process_audio(jack_nframes_t nframes, void *arg)
    return 0;
    }
  
-int peak_to_log(float peak)
+static int peak_to_log(float peak)
    {
    if (peak <= 0.0)
       return -127;
@@ -1253,41 +1240,37 @@ int peak_to_log(float peak)
    return (int)level2db(peak);
    }
    
-void segfault_handler(int data)
+static void segfault_handler(int sig)
    {
-   char *msg = "\nSegmentation Fault\n";
-   
-   if (write(STDOUT_FILENO, msg, strlen(msg)));
    exit(5);
    }
 
-void jack_shutdown_handler(void *data)
+static void jack_shutdown_handler(void *data)
    {
    jack_closed_f = TRUE;
    }
 
-void alarm_handler(int data)
-   {
-   struct xlplayer *cause;
-   
-   if ((cause = plr_l)->watchdog_timer++ == 9 ||
-       (cause = plr_r)->watchdog_timer++ == 9 ||
-       (cause = plr_i)->watchdog_timer++ == 9 ||
-       (cause = plr_j)->watchdog_timer++ == 9) 
-      {
-      if (cause->playmode == PM_INITIATE)
-         {
-         cause->initial_audio_context = cause->current_audio_context;
-         cause->playmode = PM_STOPPED;
-         cause->command = CMD_COMPLETE;
-         }
-      fprintf(stderr, "watchdog timer frozen for one of the media players -- possible bad media file\nshutting down the mixer in one second\n");
-      signal(SIGALRM, segfault_handler);
-      }
+static void alarm_handler(int sig)
+    {
+    if (app_shutdown)
+       exit(5);
+
+    #define TEST(x) (x->watchdog_timer++ >= 9)
+    if (TEST(plr_l) || TEST(plr_r) || TEST(plr_i) || TEST(plr_j))
+    #undef TEST
+       {
+       plr_l->command = CMD_COMPLETE;
+       plr_r->command = CMD_COMPLETE;
+       plr_j->command = CMD_COMPLETE;
+       plr_i->command = CMD_COMPLETE;
+
+       app_shutdown = TRUE;
+       }
+
    alarm(1);
    }
 
-void atexit_handler()
+static void atexit_handler()
    {
    if (client)
       {
@@ -1296,7 +1279,7 @@ void atexit_handler()
       }
    }
 
-void send_metadata_update(struct xlp_dynamic_metadata *dm)
+static void send_metadata_update(struct xlp_dynamic_metadata *dm)
    {
    pthread_mutex_lock(&(dm->meta_mutex));
    fprintf(stderr, "new dynamic metadata\n");
@@ -1313,12 +1296,12 @@ void send_metadata_update(struct xlp_dynamic_metadata *dm)
    pthread_mutex_unlock(&(dm->meta_mutex));
    }
 
-void display_error_to_stderr(const char *message)
+static void display_error_to_stderr(const char *message)
    {
    fprintf(stderr, "JACK ERROR MESSAGE: %s\n", message);
    }
 
-void display_info_to_stderr(const char *message)
+static void display_info_to_stderr(const char *message)
    {
    fprintf(stderr, "JACK INFO MESSAGE: %s\n", message);
    }
@@ -1385,17 +1368,11 @@ int main(int argc, char **argv)
 
    setenv("LC_ALL", "C", 1);            /* ensure proper sscanf operation */
 
-   sigmask_init();
+   sig_init();
    signal(SIGALRM, alarm_handler); 
    signal(SIGSEGV, segfault_handler);
 
    atexit(atexit_handler);
-
-#ifdef DYN_MAD
-   have_mad = dyn_mad_init();
-#else
-   have_mad = 1;
-#endif /* DYN_MAD */
 
    if((client = jack_client_open(getenv("mx_client_id"), JackUseExactName | JackServerName, NULL, getenv("jack_parameter"))) == 0)
       {
@@ -1453,7 +1430,6 @@ int main(int argc, char **argv)
    snprintf(our_sc_str_in_r, l, "%s:%s", sc_client_name, "str_in_r");
 
    sr = jack_get_sample_rate(client);
-   fb_size = FB_SIZE;
    jingles_samples_cutoff = sr / 12;            /* A twelfth of a second early */
    player_samples_cutoff = sr * 0.25;           /* for gapless playback */
 
@@ -1567,7 +1543,7 @@ int main(int argc, char **argv)
       
    while (kvp_parse(kvpdict, fp))
       {
-      if (jack_closed_f == TRUE || g_shutdown == TRUE)
+      if (jack_closed_f == TRUE || app_shutdown == TRUE)
          break;
          
       if (!strcmp(action, "sync"))
@@ -1616,7 +1592,7 @@ int main(int argc, char **argv)
 
       if (!strcmp(action, "mp3status"))
          {
-         fprintf(stdout, "IDJC: mp3=%d\n", have_mad);
+         fprintf(stdout, "IDJC: mp3=%d\n", mp3decode_cap());
          fflush(stdout);
          }
 
@@ -1789,7 +1765,7 @@ int main(int argc, char **argv)
 
       if (!strcmp(action, "requestlevels"))
          {
-         timeout = 0;           /* the main app has proven it is alive */
+         main_timeout = 0;           /* the main app has proven it is alive */
          /* make logarithmic values for the peak levels */
          str_l_peak_db = peak_to_log(peakfilter_read(str_pf_l));
          str_r_peak_db = peak_to_log(peakfilter_read(str_pf_r));
@@ -1813,7 +1789,7 @@ int main(int argc, char **argv)
          midi_nqueued= 0;
          pthread_mutex_unlock(&midi_mutex);
 
-         if (sigmask_recent_usr1())
+         if (sig_recent_usr1())
             session_command = "save_L1";
          else
             session_command = "";

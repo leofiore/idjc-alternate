@@ -1,6 +1,6 @@
 /*
 #   xlplayer.c: player decoder module for idjc
-#   Copyright (C) 2006-2009 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2006-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@
 #include "sndfiledecode.h"
 #include "avcodecdecode.h"
 #include "bsdcompat.h"
-#include "sigmask.h"
+#include "sig.h"
 
 #define TRUE 1
 #define FALSE 0
@@ -44,8 +44,6 @@
 #define PBSPEED_INPUT_BUFFER_SIZE (PBSPEED_INPUT_SAMPLE_SIZE * sizeof (float))
 
 typedef jack_default_audio_sample_t sample_t;
-
-extern int have_mad, fb_size;
 
 /* make_audio_to_float: convert the audio to the format used by jack and libsamplerate */
 float *xlplayer_make_audio_to_float(struct xlplayer *self, float *buffer, uint8_t *data, int num_samples, int bits_per_sample, int num_channels)
@@ -259,7 +257,7 @@ static void *xlplayer_main(struct xlplayer *self)
    {
    char *extension;
    
-   sigmask_perform();
+   sig_mask_thread();
    for(self->up = TRUE; self->command != CMD_THREADEXIT; self->watchdog_timer = 0)
       {
       switch (self->command)
@@ -316,7 +314,7 @@ static void *xlplayer_main(struct xlplayer *self)
                     || ((!strcmp(extension, "m4a") || !strcmp(extension, "mp4") || !strcmp(extension, "m4b") || !strcmp(extension, "m4p") || !strcmp(extension, "wma") || !strcmp(extension, "avi") || !strcmp(extension, "mpc") || !strcmp(extension, "ape")) && avcodecdecode_reg(self))
 #endif /* HAVE_AVFORMAT */
 #endif /* HAVE_AVCODEC */
-                    || (!strcmp(extension, "mp3") && have_mad && mp3decode_reg(self))
+                    || (!strcmp(extension, "mp3") && mp3decode_reg(self))
                )
                {
                self->playmode = PM_PLAYING;

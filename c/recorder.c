@@ -24,7 +24,7 @@
 #include "live_ogg_encoder.h"
 #include "sourceclient.h"
 #include "id3.h"
-#include "sigmask.h"
+#include "sig.h"
 
 #define TIMESTAMP_SIZ 23
 
@@ -527,7 +527,7 @@ static void *recorder_main(void *args)
    size_t nbytes;
    int m, s, f;
     
-   sigmask_perform();
+   sig_mask_thread();
    while (!self->thread_terminate_f)
       {
       nanosleep(&ms10, NULL);

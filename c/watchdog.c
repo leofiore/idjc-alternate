@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include <time.h>
 #include "sourceclient.h"
-#include "sigmask.h"
+#include "sig.h"
 
 #define NO_WATCHDOG
 
@@ -42,7 +42,7 @@ static void *watchdog_main(void *args)
    struct timespec ms100 = { 0, 100000000 };
    int i, infotick = 0;
    
-   sigmask_perform();
+   sig_mask_thread();
    while (!self->exit)
       {
       if (!(infotick++ & 0xF))

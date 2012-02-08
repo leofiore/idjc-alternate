@@ -1,6 +1,6 @@
 /*
 #   dyn_mad.c: dynamic linking for libmad
-#   Copyright (C) 2009 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2009-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -43,14 +43,14 @@ static void dyn_mad_close()
    dlclose(handle);
    }
 
-int dyn_mad_init()
+static void dyn_mad_init()
    {
    char *error;
 
    if (!((handle = dlopen("libmad.so", RTLD_LAZY)) || (handle = dlopen("libmad.dylib", RTLD_LAZY))))
       {
       fprintf(stderr, "failed to locate libmad dynamic library\n");
-      return 0;
+      return;
       }
    dlerror();
 
@@ -70,11 +70,18 @@ int dyn_mad_init()
       {
       fprintf(stderr, "dlsym failed with: %s\n", error);
       dlclose(handle);
-      return 0;
+      handle = NULL;
       }
 
    atexit(dyn_mad_close);
-   return 1;
+   }
+   
+int dyn_mad_onceinit()
+   {
+   static pthread_once_t once_control = PTHREAD_ONCE_INIT;
+   
+   pthread_once(&once_control, dyn_mad_init);
+   return handle != NULL;
    }
 
 int mad_frame_decode(struct mad_frame *frame, struct mad_stream *stream)

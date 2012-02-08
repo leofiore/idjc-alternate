@@ -396,6 +396,9 @@ int mp3decode_reg(struct xlplayer *xlplayer)
    long start;
    struct chapter *chapter;
 
+   if (!mp3decode_cap())
+      return REJECTED;
+
    if (!(self = xlplayer->dec_data = calloc(1, sizeof (struct mp3decode_vars))))
       {
       fprintf(stderr, "mp3decode_vars: malloc failure\n");
@@ -454,4 +457,13 @@ int mp3decode_reg(struct xlplayer *xlplayer)
             return ACCEPTED;
          }
       }
+   }
+
+int mp3decode_cap()
+   {
+   #ifdef DYN_MAD
+      return dyn_mad_onceinit();
+   #else
+      return TRUE;
+   #endif
    }
