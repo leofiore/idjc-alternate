@@ -100,13 +100,28 @@ class ArgumentParserImplementation(object):
                      help=_("show this program's version number and exit"))
       sp = self._sp = ap.add_subparsers()
       # TC: a command line option help string.
+
       sp_run = sp.add_parser("run", add_help=False, help=_("run the main idjc application -- this is the default when no command line options are specified"),
          # TC: do not translate run.
          description=description + " " + _("-- sub-command: run"), epilog=epilog)
       # TC: a command line option help string.
-      sp_mp = sp.add_parser("generateprofile", add_help=False, help=_("make a new profile for idjc using the command line"),
-         # TC: do not translate generateprofile.
-         description=description + " " + _("-- sub-command: generateprofile"), epilog=epilog)
+      
+      sp_new = sp.add_parser("new", add_help=False, help=_("make a new profile"),
+         # TC: do not translate the word profile.
+         description=description + " " + _("-- sub-command: profile"), epilog=epilog)
+      
+      sp_rm = sp.add_parser("rm", add_help=False, help=_("remove a new profile"),
+         # TC: do not translate the word profile.
+         description=description + " " + _("-- sub-command: profile"), epilog=epilog)
+      
+      sp_auto = sp.add_parser("auto", add_help=False, help=_("make a profile run automatically"),
+         # TC: do not translate the word profile.
+         description=description + " " + _("-- sub-command: profile"), epilog=epilog)
+      
+      sp_ls = sp.add_parser("ls", add_help=False, help=_("list available profiles"),
+         # TC: do not translate the word profile.
+         description=description + " " + _("-- sub-command: profile"), epilog=epilog)
+
 
       sp_run.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
       sp_run.add_argument("-d", "--dialog", dest="dialog", nargs=1, 
@@ -141,24 +156,35 @@ class ArgumentParserImplementation(object):
             help=_("attempt connection with the specified servers"))
       group.add_argument("-x", "--crossfader", dest="crossfader", choices=("1", "2"), 
             help=_("position the crossfader for the specified player"))
-      sp_mp.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
+            
+      sp_new.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
       # TC: command line help placeholder.
-      sp_mp.add_argument("newprofile", metavar=_("profile_name"),
+      sp_new.add_argument("newprofile", metavar=_("profile_name"),
             help=_("""new profile name -- will form part of the dbus
             bus/object/interface name and the JACK client ID --
             restrictions therefore apply"""))
       # TC: command line help placeholder.
-      sp_mp.add_argument("-t", "--template", dest="template", metavar=_("template_profile"),
+      sp_new.add_argument("-t", "--template", dest="template", metavar=_("template_profile"),
             help=_("an existing profile to use as a template"))
       # TC: command line help placeholder.
-      sp_mp.add_argument("-i", "--icon", dest="icon", metavar=_("icon_pathname"),
+      sp_new.add_argument("-i", "--icon", dest="icon", metavar=_("icon_pathname"),
             help=_("pathname to an icon -- defaults to idjc logo"))
       # TC: Command line help placeholder for the profile's nickname.
       # TC: Actual profile names are very restricted in what characters can be used.
-      sp_mp.add_argument("-n", "--nickname", dest="nickname", metavar=_("nickname"),
+      sp_new.add_argument("-n", "--nickname", dest="nickname", metavar=_("nickname"),
             help=_("""the alternate profile name to appear in window title bars"""))
-      sp_mp.add_argument("-d", "--description", dest="description", metavar=_("description_text"),
+      sp_new.add_argument("-d", "--description", dest="description", metavar=_("description_text"),
             help=_("a description of the profile"))
+
+      sp_rm.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
+      sp_rm.add_argument("rmprofile", metavar=_("profile_name"), nargs=1, help=_('the profile to remove'))
+      
+      sp_auto.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
+      sp_auto.add_argument("autoprofile", metavar="profile_name", help=_('the profile to make automatic'))
+      
+      #sp_ls.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
+      #sp_ls.add_argument("listprofiles", help=_('list all the available profiles'))
+
 
 
    def parse_args(self):
@@ -310,6 +336,20 @@ class ProfileManager(object):
                ap.exit(0)
          except ProfileError as e:
             ap.error(_("failed to create profile: %s") % str(e))
+
+         try:
+            if "rmprofile" in args:
+               self._delete_profile(None, args.rmprofile[0])
+               ap.exit(0)
+         except ProfileError as e:
+            ap.error(_("failed to delete profile: %s") % str(e))
+            
+         try:
+            if "autoprofile" in args:
+               self._auto(None, args.autoprofile[0])
+               ap.exit(0)
+         except ProfileError as e:
+            ap.error(_("failed to delete profile: %s") % str(e))
             
          with open(PGlobs.autoload_profile_pathname, "a"):
             pass
@@ -334,7 +374,7 @@ class ProfileManager(object):
         
          self._uprep = DBusUptimeReporter()
          self._profile_dialog = self._get_profile_dialog()
-         self._profile_dialog.connect("delete", self._cb_delete_profile)
+         self._profile_dialog.connect("delete", self._delete_profile)
          self._profile_dialog.connect("choose", self._choose_profile)
 
          def new_profile(dialog, profile, template, icon, nickname, description):
@@ -349,7 +389,7 @@ class ProfileManager(object):
          self._profile_dialog.connect("new", new_profile)
          self._profile_dialog.connect("clone", new_profile)
          self._profile_dialog.connect("edit", self._cb_edit_profile)
-         self._profile_dialog.connect("auto", self._cb_auto)
+         self._profile_dialog.connect("auto", self._auto)
          self._profile_dialog.highlight_profile(profile, scroll=True)
          if dialog_selects:
             self._profile_dialog.run()
@@ -494,7 +534,7 @@ class ProfileManager(object):
       return al_profile
       
 
-   def _cb_auto(self, dialog, profile):
+   def _auto(self, dialog, profile):
       try:
          with open(PGlobs.autoload_profile_pathname, "r+") as f:
             fcntl.flock(f, fcntl.LOCK_EX)
@@ -503,8 +543,12 @@ class ProfileManager(object):
             if profile != al_profile:
                f.write(profile)
             f.truncate()
-      except IOError:
-         print "Auto failed!"
+      except IOError as e:
+         if dialog is not None:
+            print "Auto failed!"
+         else:
+            raise ProfileError(str(e), str(e))
+         
 
       
    def _cb_edit_profile(self, dialog, newprofile, oldprofile, *opts):
@@ -547,13 +591,17 @@ class ProfileManager(object):
          dialog.destroy_new_profile_dialog()
       
       
-   def _cb_delete_profile(self, dialog, profile):
-      if profile is not dialog.profile:
+   def _delete_profile(self, dialog, profile):
+      if dialog is None or profile is not dialog.profile:
          try:
             busname = self._grab_bus_name_for_profile(profile)
             shutil.rmtree(PGlobs.profile_dir / profile)
          except dbus.DBusException:
-            pass
+            if dialog is None:
+               raise ProfileError(_("could not get lock on profile %s: profile appears to be running") % profile, None)
+         except OSError as e:
+            if dialog is None:
+               raise ProfileError(e, None)
          if profile == default:
             self._generate_default_profile()
 

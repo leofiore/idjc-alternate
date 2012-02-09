@@ -3,8 +3,7 @@ ChangeLog.gz
 INSTALL
 Makefile
 Makefile.in
-Man/idjc.1
-Man/idjcctrl.1
+man/*.1
 NEWS.gz
 README.gz
 aclocal.m4

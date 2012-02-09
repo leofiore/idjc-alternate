@@ -228,7 +228,7 @@ AC_CONFIG_FILES([Makefile
                   python/Makefile
                   python/prelims/Makefile
                   artwork/Makefile
-                  Man/Makefile
+                  man/Makefile
                   doc/Makefile
                   python/__init__.py.in
                   idjc.in

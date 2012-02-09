@@ -1,19 +1,75 @@
 .TH "IDJC" 1 "2012-02-06" "VERSION" "Internet DJ Console"
 .SH NAME
-idjc - be a dj on the internet
+idjc-run - launch the idjc main application
 .SH SYNOPSIS
-idjc
-.PP
-idjc run --help
-.PP
-idjc generateprofile --help
+.P
+idjc run [-h] [-d {true,false}] [-p profile_choice] [-j server_name]
+         [-S session_details] [--no-jack-connections] [-C]
+         [-c c [c ...]] [-V {off,private,public}] [-P p [p ...]]
+         [-s s [s ...]] [-x {1,2}]
 .SH DESCRIPTION
-.B idjc
-is a powerful yet easy to use application for individuals interested in streaming live radio shows over the Internet via Shoutcast or Icecast servers or for making podcasts.
-
-Features include two main media players with a crossfader, a jingles player, microphone signal processing (limiter, noise gate, etc.), IRC announcements, automatic stream start/stop and reconnection, simultaneous mp3 and Ogg streaming, up to 12 mono or 6 stereo audio input channels, a DSP interface, a VoIP integration feature, MIDI control surface support, audio level meters.
-
-It uses GTK+ for the user interface and JACK Audio Connection Kit to facilitate the inclusion of third-party audio applications that also support JACK within the audio chain.
+.SS General options
+.B -h, --help
+.RS
+Show a help message.
+.RE
+.PP
+.BR "-d, --dialog" "={true,false}"
+.RS
+Whether to show the profile chooser dialog.
+.RE
+.PP
+.BR "-p, --profile" =PROFILE
+.RS
+Which profile to run. Any profile other than default must currently exist.
+.RE
+.PP
+.BR "-j, --jackserver" =SERVER
+.RS
+The named jack server to use.
+.RE
+.PP
+.BR "-S, --session" =SESSIONINFO
+.RS
+See the session support section below for more details.
+.RE
+.PP
+.B --no-jack-connections
+.RS
+A possibly useful option if you are using some kind of session manager. On startup idjc will not attempt to make any connections itself.
+.RE
+.PP
+.B --no-default-jack-connections
+.RS
+No JACK ports will be connected except those listed in the session file. Naturally that means if the session file doesn't exist no connections will be made.
+.RE
+.PP
+.SS User interface options
+.BR "-c, --channels" =CHANNELS
+.RS
+Open the specified channels of a space separated list.
+.RE
+.PP
+.BR "-V, --voip" =MODE
+.RS
+Select the specified VoIP mode.
+.RE
+.PP
+.BR "-P, --players" =PLAYERS
+.RS
+Start the specified players of a space separated list. Valid options are numeric.
+.RE
+.PP
+.BR "-s, --servers" =SERVERS
+.RS
+Start the specified servers of a space separated list. Valid options are numeric.
+.RE
+.PP
+.BR "-x, --crossfader" ={1,2}
+.RS
+Position the crossfader.
+.RE
+.PP
 .SH ENVIRONMENT
 If the
 .I ~/.jackdrc
@@ -56,7 +112,8 @@ Report translation bugs to the appropriate translator whose details can be found
 .B idjc
 main menu.
 .SH SEE ALSO
-.I http://idjc.sourceforge.net
+<http://idjc.sourceforge.net>
 .I 
 .PP
-.BR jackd (1), " idjcctrl" (1)
+.BR jackd (1), " idjc-ctrl" (1), " idjc-profile" (1), " idjc-run" (1)
+

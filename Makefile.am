@@ -1,9 +1,9 @@
-SUBDIRS = po ${MAYBE_LIBSHOUT} c python artwork Man doc
+SUBDIRS = po ${MAYBE_LIBSHOUT} c python artwork man doc
 DISTDIRS = libshout
 
 EXTRA_SCRIPTS=
-nodist_bin_SCRIPTS=${PACKAGE_NAME} idjcctrl
-dist_noinst_SCRIPTS=idjc.in.in idjcctrl_.py env-up ffmpeg_avcodec.c
+nodist_bin_SCRIPTS=${PACKAGE_NAME}
+dist_noinst_SCRIPTS=idjc.in.in env-up ffmpeg_avcodec.c
 nodist_doc_DATA=AUTHORS.gz NEWS.gz README.gz ChangeLog.gz
 docdir=${prefix}/share/doc/${PACKAGE_NAME}-${PACKAGE_VERSION}
 dist_noinst_DATA=idjc.desktop.in.in
@@ -13,10 +13,6 @@ appmenudir=${prefix}/share/applications
 
 ${PACKAGE_NAME}: idjc.in
 	@sed -e 's|$${prefix}|${prefix}|' $? >$@
-
-idjcctrl: idjcctrl_.py
-	@sed -e 's|/path/to/python|${PYTHON}|' $? >$@
-	@chmod u+x $@
 
 ${PACKAGE_NAME}.desktop: idjc.desktop.in
 	@sed -e 's|$${prefix}|${prefix}|' -e 's|$${exec_prefix}|${exec_prefix}|' $? >$@
@@ -36,12 +32,10 @@ ChangeLog.gz: ChangeLog
 clean-local:
 	rm -f ChangeLog.gz README.gz NEWS.gz AUTHORS.gz ${PACKAGE_NAME}.desktop idjcctrl ${PACKAGE_NAME}
 
-# Too lazy to manually claw this out from the source tree.
 dtdist:
 	make dist
 	mv ${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz ${HOME}/Desktop
 
-# Too security conscious to not use the .netrc file.
 sfpublish:
 	make dist
 	curl --retry 3 --connect-timeout 10 -T ${PACKAGE_TARNAME}-${PACKAGE_VERSION}.tar.gz -n sftp://frs.sourceforge.net/home/frs/project/i/id/idjc/idjc/0.8/
@@ -50,4 +44,4 @@ sfpublish:
 
 ACLOCAL_AMFLAGS = -I m4
 
-EXTRA_DIST = m4/ChangeLog  config.rpath m4/ChangeLog
+EXTRA_DIST = config.rpath m4/ChangeLog
