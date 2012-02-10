@@ -2,7 +2,7 @@
 .SH NAME
 idjc - be a dj on the internet
 .SH SYNOPSIS
-idjc [-h] [-v] {run,ctrl,profile}
+idjc [-h] [-v] {run,new,rm,auto,noauto,ls}
 .SH DESCRIPTION
 .B idjc
 is a powerful yet easy to use application for individuals interested in streaming live radio shows over the Internet via Shoutcast or Icecast servers or for making podcasts.
@@ -24,28 +24,40 @@ Print the version number and exit.
 .BR Sub-commands " (each has its own man page)"
 .B run
 .RS
-Launch a new instance of idjc. (This is the default option)
+Run the main idjc application. (This is the default option)
 .RE
 .PP
-.B ctrl
+.B new
 .RS
-Issue commands to or query a currently running instance of idjc.
+Make a new profile.
 .RE
 .PP
-.B profile
+.B rm
 .RS
-Create, modify, delete, or rename profiles.
+Remove an existing profile or profiles.
+.RE
+.PP
+.B auto
+.RS
+Select which profile is to automatically launch.
+.RE
+.PP
+.B noauto
+.RS
+Remove auto-launch.
+.RE
+.PP
+.B ls
+.RS
+List the available profiles. Also show uptimes.
 .RE
 .SH REPORTING BUGS
-Send your bug reports, feature requests, general comments, patches etc. to <http://www.sourceforge.net/projects/idjc>
-.PP
-You will need to make an account in order to post.
-.PP
-Report translation bugs to the appropriate translator whose details can be found in the 'Help/About' section of the
-.B idjc
-main menu.
 .SH SEE ALSO
 <http://idjc.sourceforge.net>
 .I 
 .PP
-.BR jackd (1), " idjc-ctrl" (1), " idjc-profile" (1), " idjc-run" (1)
+.BR idjc-run (1), " idjc-new" (1), " idjc-rm" (1)
+.PP
+.BR idjc-auto (1), " idjc-noauto" (1), " idjc-ls" (1)
+.PP
+.BR jackd (1)

@@ -28,6 +28,7 @@ import time
 import math
 import fcntl
 import re
+import datetime
 import subprocess
 from functools import partial
 from collections import defaultdict
@@ -97,31 +98,37 @@ class ArgumentParserImplementation(object):
       ap.add_argument("-v", "--version", action='version', 
                      version=FGlobs.package_name + " " + FGlobs.package_version,
                      # TC: a command line option help string.
-                     help=_("show this program's version number and exit"))
+                     help=_("show the version number and exit"))
       sp = self._sp = ap.add_subparsers()
       # TC: a command line option help string.
 
       sp_run = sp.add_parser("run", add_help=False, help=_("run the main idjc application -- this is the default when no command line options are specified"),
          # TC: do not translate run.
-         description=description + " " + _("-- sub-command: run"), epilog=epilog)
-      # TC: a command line option help string.
-      
-      sp_new = sp.add_parser("new", add_help=False, help=_("make a new profile"),
-         # TC: do not translate the word profile.
-         description=description + " " + _("-- sub-command: profile"), epilog=epilog)
-      
-      sp_rm = sp.add_parser("rm", add_help=False, help=_("remove a new profile"),
-         # TC: do not translate the word profile.
-         description=description + " " + _("-- sub-command: profile"), epilog=epilog)
-      
-      sp_auto = sp.add_parser("auto", add_help=False, help=_("make a profile run automatically"),
-         # TC: do not translate the word profile.
-         description=description + " " + _("-- sub-command: profile"), epilog=epilog)
-      
-      sp_ls = sp.add_parser("ls", add_help=False, help=_("list available profiles"),
-         # TC: do not translate the word profile.
-         description=description + " " + _("-- sub-command: profile"), epilog=epilog)
+         description=description + " " + _("-- sub-command: run -- launch the idjc application"), epilog=epilog)
 
+      # TC: a command line option help string.
+      sp_new = sp.add_parser("new", add_help=False, help=_("make a new profile"),
+         # TC: do not translate the word new.
+         description=description + " " + _("-- sub-command: new -- make a new profile"), epilog=epilog)
+      
+      # TC: a command line option help string.
+      sp_rm = sp.add_parser("rm", add_help=False, help=_("remove profile(s)"),
+         # TC: do not translate the word rm.
+         description=description + " " + _("-- sub-command: rm -- remove profile(s)"), epilog=epilog)
+      
+      # TC: a command line option help string.
+      sp_auto = sp.add_parser("auto", add_help=False, help=_("select which profile is to automatically launch"),
+         # TC: do not translate the word auto.
+         description=description + " " + _("-- sub-command: auto -- mark a profile for auto-launch"), epilog=epilog)
+
+      # TC: a command line option help string.
+      sp_noauto = sp.add_parser("noauto", add_help=False, help=_("remove auto-launch"),
+         description=description + " " + _("-- sub-command: noauto -- remove auto-launch"), epilog=epilog)
+      
+      # TC: a command line option help string.
+      sp_ls = sp.add_parser("ls", add_help=False, help=_("list available profiles"),
+         # TC: do not translate the word ls.
+         description=description + " " + _("-- sub-command: ls -- list available profiles"), epilog=epilog)
 
       sp_run.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
       sp_run.add_argument("-d", "--dialog", dest="dialog", nargs=1, 
@@ -139,7 +146,7 @@ class ArgumentParserImplementation(object):
       sp_run.add_argument("-S", "--session", dest="session", nargs=1,
             # TC: command line help placeholder.
             metavar=_("session_details"),
-            help=_("e.g. 'L1:name' for a named Ladish [L1] session called 'name' -- refer to the 'idjc' man page for more details"))
+            help=_("e.g. 'L1:name' for a named Ladish [L1] session called 'name' -- refer to the idjc man page for more details"))
       sp_run.add_argument("--no-jack-connections", dest="no_jack_connections", action="store_true",
             help=_('At start-up do not make any JACK connections. This option delegates all control over restored connections to the session handler.'))
       sp_run.add_argument("-C", "--no-default-jack-connections", dest="no_default_jack_connections", action="store_true",
@@ -177,13 +184,16 @@ class ArgumentParserImplementation(object):
             help=_("a description of the profile"))
 
       sp_rm.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
-      sp_rm.add_argument("rmprofile", metavar=_("profile_name"), nargs=1, help=_('the profile to remove'))
+      sp_rm.add_argument("rmprofile", metavar=_("profile_name"), nargs="+", help=_('the profile(s) to remove'))
       
       sp_auto.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
       sp_auto.add_argument("autoprofile", metavar="profile_name", help=_('the profile to make automatic'))
       
-      #sp_ls.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
-      #sp_ls.add_argument("listprofiles", help=_('list all the available profiles'))
+      sp_noauto.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
+      sp_noauto.add_argument("--dummyarg", dest="noauto", help=argparse.SUPPRESS)
+     
+      sp_ls.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
+      sp_ls.add_argument("--dummyarg", dest="ls", help=argparse.SUPPRESS)
 
 
 
@@ -242,6 +252,8 @@ class DBusUptimeReporter(dbus.service.Object):
       Step 2, Return immediately with the cached value.
       
       Note: On error the cache is purged.
+
+      Supports synchronous mode in the absence of an event loop.
       """
 
 
@@ -273,8 +285,13 @@ class DBusUptimeReporter(dbus.service.Object):
          
          self._interface_cache[profile] = interface
 
-      interface.get_uptime(reply_handler=rh, error_handler=eh)
-      return self._uptime_cache[profile]
+      if glib.main_depth():
+         # asynchronous: more CPU efficient but requires event loop
+         interface.get_uptime(reply_handler=rh, error_handler=eh)
+         return self._uptime_cache[profile]
+      else:
+         # synchronous
+         return interface.get_uptime()
 
 
 
@@ -318,8 +335,8 @@ class ProfileManager(object):
 
    _profile = _dbus_bus_name = _profile_dialog = _init_time = None
 
-   _optionals = ("icon", "nickname", "description")
-
+   _textoptionals = ("nickname", "description")
+   _optionals = ("icon",) + _textoptionals
 
 
    def __init__(self):
@@ -339,20 +356,33 @@ class ProfileManager(object):
 
          try:
             if "rmprofile" in args:
-               self._delete_profile(None, args.rmprofile[0])
+               self._delete_profile(None, args.rmprofile)
                ap.exit(0)
          except ProfileError as e:
             ap.error(_("failed to delete profile: %s") % str(e))
             
          try:
             if "autoprofile" in args:
-               self._auto(None, args.autoprofile[0])
+               self._auto(None, args.autoprofile)
                ap.exit(0)
          except ProfileError as e:
-            ap.error(_("failed to delete profile: %s") % str(e))
-            
-         with open(PGlobs.autoload_profile_pathname, "a"):
-            pass
+            ap.error(_("auto failed: %s") % str(e))
+           
+         try:
+            if "noauto" in args:
+               self._noauto()
+               ap.exit(0)
+         except EnvironmentError as e:
+            ap.error(_("noauto failed: %s") % e)
+
+         self._uprep = DBusUptimeReporter()
+
+         try:
+            if "ls" in args:
+               self._ls()
+               ap.exit(0)
+         except EnvironmentError as e:
+            ap.error(_("ls failed: %s") % e)
 
          profile = self.autoloadprofilename
          if profile is None:
@@ -370,9 +400,18 @@ class ProfileManager(object):
          if args.dialog is not None:
             dialog_selects = args.dialog[0] == "true"
          
+         if not dialog_selects and profile:
+            if not profile_name_valid(profile):
+               ap.error(_('profile name is bad'))
+               
+            if profile not in os.walk(PGlobs.profile_dir).next()[1]:
+               ap.error(_('profile %s does not exist') % profile)
+               
+            if self._profile_has_owner(profile):
+               ap.error(_('profile %s is already running') % profile)
+            
          self._parse_session(ap, args)
         
-         self._uprep = DBusUptimeReporter()
          self._profile_dialog = self._get_profile_dialog()
          self._profile_dialog.connect("delete", self._delete_profile)
          self._profile_dialog.connect("choose", self._choose_profile)
@@ -489,8 +528,6 @@ class ProfileManager(object):
 
 
    def _parse_session(self, ap, args):
-      default = "default"
-      
       if args.session is None:
          s = ["L0", default]
       else:
@@ -512,14 +549,12 @@ class ProfileManager(object):
                print "session pathname is", sf
             elif not any(True for x in s[1] if x in ("/", " ")):
                sf = s[1]
-               print "session name is", sf
             else:
                ap.error(_("unsupported session name or session pathname -- pathnames must start with one of '/~.' -- names must not contain / characters or spaces: %s") % s[1])
          elif len(s) == 1:
             sf = default
            
       self._session_filename = sf
-      print "session type is", self._session_type
 
 
    def _autoloadprofilename(self):
@@ -535,22 +570,31 @@ class ProfileManager(object):
       
 
    def _auto(self, dialog, profile):
+      if dialog is None and profile != default and not os.path.isdir(PGlobs.profile_dir / profile):
+         raise ProfileError(_('profile %s does not exist') % profile, None)
+
       try:
          with open(PGlobs.autoload_profile_pathname, "r+") as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             al_profile = f.readline().strip()
             f.seek(0)
-            if profile != al_profile:
+            if profile != al_profile or dialog is None:
                f.write(profile)
             f.truncate()
       except IOError as e:
-         if dialog is not None:
-            print "Auto failed!"
-         else:
-            raise ProfileError(str(e), str(e))
+         if dialog is None:
+            raise ProfileError(str(e), None)
          
 
-      
+   def _noauto(self):
+      try:
+         with open(PGlobs.autoload_profile_pathname, "r+") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            f.truncate()
+      except IOError:
+         pass
+
+
    def _cb_edit_profile(self, dialog, newprofile, oldprofile, *opts):
       busses = []
       
@@ -591,17 +635,32 @@ class ProfileManager(object):
          dialog.destroy_new_profile_dialog()
       
       
-   def _delete_profile(self, dialog, profile):
-      if dialog is None or profile is not dialog.profile:
-         try:
-            busname = self._grab_bus_name_for_profile(profile)
-            shutil.rmtree(PGlobs.profile_dir / profile)
-         except dbus.DBusException:
-            if dialog is None:
-               raise ProfileError(_("could not get lock on profile %s: profile appears to be running") % profile, None)
-         except OSError as e:
-            if dialog is None:
-               raise ProfileError(e, None)
+   def _delete_profile(self, dialog, profiles):
+      if isinstance(profiles, str):
+         profiles = [profiles]
+      if dialog is None or profiles[0] is not dialog.profile:
+         busnames = []
+         # Lock all specified profiles before deleting any.
+         for profile in profiles:
+            try:
+               busnames.append(self._grab_bus_name_for_profile(profile))
+            except (dbus.DBusException, ValueError) as e:
+               if dialog is None:
+                  raise ProfileError(_("could not get a lock on profile {0}: {1}").format(profile, str(e)), None)
+            
+         # Check all directories exist beforehand.
+         if not any(os.path.isdir(PGlobs.profile_dir / x) for x in profiles):
+            raise ProfileError(_('profile does not exist'))
+            
+         for profile in profiles:
+            try:
+               shutil.rmtree(PGlobs.profile_dir / profile)
+            except OSError as e:
+               if dialog is None:
+                  raise ProfileError(e, None)
+                  
+         del busnames
+
          if profile == default:
             self._generate_default_profile()
 
@@ -661,8 +720,7 @@ class ProfileManager(object):
                   for top, dirs, files in os.walk(tdir):
                      for filename in files:
                         for expr in self._optionals + config_files:
-                           mo = re.match(expr, filename)
-                           if mo is not None and mo.group(0) == filename:
+                           if re.match(expr + "$", filename):
                               try:
                                  shutil.copyfile(tdir / filename, tmp / filename)
                               except EnvironmentError as e:
@@ -729,6 +787,22 @@ class ProfileManager(object):
             rslt["uptime"] = math.floor(self._uprep.get_uptime_for_profile(profname))
             rslt["auto"] = (1 if a == profname else 0)
             yield rslt
+
+
+   def _ls(self):
+      table = []
+      for pd in self._profile_data():
+         row = []
+         row.append(pd["profile"])
+         row.append("*" if pd["auto"] else " ")
+         row.append(str(datetime.timedelta(seconds=pd["uptime"])))
+         for each in self._textoptionals:
+            row.append(self._grab_profile_filetext(pd["profile"], each) or "\b")
+         table.append(row)
+
+      for row in sorted(table):
+         print "{1} {0:{5}} {2:>16} {3} {4}".format(*(tuple(row) + (MAX_PROFILE_LENGTH,)))
+      
 
 
    def closure(cmd, name):
