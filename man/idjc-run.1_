@@ -1,6 +1,6 @@
-.TH "IDJC" 1 "2012-02-06" "VERSION" "Internet DJ Console"
+.TH "IDJC-RUN" 1 "2012-02-06" "VERSION" "Internet DJ Console"
 .SH NAME
-idjc-run - launch the idjc main application
+idjc-run - Launch the idjc main application
 .SH SYNOPSIS
 .P
 idjc run [-h] [-d {true,false}] [-p profile_choice] [-j server_name]
@@ -105,8 +105,3 @@ When using L1 mode in Gladish if you choose "Studio/Save Studio" or "Project/Sav
 will save the JACK connection configuration in the session file.
 .SH REPORTING BUGS
 .SH SEE ALSO
-<http://idjc.sourceforge.net>
-.I 
-.PP
-.BR jackd (1), " idjc-ctrl" (1), " idjc-profile" (1), " idjc-run" (1)
-

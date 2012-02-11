@@ -1,0 +1,45 @@
+.TH "IDJC-NEW" 1 "2012-02-06" "VERSION" "Internet DJ Console"
+.SH NAME
+idjc-new - Create a new profile
+.SH SYNOPSIS
+.P
+idjc new [-h] [-t template_profile] [-i icon_pathname] [-n nickname]
+         [-d description_text]
+         profile_name
+.SH DESCRIPTION
+Each running instance of
+.B idjc
+requires its own profile and this command will create one. This task can also be achieved using the main application user interface.
+.SS Options
+.B -h, --help
+.RS
+Show a help message.
+.RE
+.PP
+.BR "-t, --templateprofile" =PROFILE
+.RS
+PROFILE=an existing profile to copy.
+.RE
+.PP
+.BR "-i, --icon-pathname" =ICON
+.RS
+ICON=the path to an image file e.g. a .png file.
+.RE
+.PP
+.BR "-n, --nickname" =NICKNAME
+.RS
+NICKNAME=an alternative name to the profile. Unlike the profile any unicode is permitted.
+.RE
+.PP
+.BR "-d, --description" =DESC
+.RS
+DESC=some description text. A label for your profile stating what it will be used for.
+.RE
+.PP
+.SS Requirements
+.B profile_name
+.RS
+The name of the new profile. Limited to the letters and digits of the ASCII character set and '_' underscore.
+.RE
+.SH REPORTING BUGS
+.SH SEE ALSO

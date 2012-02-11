@@ -1,0 +1,21 @@
+.TH "IDJC-AUTO" 1 "2012-02-06" "VERSION" "Internet DJ Console"
+.SH NAME
+idjc-auto - Make a profile be automatic
+.SH SYNOPSIS
+.P
+idjc auto [-h] profile_name
+.SH DESCRIPTION
+When a profile is made automatic the Profile Manager window will not appear at startup and instead the automatic profile will load. Only one profile can be automatic at any one time.
+.SS Options
+.B -h, --help
+.RS
+Show a help message.
+.RE
+.PP
+.SS Requirements
+.B "profile_name"
+.RS
+The name of a profile to make automatic.
+.RE
+.SH REPORTING BUGS
+.SH SEE ALSO

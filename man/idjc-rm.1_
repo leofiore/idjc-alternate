@@ -1,0 +1,23 @@
+.TH "IDJC-RM" 1 "2012-02-06" "VERSION" "Internet DJ Console"
+.SH NAME
+idjc-rm - Remove a profile
+.SH SYNOPSIS
+.P
+idjc rm [-h] profile_name [profile_name ...]
+.SH DESCRIPTION
+Removes an
+.B idjc
+profile or profiles from the relevant config directory.
+.SS Options
+.B -h, --help
+.RS
+Show a help message.
+.RE
+.PP
+.SS Requirements
+.B "profile_name"
+.RS
+The name of a profile to remove. Additional profiles can be specified.
+.RE
+.SH REPORTING BUGS
+.SH SEE ALSO
