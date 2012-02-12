@@ -1,5 +1,5 @@
 /*
-#   idjcmixer.c: central core of IDJC's mixer.
+#   mixer.c: the audio mix happens in here.
 #   Copyright (C) 2005-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
@@ -1344,9 +1344,7 @@ static void jackportread(const char *portname, const char *filter)
       jack_free(ports);
    }
   
-int main(int argc, char **argv)
-   {
-   FILE *fp =stdin;
+static struct mixer {
    const char **outport;
    int str_l_peak_db, str_r_peak_db;
    int str_l_rms_db, str_r_rms_db;
@@ -1355,16 +1353,62 @@ int main(int argc, char **argv)
    int flush_left, flush_right, flush_jingles, flush_interlude;
    int new_left_pause, new_right_pause;
    jack_nframes_t nframes;
-   char *artist = NULL, *title = NULL, *album = NULL, *replaygain = NULL;
+   char *artist, *title, *album, *replaygain;
    double length;
-   int sync = FALSE;
+   int sync;
    int use_dsp;
    char midi_output[MIDI_QUEUE_SIZE];
    char *our_sc_str_in_l;
    char *our_sc_str_in_r;
-   char *sc_client_name = getenv("sc_client_id");
    int l;
    char *session_command;
+   char *sc_client_name;
+   } s;
+
+static void mixer_cleanup()
+   {
+   alarm(0);
+   jack_deactivate(client);
+   fprintf(stderr, "calling jack_client_close for mixer\n");
+   jack_client_close(client);
+   client = NULL;
+   free(eot_alarm_table);
+   free_signallookup_table();
+   free_dblookup_table();
+   if (s.outport)
+      jack_free(s.outport);
+   free(s.our_sc_str_in_l);
+   free(s.our_sc_str_in_r);
+   mic_free_all(mics);
+   peakfilter_destroy(str_pf_l);
+   peakfilter_destroy(str_pf_r);
+   /*beat_free(beat_lp);
+   beat_free(beat_rp);*/
+   ifree(lp_lc);
+   ifree(lp_rc);
+   ifree(rp_lc);
+   ifree(rp_rc);
+   ifree(jp_lc);
+   ifree(jp_rc);
+   ifree(ip_lc);
+   ifree(ip_rc);
+   ifree(lp_lcf);
+   ifree(lp_rcf);
+   ifree(rp_lcf);
+   ifree(rp_rcf);
+   ifree(jp_lcf);
+   ifree(jp_rcf);
+   ifree(ip_lcf);
+   ifree(ip_rcf);
+   xlplayer_destroy(plr_l);
+   xlplayer_destroy(plr_r);
+   xlplayer_destroy(plr_j);
+   xlplayer_destroy(plr_i);
+   }
+
+int mixer_init(void)
+   {
+   s.sc_client_name = getenv("sc_client_id");
 
    setenv("LC_ALL", "C", 1);            /* ensure proper sscanf operation */
 
@@ -1418,16 +1462,16 @@ int main(int argc, char **argv)
    /* midi_control */
    midi_port = jack_port_register(client, "midi_control", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
 
-   l = strlen(sc_client_name) + 10;
-   our_sc_str_in_l = malloc(l);
-   our_sc_str_in_r = malloc(l);
-   if ((!our_sc_str_in_l) || (!our_sc_str_in_r))
+   s.l = strlen(s.sc_client_name) + 10;
+   s.our_sc_str_in_l = malloc(s.l);
+   s.our_sc_str_in_r = malloc(s.l);
+   if ((!s.our_sc_str_in_l) || (!s.our_sc_str_in_r))
       {
       fprintf(stderr, "malloc failure\n");
       return 1;
       }
-   snprintf(our_sc_str_in_l, l, "%s:%s", sc_client_name, "str_in_l");
-   snprintf(our_sc_str_in_r, l, "%s:%s", sc_client_name, "str_in_r");
+   snprintf(s.our_sc_str_in_l, s.l, "%s:%s", s.sc_client_name, "str_in_l");
+   snprintf(s.our_sc_str_in_r, s.l, "%s:%s", s.sc_client_name, "str_in_r");
 
    sr = jack_get_sample_rate(client);
    jingles_samples_cutoff = sr / 12;            /* A twelfth of a second early */
@@ -1455,20 +1499,20 @@ int main(int argc, char **argv)
    if (!init_dblookup_table())
       {
       fprintf(stderr, "Failed to allocate space for signal to db lookup table\n");
-      exit(5);
+      return 1;
       }
       
    if (!init_signallookup_table())
       {
       fprintf(stderr, "Failed to allocate space for db to signal lookup table\n");
-      exit(5);
+      return 1;
       } 
       
    /* generate the wave table for the DJ alarm */
    if (!(eot_alarm_table = calloc(sizeof (sample_t), sr)))
       {
       fprintf(stderr, "Failed to allocate space for end of track alarm wave table\n");
-      exit(5);
+      return 1;
       }
    else
       {
@@ -1486,23 +1530,23 @@ int main(int argc, char **argv)
    /* allocate microphone resources */
    mics = mic_init_all(atoi(getenv("mx_mic_qty")), client);
 
-   nframes = jack_get_sample_rate (client);
-   lp_lc = ialloc(nframes);
-   lp_rc = ialloc(nframes);
-   rp_lc = ialloc(nframes);
-   rp_rc = ialloc(nframes);
-   jp_lc = ialloc(nframes);
-   jp_rc = ialloc(nframes);
-   ip_lc = ialloc(nframes);
-   ip_rc = ialloc(nframes);
-   lp_lcf = ialloc(nframes);
-   lp_rcf = ialloc(nframes);
-   rp_lcf = ialloc(nframes);
-   rp_rcf = ialloc(nframes);
-   jp_lcf = ialloc(nframes);
-   jp_rcf = ialloc(nframes);
-   ip_lcf = ialloc(nframes);
-   ip_rcf = ialloc(nframes);
+   s.nframes = jack_get_sample_rate (client);
+   lp_lc = ialloc(s.nframes);
+   lp_rc = ialloc(s.nframes);
+   rp_lc = ialloc(s.nframes);
+   rp_rc = ialloc(s.nframes);
+   jp_lc = ialloc(s.nframes);
+   jp_rc = ialloc(s.nframes);
+   ip_lc = ialloc(s.nframes);
+   ip_rc = ialloc(s.nframes);
+   lp_lcf = ialloc(s.nframes);
+   lp_rcf = ialloc(s.nframes);
+   rp_lcf = ialloc(s.nframes);
+   rp_rcf = ialloc(s.nframes);
+   jp_lcf = ialloc(s.nframes);
+   jp_rcf = ialloc(s.nframes);
+   ip_lcf = ialloc(s.nframes);
+   ip_rcf = ialloc(s.nframes);
 
    if (!(lp_lc && lp_rc && rp_lc && rp_rc && jp_lc && jp_rc && ip_lc && ip_rc &&
        lp_lcf && lp_rcf && rp_lcf && rp_rcf && jp_lcf && jp_rcf && ip_lcf && ip_rcf))
@@ -1530,7 +1574,7 @@ int main(int argc, char **argv)
    fflush(stdout);
  
                 /* Scan for physical audio IO ports to use as defaults */
-   outport = jack_get_ports(client, NULL, NULL, JackPortIsPhysical | JackPortIsInput);
+   s.outport = jack_get_ports(client, NULL, NULL, JackPortIsPhysical | JackPortIsInput);
  
    /* Make voip input audio available on the voip output so you can hear your own voice */
    /* and hear jingles and mixed back audio too */
@@ -1540,353 +1584,328 @@ int main(int argc, char **argv)
    jack_connect(client, "idjc-mx:voip_send_rt", "idjc-mx:voip_recv_rt");*/
       
    alarm(3);            /* handles timeouts on media player worker threads */
+   atexit(mixer_cleanup);
+   return 0;
+   }
       
-   while (kvp_parse(kvpdict, fp))
+int mixer_main()
+   {
+   if (!(kvp_parse(kvpdict, stdin)))
+      return FALSE;
+
+   if (jack_closed_f == TRUE || app_shutdown == TRUE)
+      return TRUE;
+      
+   if (!strcmp(action, "sync"))
       {
-      if (jack_closed_f == TRUE || app_shutdown == TRUE)
-         break;
-         
-      if (!strcmp(action, "sync"))
-         {
-         fprintf(stdout, "IDJC: sync reply\n");
-         fflush(stdout);
-         sync = TRUE;
-         }
-      if (sync == FALSE)
-         continue;
+      fprintf(stdout, "IDJC: sync reply\n");
+      fflush(stdout);
+      s.sync = TRUE;
+      }
+   if (s.sync == FALSE)
+      return TRUE;
 
-      if (!strcmp(action, "jackportread"))
-         jackportread(jackport, jackfilter);
+   if (!strcmp(action, "jackportread"))
+      jackportread(jackport, jackfilter);
 
-      void dis_connect(char *str, int (*fn)(jack_client_t *, const char *, const char *))
+   void dis_connect(char *str, int (*fn)(jack_client_t *, const char *, const char *))
+      {
+      const char **jackports, **jp;
+      
+      if (!strcmp(action, str))
          {
-         const char **jackports, **jp;
-         
-         if (!strcmp(action, str))
+         if (strlen(jackport2))
             {
-            if (strlen(jackport2))
-               {
-               if (jack_port_flags(jack_port_by_name(client, jackport)) & JackPortIsOutput)
-                  fn(client, jackport, jackport2);
-               else
-                  fn(client, jackport2, jackport);
-               }
+            if (jack_port_flags(jack_port_by_name(client, jackport)) & JackPortIsOutput)
+               fn(client, jackport, jackport2);
             else
+               fn(client, jackport2, jackport);
+            }
+         else
+            {
+            /* do regular expression lookup of ports then disconnect them */
+            if (!strcmp(str, "jackdisconnect"))
                {
-               /* do regular expression lookup of ports then disconnect them */
-               if (!strcmp(str, "jackdisconnect"))
+               if ((jackports = jack_get_ports(client, jackport, NULL, 0L)))
                   {
-                  if ((jackports = jack_get_ports(client, jackport, NULL, 0L)))
-                     {
-                     for (jp = jackports; *jp; ++jp)
-                        jack_port_disconnect(client, jack_port_by_name(client, *jp));
+                  for (jp = jackports; *jp; ++jp)
+                     jack_port_disconnect(client, jack_port_by_name(client, *jp));
 
-                     jack_free(jackports);
-                     }
+                  jack_free(jackports);
                   }
                }
             }
          }
-      dis_connect("jackconnect", jack_connect);
-      dis_connect("jackdisconnect", jack_disconnect);
+      }
+   dis_connect("jackconnect", jack_connect);
+   dis_connect("jackdisconnect", jack_disconnect);
 
-      if (!strcmp(action, "mp3status"))
-         {
-         fprintf(stdout, "IDJC: mp3=%d\n", mp3decode_cap());
-         fflush(stdout);
-         }
+   if (!strcmp(action, "mp3status"))
+      {
+      fprintf(stdout, "IDJC: mp3=%d\n", mp3decode_cap());
+      fflush(stdout);
+      }
 
-      if (!strcmp(action, "mic_control"))
-         {
-         mic_valueparse(mics[atoi(item_index)], mic_param);
-         }
+   if (!strcmp(action, "mic_control"))
+      {
+      mic_valueparse(mics[atoi(item_index)], mic_param);
+      }
 
-      if (!strcmp(action, "new_channel_mode_string"))
-         {
-         mic_set_role_all(mics, channel_mode_string);
-         }
+   if (!strcmp(action, "new_channel_mode_string"))
+      {
+      mic_set_role_all(mics, channel_mode_string);
+      }
 
-      if (!strcmp(action, "headroom"))
-         {
-         headroom_db = strtof(headroom, NULL);
-         }
+   if (!strcmp(action, "headroom"))
+      {
+      headroom_db = strtof(headroom, NULL);
+      }
 
-      if (!strcmp(action, "anymic"))
-         {
-         mic_on = (flag[0] == '1') ? 1 : 0;
-         }
+   if (!strcmp(action, "anymic"))
+      {
+      mic_on = (flag[0] == '1') ? 1 : 0;
+      }
 
-      if (!strcmp(action, "fademode_left"))
-         plr_l->fade_mode = atoi(fade_mode);
-         
-      if (!strcmp(action, "fademode_right"))
-         plr_r->fade_mode = atoi(fade_mode);
+   if (!strcmp(action, "fademode_left"))
+      plr_l->fade_mode = atoi(fade_mode);
+      
+   if (!strcmp(action, "fademode_right"))
+      plr_r->fade_mode = atoi(fade_mode);
 
-      if (!strcmp(action, "playleft"))
-         {
-         fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
-         fflush(stdout);
-         }
-      if (!strcmp(action, "playright"))
-         {
-         fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
-         fflush(stdout);
-         }
-      if (!strcmp(action, "playnoflushleft"))
-         {
-         fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
-         fflush(stdout);
-         }
-      if (!strcmp(action, "playnoflushright"))
-         {
-         fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
-         fflush(stdout);
-         }
-    
-      if (!strcmp(action, "playmanyjingles"))
-         {
-         fprintf(stdout, "context_id=%d\n", xlplayer_playmany(plr_j, playerplaylist, loop[0]=='1'));
-         fflush(stdout);
-         }
-      if (!strcmp(action, "playmanyinterlude"))
-         {
-         fprintf(stdout, "context_id=%d\n", xlplayer_playmany(plr_i, playerplaylist, loop[0]=='1'));
-         fflush(stdout);
-         }
-
-      if (!strcmp(action, "stopleft"))
-         xlplayer_eject(plr_l);
-      if (!strcmp(action, "stopright"))
-         xlplayer_eject(plr_r);
-      if (!strcmp(action, "stopjingles"))
-         xlplayer_eject(plr_j);
-      if (!strcmp(action, "stopinterlude"))
-         xlplayer_eject(plr_i);
+   if (!strcmp(action, "playleft"))
+      {
+      fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+      fflush(stdout);
+      }
+   if (!strcmp(action, "playright"))
+      {
+      fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+      fflush(stdout);
+      }
+   if (!strcmp(action, "playnoflushleft"))
+      {
+      fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+      fflush(stdout);
+      }
+   if (!strcmp(action, "playnoflushright"))
+      {
+      fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+      fflush(stdout);
+      }
  
-      if (!strcmp(action, "dither"))
-         {
-         xlplayer_dither(plr_l, TRUE);
-         xlplayer_dither(plr_r, TRUE);
-         xlplayer_dither(plr_j, TRUE);
-         xlplayer_dither(plr_i, TRUE);
-         }
+   if (!strcmp(action, "playmanyjingles"))
+      {
+      fprintf(stdout, "context_id=%d\n", xlplayer_playmany(plr_j, playerplaylist, loop[0]=='1'));
+      fflush(stdout);
+      }
+   if (!strcmp(action, "playmanyinterlude"))
+      {
+      fprintf(stdout, "context_id=%d\n", xlplayer_playmany(plr_i, playerplaylist, loop[0]=='1'));
+      fflush(stdout);
+      }
 
-      if (!strcmp(action, "dontdither"))
+   if (!strcmp(action, "stopleft"))
+      xlplayer_eject(plr_l);
+   if (!strcmp(action, "stopright"))
+      xlplayer_eject(plr_r);
+   if (!strcmp(action, "stopjingles"))
+      xlplayer_eject(plr_j);
+   if (!strcmp(action, "stopinterlude"))
+      xlplayer_eject(plr_i);
+
+   if (!strcmp(action, "dither"))
+      {
+      xlplayer_dither(plr_l, TRUE);
+      xlplayer_dither(plr_r, TRUE);
+      xlplayer_dither(plr_j, TRUE);
+      xlplayer_dither(plr_i, TRUE);
+      }
+
+   if (!strcmp(action, "dontdither"))
+      {
+      xlplayer_dither(plr_l, FALSE);
+      xlplayer_dither(plr_r, FALSE);
+      xlplayer_dither(plr_j, FALSE);
+      xlplayer_dither(plr_i, FALSE);
+      }
+   
+   if (!strcmp(action, "resamplequality"))
+      {
+      plr_l->rsqual = plr_r->rsqual = plr_j->rsqual = plr_i->rsqual = resamplequality[0] - '0';
+      }
+   
+   if (!strcmp(action, "ogginforequest"))
+      {
+      if (oggdecode_get_metainfo(oggpathname, &s.artist, &s.title, &s.album, &s.length, &s.replaygain))
          {
-         xlplayer_dither(plr_l, FALSE);
-         xlplayer_dither(plr_r, FALSE);
-         xlplayer_dither(plr_j, FALSE);
-         xlplayer_dither(plr_i, FALSE);
+         fprintf(stdout, "OIR:ARTIST=%s\nOIR:TITLE=%s\nOIR:ALBUM=%s\nOIR:LENGTH=%f\nOIR:REPLAYGAIN_TRACK_GAIN=%s\nOIR:end\n", s.artist, s.title, s.album, s.length, s.replaygain);
+         fflush(stdout);
          }
-      
-      if (!strcmp(action, "resamplequality"))
+      else
          {
-         plr_l->rsqual = plr_r->rsqual = plr_j->rsqual = plr_i->rsqual = resamplequality[0] - '0';
+         fprintf(stdout, "OIR:NOT VALID\n");
+         fflush(stdout);
          }
-      
-      if (!strcmp(action, "ogginforequest"))
-         {
-         if (oggdecode_get_metainfo(oggpathname, &artist, &title, &album, &length, &replaygain))
-            {
-            fprintf(stdout, "OIR:ARTIST=%s\nOIR:TITLE=%s\nOIR:ALBUM=%s\nOIR:LENGTH=%f\nOIR:REPLAYGAIN_TRACK_GAIN=%s\nOIR:end\n", artist, title, album, length, replaygain);
-            fflush(stdout);
-            }
-         else
-            {
-            fprintf(stdout, "OIR:NOT VALID\n");
-            fflush(stdout);
-            }
-         }
-      
-      if (!strcmp(action, "sndfileinforequest"))
-         sndfileinfo(sndfilepathname);
+      }
+   
+   if (!strcmp(action, "sndfileinforequest"))
+      sndfileinfo(sndfilepathname);
 
 #ifdef HAVE_AVCODEC
 #ifdef HAVE_AVFORMAT
-      if (!strcmp(action, "avformatinforequest"))
-         avformatinfo(avformatpathname);
+   if (!strcmp(action, "avformatinforequest"))
+      avformatinfo(avformatpathname);
 #endif
 #endif
 
 #ifdef HAVE_SPEEX
-      if (!(strcmp(action, "speexreadtagrequest")))
-         speex_tag_read(speexpathname);
-      if (!(strcmp(action, "speexwritetagrequest")))
-         speex_tag_write(speexpathname, speexcreatedby, speextaglist);
+   if (!(strcmp(action, "speexreadtagrequest")))
+      speex_tag_read(speexpathname);
+   if (!(strcmp(action, "speexwritetagrequest")))
+      speex_tag_write(speexpathname, speexcreatedby, speextaglist);
 #endif
 
-      if (!strcmp(action, "normalizerstats"))
+   if (!strcmp(action, "normalizerstats"))
+      {
+      if (sscanf(normalizer_string, ":%f:%f:%f:%f:%d:", &new_normalizer.maxlevel,
+             &new_normalizer.ceiling, &s.normrise, &s.normfall, &new_normalizer.active) != 5)
          {
-         if (sscanf(normalizer_string, ":%f:%f:%f:%f:%d:", &new_normalizer.maxlevel,
-                &new_normalizer.ceiling, &normrise, &normfall, &new_normalizer.active) != 5)
-            {
-            fprintf(stderr, "mixer got bad normalizer string\n");
-            break;
-            }
-         new_normalizer.rise = 1.0F / normrise;
-         new_normalizer.fall = 1.0F / normfall;
-         new_normalizer_stats = TRUE;
+         fprintf(stderr, "mixer got bad normalizer string\n");
+         return TRUE;
          }
+      new_normalizer.rise = 1.0F / s.normrise;
+      new_normalizer.fall = 1.0F / s.normfall;
+      new_normalizer_stats = TRUE;
+      }
 
-      if (!strcmp(action, "mixstats"))
+   if (!strcmp(action, "mixstats"))
+      {
+      if(sscanf(mixer_string,
+             ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:",
+             &volume, &volume2, &crossfade, &jinglesvolume, &jinglesvolume2 , &interludevol, &mixbackvol, &jingles_playing,
+             &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
+             &s.new_left_pause, &s.new_right_pause, &s.flush_left, &s.flush_right, &s.flush_jingles, &s.flush_interlude, &simple_mixer, &eot_alarm_set, &mixermode, &s.fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed), &speed_variance, &dj_audio_level, &crosspattern, &s.use_dsp, &twodblimit) !=31)
          {
-         if(sscanf(mixer_string,
-                ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:",
-                &volume, &volume2, &crossfade, &jinglesvolume, &jinglesvolume2 , &interludevol, &mixbackvol, &jingles_playing,
-                &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
-                &new_left_pause, &new_right_pause, &flush_left, &flush_right, &flush_jingles, &flush_interlude, &simple_mixer, &eot_alarm_set, &mixermode, &fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed), &speed_variance, &dj_audio_level, &crosspattern, &use_dsp, &twodblimit) !=31)
-            {
-            fprintf(stderr, "mixer got bad mixer string\n");
-            break;
-            }
-         eot_alarm_f |= eot_alarm_set;
-
-         plr_l->fadeout_f = plr_r->fadeout_f = plr_j->fadeout_f = plr_i->fadeout_f = fadeout_f;
-
-         if (use_dsp != using_dsp)
-            using_dsp = use_dsp;
-
-         if (new_left_pause != plr_l->pause)
-            {
-            if (new_left_pause)
-               xlplayer_pause(plr_l);
-            else
-               xlplayer_unpause(plr_l);
-            }
-            
-         if (new_right_pause != plr_r->pause)
-            {
-            if (new_right_pause)
-               xlplayer_pause(plr_r);
-            else
-               xlplayer_unpause(plr_r);
-            }
+         fprintf(stderr, "mixer got bad mixer string\n");
+         return TRUE;
          }
+      eot_alarm_f |= eot_alarm_set;
 
-      if (!strcmp(action, "requestlevels"))
+      plr_l->fadeout_f = plr_r->fadeout_f = plr_j->fadeout_f = plr_i->fadeout_f = s.fadeout_f;
+
+      if (s.use_dsp != using_dsp)
+         using_dsp = s.use_dsp;
+
+      if (s.new_left_pause != plr_l->pause)
          {
-         main_timeout = 0;           /* the main app has proven it is alive */
-         /* make logarithmic values for the peak levels */
-         str_l_peak_db = peak_to_log(peakfilter_read(str_pf_l));
-         str_r_peak_db = peak_to_log(peakfilter_read(str_pf_r));
-         /* set reply values for a totally blank signal */
-         str_l_rms_db = str_r_rms_db = 120;
-         /* compute the rms values */
-         if (str_l_meansqrd)
-            str_l_rms_db = (int) fabs(level2db(sqrt(str_l_meansqrd)));
-         if (str_r_meansqrd)
-            str_r_rms_db = (int) fabs(level2db(sqrt(str_r_meansqrd)));
-            
-         /* send the meter and other stats to the main app */
-         mic_stats_all(mics);
-
-         /* forward any MIDI commands that have been queued since last time */
-         pthread_mutex_lock(&midi_mutex);
-         midi_output[0]= '\0';
-         if (midi_nqueued>0) /* exclude leading `,`, include trailing `\0` */
-            memcpy(midi_output, midi_queue+1, midi_nqueued*sizeof(char));
-         midi_queue[0]= '\0';
-         midi_nqueued= 0;
-         pthread_mutex_unlock(&midi_mutex);
-
-         if (sig_recent_usr1())
-            session_command = "save_L1";
+         if (s.new_left_pause)
+            xlplayer_pause(plr_l);
          else
-            session_command = "";
-
-         fprintf(stdout, 
-                   "str_l_peak=%d\nstr_r_peak=%d\n"
-                   "str_l_rms=%d\nstr_r_rms=%d\n"
-                   "jingles_playing=%d\n"
-                   "left_elapsed=%d\n"
-                   "right_elapsed=%d\n"
-                   "left_playing=%d\n"
-                   "right_playing=%d\n"
-                   "interlude_playing=%d\n"
-                   "left_signal=%d\n"
-                   "right_signal=%d\n"
-                   "left_cid=%d\n"
-                   "right_cid=%d\n"
-                   "jingles_cid=%d\n"
-                   "interlude_cid=%d\n"
-                   "left_audio_runout=%d\n"
-                   "right_audio_runout=%d\n"
-                   "left_additional_metadata=%d\n"
-                   "right_additional_metadata=%d\n"
-                   "midi=%s\n"
-                   "silence_l=%f\n"
-                   "silence_r=%f\n"
-                   "session_command=%s\n"
-                   "end\n",
-                   str_l_peak_db, str_r_peak_db,
-                   str_l_rms_db, str_r_rms_db,
-                   jingles_audio_f | (plr_j->current_audio_context & 0x1),
-                   plr_l->play_progress_ms / 1000,
-                   plr_r->play_progress_ms / 1000,
-                   plr_l->have_data_f | (plr_l->current_audio_context & 0x1),
-                   plr_r->have_data_f | (plr_r->current_audio_context & 0x1),
-                   plr_i->have_data_f | (plr_i->current_audio_context & 0x1),
-                   left_peak > 0.001F || left_peak < 0.0F || plr_l->pause,
-                   right_peak > 0.001F || right_peak < 0.0F || plr_r->pause,
-                   plr_l->current_audio_context,
-                   plr_r->current_audio_context,
-                   plr_j->current_audio_context,
-                   plr_i->current_audio_context,
-                   left_audio_runout && (!(plr_l->current_audio_context & 0x1)),
-                   right_audio_runout && (!(plr_r->current_audio_context & 0x1)),
-                   plr_l->dynamic_metadata.data_type,
-                   plr_r->dynamic_metadata.data_type,
-                   midi_output,
-                   plr_l->silence,
-                   plr_r->silence,
-                   session_command);
-                   
-         /* tell the jack mixer it can reset its vu stats now */
-         reset_vu_stats_f = TRUE;
-         left_peak = right_peak = -1.0F;
-         if (plr_l->dynamic_metadata.data_type)
-            send_metadata_update(&(plr_l->dynamic_metadata));
-         if (plr_r->dynamic_metadata.data_type)
-            send_metadata_update(&(plr_r->dynamic_metadata));
-         fflush(stdout);
+            xlplayer_unpause(plr_l);
+         }
+         
+      if (s.new_right_pause != plr_r->pause)
+         {
+         if (s.new_right_pause)
+            xlplayer_pause(plr_r);
+         else
+            xlplayer_unpause(plr_r);
          }
       }
-   alarm(0);
-   jack_deactivate(client);
-   fprintf(stderr, "calling jack_client_close for mixer\n");
-   jack_client_close(client);
-   client = NULL;
-   free(eot_alarm_table);
-   free_signallookup_table();
-   free_dblookup_table();
-   if (outport)
-      jack_free(outport);
-   free(our_sc_str_in_l);
-   free(our_sc_str_in_r);
-   mic_free_all(mics);
-   peakfilter_destroy(str_pf_l);
-   peakfilter_destroy(str_pf_r);
-   /*beat_free(beat_lp);
-   beat_free(beat_rp);*/
-   ifree(lp_lc);
-   ifree(lp_rc);
-   ifree(rp_lc);
-   ifree(rp_rc);
-   ifree(jp_lc);
-   ifree(jp_rc);
-   ifree(ip_lc);
-   ifree(ip_rc);
-   ifree(lp_lcf);
-   ifree(lp_rcf);
-   ifree(rp_lcf);
-   ifree(rp_rcf);
-   ifree(jp_lcf);
-   ifree(jp_rcf);
-   ifree(ip_lcf);
-   ifree(ip_rcf);
-   xlplayer_destroy(plr_l);
-   xlplayer_destroy(plr_r);
-   xlplayer_destroy(plr_j);
-   xlplayer_destroy(plr_i);
+
+   if (!strcmp(action, "requestlevels"))
+      {
+      main_timeout = 0;           /* the main app has proven it is alive */
+      /* make logarithmic values for the peak levels */
+      s.str_l_peak_db = peak_to_log(peakfilter_read(str_pf_l));
+      s.str_r_peak_db = peak_to_log(peakfilter_read(str_pf_r));
+      /* set reply values for a totally blank signal */
+      s.str_l_rms_db = s.str_r_rms_db = 120;
+      /* compute the rms values */
+      if (str_l_meansqrd)
+         s.str_l_rms_db = (int) fabs(level2db(sqrt(str_l_meansqrd)));
+      if (str_r_meansqrd)
+         s.str_r_rms_db = (int) fabs(level2db(sqrt(str_r_meansqrd)));
+         
+      /* send the meter and other stats to the main app */
+      mic_stats_all(mics);
+
+      /* forward any MIDI commands that have been queued since last time */
+      pthread_mutex_lock(&midi_mutex);
+      s.midi_output[0]= '\0';
+      if (midi_nqueued>0) /* exclude leading `,`, include trailing `\0` */
+         memcpy(s.midi_output, midi_queue+1, midi_nqueued*sizeof(char));
+      midi_queue[0]= '\0';
+      midi_nqueued= 0;
+      pthread_mutex_unlock(&midi_mutex);
+
+      if (sig_recent_usr1())
+         s.session_command = "save_L1";
+      else
+         s.session_command = "";
+
+      fprintf(stdout, 
+                "str_l_peak=%d\nstr_r_peak=%d\n"
+                "str_l_rms=%d\nstr_r_rms=%d\n"
+                "jingles_playing=%d\n"
+                "left_elapsed=%d\n"
+                "right_elapsed=%d\n"
+                "left_playing=%d\n"
+                "right_playing=%d\n"
+                "interlude_playing=%d\n"
+                "left_signal=%d\n"
+                "right_signal=%d\n"
+                "left_cid=%d\n"
+                "right_cid=%d\n"
+                "jingles_cid=%d\n"
+                "interlude_cid=%d\n"
+                "left_audio_runout=%d\n"
+                "right_audio_runout=%d\n"
+                "left_additional_metadata=%d\n"
+                "right_additional_metadata=%d\n"
+                "midi=%s\n"
+                "silence_l=%f\n"
+                "silence_r=%f\n"
+                "session_command=%s\n"
+                "end\n",
+                s.str_l_peak_db, s.str_r_peak_db,
+                s.str_l_rms_db, s.str_r_rms_db,
+                jingles_audio_f | (plr_j->current_audio_context & 0x1),
+                plr_l->play_progress_ms / 1000,
+                plr_r->play_progress_ms / 1000,
+                plr_l->have_data_f | (plr_l->current_audio_context & 0x1),
+                plr_r->have_data_f | (plr_r->current_audio_context & 0x1),
+                plr_i->have_data_f | (plr_i->current_audio_context & 0x1),
+                left_peak > 0.001F || left_peak < 0.0F || plr_l->pause,
+                right_peak > 0.001F || right_peak < 0.0F || plr_r->pause,
+                plr_l->current_audio_context,
+                plr_r->current_audio_context,
+                plr_j->current_audio_context,
+                plr_i->current_audio_context,
+                left_audio_runout && (!(plr_l->current_audio_context & 0x1)),
+                right_audio_runout && (!(plr_r->current_audio_context & 0x1)),
+                plr_l->dynamic_metadata.data_type,
+                plr_r->dynamic_metadata.data_type,
+                s.midi_output,
+                plr_l->silence,
+                plr_r->silence,
+                s.session_command);
+                
+      /* tell the jack mixer it can reset its vu stats now */
+      reset_vu_stats_f = TRUE;
+      left_peak = right_peak = -1.0F;
+      if (plr_l->dynamic_metadata.data_type)
+         send_metadata_update(&(plr_l->dynamic_metadata));
+      if (plr_r->dynamic_metadata.data_type)
+         send_metadata_update(&(plr_r->dynamic_metadata));
+      fflush(stdout);
+      }
+   return TRUE;
+   }
+
+int main(void)
+   {
+   mixer_init();
+   while(mixer_main());
    return 0;
    }
