@@ -2615,10 +2615,13 @@ class MainWindow:
          os.environ["jack_parameter"] = "default"
             
       os.environ["mx_client_id"] = mx_id = "idjc-mx_" + pm.profile
+      os.environ["mx_mic_qty"] = str(PGlobs.num_micpairs * 2)
       os.environ["sc_client_id"] = sc_id = "idjc-sc_" + pm.profile
+      os.environ["sc_num_streamers"] = str(PGlobs.num_streamers)
+      os.environ["sc_num_encoders"] = str(PGlobs.num_encoders)
+      os.environ["sc_num_recorders"] = str(PGlobs.num_recorders)
 
       print "jack client IDs:", mx_id, sc_id
-      os.environ["mx_mic_qty"] = str(PGlobs.num_micpairs * 2)
 
       self.session_loaded = False
 

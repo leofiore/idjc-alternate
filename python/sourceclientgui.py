@@ -2605,12 +2605,6 @@ class SourceClientGui:
       if reply != "succeeded":
          print self.server_errmsg
          self.app_exit()
-      self.send("encoders=%d\nstreamers=%d\nrecorders=%d\ncommand=threads_init\n" % (
-                     PGlobs.num_encoders, PGlobs.num_streamers, PGlobs.num_recorders))
-      if self.receive() != "succeeded":
-         print self.unexpected_reply
-         print "failed to initialise threads\n"
-         self.app_exit()
       self.send("command=jack_samplerate_request\n")
       reply = self.receive()
       if reply != "failed" and self.receive() == "succeeded":

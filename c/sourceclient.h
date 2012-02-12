@@ -41,24 +41,12 @@ struct threads_info
    struct watchdog *watchdog;
    };
 
-struct threads_vars
-   {
-   char *num_encoders;
-   char *num_streamers;
-   char *num_recorders;
-   };
-
 struct universal_vars
    {
    char *command;
    char *dev_type;
    char *tab_id;
    int tab;
-   };
-
-struct debug_vars
-   {
-   char *timeout_duration;
    };
 
 struct commandmap
