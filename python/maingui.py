@@ -730,8 +730,8 @@ class MicOpener(gtk.HBox):
    def notify_others(self):
       r = self.approot
       # Player headroom for mic-audio toggle.
-      r.mixer_write("ACTN=anymic\nFLAG=%d\nend\n" % self.any_mic_selected, True)
-      r.mixer_write("HEAD=%f\nACTN=headroom\nend\n" % self._headroom, True)
+      r.mixer_write("ACTN=anymic\nFLAG=%d\nend\n" % self.any_mic_selected)
+      r.mixer_write("HEAD=%f\nACTN=headroom\nend\n" % self._headroom)
       r.new_mixermode(r.mixermode)
 
    def cb_mictoggle(self, button, mics):
@@ -861,7 +861,7 @@ class MicOpener(gtk.HBox):
          for channel in button:
             channel_modes[channel.index] = 'm'
 
-      self.approot.mixer_write("CMOD=%s\nACTN=new_channel_mode_string\nend\n" % "".join(channel_modes), True)    
+      self.approot.mixer_write("CMOD=%s\nACTN=new_channel_mode_string\nend\n" % "".join(channel_modes))
       self.notify_others()
 
      
@@ -1716,7 +1716,7 @@ class MainWindow:
                                                 self.dsp_button.get_active(), 
                                                 self.prefs_window.twodblimit.get_active(),
                                                 )
-      self.mixer_write("MIXR=%s\nACTN=mixstats\nend\n" % string_to_send, True)
+      self.mixer_write("MIXR=%s\nACTN=mixstats\nend\n" % string_to_send)
 
       self.alarm = False
       iteration = 0
@@ -2219,76 +2219,53 @@ class MainWindow:
       return True
 
    # all mixer write operations should go through here so that broken pipes can be handled properly
-   def mixer_write(self, message, flush = False, nowrite = False):
+   def mixer_write(self, message):
       try:
-         if nowrite:
-            raise IOError
+         if message == "bootstrap":
+            raise IOError("bringing up backend")  # What a wonderful mental picture.
          self.mixer_ctrl.write(message)
-         if flush:
-            self.mixer_ctrl.flush()
-      except (IOError, ValueError):
-         print "*** Mixer has likely crashed ***"
-         
-         try:
-            sp_mx = subprocess.Popen([FGlobs.libexecdir / "idjcmixer"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
-         except Exception, inst:
-            print inst
-            print "unable to open a pipe to the mixer module"
-            self.destroy_hard()
+         self.mixer_ctrl.flush()
+      except (IOError, ValueError) as e:
+         print str(e)
+         for i in range(1, 4):
+            print "attempt", i
+            try:
+               sp_mx = subprocess.Popen([FGlobs.libexecdir / "idjcmixer"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
+            except Exception, inst:
+               print inst
+               print "unable to open a pipe to the mixer module"
+               continue
+            else:
+               (self.mixer_ctrl, self.mixer_rply) = (sp_mx.stdin, sp_mx.stdout)
+               
+            for j in range(10):
+               if self.mixer_read().strip() == "mixer_success":
+                  break
+            else:
+               print "bad response from newly started backend"
+               continue
+            if message != "bootstrap":
+               # Restore previous settings to the mixer.
+               self.send_new_mixer_stats()
+               self.player_left.next.clicked()
+               self.player_right.next.clicked()
+               self.jingles.stop.clicked()
+               if self.jingles.interlude_player_track != "":
+                  self.jingles.start_interlude_player(self.jingles.interlude_player_track)
+               self.jack.restore(restrict=os.environ["mx_client_id"] + ":")
+               self.mixer_write(message)
+            break
          else:
-            (self.mixer_ctrl, self.mixer_rply) = (sp_mx.stdin, sp_mx.stdout)
-            
-         rply = self.mixer_read()
-         while rply[:17] != "IDJC: Sample rate":
-            if rply == "":
-               if self.last_chance == True:
-                  print "mixer crashed a third time -- exiting"
-                  self.destroy_hard()
-               self.last_chance = True
-               print "mixer has crashed a second time"
-               self.mixer_write(message, flush, True)
-               return
-            rply = self.mixer_read()
-            if rply[:6] == "JACK: ":
-               print rply
-               self.destroy_hard()
-         self.samplerate = rply[18:].strip()
-         print "Sample rate is %s" % self.samplerate
-         if self.samplerate != "44100" and self.samplerate !="48000":
-            print "Sample rate not supported or garbled reply from mixer"
+            print "giving up"
             self.destroy_hard()
-         self.mixer_write("ACTN=nothing\nend\nACTN=sync\nend\n", True)
-         print "attempting to sync"
-         while 1:
-            rply = self.mixer_read()
-            if rply == "IDJC: sync reply\n":
-               break;
-            if rply == "":
-               print "mixer has crashed a second time"
-               self.destroy_hard()
-            print "attempting to sync"
-         print "got sync"
-         
-         self.send_new_mixer_stats()                    # restore previous settings to the mixer
-         self.prefs_window.send_new_normalizer_stats()
-         self.player_left.next.clicked()
-         self.player_right.next.clicked()
-         self.jingles.stop.clicked()
-         if self.jingles.interlude_player_track != "":
-            self.jingles.start_interlude_player(self.jingles.interlude_player_track)
-         if self.last_chance == False:
-            self.mixer_write(message, flush)            # resume what we were doing
-         self.jack.restore(restrict=os.environ["mx_client_id"] + ":")
-      else:
-         self.last_chance = False
 
    def mixer_read(self, iters = 0):
       if iters == 5:
          self.destroy_hard()
       try:
          line = self.mixer_rply.readline()
-      except IOError:
-         print "mixer_read: IOError detected"           # this can occur as a result of SIGUSR2 from the launcher
+      except IOError as e:
+         print str(e)
          line = self.mixer_read(iters + 1)
       if line == "Segmentation Fault\n":
          line = ""
@@ -2436,7 +2413,7 @@ class MainWindow:
          gtk.gdk.threads_enter()
       try:
          try:
-            self.mixer_write("ACTN=requestlevels\nend\n", True)
+            self.mixer_write("ACTN=requestlevels\nend\n")
          except ValueError, IOError:
             if locking:
                gtk.gdk.threads_leave()
@@ -2625,40 +2602,8 @@ class MainWindow:
 
       self.session_loaded = False
 
-      try:
-         sp_mx = subprocess.Popen([FGlobs.libexecdir / "idjcmixer"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
-      except Exception, e:
-         print e
-         raise self.initfailed("unable to open a pipe to the mixer module")
-      else:
-         (self.mixer_ctrl, self.mixer_rply) = (sp_mx.stdin, sp_mx.stdout)
-  
-      # check for a reply from the mixer.
-      self.last_chance = False
-      rply = jackrply = self.mixer_read()
-      while rply[:6] != "IDJC: ":
-         if rply == "":
-            print "mixer crashed"
-            message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, _('The mixer module crashed during initialisation.'))
-            message_dialog.set_title(_('IDJC Launch Failed') + pm.title_extra)
-            message_dialog.run()
-            message_dialog.destroy()
-            raise self.initfailed()
-         rply = self.mixer_read()
-         if rply[:6] == "JACK: ":
-            jackrply = rply
-      if rply[:17] == "IDJC: Sample rate":
-         self.samplerate = rply[18:].strip()
-         self.mixer_write("ACTN=sync\nend\n", True)
-         self.mixer_read()
-      else:
-         message_dialog = gtk.MessageDialog(None, 0, gtk.MESSAGE_INFO, gtk.BUTTONS_CLOSE, _('The JACK sound server needs to be running in order to run IDJC.\nIn order to manually start it try something like:\n\n        $ jackd -d alsa -r 44100 -p 2048\n\nIf you would like JACK to start automatically with your user specified parameters try something like this, which will create a file called .jackdrc in your home directory:\n\n        $ echo "/usr/bin/jackd -d alsa -r 44100" > ~/.jackdrc\n\nIf you have already done this it is possible another application or non-JACK sound server is using the sound card.\n\nPossible remedies would be to close the other audio app or configure the sound server to go into suspend mode after a brief amount of idle time.\n\nIf you are trying to connect to a named jack server, either set the environment variable JACK_DEFAULT_SERVER to that name or launch IDJC with the -j jackservername option. For example:\n\n         $ jackd -n xyzzy -d alsa -r 44100 -p 2048 &\n         $ idjc -p profilename -j xyzzy\n\nIf you are trying to open multiple instances of IDJC use the -e command line switch.'))
-         message_dialog.set_title(_('IDJC Launch Failed') + pm.title_extra)
-         message_dialog.run()
-         message_dialog.destroy()
-         raise self.initfailed()
-  
-      self.mixer_write("ACTN=mp3status\nend\n", True)
+      self.mixer_write("bootstrap")
+      self.mixer_write("ACTN=mp3status\nend\n")
       rply = self.mixer_read()
       if rply == "IDJC: mp3=1\n":
          supported.media.append(".mp3")
@@ -3327,6 +3272,7 @@ class MainWindow:
       self.metadata_right_ctrl = slot_object(0)
       self.player_left.silence = slot_object(0.0)
       self.player_right.silence = slot_object(0.0)
+      self.sample_rate = slot_object(0)
       
       self.feature_set = gtk.ToggleButton()
       self.feature_set.set_active(True)
@@ -3365,6 +3311,7 @@ class MainWindow:
          "right_additional_metadata": self.metadata_right_ctrl,
          "silence_l"                : self.player_left.silence,
          "silence_r"                : self.player_right.silence,
+         "sample_rate"              : self.sample_rate,
          }
          
       for i, mic in enumerate(self.mic_meters):
@@ -3390,7 +3337,7 @@ class MainWindow:
       self.menu.profilesmenu_i.connect("activate", lambda w: pm.profile_dialog.present())
       self.menu.aboutmenu_i.connect("activate", lambda w: self.prefs_window.show_about())
 
-      self.jack = JackMenu(self.menu, lambda s, r: self.mixer_write("ACTN=jack%s\n%s" % (s, r), True), lambda: self.mixer_read())
+      self.jack = JackMenu(self.menu, lambda s, r: self.mixer_write("ACTN=jack%s\n%s" % (s, r)), lambda: self.mixer_read())
       self.jack.load(startup=True)
 
       self.vutimeout = gobject.timeout_add(50, self.vu_update)

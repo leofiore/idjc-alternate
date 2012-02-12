@@ -140,13 +140,6 @@ static struct compressor stream_limiter =
    0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0, 0.0
    };
 
-static struct normalizer str_normalizer =
-   {
-   0, 0.0F, -12.0F, 1.0F/120000.0F, 1.0F/90000.0F, 12.0
-   }, new_normalizer;
-
-static int new_normalizer_stats = FALSE;
-
 /* the different player's gain factors */
 /* lp=left player, rp=right player, jp=jingles player, ip=interlude player */ 
 /* lc=left channel, rc=right channel */
@@ -192,7 +185,7 @@ static struct xlplayer *plr_l, *plr_r, *plr_j, *plr_i; /* player instance stuctu
 
 /* these are set in the parse routine - the contents coming from the GUI */
 static char *mixer_string, *compressor_string, *gate_string, *microphone_string, *item_index;
-static char *normalizer_string, *new_mic_string;
+static char *new_mic_string;
 static char *midi, *audl, *audr, *strl, *strr, *action;
 static char *target_port_name;
 static char *dol, *dor, *dil, *dir;
@@ -218,7 +211,6 @@ static struct kvpdict kvpdict[] = {
          { "GATE", &gate_string, NULL },
          { "MICS", &microphone_string, NULL },
          { "INDX", &item_index, NULL },
-         { "NORM", &normalizer_string, NULL },
          { "NMIC", &new_mic_string, NULL },
          { "MIC",  &target_port_name, NULL },
          { "MIDI", &midi, NULL },
@@ -468,7 +460,7 @@ static int process_audio(jack_nframes_t nframes, void *arg)
    sample_t lc_s_micmix = 0.0f, rc_s_micmix = 0.0f, d_micmix = 0.0f;
    sample_t lc_s_auxmix = 0.0f, rc_s_auxmix = 0.0f;
    /* the following are used to apply the output of the compressor code to the audio levels */
-   sample_t compressor_gain = 1.0, str_normalizer_gain;
+   sample_t compressor_gain = 1.0;
    /* a counter variable used to trigger the volume smoothing on a regular basis */
    static unsigned vol_smooth_count = 0;
    /* index values for reading from a table of fade gain values */
@@ -664,13 +656,6 @@ static int process_audio(jack_nframes_t nframes, void *arg)
       reset_vu_stats_f = FALSE;
       }
 
-   if (new_normalizer_stats)
-      {
-      new_normalizer.level = str_normalizer.level;
-      str_normalizer = new_normalizer;
-      new_normalizer_stats = FALSE;
-      }
-
    mic_process_start_all(mics, nframes);
 
    /* there are four mixer modes and the only seemingly efficient way to do them is */
@@ -727,12 +712,6 @@ static int process_audio(jack_nframes_t nframes, void *arg)
          (lp_lc_fade * lp_lc_strf) + (rp_lc_fade * rp_lc_strf) + (jp_lc_fade * jp_lc_strf);
          *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + (*jprcp * jp_rc_str)) * df + rc_s_micmix + rc_s_auxmix + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf) +
          (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (jp_rc_fade * jp_rc_strf);
-         
-         /* apply normalization */
-         str_normalizer_gain = db2level(normalizer(&str_normalizer, *dolp, *dorp));
-         
-         *dolp *= str_normalizer_gain;
-         *dorp *= str_normalizer_gain;
          
          /* hard limit the levels if they go outside permitted limits */
          /* note this is not the same as clipping */
@@ -860,12 +839,6 @@ static int process_audio(jack_nframes_t nframes, void *arg)
             *lpsp *= compressor_gain;
             *rpsp *= compressor_gain;
 
-            /* apply normalization at the stream level */
-            str_normalizer_gain = db2level(normalizer(&str_normalizer, *dolp, *dorp));
-            
-            *dolp *= str_normalizer_gain;
-            *dorp *= str_normalizer_gain;
-            
             /* hard limit the levels if they go outside permitted limits */
             /* note this is not the same as clipping */
             compressor_gain = db2level(limiter(&stream_limiter, *dolp, *dorp));
@@ -980,12 +953,6 @@ static int process_audio(jack_nframes_t nframes, void *arg)
                (lp_lc_fade * lp_rc_strf) + (rp_lc_fade * rp_lc_strf) + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf);
                *dorp = (*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + rc_s_auxmix +
                (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf);
-               
-               /* apply normalization at the stream level */
-               str_normalizer_gain = db2level(normalizer(&str_normalizer, *dolp, *dorp));
-               
-               *dolp *= str_normalizer_gain;
-               *dorp *= str_normalizer_gain;
                
                /* hard limit the levels if they go outside permitted limits */
                /* note this is not the same as clipping */
@@ -1111,12 +1078,6 @@ static int process_audio(jack_nframes_t nframes, void *arg)
                   (lp_lc_fade * lp_lc_strf) + (rp_lc_fade * rp_lc_strf) + (jp_lc_fade * jp_lc_strf);
                   *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + (*jprcp * jp_rc_str)) * df + rc_s_micmix + rc_s_auxmix + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf) +
                   (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (jp_rc_fade * jp_rc_strf);
-                  
-                  /* apply normalization at the stream level */
-                  str_normalizer_gain = db2level(normalizer(&str_normalizer, *dolp, *dorp));
-                  
-                  *dolp *= str_normalizer_gain;
-                  *dorp *= str_normalizer_gain;
                   
                   /* hard limit the levels if they go outside permitted limits */
                   /* note this is not the same as clipping */
@@ -1355,7 +1316,6 @@ static struct mixer {
    jack_nframes_t nframes;
    char *artist, *title, *album, *replaygain;
    double length;
-   int sync;
    int use_dsp;
    char midi_output[MIDI_QUEUE_SIZE];
    char *our_sc_str_in_l;
@@ -1406,7 +1366,7 @@ static void mixer_cleanup()
    xlplayer_destroy(plr_i);
    }
 
-int mixer_init(void)
+void mixer_init(void)
    {
    s.sc_client_name = getenv("sc_client_id");
 
@@ -1420,9 +1380,8 @@ int mixer_init(void)
 
    if((client = jack_client_open(getenv("mx_client_id"), JackUseExactName | JackServerName, NULL, getenv("jack_parameter"))) == 0)
       {
-      printf("IDJC: Error\n");
-      fflush(stdout);
-      return 1;
+      fprintf(stderr, "mixer.c: jack_client_open failed");
+      exit(5);
       }
       
    jack_set_process_callback(client, process_audio, NULL);
@@ -1468,7 +1427,7 @@ int mixer_init(void)
    if ((!s.our_sc_str_in_l) || (!s.our_sc_str_in_r))
       {
       fprintf(stderr, "malloc failure\n");
-      return 1;
+      exit(5);
       }
    snprintf(s.our_sc_str_in_l, s.l, "%s:%s", s.sc_client_name, "str_in_l");
    snprintf(s.our_sc_str_in_r, s.l, "%s:%s", s.sc_client_name, "str_in_r");
@@ -1481,38 +1440,38 @@ int mixer_init(void)
          (plr_r = xlplayer_create(sr, RB_SIZE, "rightplayer", &jack_closed_f))))
       {
       printf("failed to create main player modules\n");
-      return 1;
+      exit(5);
       }
    
    if (!(plr_j = xlplayer_create(sr, RB_SIZE, "jinglesplayer", &jack_closed_f)))
       {
       printf("failed to create jingles player module\n");
-      return 1;
+      exit(5);
       }
 
    if (!(plr_i = xlplayer_create(sr, RB_SIZE, "interludeplayer", &jack_closed_f)))
       {
       printf("failed to create interlude player module\n");
-      return 1;
+      exit(5);
       }
 
    if (!init_dblookup_table())
       {
       fprintf(stderr, "Failed to allocate space for signal to db lookup table\n");
-      return 1;
+      exit(5);
       }
       
    if (!init_signallookup_table())
       {
       fprintf(stderr, "Failed to allocate space for db to signal lookup table\n");
-      return 1;
+      exit(5);
       } 
       
    /* generate the wave table for the DJ alarm */
    if (!(eot_alarm_table = calloc(sizeof (sample_t), sr)))
       {
       fprintf(stderr, "Failed to allocate space for end of track alarm wave table\n");
-      return 1;
+      exit(5);
       }
    else
       {
@@ -1565,14 +1524,9 @@ int mixer_init(void)
    if (jack_activate(client))
       {
       fprintf(stderr, "Failed to activate client\n");
-      return 1;
+      exit(5);
       }
    
-   /* report the sample rate back to the main app where it is used to calibrate mplayer */
-   /* the main app waits on this signal in order to prevent a race with the server code */
-   fprintf(stdout, "IDJC: Sample rate %d\n", (int)sr);
-   fflush(stdout);
- 
                 /* Scan for physical audio IO ports to use as defaults */
    s.outport = jack_get_ports(client, NULL, NULL, JackPortIsPhysical | JackPortIsInput);
  
@@ -1585,7 +1539,9 @@ int mixer_init(void)
       
    alarm(3);            /* handles timeouts on media player worker threads */
    atexit(mixer_cleanup);
-   return 0;
+
+   puts("mixer_success");
+   fflush(stdout);
    }
       
 int mixer_main()
@@ -1596,15 +1552,6 @@ int mixer_main()
    if (jack_closed_f == TRUE || app_shutdown == TRUE)
       return TRUE;
       
-   if (!strcmp(action, "sync"))
-      {
-      fprintf(stdout, "IDJC: sync reply\n");
-      fflush(stdout);
-      s.sync = TRUE;
-      }
-   if (s.sync == FALSE)
-      return TRUE;
-
    if (!strcmp(action, "jackportread"))
       jackportread(jackport, jackfilter);
 
@@ -1765,19 +1712,6 @@ int mixer_main()
       speex_tag_write(speexpathname, speexcreatedby, speextaglist);
 #endif
 
-   if (!strcmp(action, "normalizerstats"))
-      {
-      if (sscanf(normalizer_string, ":%f:%f:%f:%f:%d:", &new_normalizer.maxlevel,
-             &new_normalizer.ceiling, &s.normrise, &s.normfall, &new_normalizer.active) != 5)
-         {
-         fprintf(stderr, "mixer got bad normalizer string\n");
-         return TRUE;
-         }
-      new_normalizer.rise = 1.0F / s.normrise;
-      new_normalizer.fall = 1.0F / s.normfall;
-      new_normalizer_stats = TRUE;
-      }
-
    if (!strcmp(action, "mixstats"))
       {
       if(sscanf(mixer_string,
@@ -1867,6 +1801,7 @@ int mixer_main()
                 "silence_l=%f\n"
                 "silence_r=%f\n"
                 "session_command=%s\n"
+                "sample_rate=%lu\n"
                 "end\n",
                 s.str_l_peak_db, s.str_r_peak_db,
                 s.str_l_rms_db, s.str_r_rms_db,
@@ -1889,7 +1824,8 @@ int mixer_main()
                 s.midi_output,
                 plr_l->silence,
                 plr_r->silence,
-                s.session_command);
+                s.session_command,
+                (unsigned long)jack_get_sample_rate(client));
                 
       /* tell the jack mixer it can reset its vu stats now */
       reset_vu_stats_f = TRUE;

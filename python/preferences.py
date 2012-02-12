@@ -137,7 +137,7 @@ class AGCControl(gtk.Frame):
          if isinstance(widget, (gtk.ToggleButton, gtk.ComboBox)):
             value = int(widget.get_active())
          stringtosend = "INDX=%d\nAGCP=%s=%s\nACTN=%s\nend\n" % (self.index, wname, str(value), "mic_control")
-         self.approot.mixer_write(stringtosend, True)
+         self.approot.mixer_write(stringtosend)
 
    def set_partner(self, partner):
       self.partner = partner
@@ -570,33 +570,9 @@ def make_entry_line(parent, item, code, hastoggle, index=None):
 
 
 class mixprefs:
-   def send_new_normalizer_stats(self):
-      r = float(self.parent.samplerate)
-      string_to_send = ":%0.1f:%0.1f:%d:%d:%d:" % (
-                                        self.normboost_adj.get_value(),
-                                        self.normceiling_adj.get_value(),
-                                        self.normrise_adj.get_value() * r,
-                                        self.normfall_adj.get_value() * r, 
-                                        self.normalize.get_active())
-      self.parent.mixer_write("NORM=%s\nACTN=normalizerstats\nend\n" % string_to_send, True)
-      
    def send_new_resampler_stats(self):
-      self.parent.mixer_write("RSQT=%d\nACTN=resamplequality\nend\n" % self.resample_quality, True)
-      
-   def normalizer_defaults(self, value = None):
-      self.normboost_adj.set_value(12.0)
-      self.normboost_adj.value_changed()
-      self.normceiling_adj.set_value(-12.0)
-      self.normceiling_adj.value_changed()
-      self.normrise_adj.set_value(2.7)
-      self.normrise_adj.value_changed()
-      self.normfall_adj.set_value(2.0)
-      self.normfall_adj.value_changed()
+      self.parent.mixer_write("RSQT=%d\nACTN=resamplequality\nend\n" % self.resample_quality)
 
-   def cb_normalizer(self, widget, data = None):
-      self.normalizer_hbox.set_sensitive(self.normalize.get_active())
-      self.send_new_normalizer_stats()
-      
    def cb_resample_quality(self, widget, data):
       if widget.get_active():
          self.resample_quality = data
@@ -607,7 +583,7 @@ class mixprefs:
          string_to_send = "ACTN=dither\nend\n"
       else:
          string_to_send = "ACTN=dontdither\nend\n"
-      self.parent.mixer_write(string_to_send, True)
+      self.parent.mixer_write(string_to_send)
 
    def cb_dj_aud(self, widget):
       self.parent.send_new_mixer_stats()
@@ -1079,110 +1055,6 @@ class mixprefs:
 
       outervbox.pack_start(frame, False, False, 0)
       
-      # Stream normalizer config
-      
-      frametitlebox = gtk.HBox()
-      self.normalize = gtk.CheckButton(_('Stream Normaliser'))
-      self.normalize.connect("toggled", self.cb_normalizer)
-      frametitlebox.pack_start(self.normalize, True, False, 2)
-      set_tip(self.normalize, _("This feature is provided to make the various pieces of music that are played of a more uniform loudness level. The default settings are likely to be sufficient however you may adjust them and you can compare the effect by clicking the 'Monitor Mix' 'Stream' button in the main application window which will allow you to compare the processed with the non-processed audio."))
-      self.normalize.show()
-      frametitlebox.show()
-
-      frame = gtk.Frame()
-      frame.set_label_widget(frametitlebox)
-      frame.set_border_width(3)
-      self.normalizer_hbox = gtk.HBox()
-      self.normalizer_hbox.set_sensitive(False)
-      self.normalizer_hbox.set_border_width(5)
-      frame.add(self.normalizer_hbox)
-      self.normalizer_hbox.show()
-      mvbox = gtk.VBox()
-      self.normalizer_hbox.pack_start(mvbox, True, False, 0)
-      mvbox.show()
-      lvbox = gtk.VBox()
-      lvbox.set_spacing(2)
-      self.normalizer_hbox.pack_start(lvbox, True, False, 0)
-      lvbox.show()
-      rvbox = gtk.VBox()
-      rvbox.set_spacing(2)
-      self.normalizer_hbox.pack_start(rvbox, True, False, 0)
-      rvbox.show()
-      outervbox.pack_start(frame, False, False, 0)
-      frame.show()
-      
-      sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
-      
-      boostbox = gtk.HBox()
-      boostbox.set_spacing(3)
-      self.normboost_adj = gtk.Adjustment(12.0, 0.0, 25.0, 0.1, 0.2)
-      normboost = gtk.SpinButton(self.normboost_adj, 1, 1)
-      normboost.connect("value-changed", self.cb_normalizer)
-      sizegroup.add_widget(normboost)
-      boostbox.pack_start(normboost, False, False, 0)
-      normboost.show()
-      label = gtk.Label(_('Boost'))
-      boostbox.pack_start(label, False, False, 0)
-      label.show()
-      lvbox.add(boostbox)
-      boostbox.show()
-      set_tip(normboost, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
-      
-      ceilingbox = gtk.HBox()
-      ceilingbox.set_spacing(3)
-      self.normceiling_adj = gtk.Adjustment(-12.0, -25.0, 0.0, 0.1, 0.2)
-      normceiling = gtk.SpinButton(self.normceiling_adj, 1, 1)
-      normceiling.connect("value-changed", self.cb_normalizer)
-      sizegroup.add_widget(normceiling)
-      ceilingbox.pack_start(normceiling, False, False, 0)
-      normceiling.show()
-      label = gtk.Label(_('Threshold'))
-      ceilingbox.pack_start(label, False, False, 0)
-      label.show()
-      lvbox.add(ceilingbox)
-      ceilingbox.show()
-      set_tip(normceiling, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
-      
-      defaultsbox = gtk.HBox()
-      self.normdefaults = gtk.Button(_('Defaults'))
-      self.normdefaults.connect("clicked", self.normalizer_defaults)
-      defaultsbox.pack_start(self.normdefaults, True, True, 0)
-      self.normdefaults.show()
-      mvbox.pack_start(defaultsbox, True, False, 0)
-      defaultsbox.show()
-      set_tip(self.normdefaults, _('Load the recommended settings.'))
-      
-      sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
-      
-      risebox = gtk.HBox()
-      risebox.set_spacing(3)
-      self.normrise_adj = gtk.Adjustment(2.7, 0.1, 5.0, 0.1, 1.0)
-      normrise = gtk.SpinButton(self.normrise_adj, 1, 1)
-      normrise.connect("value-changed", self.cb_normalizer)
-      sizegroup.add_widget(normrise)
-      risebox.pack_start(normrise, False, False, 0)
-      normrise.show()
-      label = gtk.Label(_('Rise'))
-      risebox.pack_start(label, False, False, 0)
-      label.show()
-      rvbox.add(risebox)
-      risebox.show()
-      set_tip(normrise, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
-      
-      fallbox = gtk.HBox()
-      fallbox.set_spacing(3)
-      self.normfall_adj = gtk.Adjustment(2.0, 0.1, 5.0, 0.1, 1.0)
-      normfall = gtk.SpinButton(self.normfall_adj, 1, 1)
-      normfall.connect("value-changed", self.cb_normalizer)
-      sizegroup.add_widget(normfall)
-      fallbox.pack_start(normfall, False, False, 0)
-      normfall.show()
-      label = gtk.Label(_('Fall'))
-      fallbox.pack_start(label, False, False, 0)
-      label.show()
-      rvbox.add(fallbox)
-      fallbox.show()
-      set_tip(normfall, _('Adjust these settings carefully since they can have subtle but undesireable effects on the sound quality.'))
       
       aud_rs_hbox = gtk.HBox()
       
@@ -1508,7 +1380,6 @@ class mixprefs:
          "trxpld"        : self.tracks_played,
          "strmon"        : self.stream_mon,
          "bigdigibox"    : self.bigger_box_toggle, 
-         "normalize"     : self.normalize,
          "dither"        : self.dither,
          "recallsession" : self.restore_session_option,
          "proktoggle"    : self.p3prefs.proktoggle,
@@ -1536,10 +1407,6 @@ class mixprefs:
       self.valuesdict = {
          "interval_vol"  : self.parent.jingles.interadj,
          "passspeed"     : self.parent.passspeed_adj,
-         "normboost"     : self.normboost_adj,
-         "normceiling"   : self.normceiling_adj,
-         "normrisetc"    : self.normrise_adj,
-         "normfalltc"    : self.normfall_adj, 
          "djvolume"      : self.dj_aud_adj,
          "rg_default"    : self.rg_defaultgain,
          "rg_boost"      : self.rg_boost,
