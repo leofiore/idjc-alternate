@@ -1,6 +1,6 @@
 /*
 #   kvpparse.c: the mixer and server command parsing mechanism used by IDJC.
-#   Copyright (C) 2005-2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2005-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -24,26 +24,41 @@
 #include "kvpparse.h"
 #include "bsdcompat.h"
 
+static char *buffer;
+
+static void kvp_cleanup()
+   {
+   if (buffer)
+      free(buffer);
+   }
+
 int kvp_parse(struct kvpdict *kvpdict, FILE *fp)
    {
-   char *buffer = NULL, *key, *value;
-   size_t n = 5000;
+   static size_t n = 5000;
+   char *value;
    ssize_t rv;
 
-   buffer = malloc(5000);
+   if (!buffer)
+      {
+      if (!(buffer = malloc(n)))
+         {
+         fprintf(stderr, "malloc failure\n");
+         exit(5);
+         }
+      atexit(kvp_cleanup);
+      } 
+
    while (rv = getline(&buffer, &n, fp), rv > 0 && strcmp(buffer, "end\n"))
       {
       /* the following function is fed a key value pair e.g. key=value */
-      value = kvp_extract_value((key = buffer)); /* key is truncated at the = */
+      value = kvp_extract_value(buffer); /* key is truncated at the = */
       /* value = a pointer to a copy of the value part after the '=' allocated on the heap */
-      if(!(kvp_apply_to_dict(kvpdict, key, value)))
-         fprintf(stderr, "kvp_parse: %s=%s, key missing from dictionary\n", key, value);
+      if(!(kvp_apply_to_dict(kvpdict, buffer, value)))
+         fprintf(stderr, "kvp_parse: %s=%s, key missing from dictionary\n", buffer, value);
       /* assuming the error message wasn't printed the associated pointer in the dictionary will have been updated */
       }
 
-   if (buffer)
-      free(buffer);
-   else
+   if (!buffer)
       fprintf(stderr, "getline failed to allocate a buffer in function kvp_parse\n");
    return rv > 0;
    }
