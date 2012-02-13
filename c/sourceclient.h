@@ -62,7 +62,8 @@ struct commandmap
 #include "recorder.h"
 #include "audio_feed.h"
 
-int main(void);
+void sourceclient_init();
+int sourceclient_main();
 void comms_send(char *message);
 
 #endif

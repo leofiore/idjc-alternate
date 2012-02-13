@@ -179,7 +179,7 @@ class Jingles(object):
 
          self.parent.deckadj.value_changed()
          string_to_send = "VOL2=%d\nLOOP=0\nPLPL=%s\nACTN=playmanyjingles\nend\n" % (self.play_ex.get_active(), self.pack_playlistlist(playlist))
-         self.parent.mixer_write(string_to_send, True)
+         self.parent.mixer_write(string_to_send)
          
          while 1:
             line = self.parent.mixer_read()
@@ -207,7 +207,7 @@ class Jingles(object):
          print "Stop player"
          if flush == True:
             print "stop with flush"
-            self.parent.mixer_write("ACTN=stopjingles\nend\n", True)
+            self.parent.mixer_write("ACTN=stopjingles\nend\n")
          else:
             print "stop without flush"
             self.stop.clicked() # this will take care of resetting the play button without triggering a flush
@@ -263,7 +263,7 @@ class Jingles(object):
       self.interlude_player_track = pathname
       string_to_send = "LOOP=1\nPLPL=%s\nACTN=playmanyinterlude\nend\n" % self.pack_playlistlist([pathname,])
       print "string to send is:-"
-      self.parent.mixer_write(string_to_send, True)
+      self.parent.mixer_write(string_to_send)
       while 1:
          line = self.parent.mixer_read()
          if line.startswith("context_id="):
@@ -283,7 +283,7 @@ class Jingles(object):
       self.interlude_player_track = ""
       if self.interlude_playing == True:
          self.interlude_playing = False
-         self.parent.mixer_write("ACTN=stopinterlude\nend\n", True)
+         self.parent.mixer_write("ACTN=stopinterlude\nend\n")
       
    def cb_interlude(self, widget, treeview):
       if widget.get_active():

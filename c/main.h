@@ -1,6 +1,6 @@
 /*
-#   mixer.h: the audio mix happens in here.
-#   Copyright (C) 2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   main.h: backend unification module
+#   Copyright (C) 2011-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -17,7 +17,8 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
-void mixer_init();
-int mixer_main();
-int mixer_control(char *command);
-int mixer_keepalive();
+#include <signal.h>
+
+extern sig_atomic_t app_shutdown;
+extern int main_timeout;
+

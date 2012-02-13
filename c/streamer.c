@@ -425,7 +425,6 @@ int streamer_disconnect(struct threads_info *ti, struct universal_vars *uv, void
 void shout_initialiser()
    {
    shout_init();
-   fprintf(stderr, "shout_initialiser: shout_init called\n");
    }
 
 struct streamer *streamer_init(struct threads_info *ti, int numeric_id)

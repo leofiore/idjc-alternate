@@ -51,6 +51,7 @@
 #include "dyn_mad.h"
 #include "peakfilter.h"
 #include "sig.h"
+#include "main.h"
 
 #define TRUE 1
 #define FALSE 0
@@ -93,10 +94,6 @@ static unsigned jingles_samples_cutoff;
 static unsigned player_samples_cutoff;
 /* used to implement interlude player fade in/out: true when playing a track */
 static int main_play;
-/* if the main gui get stuck this counter will see that the mixer terminates */
-static volatile sig_atomic_t main_timeout;
-/* application shutdown flag */
-static volatile sig_atomic_t app_shutdown;
 /* flag set when jack closes the client thread for example when the jackd is closed */
 static int jack_closed_f;
 /* flag to indicate whether to use the player reading function which supports speed variance */
@@ -278,7 +275,8 @@ static void update_smoothed_volumes()
    const float bias = 0.35386f;
    const float pat3 = 0.9504953575f;
 
-   main_timeout++;
+   if (main_timeout >= 0)
+      ++main_timeout;
    
    if (dj_audio_level != current_dj_audio_level)
       {
@@ -1201,34 +1199,26 @@ static int peak_to_log(float peak)
    return (int)level2db(peak);
    }
    
-static void segfault_handler(int sig)
-   {
-   exit(5);
-   }
-
 static void jack_shutdown_handler(void *data)
    {
    jack_closed_f = TRUE;
    }
 
-static void alarm_handler(int sig)
-    {
-    if (app_shutdown)
-       exit(5);
+int mixer_keepalive()
+   {
+   #define TEST(x) (x->watchdog_timer++ >= 9)
+   if (TEST(plr_l) || TEST(plr_r) || TEST(plr_i) || TEST(plr_j))
+   #undef TEST
+      {
+      plr_l->command = CMD_COMPLETE;
+      plr_r->command = CMD_COMPLETE;
+      plr_j->command = CMD_COMPLETE;
+      plr_i->command = CMD_COMPLETE;
 
-    #define TEST(x) (x->watchdog_timer++ >= 9)
-    if (TEST(plr_l) || TEST(plr_r) || TEST(plr_i) || TEST(plr_j))
-    #undef TEST
-       {
-       plr_l->command = CMD_COMPLETE;
-       plr_r->command = CMD_COMPLETE;
-       plr_j->command = CMD_COMPLETE;
-       plr_i->command = CMD_COMPLETE;
-
-       app_shutdown = TRUE;
-       }
-
-   alarm(1);
+      return FALSE;
+      }
+   else
+      return TRUE;
    }
 
 static void atexit_handler()
@@ -1369,12 +1359,6 @@ static void mixer_cleanup()
 void mixer_init(void)
    {
    s.sc_client_name = getenv("sc_client_id");
-
-   setenv("LC_ALL", "C", 1);            /* ensure proper sscanf operation */
-
-   sig_init();
-   signal(SIGALRM, alarm_handler); 
-   signal(SIGSEGV, segfault_handler);
 
    atexit(atexit_handler);
 
@@ -1539,9 +1523,6 @@ void mixer_init(void)
       
    alarm(3);            /* handles timeouts on media player worker threads */
    atexit(mixer_cleanup);
-
-   puts("mixer_success");
-   fflush(stdout);
    }
       
 int mixer_main()
@@ -1549,9 +1530,6 @@ int mixer_main()
    if (!(kvp_parse(kvpdict, stdin)))
       return FALSE;
 
-   if (jack_closed_f == TRUE || app_shutdown == TRUE)
-      return TRUE;
-      
    if (!strcmp(action, "jackportread"))
       jackportread(jackport, jackfilter);
 
@@ -1836,12 +1814,6 @@ int mixer_main()
          send_metadata_update(&(plr_r->dynamic_metadata));
       fflush(stdout);
       }
+      
    return TRUE;
-   }
-
-int main(void)
-   {
-   mixer_init();
-   while(mixer_main());
-   return 0;
    }

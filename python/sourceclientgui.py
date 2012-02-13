@@ -1451,6 +1451,7 @@ class StreamTab(Tab):
       self.metadata_display.push(0, disp)
       self.metadata_update.set_relief(gtk.RELIEF_HALF)
       self.scg.send("tab_id=%d\ndev_type=encoder\ncustom_meta=%s\ncustom_meta_lat1=%s\ncommand=new_custom_metadata\n" % (self.numeric_id, cm, cm_lat1))
+      self.scg.receive()
 
    def cb_new_metadata_format(self, widget):
       self.metadata_update.set_relief(gtk.RELIEF_NORMAL)  
@@ -2499,11 +2500,11 @@ class SourceClientGui:
    
    def receive(self):
       if not self.comms_reply_pending:
-         print "sourceclientgui.receive: nothing to receive"
+         print "sc receive: nothing to receive"
          return "failed"
       while 1:
          try:
-            reply = self.comms_rply.readline()
+            reply = self.parent.mixer_read()
          except:
             return "failed"
          if reply.startswith("idjcsc: "):
@@ -2518,33 +2519,12 @@ class SourceClientGui:
             return "failed"
 
    def send(self, string_to_send):
-      while self.comms_reply_pending:   # dump unused replies from previous send
-         self.receive()
+      if self.comms_reply_pending:   # dump unused replies from previous send
+         raise RuntimeError("uncollected reply from previous command: \n%s+++" % self.comms_reply_pending)
       if not "tab_id=" in string_to_send:
          string_to_send = "tab_id=-1\n" + string_to_send
-      try:
-         self.comms_cmd.write(string_to_send + "end\n")
-         self.comms_cmd.flush()
-         self.comms_reply_pending = True
-      except (ValueError, IOError):
-         print "sourceclientgui.send: send failed - idjcsourceclient crashed"
-         self.source_client_crash_count += 1
-         self.source_client_close()
-         print self.server_errmsg
-         time.sleep(0.5)
-         if self.source_client_crash_count == 3:
-            print "idjcsourceclient is crashing repeatedly - exiting\n"
-            self.app_exit()
-         self.source_client_open()
-         self.receive()
-         self.parent.jack.restore(restrict=os.environ["sc_client_id"] + ":")
-         self.comms_reply_pending = False
-         self.restart_streams_and_recorders()
-      else:
-         if self.source_client_crash_count:
-            if time.time() > self.uptime + 15.0:
-               self.source_client_crash_count -= 1
-               self.uptime = time.time()
+      self.parent.mixer_write(string_to_send + "end\n", "sc")
+      self.comms_reply_pending = string_to_send
             
    def restart_streams_and_recorders(self):
       whichstreams = []
@@ -2583,6 +2563,7 @@ class SourceClientGui:
       common = {"artist": artist, "title": title, "album": album, "songname": songname}
       for tab in self.streamtabframe.tabs:         # Update the custom metadata on all stream tabs.
          tab.metadata_update.clicked()
+         self.receive()
          ircmetadata = {"djname": tab.dj_name_entry.get_text(),
                         "description": tab.description_entry.get_text(),
                         "url": tab.listen_url_entry.get_text()
@@ -2592,19 +2573,7 @@ class SourceClientGui:
          tab.ircpane.connections_controller.new_metadata(ircmetadata)
       
    def source_client_open(self):
-      try:
-         sp_sc = subprocess.Popen([FGlobs.libexecdir / "idjcsourceclient"],
-            bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
-      except Exception, inst:
-         print inst
-         print "unable to open a pipe to the sourceclient module"
-         self.app_exit()
-      (self.comms_cmd, self.comms_rply) = (sp_sc.stdin, sp_sc.stdout)
-      self.comms_reply_pending = True
-      reply = self.receive()
-      if reply != "succeeded":
-         print self.server_errmsg
-         self.app_exit()
+      self.comms_reply_pending = False
       self.send("command=jack_samplerate_request\n")
       reply = self.receive()
       if reply != "failed" and self.receive() == "succeeded":

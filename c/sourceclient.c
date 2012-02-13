@@ -84,7 +84,6 @@ static void threads_shutdown(struct threads_info *ti)
    
    if (threads_up)
       {
-      fprintf(stderr, "sourceclient threads_shutdown commencing\n");
       audio_feed_deactivate(ti->audio_feed);
       watchdog_destroy(ti->watchdog);
       for (i = 0; i < ti->n_recorders; i++)
@@ -231,7 +230,6 @@ void sourceclient_init()
    
    threads_init(&ti);
    atexit(sourceclient_cleanup);
-   comms_send("succeeded");
    }
 
 int sourceclient_main()
@@ -253,11 +251,4 @@ int sourceclient_main()
       }
       
    return TRUE;
-   }
-
-int main(void)
-   {
-   sourceclient_init();
-   while(sourceclient_main());
-   return 0;
    }

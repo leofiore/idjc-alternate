@@ -2195,7 +2195,7 @@ class MainWindow:
       gobject.source_remove(self.vutimeout)
       gobject.source_remove(self.savetimeout)
       self.server_window.source_client_close()
-      self.mixer_ctrl.close()
+      self._mixer_ctrl.close()
       if gtk.main_level():
          gtk.main_quit()
       time.sleep(0.3)   # Allow time for all subthreads/programs time to exit 
@@ -2219,33 +2219,40 @@ class MainWindow:
       return True
 
    # all mixer write operations should go through here so that broken pipes can be handled properly
-   def mixer_write(self, message):
+   def mixer_write(self, message, target="mx"):
+      if target == True or target == False or target == None:
+         raise RuntimeError("want traceback")
       try:
+         self._mixer_ctrl.write("%s\n%s" % (target, message))
+         self._mixer_ctrl.flush()
+      except (IOError, ValueError, AttributeError) as e:
          if message == "bootstrap":
-            raise IOError("bringing up backend")  # What a wonderful mental picture.
-         self.mixer_ctrl.write(message)
-         self.mixer_ctrl.flush()
-      except (IOError, ValueError) as e:
-         print str(e)
+            print "launching backend"
+         else:
+            print str(e)
          for i in range(1, 4):
             print "attempt", i
             try:
-               sp_mx = subprocess.Popen([FGlobs.libexecdir / "idjcmixer"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
+               subproc = subprocess.Popen([FGlobs.libexecdir / "idjcbe"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
             except Exception, inst:
                print inst
-               print "unable to open a pipe to the mixer module"
+               print "unable to open a pipe to the backend"
                continue
             else:
-               (self.mixer_ctrl, self.mixer_rply) = (sp_mx.stdin, sp_mx.stdout)
+               (self._mixer_ctrl, self._mixer_rply) = (subproc.stdin, subproc.stdout)
+               
+            print "awaiting reply"
                
             for j in range(10):
-               if self.mixer_read().strip() == "mixer_success":
+               reply = self.mixer_read()
+               print "got", reply
+               if reply == "idjc backend ready\n":
                   break
             else:
                print "bad response from newly started backend"
                continue
             if message != "bootstrap":
-               # Restore previous settings to the mixer.
+               # Restore previous settings.
                self.send_new_mixer_stats()
                self.player_left.next.clicked()
                self.player_right.next.clicked()
@@ -2253,7 +2260,13 @@ class MainWindow:
                if self.jingles.interlude_player_track != "":
                   self.jingles.start_interlude_player(self.jingles.interlude_player_track)
                self.jack.restore(restrict=os.environ["mx_client_id"] + ":")
-               self.mixer_write(message)
+               self.mixer_write(message, target)
+               
+               self.server_window.source_client_open()
+               #self.server_window.receive()
+               self.jack.restore(restrict=os.environ["sc_client_id"] + ":")
+               self.comms_reply_pending = False
+               self.server_window.restart_streams_and_recorders()
             break
          else:
             print "giving up"
@@ -2263,15 +2276,15 @@ class MainWindow:
       if iters == 5:
          self.destroy_hard()
       try:
-         line = self.mixer_rply.readline()
+         line = self._mixer_rply.readline()
       except IOError as e:
          print str(e)
          line = self.mixer_read(iters + 1)
       if line == "Segmentation Fault\n":
          line = ""
          print "Mixer reports a segmentation fault"
-         self.mixer_rply.close()
-         self.mixer_ctrl.close()
+         self._mixer_rply.close()
+         self._mixer_ctrl.close()
       return line
 
    def process_play_command(self, filelist):
