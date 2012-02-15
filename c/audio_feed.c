@@ -24,20 +24,23 @@
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
 #include "sourceclient.h"
+#include "main.h"
 
 typedef jack_default_audio_sample_t sample_t;
 
-static int jack_process_callback(jack_nframes_t n_frames, void *arg)
+static struct audio_feed *audio_feed;
+
+int audio_feed_process_audio(jack_nframes_t n_frames, void *arg)
    {
-   struct audio_feed *self = arg;
+   struct audio_feed *self = audio_feed;
    struct threads_info *ti = self->threads_info;
    struct encoder *e;
    struct recorder *r;
    sample_t *input_port_buffer[2];
    int i;
    
-   input_port_buffer[0] = jack_port_get_buffer(self->input_port[0], n_frames);
-   input_port_buffer[1] = jack_port_get_buffer(self->input_port[1], n_frames);
+   input_port_buffer[0] = jack_port_get_buffer(g.port.output_in_l, n_frames);
+   input_port_buffer[1] = jack_port_get_buffer(g.port.output_in_r, n_frames);
    
    /* feed pcm audio data to all encoders that request it */
    for (i = 0; i < ti->n_encoders; i++)
@@ -97,21 +100,6 @@ static int jack_process_callback(jack_nframes_t n_frames, void *arg)
    return 0;
    }
 
-static void custom_jack_error_callback(const char *message)
-   {
-   fprintf(stderr, "jack error: %s\n", message);
-   }
-
-static void custom_jack_info_callback(const char *message)
-   {
-   fprintf(stderr, "jack info: %s\n", message);
-   }
-
-static void jack_shutdown_callback()
-   {
-   fprintf(stderr, "jack_shutdown_callback: jack was shut down\n");
-   }
-
 int audio_feed_jack_samplerate_request(struct threads_info *ti, struct universal_vars *uv, void *param)
    {
    printf("idjcsc: sample_rate=%ld\n", (long)ti->audio_feed->sample_rate);
@@ -121,80 +109,24 @@ int audio_feed_jack_samplerate_request(struct threads_info *ti, struct universal
    return SUCCEEDED;
    }
 
-static char *str_join(const char *s1, const char *s2)
-   {
-   size_t l = strlen(s1) + strlen(s2) + 1;
-   char *s;
-   
-   if (!(s = malloc(l)))
-      {
-      fprintf(stderr, "malloc failure");
-      return NULL;
-      }
-
-   snprintf(s, l, "%s%s", s1, s2);
-   return s;
-   }
-
 struct audio_feed *audio_feed_init(struct threads_info *ti)
    {
    struct audio_feed *self;
 
-   if (!(self = calloc(1, sizeof (struct audio_feed))))
+   if (!(self = audio_feed = calloc(1, sizeof (struct audio_feed))))
       {
       fprintf(stderr, "audio_feed_init: malloc failure\n");
       return NULL;
       }
-      
-   self->sc_port_l = str_join(getenv("sc_client_id"), ":str_in_l");
-   self->sc_port_r = str_join(getenv("sc_client_id"), ":str_in_r");
 
-   if (!(self->sc_port_l && self->sc_port_r))
-      return NULL;
-      
-   if (!(self->jack_client_name = strdup(getenv("sc_client_id"))))
-      {
-      fprintf(stderr, "audio_feed_init: malloc failure\n");
-      return NULL;
-      }
-   self->threads_info = ti;
-   jack_set_error_function(custom_jack_error_callback);
-#ifdef HAVE_JACK_SET_INFO_FUNCTION
-   jack_set_info_function(custom_jack_info_callback);
-#endif
-
-   if (!(self->jack_h = jack_client_open(self->jack_client_name, JackUseExactName | JackServerName, NULL, getenv("jack_parameter"))))
-      {
-      fprintf(stderr, "audio_feed_init: creation of a new jack client failed\nthis could be due to jackd having not been started or another instance of idjcsourceclient is currently running\n");
-      return NULL;
-      }
-   jack_set_process_callback(self->jack_h, jack_process_callback, self);
-   jack_on_shutdown(self->jack_h, jack_shutdown_callback, NULL);
-   
-   self->input_port[0] = jack_port_register(self->jack_h, "str_in_l", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
-   self->input_port[1] = jack_port_register(self->jack_h, "str_in_r", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
-   
-   self->sample_rate = jack_get_sample_rate(self->jack_h);
-   if(jack_activate (self->jack_h))
-      {
-      fprintf(stderr, "audio_feed_init: could not activate jack client\n");
-      return NULL;
-      }
+   self->threads_info = ti;      
+   self->sample_rate = jack_get_sample_rate(g.client);
    return self;
    }
 
-void audio_feed_deactivate(struct audio_feed *self)
-   {
-   jack_deactivate(self->jack_h);
-   }
 
 void audio_feed_destroy(struct audio_feed *self)
    {
-   fprintf(stderr, "calling jack_client_close for sourceclient\n");
-   jack_client_close(self->jack_h);
    self->threads_info->audio_feed = NULL;
-   free(self->jack_client_name);
-   free(self->sc_port_l);
-   free(self->sc_port_r);
    free(self);
    }

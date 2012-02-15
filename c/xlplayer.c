@@ -460,7 +460,7 @@ static long conv_rf_read(void *cb_data, float **audiodata)
       }
    }
 
-struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, int *shutdown_f)
+struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, sig_atomic_t *shutdown_f)
    {
    struct xlplayer *self;
    int error;

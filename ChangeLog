@@ -1,5 +1,7 @@
 * Changes in version 0.8.8 *
 
+Merged the sourceclient and mixer modules.
+
 Updated man pages.
 
 Improved lockup handling code.

@@ -1,6 +1,6 @@
 /*
-#   audiofeed.h: jack connectivity for the streaming module of idjc
-#   Copyright (C) 2007-2010 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   mixer.h: the audio mix happens in here.
+#   Copyright (C) 2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -17,22 +17,10 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef AUDIO_FEED_H
-#define AUDIO_FEED_H
-
 #include <jack/jack.h>
-#include "sourceclient.h"
 
-struct audio_feed
-   {
-   struct threads_info *threads_info;
-   jack_nframes_t sample_rate;
-   };
-
-struct audio_feed *audio_feed_init(struct threads_info *ti);
-void audio_feed_deactivate(struct audio_feed *self);
-void audio_feed_destroy(struct audio_feed *self);
-int audio_feed_jack_samplerate_request(struct threads_info *ti, struct universal_vars *uv, void *param);
-int audio_feed_process_audio(jack_nframes_t n_frames, void *arg);
-
-#endif
+void mixer_init();
+int mixer_main();
+int mixer_control(char *command);
+int mixer_keepalive();
+int mixer_process_audio(jack_nframes_t n_frames, void *arg);

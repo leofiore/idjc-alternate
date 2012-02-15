@@ -10,9 +10,8 @@ aclocal.m4
 artwork/idjc.png
 autom4te.cache/*
 c/.deps/
-c/idjcmixer
+c/idjcbe
 c/*.o
-c/idjcsourceclient
 compile
 config.h
 config.h.in

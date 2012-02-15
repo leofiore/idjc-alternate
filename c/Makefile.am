@@ -1,11 +1,38 @@
-libexec_PROGRAMS=idjcmixer idjcsourceclient
+libexec_PROGRAMS = idjcbe
 
-idjcsourceclient_SOURCES=sourceclient.c sourceclient.h kvpdict.c kvpdict.h kvpparse.c kvpparse.h encoder.c encoder.h streamer.c streamer.h recorder.c recorder.h audio_feed.c audio_feed.h live_ogg_encoder.c live_ogg_encoder.h watchdog.c watchdog.h  live_mp3_encoder.c live_mp3_encoder.h id3.c id3.h bsdcompat.c bsdcompat.h gnusource.h live_oggflac_encoder.c live_oggflac_encoder.h live_oggspeex_encoder.c live_oggspeex_encoder.h dyn_lame.c dyn_lame.h lame.h sig.c sig.h
-idjcsourceclient_CFLAGS=-Wall -std=gnu99 -O2 ${LIBJACK_CFLAGS} ${LIBVORBIS_CFLAGS} ${LIBVORBISENC_CFLAGS} ${LIBSAMPLERATE_CFLAGS} ${LIBFLAC_CFLAGS} ${LIBSPEEX_CFLAGS} ${LIBSHOUT_CFLAGS}
-idjcsourceclient_LDADD=-lpthread ${DYN_LIBS} ${LIBMP3LAME} ${LIBM} ${LIBJACK_LIBS} ${LIBVORBIS_LIBS} ${LIBVORBISENC_LIBS} ${LIBSAMPLERATE_LIBS} ${LIBFLAC_LIBS} ${LIBSPEEX_LIBS} ${LIBSHOUT_LIBS} ${LIBSNDFILE_LIBS}
-idjcsourceclient_LDFLAGS=${DYN_LDFLAGS}
+idjcbe_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecdecode.h bsdcompat.c bsdcompat.h			\
+			\
+				compressor.c compressor.h dbconvert.c dbconvert.h dyn_lame.c dyn_lame.h dyn_mad.c dyn_mad.h encoder.c		\
+			\
+				encoder.h fade.c fade.h flacdecode.c flacdecode.h gnusource.h ialloc.c ialloc.h id3.c id3.h kvpdict.c		\
+			\
+				kvpdict.h kvpparse.c kvpparse.h lame.h live_mp3_encoder.c live_mp3_encoder.h live_ogg_encoder.c				\
+			\
+				live_ogg_encoder.h live_oggflac_encoder.c live_oggflac_encoder.h live_oggspeex_encoder.c						\
+			\
+				live_oggspeex_encoder.h mad.h main.c main.h mic.c mic.h mixer.c mixer.h mp3dec.c mp3dec.h mp3tagread.c	\
+			\
+				mp3tagread.h ogg_flac_dec.c ogg_flac_dec.h ogg_speex_dec.c ogg_speex_dec.h ogg_vorbis_dec.c					\
+			\
+				ogg_vorbis_dec.h oggdec.c oggdec.h peakfilter.c peakfilter.h recorder.c recorder.h sig.c sig.h				\
+			\
+				sndfiledecode.c sndfiledecode.h sndfileinfo.c sndfileinfo.h sourceclient.c sourceclient.h speextag.c		\
+			\
+				speextag.h streamer.c streamer.h watchdog.c watchdog.h xlplayer.c xlplayer.h
 
-idjcmixer_SOURCES=idjcmixer.c kvpdict.c kvpparse.c kvpdict.h kvpparse.h dbconvert.c dbconvert.h ialloc.c ialloc.h xlplayer.c xlplayer.h compressor.c compressor.h sndfileinfo.c sndfileinfo.h flacdecode.c flacdecode.h mp3dec.c mp3dec.h sndfiledecode.c sndfiledecode.h avcodecdecode.c avcodecdecode.h mp3tagread.c mp3tagread.h oggdec.c oggdec.h ogg_vorbis_dec.c ogg_vorbis_dec.h ogg_flac_dec.c ogg_flac_dec.h ogg_speex_dec.c ogg_speex_dec.h speextag.c speextag.h bsdcompat.c bsdcompat.h gnusource.h agc.c agc.h dyn_mad.c dyn_mad.h mad.h mic.c mic.h peakfilter.c peakfilter.h fade.c fade.h sig.c sig.h
-idjcmixer_CFLAGS=-Wall -std=gnu99 -O2 ${LIBVORBIS_CFLAGS} ${LIBJACK_CFLAGS} ${LIBSAMPLERATE_CFLAGS} ${LIBFLAC_CFLAGS} ${LIBSNDFILE_CFLAGS} ${LIBMAD_CFLAGS} ${LIBAVCODEC_CFLAGS} ${LIBAVFORMAT_CFLAGS} ${LIBAVUTIL_CFLAGS} ${LIBSPEEX_CFLAGS} ${GLIB_CFLAGS}
-idjcmixer_LDADD=-lpthread ${DYN_LIBS} ${LIBM} ${LIBVORBIS_LIBS} ${LIBJACK_LIBS} ${LIBSAMPLERATE_LIBS} ${LIBFLAC_LIBS} ${LIBSNDFILE_LIBS} ${LIBMAD_LIBS} ${LIBAVCODEC_LIBS} ${LIBAVFORMAT_LIBS} ${LIBAVUTIL_LIBS} ${LIBSPEEX_LIBS} ${GLIB_LIBS}
-idjcmixer_LDFLAGS=${DYN_LDFLAGS}
+
+idjcbe_CFLAGS = ${GLIB_CFLAGS} ${LIBAVCODEC_CFLAGS} ${LIBAVFORMAT_CFLAGS} ${LIBAVUTIL_CFLAGS} ${LIBFLAC_CFLAGS}		\
+			\
+				${LIBJACK_CFLAGS} ${LIBMAD_CFLAGS} ${LIBSAMPLERATE_CFLAGS} ${LIBSHOUT_CFLAGS} ${LIBSNDFILE_CFLAGS} 		\
+			\
+				${LIBSPEEX_CFLAGS} ${LIBVORBISENC_CFLAGS} ${LIBVORBIS_CFLAGS} -O2 -Wall -std=gnu99
+
+
+idjcbe_LDADD = ${DYN_LIBS} ${GLIB_LIBS} ${LIBAVCODEC_LIBS} ${LIBAVFORMAT_LIBS} ${LIBAVUTIL_LIBS} ${LIBFLAC_LIBS} 		\
+			\
+				${LIBJACK_LIBS} ${LIBMAD_LIBS} ${LIBMP3LAME} ${LIBM} ${LIBSAMPLERATE_LIBS} ${LIBSHOUT_LIBS} 					\
+			\
+				${LIBSNDFILE_LIBS} ${LIBSPEEX_LIBS} ${LIBVORBISENC_LIBS} ${LIBVORBIS_LIBS} -lpthread
+
+
+idjcbe_LDFLAGS = ${DYN_LDFLAGS}
