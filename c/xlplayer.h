@@ -131,7 +131,7 @@ struct xlplayer
    };
 
 /* xlplayer_create: create an instance of the player */
-struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, int *shutdown_f);
+struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, sig_atomic_t *shutdown_f);
 /* xlplayer_destroy: the opposite of xlplayer_create */
 void xlplayer_destroy(struct xlplayer *);
 

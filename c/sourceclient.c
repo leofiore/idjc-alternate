@@ -28,6 +28,7 @@
 #include "kvpparse.h"
 #include "live_ogg_encoder.h"
 #include "sig.h"
+#include "main.h"
 
 static int threads_up;
 
@@ -35,9 +36,9 @@ static void threads_init(struct threads_info *ti)
    {
    int i;
    
-   ti->n_encoders = atoi(getenv("sc_num_encoders"));
-   ti->n_streamers = atoi(getenv("sc_num_streamers"));
-   ti->n_recorders = atoi(getenv("sc_num_recorders"));
+   ti->n_encoders = atoi(getenv("num_encoders"));
+   ti->n_streamers = atoi(getenv("num_streamers"));
+   ti->n_recorders = atoi(getenv("num_recorders"));
    ti->encoder = calloc(ti->n_encoders, sizeof (struct encoder *));
    ti->streamer = calloc(ti->n_streamers, sizeof (struct streamer *));
    ti->recorder = calloc(ti->n_recorders, sizeof (struct recorder *));
@@ -84,7 +85,6 @@ static void threads_shutdown(struct threads_info *ti)
    
    if (threads_up)
       {
-      audio_feed_deactivate(ti->audio_feed);
       watchdog_destroy(ti->watchdog);
       for (i = 0; i < ti->n_recorders; i++)
          recorder_destroy(ti->recorder[i]);

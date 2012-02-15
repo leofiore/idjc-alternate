@@ -169,13 +169,13 @@ class JackMenu(MenuMixin):
       for i in range(1, PGlobs.num_micpairs * 2 + 1):
          self.add_port(self.channelsmenu, "ch_in_" + str(i))
 
-      for each in zip(("str_in_",) * 2, lr):
-         self.add_port(self.outputmenu, "".join(each), "sc")
+      for each in zip(("output_in_",) * 2, lr):
+         self.add_port(self.outputmenu, "".join(each))
          
       self._port_data = []
 
-   def add_port(self, menu, port, prefix="mx"):
-      pport = os.environ["%s_client_id" % prefix] + ":" + port
+   def add_port(self, menu, port):
+      pport = os.environ["client_id"] + ":" + port
       self.ports.append(pport)
       self.build(menu, autowipe=True, use_underline=False)(((port, pport),))
       mi = getattr(self, port + "menu_i")
@@ -271,23 +271,23 @@ class JackMenu(MenuMixin):
             cons = []
          else:
             cons = """[
-               ["{mx}:ch_in_1", ["system:capture_1"]],
-               ["{mx}:ch_in_2", ["system:capture_2"]],
-               ["{mx}:dj_out_l", ["system:playback_1"]],
-               ["{mx}:dj_out_r", ["system:playback_2"]],
-               ["{sc}:str_in_l", ["{mx}:str_out_l"]],
-               ["{sc}:str_in_r", ["{mx}:str_out_r"]], """
+               ["{client_id}:ch_in_1", ["system:capture_1"]],
+               ["{client_id}:ch_in_2", ["system:capture_2"]],
+               ["{client_id}:dj_out_l", ["system:playback_1"]],
+               ["{client_id}:dj_out_r", ["system:playback_2"]],
+               ["{client_id}:output_in_l", ["{client_id}:str_out_l"]],
+               ["{client_id}:output_in_r", ["{client_id}:str_out_r"]], """
 
             if self.get_playback_port_qty() < 8:
                cons += """
-                  ["{mx}:str_out_l", ["system:playback_3", "{sc}:str_in_l"]],
-                  ["{mx}:str_out_r", ["system:playback_4", "{sc}:str_in_r"]]] """
+                  ["{client_id}:str_out_l", ["system:playback_3", "{client_id}:output_in_l"]],
+                  ["{client_id}:str_out_r", ["system:playback_4", "{client_id}:output_in_r"]]] """
             else:
                cons += """
-                  ["{mx}:str_out_l", ["system:playback_5", "{sc}:str_in_l"]],
-                  ["{mx}:str_out_r", ["system:playback_6", "{sc}:str_in_r"]]] """
+                  ["{client_id}:str_out_l", ["system:playback_5", "{client_id}:output_in_l"]],
+                  ["{client_id}:str_out_r", ["system:playback_6", "{client_id}:output_in_r"]]] """
 
-            cons = eval(cons.format(mx=os.environ["mx_client_id"], sc=os.environ["sc_client_id"]))
+            cons = eval(cons.format(client_id=os.environ["client_id"]))
 
       self._port_data = cons
       if not startup or not args.no_jack_connections:
@@ -2259,14 +2259,13 @@ class MainWindow:
                self.jingles.stop.clicked()
                if self.jingles.interlude_player_track != "":
                   self.jingles.start_interlude_player(self.jingles.interlude_player_track)
-               self.jack.restore(restrict=os.environ["mx_client_id"] + ":")
-               self.mixer_write(message, target)
                
                self.server_window.source_client_open()
                #self.server_window.receive()
-               self.jack.restore(restrict=os.environ["sc_client_id"] + ":")
                self.comms_reply_pending = False
                self.server_window.restart_streams_and_recorders()
+               self.jack.restore()
+               self.mixer_write(message, target)
             break
          else:
             print "giving up"
@@ -2604,14 +2603,13 @@ class MainWindow:
       else:
          os.environ["jack_parameter"] = "default"
             
-      os.environ["mx_client_id"] = mx_id = "idjc-mx_" + pm.profile
-      os.environ["mx_mic_qty"] = str(PGlobs.num_micpairs * 2)
-      os.environ["sc_client_id"] = sc_id = "idjc-sc_" + pm.profile
-      os.environ["sc_num_streamers"] = str(PGlobs.num_streamers)
-      os.environ["sc_num_encoders"] = str(PGlobs.num_encoders)
-      os.environ["sc_num_recorders"] = str(PGlobs.num_recorders)
+      os.environ["client_id"] = client_id = "idjc_" + pm.profile
+      os.environ["mic_qty"] = str(PGlobs.num_micpairs * 2)
+      os.environ["num_streamers"] = str(PGlobs.num_streamers)
+      os.environ["num_encoders"] = str(PGlobs.num_encoders)
+      os.environ["num_recorders"] = str(PGlobs.num_recorders)
 
-      print "jack client IDs:", mx_id, sc_id
+      print "jack client ID:", client_id
 
       self.session_loaded = False
 

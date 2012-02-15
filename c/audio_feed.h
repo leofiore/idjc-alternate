@@ -26,11 +26,6 @@
 struct audio_feed
    {
    struct threads_info *threads_info;
-   jack_client_t *jack_h;
-   char *jack_client_name;
-   char *sc_port_l, *sc_port_r;
-   jack_port_t *input_port[2];
-   jack_port_t *output_port[2];
    jack_nframes_t sample_rate;
    };
 
@@ -38,5 +33,6 @@ struct audio_feed *audio_feed_init(struct threads_info *ti);
 void audio_feed_deactivate(struct audio_feed *self);
 void audio_feed_destroy(struct audio_feed *self);
 int audio_feed_jack_samplerate_request(struct threads_info *ti, struct universal_vars *uv, void *param);
+int audio_feed_process_audio(jack_nframes_t n_frames, void *arg);
 
 #endif

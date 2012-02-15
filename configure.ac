@@ -21,7 +21,6 @@ AM_GNU_GETTEXT_VERSION([0.18.1])
 
 # We need libjack in order to compile.
 PKG_CHECK_MODULES(LIBJACK, [jack >= 0.98.0])
-AC_CHECK_LIB([jack],[jack_set_info_function],[AC_DEFINE(HAVE_JACK_SET_INFO_FUNCTION, 1, [set for presence of])], [])
 
 # Also check for libvorbis and libvorbisenc
 PKG_CHECK_MODULES([LIBVORBIS], [vorbis >= 1.0.0])

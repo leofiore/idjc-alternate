@@ -2500,8 +2500,7 @@ class SourceClientGui:
    
    def receive(self):
       if not self.comms_reply_pending:
-         print "sc receive: nothing to receive"
-         return "failed"
+         raise RuntimeError("sc receive: nothing to receive")
       while 1:
          try:
             reply = self.parent.mixer_read()
@@ -2563,7 +2562,6 @@ class SourceClientGui:
       common = {"artist": artist, "title": title, "album": album, "songname": songname}
       for tab in self.streamtabframe.tabs:         # Update the custom metadata on all stream tabs.
          tab.metadata_update.clicked()
-         self.receive()
          ircmetadata = {"djname": tab.dj_name_entry.get_text(),
                         "description": tab.description_entry.get_text(),
                         "url": tab.listen_url_entry.get_text()
