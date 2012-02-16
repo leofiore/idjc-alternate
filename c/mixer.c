@@ -244,6 +244,14 @@ static void handle_mute_button(sample_t *gainlevel, int switchlevel)
       }
    }
 
+void mixer_stop_players()
+   {
+   plr_l->command = CMD_COMPLETE;
+   plr_r->command = CMD_COMPLETE;
+   plr_j->command = CMD_COMPLETE;
+   plr_i->command = CMD_COMPLETE;
+   }
+
 /* update_smoothed_volumes: stuff that gets run once every 32 samples */
 static void update_smoothed_volumes()
    {
@@ -258,9 +266,6 @@ static void update_smoothed_volumes()
    const float bias = 0.35386f;
    const float pat3 = 0.9504953575f;
 
-   if (g.main_timeout >= 0)
-      ++g.main_timeout;
-   
    if (dj_audio_level != current_dj_audio_level)
       {
       current_dj_audio_level = dj_audio_level;
@@ -465,23 +470,6 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
    int pitch_wheel;
    struct mic **micp;
 
-#if 0
-   if (main_timeout > 8000)
-      {
-      if (!app_shutdown)
-         {
-         alarm(1);
-         fprintf(stderr, "main thread timeout exceeded\n");
-         app_shutdown = TRUE;
-         }
-      plr_l->command = CMD_COMPLETE;
-      plr_r->command = CMD_COMPLETE;
-      plr_j->command = CMD_COMPLETE;
-      plr_i->command = CMD_COMPLETE;
-      return -1;
-      }
-#endif
-
    /* midi_control. read incoming commands forward to gui */
    midi_buffer = jack_port_get_buffer(g.port.midi_port, nframes);
    midi_nevents = jack_midi_get_event_count(midi_buffer);
@@ -583,10 +571,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
          printf("Malloc failure in process audio\n");
          g.app_shutdown = TRUE;
          }
-      plr_l->command = CMD_COMPLETE;
-      plr_r->command = CMD_COMPLETE;
-      plr_j->command = CMD_COMPLETE;
-      plr_i->command = CMD_COMPLETE;
+      mixer_stop_players();
       return -1;
       }  
 
@@ -1187,22 +1172,17 @@ static int peak_to_log(float peak)
       return 0;
    return (int)level2db(peak);
    }
-   
-int mixer_keepalive()
-   {
-   #define TEST(x) (x->watchdog_timer++ >= 9)
-   if (TEST(plr_l) || TEST(plr_r) || TEST(plr_i) || TEST(plr_j))
-   #undef TEST
-      {
-      plr_l->command = CMD_COMPLETE;
-      plr_r->command = CMD_COMPLETE;
-      plr_j->command = CMD_COMPLETE;
-      plr_i->command = CMD_COMPLETE;
 
-      return FALSE;
-      }
-   else
-      return TRUE;
+int mixer_keepalive()
+   { 
+   ++plr_l->watchdog_timer;
+   ++plr_r->watchdog_timer;
+   ++plr_i->watchdog_timer;
+   ++plr_j->watchdog_timer;
+
+   #define TEST(x) (x->watchdog_timer >= 9)
+   return !(TEST(plr_l) || TEST(plr_r) || TEST(plr_i) || TEST(plr_j));
+   #undef TEST
    }
 
 static void send_metadata_update(struct xlp_dynamic_metadata *dm)
@@ -1399,6 +1379,7 @@ void mixer_init(void)
       }
             
    atexit(mixer_cleanup);
+   g.mixer_up = TRUE;
    }
       
 int mixer_main()
@@ -1603,8 +1584,6 @@ int mixer_main()
 
    if (!strcmp(action, "requestlevels"))
       {
-      if (g.main_timeout > 0)
-         g.main_timeout = 0;           /* the main app has proven it is alive */
       /* make logarithmic values for the peak levels */
       s.str_l_peak_db = peak_to_log(peakfilter_read(str_pf_l));
       s.str_r_peak_db = peak_to_log(peakfilter_read(str_pf_r));

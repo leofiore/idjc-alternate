@@ -27,7 +27,6 @@ struct encoder;
 struct streamer;
 struct recorder;
 struct audio_feed;
-struct watchdog;
 
 struct threads_info
    {
@@ -38,7 +37,6 @@ struct threads_info
    struct streamer **streamer;
    struct recorder **recorder;
    struct audio_feed *audio_feed;
-   struct watchdog *watchdog;
    };
 
 struct universal_vars
@@ -56,7 +54,6 @@ struct commandmap
    void *other_parameter;
    };
    
-#include "watchdog.h"
 #include "encoder.h"
 #include "streamer.h"
 #include "recorder.h"

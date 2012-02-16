@@ -244,9 +244,6 @@ static void live_oggspeex_encoder_main(struct encoder *encoder)
       int ws;
       int (*ogg_paging_function)(ogg_stream_state *, ogg_page *);
  
-      if (!(encoder->watchdog_info.tick & 127))
-         fprintf(stderr, "encoder %d running\n", encoder->numeric_id);  
-         
       if (s->eos == FALSE)
          {
          if ((encoder->new_metadata && s->use_metadata) || !encoder->run_request_f || encoder->flush)

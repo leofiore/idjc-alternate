@@ -120,8 +120,6 @@ static void live_mp3_encoder_main(struct encoder *encoder)
       }
    if (encoder->encoder_state == ES_RUNNING)
       {
-      if (!(encoder->watchdog_info.tick & 127))
-         fprintf(stderr, "encoder %d running\n", encoder->numeric_id);
       if (encoder->flush || !encoder->run_request_f)
          {
          encoder->flush = FALSE;

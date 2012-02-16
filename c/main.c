@@ -31,15 +31,21 @@
 #define FALSE 0
 #define TRUE (!FALSE)
 
-struct globs g = {.main_timeout = -1};
+struct globs g;
 
 static void alarm_handler(int sig)
-    {
-    if (g.app_shutdown)
-       exit(5);
+   {
+   if (g.app_shutdown)
+      exit(5);
 
-    if (!mixer_keepalive())
-       g.app_shutdown = TRUE;
+   if (g.mixer_up && !mixer_keepalive())
+      g.app_shutdown = TRUE;
+
+   if (g.jack_timeout++ > 9)
+      g.app_shutdown = TRUE;
+   
+   if (g.has_head && g.main_timeout++ > 9)
+      g.app_shutdown = TRUE;
 
    /* One second grace to shut down naturally. */
    alarm(1);
@@ -71,13 +77,20 @@ static void cleanup_jack()
 
 static int main_process_audio(jack_nframes_t n_frames, void *arg)
    {
-   return mixer_process_audio(n_frames, arg) || audio_feed_process_audio(n_frames, arg);
+   int rv;
+
+   rv =  mixer_process_audio(n_frames, arg) || audio_feed_process_audio(n_frames, arg);
+   
+   if (rv == 0)
+      g.jack_timeout = 0;
+   
+   return rv;
    }
 
 int main(void)
    {
    char *buffer = NULL;
-   size_t n = 5000;
+   size_t n = 10;
    int keep_running = TRUE;
 
    /* Without these being set the backend will segfault. */
@@ -90,7 +103,7 @@ int main(void)
             setenv("num_encoders", "6", o) ||
             setenv("num_recorders", "2", o) ||
             setenv("jack_parameter", "default", o) ||
-            setenv("headless", "1", o) ||
+            setenv("has_head", "0", o) ||
             /* C locale required for . as radix character. */
             setenv("LC_ALL", "C", 1))
          {
@@ -100,13 +113,8 @@ int main(void)
       }
 
    setlocale(LC_ALL, getenv("LC_ALL"));
-   if (atoi(getenv("headless")))
-      signal(SIGALRM, SIG_IGN);
-   else
-      {
-      g.main_timeout = 0;
-      signal(SIGALRM, alarm_handler);
-      }
+   g.has_head = atoi(getenv("has_head"));
+   signal(SIGALRM, alarm_handler);
    
    /* Signal handling. */
    sig_init();
@@ -116,6 +124,8 @@ int main(void)
       fprintf(stderr, "main.c: jack_client_open failed");
       exit(5);
       }
+
+   alarm(3);
 
    jack_set_error_function(custom_jack_error_callback);
    jack_set_info_function(custom_jack_info_callback);
@@ -170,6 +180,8 @@ int main(void)
    printf("idjc backend ready\n");
    fflush(stdout);
 
+   alarm(1);
+
    while (keep_running && getline(&buffer, &n, stdin) > 0 && !g.app_shutdown)
       {
       /* Filter commands to submodules. */
@@ -185,6 +197,7 @@ int main(void)
             exit(5);
             }
          }
+      g.main_timeout = 0;
       }
 
    jack_deactivate(g.client);

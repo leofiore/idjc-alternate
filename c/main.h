@@ -45,6 +45,9 @@ struct globs
    {
    sig_atomic_t app_shutdown;
    int main_timeout;          /* Inactive when negative. */
+   int jack_timeout;
+   int has_head;
+   int mixer_up;
    jack_client_t *client;     /* Client handle to JACK. */
    struct jack_ports port;    /* JACK port handles. */
    };

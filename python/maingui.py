@@ -2608,6 +2608,7 @@ class MainWindow:
       os.environ["num_streamers"] = str(PGlobs.num_streamers)
       os.environ["num_encoders"] = str(PGlobs.num_encoders)
       os.environ["num_recorders"] = str(PGlobs.num_recorders)
+      os.environ["has_head"] = "1"
 
       print "jack client ID:", client_id
 

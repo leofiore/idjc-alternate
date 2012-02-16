@@ -49,7 +49,6 @@ struct _util_dict;
 
 struct streamer
    {
-   struct watchdog_info watchdog_info;
    struct threads_info *threads_info;
    int numeric_id;
    pthread_t thread_h;

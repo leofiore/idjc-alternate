@@ -456,7 +456,6 @@ void *encoder_main(void *args)
    while(!self->thread_terminate_f)
       {
       pthread_mutex_lock(&self->flush_mutex);
-      self->watchdog_info.tick++;
       switch(self->encoder_state)
          {
          case ES_STOPPED:

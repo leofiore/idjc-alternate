@@ -531,15 +531,12 @@ static void *recorder_main(void *args)
    while (!self->thread_terminate_f)
       {
       nanosleep(&ms10, NULL);
-      self->watchdog_info.tick++;
+
       switch (self->record_mode)
          {
          case RM_STOPPED:
             continue;
          case RM_RECORDING:
-            if (!(self->watchdog_info.tick & 0x3F))
-               fprintf(stderr, "recorder_main: recorder %d is recording\n", self->numeric_id);
-               
             if (self->initial_serial == -1)
                {
                while ((nbytes = jack_ringbuffer_read(self->input_rb[1], self->right, audio_buffer_elements * sizeof (sample_t))))
@@ -896,7 +893,7 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
       self->record_mode = RM_PAUSED;
    else 
       self->record_mode = RM_RECORDING;
-   fprintf(stderr, "recorder_start called\n");
+   fprintf(stderr, "recorder_start: device %d activated\n", self->numeric_id);
    return SUCCEEDED;
    }
    
@@ -907,13 +904,13 @@ int recorder_stop(struct threads_info *ti, struct universal_vars *uv, void *othe
 
    if (self->record_mode == RM_STOPPED)
       {
-      fprintf(stderr, "recorder_stop: recorder is already stopped\n");
+      fprintf(stderr, "recorder_stop: device %d is already stopped\n", self->numeric_id);
       return FAILED;
       }
    self->stop_request = TRUE;
    while (self->record_mode != RM_STOPPED)
       nanosleep(&ms10, NULL);
-   fprintf(stderr, "recorder_stop called\n");
+   fprintf(stderr, "recorder_stop: device %d stopped\n", self->numeric_id);
    return SUCCEEDED;
    }
    

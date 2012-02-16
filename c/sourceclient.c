@@ -70,11 +70,6 @@ static void threads_init(struct threads_info *ti)
       fprintf(stderr, "threads_init: audio feed initialisation failed\n");
       exit(5);
       }
-   if (!(ti->watchdog = watchdog_init(ti)))
-      {
-      fprintf(stderr, "threads_init: failed to start watchdog\n");
-      exit(5);
-      }
    fprintf(stderr, "started %d encoders, %d streamers, %d recorders\n", ti->n_encoders, ti->n_streamers, ti->n_recorders);
    threads_up = TRUE;
    }
@@ -85,7 +80,6 @@ static void threads_shutdown(struct threads_info *ti)
    
    if (threads_up)
       {
-      watchdog_destroy(ti->watchdog);
       for (i = 0; i < ti->n_recorders; i++)
          recorder_destroy(ti->recorder[i]);
       for (i = 0; i < ti->n_streamers; i++)

@@ -165,8 +165,6 @@ static void live_ogg_encoder_main(struct encoder *encoder)
       }
    if (encoder->encoder_state == ES_RUNNING)
       {
-      if (!(encoder->watchdog_info.tick & 127))
-         fprintf(stderr, "encoder %d running\n", encoder->numeric_id);
       if (encoder->flush)
          {
          cycle_restart = TRUE;

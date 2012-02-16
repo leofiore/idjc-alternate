@@ -262,9 +262,6 @@ static void live_oggflac_encoder_main(struct encoder *encoder)
       {
       struct encoder_ip_data *id;
 
-      if (!(encoder->watchdog_info.tick & 127))
-         fprintf(stderr, "encoder %d running\n", encoder->numeric_id);
-
       if ((encoder->new_metadata && s->use_metadata) || !encoder->run_request_f || encoder->flush)
          {
          FLAC__stream_encoder_finish(s->enc);

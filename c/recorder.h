@@ -62,7 +62,6 @@ struct metadata_item2
 
 struct recorder
    {
-   struct watchdog_info watchdog_info;
    struct threads_info *threads_info;
    int numeric_id;              /* the identity of this recorder */
    pthread_t thread_h;          /* pthread handle for the recorder */

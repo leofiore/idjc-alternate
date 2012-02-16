@@ -18,7 +18,7 @@ idjcbe_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecde
 			\
 				sndfiledecode.c sndfiledecode.h sndfileinfo.c sndfileinfo.h sourceclient.c sourceclient.h speextag.c		\
 			\
-				speextag.h streamer.c streamer.h watchdog.c watchdog.h xlplayer.c xlplayer.h
+				speextag.h streamer.c streamer.h xlplayer.c xlplayer.h
 
 
 idjcbe_CFLAGS = ${GLIB_CFLAGS} ${LIBAVCODEC_CFLAGS} ${LIBAVFORMAT_CFLAGS} ${LIBAVUTIL_CFLAGS} ${LIBFLAC_CFLAGS}		\

@@ -58,7 +58,7 @@ static void *streamer_main(void *args)
    while (!self->thread_terminate_f)
       {
       nanosleep(&ms10, NULL);
-      self->watchdog_info.tick++;
+
       switch (self->stream_mode)
          {
          case SM_DISCONNECTED:
@@ -67,11 +67,8 @@ static void *streamer_main(void *args)
             switch(self->shout_status)
                {
                case SHOUTERR_BUSY:
-                  if (!(self->watchdog_info.tick & 0x3F))
-                     {
-                     fprintf(stderr, "streamer_main: busy, waiting for the server to grant access\n");
-                     self->shout_status = shout_get_connected(self->shout);
-                     }
+                  self->shout_status = shout_get_connected(self->shout);
+
                   if (self->disconnect_request)
                      self->stream_mode = SM_DISCONNECTING;
                   break;
@@ -89,8 +86,6 @@ static void *streamer_main(void *args)
                }
             break;
          case SM_CONNECTED:
-            if (!(self->watchdog_info.tick & 0x3F))
-               fprintf(stderr, "streamer_main: streamer %d is running\n", self->numeric_id);
             /* check the connection is still on */
             if ((self->shout_status = shout_get_connected(self->shout)) != SHOUTERR_CONNECTED)
                {

@@ -112,7 +112,6 @@ struct encoder_header_buffer
 
 struct encoder
    {
-   struct watchdog_info watchdog_info;  /* used by the watchdog */
    struct threads_info *threads_info;   /* link to the global data structure */
    int numeric_id;                      /* identitity of this encoder from 0 */
    pthread_t thread_h;                  /* this encoder's pthread handle */
