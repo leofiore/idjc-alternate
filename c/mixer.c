@@ -1635,6 +1635,7 @@ int mixer_main()
                 "silence_l=%f\n"
                 "silence_r=%f\n"
                 "session_command=%s\n"
+                "ports_connections_changed=%d\n"
                 "end\n",
                 s.str_l_peak_db, s.str_r_peak_db,
                 s.str_l_rms_db, s.str_r_rms_db,
@@ -1657,7 +1658,15 @@ int mixer_main()
                 s.midi_output,
                 plr_l->silence,
                 plr_r->silence,
-                s.session_command);
+                s.session_command,
+                g.port_connection_count
+                );
+
+      /* mark info as sent */
+      if (g.port_connection_count)
+         fprintf(stderr, "port connection changed qty %d\n", g.port_connection_count);
+         
+      g.port_connection_count = -g.port_connection_count;
                 
       /* tell the jack mixer it can reset its vu stats now */
       reset_vu_stats_f = TRUE;

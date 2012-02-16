@@ -33,6 +33,8 @@
 
 struct globs g;
 
+static sig_atomic_t port_connection_count;
+
 static void alarm_handler(int sig)
    {
    if (g.app_shutdown)
@@ -64,6 +66,11 @@ static void custom_jack_info_callback(const char *message)
 static void custom_jack_on_shutdown_callback()
    {
    g.app_shutdown = TRUE;
+   }
+   
+static void custom_jack_port_connect_callback(jack_port_id_t a, jack_port_id_t b, int connect, void *arg)
+   {
+   ++port_connection_count;
    }
 
 static void cleanup_jack()
@@ -130,12 +137,13 @@ int main(void)
    jack_set_error_function(custom_jack_error_callback);
    jack_set_info_function(custom_jack_info_callback);
    jack_on_shutdown(g.client, custom_jack_on_shutdown_callback, NULL);
-   
+
+   jack_set_port_connect_callback(g.client, custom_jack_port_connect_callback, NULL);
    jack_set_process_callback(g.client, main_process_audio, NULL);
 
    /* Registration of JACK ports. */
-   #define MK_AUDIO_INPUT(var, name) var = jack_port_register(g.client, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0)
-   #define MK_AUDIO_OUTPUT(var, name) var = jack_port_register(g.client, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0)
+   #define MK_AUDIO_INPUT(var, name) var = jack_port_register(g.client, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
+   #define MK_AUDIO_OUTPUT(var, name) var = jack_port_register(g.client, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
    
       {
       struct jack_ports *p = &g.port;
@@ -184,6 +192,8 @@ int main(void)
 
    while (keep_running && getline(&buffer, &n, stdin) > 0 && !g.app_shutdown)
       {
+      g.port_connection_count = port_connection_count;
+
       /* Filter commands to submodules. */
       if (!strcmp(buffer, "mx\n"))
          keep_running = mixer_main();
@@ -197,6 +207,9 @@ int main(void)
             exit(5);
             }
          }
+         
+      if (g.port_connection_count < 0)
+         port_connection_count += g.port_connection_count;
       g.main_timeout = 0;
       }
 

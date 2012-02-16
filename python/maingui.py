@@ -213,7 +213,7 @@ class JackMenu(MenuMixin):
    def cb_activate(self, mi, local, dest):
       cmd = "connect" if mi.get_active() else "disconnect"
       self.write(cmd, "JPRT=%s\nJPT2=%s\nend\n" % (local, dest))
-      self.standard_save()
+      # Defer save until backend reports connections have changed.
 
    def get_playback_port_qty(self):
       self.write("portread", "JFIL=\nJPRT=\nend\n")
@@ -2078,7 +2078,7 @@ class MainWindow:
       self.prefs_window.save_player_prefs()
       self.controls.save_prefs()
       self.server_window.save_session_settings()
-      self.jack.standard_save()
+      # JACK ports are saved at the moment of change, not here.
       
       return True  # This is also a timeout routine
 
@@ -2432,6 +2432,7 @@ class MainWindow:
             return True
 
          session_cmd = midis = ''
+         cons_changed = False
          while 1:
             line = self.mixer_read().rstrip()
             if line == "":
@@ -2452,6 +2453,9 @@ class MainWindow:
             if key == "session_command":
                session_cmd = value
                continue
+             
+            if key == "ports_connections_changed":
+               cons_changed = value != "0"
                
             if key.startswith("silence_"):
                try:
@@ -2495,6 +2499,9 @@ class MainWindow:
          if session_cmd:
             if session_cmd == "save_L1" and pm.session_type == "L1":
                self.jack.session_save()
+
+         if cons_changed:
+            self.jack.standard_save()
 
       except:
          if locking:    # ensure unlocking occurs whenever there is an exception
