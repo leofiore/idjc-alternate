@@ -48,7 +48,6 @@ struct globs
    int jack_timeout;
    int has_head;
    int mixer_up;
-   int port_connection_count;
    jack_client_t *client;     /* Client handle to JACK. */
    struct jack_ports port;    /* JACK port handles. */
    };

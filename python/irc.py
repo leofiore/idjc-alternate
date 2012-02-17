@@ -41,7 +41,7 @@ from .gtkstuff import DefaultEntry
 from .gtkstuff import NamedTreeRowReference
 from .gtkstuff import ConfirmationDialog
 from .gtkstuff import threadslock
-from .freefunctions import string_multireplace
+from .utils import string_multireplace
 from .tooltips import main_tips
 
 

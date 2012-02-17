@@ -840,7 +840,7 @@ class IDJC_Media_Player:
       metadata = metadata or _('Unknown')
 
       # TC: Cuesheet data element as shown in the playlist.
-      element = PlayerRow('<span foreground="dark green">%s</span>' % _("(Cue sheet)") + rich_safe(metadata),
+      element = PlayerRow('<span foreground="dark green">%s</span>' % _("(Cue sheet)") + glib.markup_escape_text(metadata),
             cue_pathname, totalframes // 75 + 1, metadata, "utf-8",
             global_cue_title, global_cue_performer, RGDEF, cuesheet_liststore, "")
          
@@ -875,7 +875,7 @@ class IDJC_Media_Player:
       meta_name = os.path.splitext(glib.filename_display_basename(filename))[0].lstrip("0123456789 -")
       encoding = None  # Obsolete
       # TC: Playlist text meaning the metadata tag is missing or incomplete.
-      rsmeta_name = '<span foreground="dark red">(%s)</span> %s' % (_('Bad Tag'), rich_safe(meta_name))
+      rsmeta_name = '<span foreground="dark red">(%s)</span> %s' % (_('Bad Tag'), glib.markup_escape_text(meta_name))
       title_retval = meta_name
  
          
@@ -1068,7 +1068,7 @@ class IDJC_Media_Player:
       
       if artist and title:
          meta_name = artist + u" - " + title
-         return PlayerRow(rich_safe(meta_name), filename, length, meta_name, encoding, title, artist, rg, cuesheet, album)
+         return PlayerRow(glib.markup_escape_text(meta_name), filename, length, meta_name, encoding, title, artist, rg, cuesheet, album)
       else:
          return PlayerRow(rsmeta_name, filename, length, meta_name, encoding, title_retval, artist, rg, cuesheet, album)
 

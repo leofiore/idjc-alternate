@@ -44,7 +44,6 @@ from .sourceclientgui import *
 from .preferences import *
 from .jingles import *
 from .freefunctions import slot_object
-from .freefunctions import rich_safe
 from .gtkstuff import threadslock, WindowSizeTracker
 from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog
 from . import midicontrols
@@ -234,6 +233,7 @@ class JackMenu(MenuMixin):
       self._port_data = self._get_port_data()
 
       self._save(where)
+      
       try:
          subprocess.call(["notify-send", "%s:%s %s Session Saved" % (PGlobs.app_shortform, pm.profile, self.session_type)])
       except OSError:
@@ -2231,7 +2231,7 @@ class MainWindow:
          else:
             print str(e)
          for i in range(1, 4):
-            print "attempt", i
+            print "backend launch attempt", i
             try:
                subproc = subprocess.Popen([FGlobs.libexecdir / "idjcbe"], bufsize = 4096, stdin = subprocess.PIPE, stdout = subprocess.PIPE, close_fds = True)
             except Exception, inst:
@@ -3361,7 +3361,7 @@ class MainWindow:
 
       self.vutimeout = gobject.timeout_add(50, self.vu_update)
       self.statstimeout = gobject.timeout_add(100, self.stats_update)
-      self.savetimeout = gobject.timeout_add_seconds(60, threadslock(self.save_session));
+      self.savetimeout = gobject.timeout_add_seconds(120, threadslock(self.save_session));
       
       for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
          signal.signal(sig, lambda s, f: glib.idle_add(threadslock(self.destroy)))

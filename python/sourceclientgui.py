@@ -38,7 +38,7 @@ import gtk
 import gobject
 
 from idjc import FGlobs, PGlobs
-from .freefunctions import string_multireplace
+from .utils import string_multireplace
 from .gtkstuff import DefaultEntry, threadslock, HistoryEntry, WindowSizeTracker
 from .dialogs import *
 from .irc import IRCPane

@@ -20,6 +20,10 @@ But strictly no third party module dependencies.
 #   If not, see <http://www.gnu.org/licenses/>.
 
 
+__all__ = ["Singleton", "PolicedAttributes", "FixedAttributes",
+            "PathStr", "SlotObject", "string_multireplace"]
+
+
 import os
 import threading
 from functools import wraps
@@ -33,6 +37,7 @@ class Singleton(type):
       try:
          # Return an existing instance.
          return cls._instance
+
       except AttributeError:
          # No existing instance so instantiate just this once.
          cls._instance = super(Singleton, cls).__call__(*args, **kwds)
@@ -51,6 +56,7 @@ def _PA_rlock(f):
       try:
          rlock.acquire()
          return f(cls, *args, **kwds)
+
       finally:
          rlock.release()
 
@@ -80,6 +86,7 @@ class PolicedAttributes(type):
                   super(PolicedAttributes, cls).__getattribute__(attr),
                   *args, **kwds)
             bc.__setattr__(attr, new)
+
          else:
             raise NotImplementedError("variable is locked")
       
@@ -99,6 +106,7 @@ class PolicedAttributes(type):
    def __setattr__(cls, name, value):
       if name in bc.__getattribute__("_banned"):
          raise NotImplementedError("value has already been read")
+
       bc.__setattr__(name, value)
 
          
@@ -136,3 +144,64 @@ class PathStr(str):
 
    def __repr__(self):
       return "PathStr('%s')" % self
+
+
+
+class slot_object(object):  
+   """A mutable object containing an immutable object."""
+   
+
+   __slots__ = ['value']
+
+   
+   def __init__(self, value):
+      self.value = value
+
+
+   def __str__(self):
+      return str(self.value)
+
+
+   def __int__(self):
+      return int(self.value)
+
+
+   def __float__(self):
+      return float(self.value)
+
+
+   def __repr__(self):
+      return "slot_object(%s)" % repr(self.value)
+
+      
+   def __getattr__(self, what):
+      def assign(value):
+         self.value = value
+         
+      if what.startswith("get_"):
+         return lambda : self.value
+
+      elif what.startswith("set_"):
+         return assign
+
+      else:
+         object.__getattribute__(self, what)
+
+
+
+def string_multireplace(part, table):
+   """Replace multiple items in a string.
+
+   Table is a sequence of 2 tuples of from, to strings.
+   """
+
+   if not table:
+      return part
+      
+   parts = part.split(table[0][0])
+   t_next = table[1:]
+
+   for i, each in enumerate(parts):
+      parts[i] = string_multireplace(each, t_next)
+      
+   return table[0][1].join(parts)

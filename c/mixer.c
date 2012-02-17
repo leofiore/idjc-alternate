@@ -35,6 +35,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <locale.h>
+#include <limits.h>
 
 #include "kvpparse.h"
 #include "dbconvert.h"
@@ -111,6 +112,10 @@ static int twodblimit;
 static struct mic **mics;
 /* peakfilter handles for stream peak */
 static struct peakfilter *str_pf_l, *str_pf_r;
+/* counts the number of times port connections have changed */
+static unsigned int port_connection_count;
+/* counts the number of times port connection counts have been reported */
+static unsigned int port_reports;
 
 static jack_nframes_t alarm_size;
 
@@ -242,6 +247,11 @@ static void handle_mute_button(sample_t *gainlevel, int switchlevel)
             *gainlevel = 0.0F;
          }
       }
+   }
+
+static void custom_jack_port_connect_callback(jack_port_id_t a, jack_port_id_t b, int connect, void *arg)
+   {
+   ++port_connection_count;
    }
 
 void mixer_stop_players()
@@ -1377,6 +1387,8 @@ void mixer_init(void)
       fprintf(stderr, "Failed to allocate read-buffers for player_reader reading\n");
       exit(5);
       }
+      
+   jack_set_port_connect_callback(g.client, custom_jack_port_connect_callback, NULL);
             
    atexit(mixer_cleanup);
    g.mixer_up = TRUE;
@@ -1384,6 +1396,8 @@ void mixer_init(void)
       
 int mixer_main()
    {
+   unsigned int lead, ports_diff;
+
    if (!(kvp_parse(kvpdict, stdin)))
       return FALSE;
 
@@ -1612,6 +1626,12 @@ int mixer_main()
       else
          s.session_command = "";
 
+      lead = port_connection_count;
+      if (lead - port_reports > UINT_MAX << 1)
+         ports_diff = UINT_MAX - lead + port_reports + 1;    /* handle wrap */
+      else
+         ports_diff = lead - port_reports;
+
       fprintf(stdout, 
                 "str_l_peak=%d\nstr_r_peak=%d\n"
                 "str_l_rms=%d\nstr_r_rms=%d\n"
@@ -1659,15 +1679,15 @@ int mixer_main()
                 plr_l->silence,
                 plr_r->silence,
                 s.session_command,
-                g.port_connection_count
+                ports_diff
                 );
 
-      /* mark info as sent */
-      if (g.port_connection_count)
-         fprintf(stderr, "port connection changed qty %d\n", g.port_connection_count);
+      if (ports_diff)
+         {
+         port_reports += ports_diff;
+         fprintf(stderr, "port connection changed qty %d\n", ports_diff);
+         }
          
-      g.port_connection_count = -g.port_connection_count;
-                
       /* tell the jack mixer it can reset its vu stats now */
       reset_vu_stats_f = TRUE;
       left_peak = right_peak = -1.0F;

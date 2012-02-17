@@ -24,10 +24,11 @@ import os
 import sys
 import string
 import re
-import pango
 import gettext
 
 import gtk
+import pango
+import glib
 import mutagen
 import mutagen.id3 as id3
 from mutagen.mp3 import MP3
@@ -689,11 +690,11 @@ class MutagenGUI:
       label = gtk.Label()
       if idjcroot:
          if encoding is not None:
-            label.set_markup(u"<b>" + _('Filename:').decode("utf-8") + u" " + rich_safe(unicode(os.path.split(pathname)[1], encoding).encode("utf-8", "replace")) + u"</b>")
+            label.set_markup(u"<b>" + _('Filename:').decode("utf-8") + u" " + glib.markup_escape_text(unicode(os.path.split(pathname)[1], encoding).encode("utf-8", "replace")) + u"</b>")
          else:
-            label.set_markup(u"<b>" + _('Filename:').decode("utf-8") + u" " + rich_safe(os.path.split(pathname)[1]).encode("utf-8", "replace") + u"</b>")
+            label.set_markup(u"<b>" + _('Filename:').decode("utf-8") + u" " + glib.markup_escape_text(os.path.split(pathname)[1]).encode("utf-8", "replace") + u"</b>")
       else:
-         label.set_markup(u"<b>" + _('Filename:').decode("utf-8") + u" " + rich_safe(unicode(os.path.split(pathname)[1], "latin1").encode("utf-8", "replace")) + u"</b>")
+         label.set_markup(u"<b>" + _('Filename:').decode("utf-8") + u" " + glib.markup_escape_text(unicode(os.path.split(pathname)[1], "latin1").encode("utf-8", "replace")) + u"</b>")
       vbox.pack_start(label, False, False, 6)
       label.show()
       

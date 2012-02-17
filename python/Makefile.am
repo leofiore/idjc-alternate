@@ -1,13 +1,19 @@
 SUBDIRS = prelims
 
-pkgpython_PYTHON=utils.py maingui.py midicontrols.py freefunctions.py jingles.py playergui.py preferences.py mutagentagger.py sourceclientgui.py dialogs.py popupwindow.py tooltips.py licence_window.py p3db.py gtkstuff.py irc.py
+pkgpython_PYTHON = dialogs.py gtkstuff.py irc.py jingles.py licence_window.py maingui.py  \
+					/
+						 midicontrols.py mutagentagger.py p3db.py playergui.py popupwindow.py   \
+					/
+						 preferences.py sourceclientgui.py tooltips.py utils.py						
 
 nodist_pkgpython_PYTHON=__init__.py
 
 dist_noinst_PYTHON=__init__.py.in.in
 
 __init__.py: __init__.py.in
-	@sed -e 's|$${pkgdatadir}|${pkgdatadir}|' -e 's|$${exec_prefix}|${exec_prefix}|' -e 's|$${prefix}|${prefix}|' $? >$@
+	@sed -e 's|$${pkgdatadir}|${pkgdatadir}|' \
+	     -e 's|$${exec_prefix}|${exec_prefix}|' \
+	     -e 's|$${prefix}|${prefix}|' $? >$@
 
 clean-local:
 	rm -f __init__.py

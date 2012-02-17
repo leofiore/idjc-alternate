@@ -235,9 +235,9 @@ class Jingles(object):
       self.liststore.clear()
       for each in files:        # files will be added with alpha numeric sorting
          if each == self.interlude_song:
-            self.liststore.append([ count, each, "<b>" + rich_safe(each) + "</b>" ])
+            self.liststore.append([ count, each, "<b>" + glib.markup_escape_text(each) + "</b>" ])
          else:
-            self.liststore.append([ count, each, rich_safe(each) ])
+            self.liststore.append([ count, each, glib.markup_escape_text(each) ])
          count = count + 1
       i = 0
       while i < count:          # reorders the item numbers on the left column
