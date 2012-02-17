@@ -21,7 +21,7 @@ But strictly no third party module dependencies.
 
 
 __all__ = ["Singleton", "PolicedAttributes", "FixedAttributes",
-            "PathStr", "SlotObject", "string_multireplace"]
+                "PathStr", "SlotObject", "string_multireplace"]
 
 
 import os
@@ -30,178 +30,178 @@ from functools import wraps
 
 
 class Singleton(type):
-   """Enforce the singleton pattern upon the user class."""
+    """Enforce the singleton pattern upon the user class."""
 
-   
-   def __call__(cls, *args, **kwds):
-      try:
-         # Return an existing instance.
-         return cls._instance
 
-      except AttributeError:
-         # No existing instance so instantiate just this once.
-         cls._instance = super(Singleton, cls).__call__(*args, **kwds)
-         return cls._instance
+    def __call__(cls, *args, **kwds):
+        try:
+            # Return an existing instance.
+            return cls._instance
+
+        except AttributeError:
+            # No existing instance so instantiate just this once.
+            cls._instance = super(Singleton, cls).__call__(*args, **kwds)
+            return cls._instance
 
 
 
 def _PA_rlock(f):
-   """Policed Attributes helper for thread locking."""
-   
-   @wraps(f)
-   def _wrapper(cls, *args, **kwds):
-      bc = f.func_globals["bc"] = super(type(cls), cls)
-      rlock = bc.__getattribute__("_rlock")
-      
-      try:
-         rlock.acquire()
-         return f(cls, *args, **kwds)
+    """Policed Attributes helper for thread locking."""
 
-      finally:
-         rlock.release()
+    @wraps(f)
+    def _wrapper(cls, *args, **kwds):
+        bc = f.func_globals["bc"] = super(type(cls), cls)
+        rlock = bc.__getattribute__("_rlock")
 
-   return _wrapper
+        try:
+            rlock.acquire()
+            return f(cls, *args, **kwds)
+
+        finally:
+            rlock.release()
+
+    return _wrapper
 
 
 
 class PolicedAttributes(type):
-   """Polices data access to a namespace class.
-   
-   Prevents write access to attributes after they have been read.
-   Envisioned useful for the implementation of "safe" global variables.
-   """
+    """Polices data access to a namespace class.
 
-   def __new__(meta, name, bases, _dict):
-      @classmethod
-      @_PA_rlock
-      def peek(cls, attr, cb, *args, **kwds):
-         """Allow read + write within a callback.
+    Prevents write access to attributes after they have been read.
+    Envisioned useful for the implementation of "safe" global variables.
+    """
 
-         Typical use might be to append to an existing string.
-         No modification ban is placed or bypassed.
-         """
-         
-         if attr not in bc.__getattribute__("_banned"):
-            new = cb(
-                  super(PolicedAttributes, cls).__getattribute__(attr),
-                  *args, **kwds)
-            bc.__setattr__(attr, new)
+    def __new__(meta, name, bases, _dict):
+        @classmethod
+        @_PA_rlock
+        def peek(cls, attr, cb, *args, **kwds):
+            """Allow read + write within a callback.
 
-         else:
-            raise NotImplementedError("variable is locked")
-      
-      _dict["peek"] = peek
-      _dict["_banned"] = set()
-      _dict["_rlock"] = threading.RLock()
-      return super(PolicedAttributes, meta).__new__(meta, name, bases, _dict)
+            Typical use might be to append to an existing string.
+            No modification ban is placed or bypassed.
+            """
+
+            if attr not in bc.__getattribute__("_banned"):
+                new = cb(
+                        super(PolicedAttributes, cls).__getattribute__(attr),
+                        *args, **kwds)
+                bc.__setattr__(attr, new)
+
+            else:
+                raise NotImplementedError("variable is locked")
+
+        _dict["peek"] = peek
+        _dict["_banned"] = set()
+        _dict["_rlock"] = threading.RLock()
+        return super(PolicedAttributes, meta).__new__(meta, name, bases, _dict)
 
 
-   @_PA_rlock
-   def __getattribute__(cls, name):
-      bc.__getattribute__("_banned").add(name)
-      return bc.__getattribute__(name)
+    @_PA_rlock
+    def __getattribute__(cls, name):
+        bc.__getattribute__("_banned").add(name)
+        return bc.__getattribute__(name)
 
-     
-   @_PA_rlock
-   def __setattr__(cls, name, value):
-      if name in bc.__getattribute__("_banned"):
-         raise NotImplementedError("value has already been read")
 
-      bc.__setattr__(name, value)
+    @_PA_rlock
+    def __setattr__(cls, name, value):
+        if name in bc.__getattribute__("_banned"):
+            raise NotImplementedError("value has already been read")
 
-         
-   def __call__(cls, *args, **kwds):
-      raise NotImplementedError("this class cannot be instantiated")
+        bc.__setattr__(name, value)
+
+
+    def __call__(cls, *args, **kwds):
+        raise NotImplementedError("this class cannot be instantiated")
 
 
 
 class FixedAttributes(type):
-   """Implements a namespace class of constants."""
-   
+    """Implements a namespace class of constants."""
 
-   def __setattr__(cls, name, value):
-      raise NotImplementedError("value cannot be changed")
-      
-   
-   def __call__(cls, *args, **kwds):
-      raise NotImplementedError("this class cannot be instantiated")
+
+    def __setattr__(cls, name, value):
+        raise NotImplementedError("value cannot be changed")
+
+
+    def __call__(cls, *args, **kwds):
+        raise NotImplementedError("this class cannot be instantiated")
 
 
 
 class PathStr(str):
-   """A data type to perform path joins using the / operator.
-   
-   In this case the higher precedence of / is unfortunate.
-   """
-   
-   def __div__(self, other):
-      return PathStr(os.path.join(str(self), other))
-   
-   
-   def __add__(self, other):
-      return PathStr(str.__add__(self, other))
+    """A data type to perform path joins using the / operator.
+
+    In this case the higher precedence of / is unfortunate.
+    """
+
+    def __div__(self, other):
+        return PathStr(os.path.join(str(self), other))
 
 
-   def __repr__(self):
-      return "PathStr('%s')" % self
+    def __add__(self, other):
+        return PathStr(str.__add__(self, other))
+
+
+    def __repr__(self):
+        return "PathStr('%s')" % self
 
 
 
-class slot_object(object):  
-   """A mutable object containing an immutable object."""
-   
-
-   __slots__ = ['value']
-
-   
-   def __init__(self, value):
-      self.value = value
+class slot_object(object):
+    """A mutable object containing an immutable object."""
 
 
-   def __str__(self):
-      return str(self.value)
+    __slots__ = ['value']
 
 
-   def __int__(self):
-      return int(self.value)
+    def __init__(self, value):
+        self.value = value
 
 
-   def __float__(self):
-      return float(self.value)
+    def __str__(self):
+        return str(self.value)
 
 
-   def __repr__(self):
-      return "slot_object(%s)" % repr(self.value)
+    def __int__(self):
+        return int(self.value)
 
-      
-   def __getattr__(self, what):
-      def assign(value):
-         self.value = value
-         
-      if what.startswith("get_"):
-         return lambda : self.value
 
-      elif what.startswith("set_"):
-         return assign
+    def __float__(self):
+        return float(self.value)
 
-      else:
-         object.__getattribute__(self, what)
+
+    def __repr__(self):
+        return "slot_object(%s)" % repr(self.value)
+
+
+    def __getattr__(self, what):
+        def assign(value):
+            self.value = value
+
+        if what.startswith("get_"):
+            return lambda : self.value
+
+        elif what.startswith("set_"):
+            return assign
+
+        else:
+            object.__getattribute__(self, what)
 
 
 
 def string_multireplace(part, table):
-   """Replace multiple items in a string.
+    """Replace multiple items in a string.
 
-   Table is a sequence of 2 tuples of from, to strings.
-   """
+    Table is a sequence of 2 tuples of from, to strings.
+    """
 
-   if not table:
-      return part
-      
-   parts = part.split(table[0][0])
-   t_next = table[1:]
+    if not table:
+        return part
 
-   for i, each in enumerate(parts):
-      parts[i] = string_multireplace(each, t_next)
-      
-   return table[0][1].join(parts)
+    parts = part.split(table[0][0])
+    t_next = table[1:]
+
+    for i, each in enumerate(parts):
+        parts[i] = string_multireplace(each, t_next)
+
+    return table[0][1].join(parts)

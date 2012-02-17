@@ -188,9 +188,9 @@ class Binding(tuple):
     one 'input:action' pair per line. There may be multiple bindings of the
     same input or the same action. An 'input' string looks like one of:
 
-        Cc.nn    - MIDI control, channel 'c', control number 'nn'
-        Nc.nn    - MIDI note, channel 'c', note id 'nn'
-        Pc       - MIDI pitch wheel, channel 'c'
+        Cc.nn   - MIDI control, channel 'c', control number 'nn'
+        Nc.nn   - MIDI note, channel 'c', note id 'nn'
+        Pc     - MIDI pitch wheel, channel 'c'
         Kmm.nnnn - Keypress, modifier-state 'm', keyval 'nnnn'
 
     All numbers are hex. This format is also used to send MIDI event data from
@@ -797,15 +797,15 @@ class Controls(object):
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def p_gain(self, n, v, isd):
-    #    player= self._get_player(n)
-    #    if player is None: return
-    #    pass # XXX
+    #   player= self._get_player(n)
+    #   if player is None: return
+    #   pass # XXX
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def p_pan(self, n, v, isd):
-    #    player= self._get_player(n)
-    #    if player is None: return
-    #    pass # XXX
+    #   player= self._get_player(n)
+    #   if player is None: return
+    #   pass # XXX
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def p_pitch(self, n, v, isd):
@@ -913,11 +913,11 @@ class Controls(object):
         
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def m_vol(self, n, v, isd):
-    #    pass # XXX
+    #   pass # XXX
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def m_gain(self, n, v, isd):
-    #    pass # XXX
+    #   pass # XXX
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def m_pan(self, n, v, isd):
@@ -943,15 +943,15 @@ class Controls(object):
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def v_vol(self, n, v, isd):
-    #    pass # XXX
+    #   pass # XXX
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def v_gain(self, n, v, isd):
-    #    pass # XXX
+    #   pass # XXX
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def v_pan(self, n, v, isd):
-    #    pass # XXX
+    #   pass # XXX
 
     # One jingle
     #
