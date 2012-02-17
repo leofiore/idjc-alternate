@@ -24,10 +24,10 @@
 #include "sourceclient.h"
 
 struct audio_feed
-   {
-   struct threads_info *threads_info;
-   jack_nframes_t sample_rate;
-   };
+    {
+    struct threads_info *threads_info;
+    jack_nframes_t sample_rate;
+    };
 
 struct audio_feed *audio_feed_init(struct threads_info *ti);
 void audio_feed_deactivate(struct audio_feed *self);

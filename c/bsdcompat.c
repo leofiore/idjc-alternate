@@ -28,80 +28,80 @@
 #include <errno.h>
 
 float bsd_pow10f(float x)
-   {
-   return powf(10.f, x);
-   }
+    {
+    return powf(10.f, x);
+    }
 
 char *bsd_strndup(const char *s, size_t n)
-   {
-   size_t l;
-   char *r, *p;
+    {
+    size_t l;
+    char *r, *p;
 
-   if ((l = strlen(s)) < n)
-      n = l;
+    if ((l = strlen(s)) < n)
+        n = l;
 
-   if ((p = r = malloc(n + 1)) == NULL)
-      errno = ENOMEM;
-   else
-      {
-      while (n--)
-         *p++ = *s++;
-      *p = '\0';
-      }
+    if ((p = r = malloc(n + 1)) == NULL)
+        errno = ENOMEM;
+    else
+        {
+        while (n--)
+            *p++ = *s++;
+        *p = '\0';
+        }
 
-   return r;
-   }
+    return r;
+    }
 
 ssize_t bsd_getline(char **lineptr, size_t *n, FILE *stream)
-   {
-   const size_t growby = 64;
-   ssize_t i = 0;
-   int eol = 0, c;
+    {
+    const size_t growby = 64;
+    ssize_t i = 0;
+    int eol = 0, c;
 
-   if (lineptr == NULL || n == NULL || fileno(stream) == -1)
-      {
-      errno = EINVAL;
-      return -1;
-      }
+    if (lineptr == NULL || n == NULL || fileno(stream) == -1)
+        {
+        errno = EINVAL;
+        return -1;
+        }
 
-   if (*lineptr == NULL)
-      *n = 0;
+    if (*lineptr == NULL)
+        *n = 0;
 
-   for (;;)
-      {
-      if (i == *n)
-         if ((*lineptr = realloc(*lineptr, *n += growby + i / 8)) == NULL)
-            {
-            perror("getline: malloc failure\n");
-            *n = 0;
-            return -1;
-            }
+    for (;;)
+        {
+        if (i == *n)
+            if ((*lineptr = realloc(*lineptr, *n += growby + i / 8)) == NULL)
+                {
+                perror("getline: malloc failure\n");
+                *n = 0;
+                return -1;
+                }
 
-      if (eol)
-         break;
+        if (eol)
+            break;
 
-      c = fgetc(stream);
-      if (feof(stream) || ferror(stream))
-         eol = 1;
-      else
-         {
-         (*lineptr)[i++] = c;
-         if (c == '\n')
+        c = fgetc(stream);
+        if (feof(stream) || ferror(stream))
             eol = 1;
-         }
-      }
+        else
+            {
+            (*lineptr)[i++] = c;
+            if (c == '\n')
+                eol = 1;
+            }
+        }
 
-   (*lineptr)[i] = '\0';
+    (*lineptr)[i] = '\0';
 
-   if (i == 0)
-      fprintf(stderr, "line length was zero\n");
+    if (i == 0)
+        fprintf(stderr, "line length was zero\n");
 
-   return i;
-   }
+    return i;
+    }
 
 char *bsd_canonicalize_file_name(const char *path)
-   {
-   return realpath(path, NULL);
-   }
+    {
+    return realpath(path, NULL);
+    }
 
 #endif /* USE_BSD_COMPAT */

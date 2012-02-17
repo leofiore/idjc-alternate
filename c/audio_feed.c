@@ -31,102 +31,102 @@ typedef jack_default_audio_sample_t sample_t;
 static struct audio_feed *audio_feed;
 
 int audio_feed_process_audio(jack_nframes_t n_frames, void *arg)
-   {
-   struct audio_feed *self = audio_feed;
-   struct threads_info *ti = self->threads_info;
-   struct encoder *e;
-   struct recorder *r;
-   sample_t *input_port_buffer[2];
-   int i;
-   
-   input_port_buffer[0] = jack_port_get_buffer(g.port.output_in_l, n_frames);
-   input_port_buffer[1] = jack_port_get_buffer(g.port.output_in_r, n_frames);
-   
-   /* feed pcm audio data to all encoders that request it */
-   for (i = 0; i < ti->n_encoders; i++)
-      {
-      e = ti->encoder[i];
-      switch (e->jack_dataflow_control)
-         {
-         case JD_OFF:
-            break;
-         case JD_ON:
-            if (jack_ringbuffer_write_space(e->input_rb[1]) >= n_frames * sizeof (sample_t))
-               {
-               jack_ringbuffer_write(e->input_rb[0], (char *)input_port_buffer[0], n_frames * sizeof (sample_t));
-               jack_ringbuffer_write(e->input_rb[1], (char *)input_port_buffer[1], n_frames * sizeof (sample_t));
-               }
-            else
-               /* normally this happens when the CPU is overloaded */
-               e->performance_warning_indicator = PW_AUDIO_DATA_DROPPED;
-            break;
-         case JD_FLUSH:
-            jack_ringbuffer_reset(e->input_rb[0]);
-            jack_ringbuffer_reset(e->input_rb[1]);
-            e->jack_dataflow_control = JD_OFF;
-            break;
-         default:
-            fprintf(stderr, "jack_process_callback: unhandled jack_dataflow_control parameter\n");
-         }
-      }
+    {
+    struct audio_feed *self = audio_feed;
+    struct threads_info *ti = self->threads_info;
+    struct encoder *e;
+    struct recorder *r;
+    sample_t *input_port_buffer[2];
+    int i;
+    
+    input_port_buffer[0] = jack_port_get_buffer(g.port.output_in_l, n_frames);
+    input_port_buffer[1] = jack_port_get_buffer(g.port.output_in_r, n_frames);
+    
+    /* feed pcm audio data to all encoders that request it */
+    for (i = 0; i < ti->n_encoders; i++)
+        {
+        e = ti->encoder[i];
+        switch (e->jack_dataflow_control)
+            {
+            case JD_OFF:
+                break;
+            case JD_ON:
+                if (jack_ringbuffer_write_space(e->input_rb[1]) >= n_frames * sizeof (sample_t))
+                    {
+                    jack_ringbuffer_write(e->input_rb[0], (char *)input_port_buffer[0], n_frames * sizeof (sample_t));
+                    jack_ringbuffer_write(e->input_rb[1], (char *)input_port_buffer[1], n_frames * sizeof (sample_t));
+                    }
+                else
+                    /* normally this happens when the CPU is overloaded */
+                    e->performance_warning_indicator = PW_AUDIO_DATA_DROPPED;
+                break;
+            case JD_FLUSH:
+                jack_ringbuffer_reset(e->input_rb[0]);
+                jack_ringbuffer_reset(e->input_rb[1]);
+                e->jack_dataflow_control = JD_OFF;
+                break;
+            default:
+                fprintf(stderr, "jack_process_callback: unhandled jack_dataflow_control parameter\n");
+            }
+        }
+        
+    for (i = 0; i < ti->n_recorders; i++)
+        {
+        r = ti->recorder[i];
+        switch (r->jack_dataflow_control)
+            {
+            case JD_OFF:
+                break;
+            case JD_ON:
+                if (jack_ringbuffer_write_space(r->input_rb[1]) >= n_frames * sizeof (sample_t))
+                    {
+                    jack_ringbuffer_write(r->input_rb[0], (char *)input_port_buffer[0], n_frames * sizeof (sample_t));
+                    jack_ringbuffer_write(r->input_rb[1], (char *)input_port_buffer[1], n_frames * sizeof (sample_t));
+                    }
+                else
+                    /* normally this happens when the CPU is overloaded */
+                    r->performance_warning_indicator = PW_AUDIO_DATA_DROPPED;
+                break;
+            case JD_FLUSH:
+                jack_ringbuffer_reset(r->input_rb[0]);
+                jack_ringbuffer_reset(r->input_rb[1]);
+                r->jack_dataflow_control = JD_OFF;
+                break;
+            default:
+                fprintf(stderr, "jack_process_callback: unhandled jack_dataflow_control parameter\n");
+            }   
+        }
       
-   for (i = 0; i < ti->n_recorders; i++)
-      {
-      r = ti->recorder[i];
-      switch (r->jack_dataflow_control)
-         {
-         case JD_OFF:
-            break;
-         case JD_ON:
-            if (jack_ringbuffer_write_space(r->input_rb[1]) >= n_frames * sizeof (sample_t))
-               {
-               jack_ringbuffer_write(r->input_rb[0], (char *)input_port_buffer[0], n_frames * sizeof (sample_t));
-               jack_ringbuffer_write(r->input_rb[1], (char *)input_port_buffer[1], n_frames * sizeof (sample_t));
-               }
-            else
-               /* normally this happens when the CPU is overloaded */
-               r->performance_warning_indicator = PW_AUDIO_DATA_DROPPED;
-            break;
-         case JD_FLUSH:
-            jack_ringbuffer_reset(r->input_rb[0]);
-            jack_ringbuffer_reset(r->input_rb[1]);
-            r->jack_dataflow_control = JD_OFF;
-            break;
-         default:
-            fprintf(stderr, "jack_process_callback: unhandled jack_dataflow_control parameter\n");
-         }   
-      }
-     
-   return 0;
-   }
+    return 0;
+    }
 
 int audio_feed_jack_samplerate_request(struct threads_info *ti, struct universal_vars *uv, void *param)
-   {
-   printf("idjcsc: sample_rate=%ld\n", (long)ti->audio_feed->sample_rate);
-   fflush(stdout);
-   if (ferror(stdout))
-      return FAILED;
-   return SUCCEEDED;
-   }
+    {
+    printf("idjcsc: sample_rate=%ld\n", (long)ti->audio_feed->sample_rate);
+    fflush(stdout);
+    if (ferror(stdout))
+        return FAILED;
+    return SUCCEEDED;
+    }
 
 struct audio_feed *audio_feed_init(struct threads_info *ti)
-   {
-   struct audio_feed *self;
+    {
+    struct audio_feed *self;
 
-   if (!(self = audio_feed = calloc(1, sizeof (struct audio_feed))))
-      {
-      fprintf(stderr, "audio_feed_init: malloc failure\n");
-      return NULL;
-      }
+    if (!(self = audio_feed = calloc(1, sizeof (struct audio_feed))))
+        {
+        fprintf(stderr, "audio_feed_init: malloc failure\n");
+        return NULL;
+        }
 
-   self->threads_info = ti;      
-   self->sample_rate = jack_get_sample_rate(g.client);
-   return self;
-   }
+    self->threads_info = ti;      
+    self->sample_rate = jack_get_sample_rate(g.client);
+    return self;
+    }
 
 
 void audio_feed_destroy(struct audio_feed *self)
-   {
-   self->threads_info->audio_feed = NULL;
-   free(self);
-   }
+    {
+    self->threads_info->audio_feed = NULL;
+    free(self);
+    }

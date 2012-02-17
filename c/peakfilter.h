@@ -18,12 +18,12 @@
 */
 
 struct peakfilter
-   {
-   float *start;
-   float *end;
-   float *ptr;
-   float peak;
-   };
+    {
+    float *start;
+    float *end;
+    float *ptr;
+    float peak;
+    };
 
 struct peakfilter *peakfilter_create(float window, int sample_rate);
 void peakfilter_destroy(struct peakfilter *self);

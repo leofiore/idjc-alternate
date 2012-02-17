@@ -27,18 +27,18 @@
 #include "sourceclient.h"
 
 struct lme_data
-   {
-   lame_global_flags *gfp;
-   int lame_mode;
-   int lame_channels;
-   int lame_quality;
-   int lame_freeformat;
-   char *metadata;
-   int lame_samples;
-   unsigned char *mp3buf;
-   size_t mp3bufsize;
-   enum packet_flags packetflags;
-   };
+    {
+    lame_global_flags *gfp;
+    int lame_mode;
+    int lame_channels;
+    int lame_quality;
+    int lame_freeformat;
+    char *metadata;
+    int lame_samples;
+    unsigned char *mp3buf;
+    size_t mp3bufsize;
+    enum packet_flags packetflags;
+    };
 
 int live_mp3_encoder_init(struct encoder *encoder, struct encoder_vars *ev);
 

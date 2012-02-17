@@ -25,28 +25,28 @@
 #include "sourceclient.h"
 
 struct ogg_tag_data
-   {
-   char *custom;
-   char *artist;
-   char *title;
-   char *album;
-   };
+    {
+    char *custom;
+    char *artist;
+    char *title;
+    char *album;
+    };
 
 struct loe_data
-   {
-   struct ogg_tag_data tag_data;
-   long max_bitrate;            /* ogg upper and lower bitrate settings */
-   long min_bitrate;
-   vorbis_info      vi;
-   vorbis_block     vb;
-   vorbis_dsp_state vd;
-   vorbis_comment   vc;
-   ogg_stream_state os;
-   ogg_page         og;
-   ogg_packet       op;
-   int pagesamples;
-   int (*owf)(ogg_stream_state *os, ogg_page *og);
-   };
+    {
+    struct ogg_tag_data tag_data;
+    long max_bitrate;            /* ogg upper and lower bitrate settings */
+    long min_bitrate;
+    vorbis_info      vi;
+    vorbis_block     vb;
+    vorbis_dsp_state vd;
+    vorbis_comment   vc;
+    ogg_stream_state os;
+    ogg_page         og;
+    ogg_packet       op;
+    int pagesamples;
+    int (*owf)(ogg_stream_state *os, ogg_page *og);
+    };
 
 int live_ogg_encoder_init(struct encoder *encoder, struct encoder_vars *ev);
 int live_ogg_test_values(struct threads_info *ti, struct universal_vars *uv, void *other);

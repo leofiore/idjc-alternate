@@ -24,42 +24,42 @@
 enum streamtype_t { ST_UNHANDLED, ST_VORBIS, ST_FLAC, ST_SPEEX };
 
 struct oggdec_vars
-   {
-   int magic;              /* 4545 */
-   FILE  *fp;              /* file handle */
-   double seek_s;          /* time offset for first stream to be played */
-   void *dec_data;         /* decoder state variables live here */
-   void (*dec_cleanup)(struct xlplayer *xlplayer); /* decoder cleanup function */
-   struct xlplayer *xlplayer;
+    {
+    int magic;              /* 4545 */
+    FILE  *fp;              /* file handle */
+    double seek_s;          /* time offset for first stream to be played */
+    void *dec_data;         /* decoder state variables live here */
+    void (*dec_cleanup)(struct xlplayer *xlplayer); /* decoder cleanup function */
+    struct xlplayer *xlplayer;
 
-   ogg_sync_state   oy;    /* various ogg decoding variables */
-   ogg_page         og;
-   ogg_stream_state os;
-   ogg_packet       op;
+    ogg_sync_state   oy;    /* various ogg decoding variables */
+    ogg_page         og;
+    ogg_stream_state os;
+    ogg_packet       op;
 
-   /* a callback routine for when a new ogg page is obtained */
-   void (*new_oggpage_callback)(struct oggdec_vars *self, void *cb_userdata);
-   void *new_oggpage_cb_userdata;
+    /* a callback routine for when a new ogg page is obtained */
+    void (*new_oggpage_callback)(struct oggdec_vars *self, void *cb_userdata);
+    void *new_oggpage_cb_userdata;
 
-   /* stream info */
+    /* stream info */
 
-   off_t  *bos_offset;      /* file position where each stream starts */
-   unsigned *granule_count;   /* number of samples in this stream */
-   int    *serial;          /* the ogg serial numbers */
-   unsigned *samplerate;    /* sample rate per channel */
-   int    *channels;        /* number of audio channels */
-   char  **artist;          /* artist and title metadata */
-   char  **title;
-   char  **album;
-   char  **replaygain;      /* specifically replaygain_track_gain */
-   enum streamtype_t *streamtype;    /* indicate which type ie vorbis, flac */
-   double *start_time;      /* the time when each stream starts */
-   double *duration;        /* playback time */
-   int     n_streams;       /* number of logical streams found */
-   int     ix;              /* index of the stream of interest */
-   off_t   eos_offset;      /* offset to the end of file */
-   double  total_duration;  /* sum total playback time */
-   };
+    off_t  *bos_offset;      /* file position where each stream starts */
+    unsigned *granule_count;   /* number of samples in this stream */
+    int    *serial;          /* the ogg serial numbers */
+    unsigned *samplerate;    /* sample rate per channel */
+    int    *channels;        /* number of audio channels */
+    char  **artist;          /* artist and title metadata */
+    char  **title;
+    char  **album;
+    char  **replaygain;      /* specifically replaygain_track_gain */
+    enum streamtype_t *streamtype;    /* indicate which type ie vorbis, flac */
+    double *start_time;      /* the time when each stream starts */
+    double *duration;        /* playback time */
+    int     n_streams;       /* number of logical streams found */
+    int     ix;              /* index of the stream of interest */
+    off_t   eos_offset;      /* offset to the end of file */
+    double  total_duration;  /* sum total playback time */
+    };
 
 int oggdecode_reg(struct xlplayer *xlplayer);
 int oggdecode_get_metainfo(char *pathname, char **artist, char **title, char **album, double *length, char **replaygain);

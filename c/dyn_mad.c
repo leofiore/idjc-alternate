@@ -39,89 +39,89 @@ static void (*frame_init)(struct mad_frame *);
 static void (*synth_frame)(struct mad_synth *, struct mad_frame const *);
 
 static void dyn_mad_close()
-   {
-   dlclose(handle);
-   }
+    {
+    dlclose(handle);
+    }
 
 static void dyn_mad_init()
-   {
-   char *error;
+    {
+    char *error;
 
-   if (!((handle = dlopen("libmad.so", RTLD_LAZY)) || (handle = dlopen("libmad.dylib", RTLD_LAZY))))
-      {
-      fprintf(stderr, "failed to locate libmad dynamic library\n");
-      return;
-      }
-   dlerror();
+    if (!((handle = dlopen("libmad.so", RTLD_LAZY)) || (handle = dlopen("libmad.dylib", RTLD_LAZY))))
+        {
+        fprintf(stderr, "failed to locate libmad dynamic library\n");
+        return;
+        }
+    dlerror();
 
-   if (!(   (frame_decode = dlsym(handle, "mad_frame_decode")) &&
-            (stream_buffer = dlsym(handle, "mad_stream_buffer")) &&
-            (stream_finish = dlsym(handle, "mad_stream_finish")) &&
-            (frame_finish = dlsym(handle, "mad_frame_finish")) &&
-            (synth_init = dlsym(handle, "mad_synth_init")) &&
-            (stream_init = dlsym(handle, "mad_stream_init")) &&
-            (frame_init = dlsym(handle, "mad_frame_init")) &&
-            (synth_frame = dlsym(handle, "mad_synth_frame"))))
-      {
-      fprintf(stderr, "missing symbols in libmad");
-      } 
+    if (!(   (frame_decode = dlsym(handle, "mad_frame_decode")) &&
+                (stream_buffer = dlsym(handle, "mad_stream_buffer")) &&
+                (stream_finish = dlsym(handle, "mad_stream_finish")) &&
+                (frame_finish = dlsym(handle, "mad_frame_finish")) &&
+                (synth_init = dlsym(handle, "mad_synth_init")) &&
+                (stream_init = dlsym(handle, "mad_stream_init")) &&
+                (frame_init = dlsym(handle, "mad_frame_init")) &&
+                (synth_frame = dlsym(handle, "mad_synth_frame"))))
+        {
+        fprintf(stderr, "missing symbols in libmad");
+        } 
 
-   if ((error = dlerror()))
-      {
-      fprintf(stderr, "dlsym failed with: %s\n", error);
-      dlclose(handle);
-      handle = NULL;
-      }
+    if ((error = dlerror()))
+        {
+        fprintf(stderr, "dlsym failed with: %s\n", error);
+        dlclose(handle);
+        handle = NULL;
+        }
 
-   atexit(dyn_mad_close);
-   }
-   
+    atexit(dyn_mad_close);
+    }
+    
 int dyn_mad_onceinit()
-   {
-   static pthread_once_t once_control = PTHREAD_ONCE_INIT;
-   
-   pthread_once(&once_control, dyn_mad_init);
-   return handle != NULL;
-   }
+    {
+    static pthread_once_t once_control = PTHREAD_ONCE_INIT;
+    
+    pthread_once(&once_control, dyn_mad_init);
+    return handle != NULL;
+    }
 
 int mad_frame_decode(struct mad_frame *frame, struct mad_stream *stream)
-   {
-   return frame_decode(frame, stream);
-   }
+    {
+    return frame_decode(frame, stream);
+    }
 
 void mad_stream_buffer(struct mad_stream *stream, unsigned char const *buffer, unsigned long length)
-   {
-   stream_buffer(stream, buffer, length);
-   }
+    {
+    stream_buffer(stream, buffer, length);
+    }
 
 void mad_stream_finish(struct mad_stream *stream)
-   {
-   stream_finish(stream);
-   }
+    {
+    stream_finish(stream);
+    }
 
 void mad_frame_finish(struct mad_frame *frame)
-   {
-   frame_finish(frame);
-   }
+    {
+    frame_finish(frame);
+    }
 
 void mad_synth_init(struct mad_synth *synth)
-   {
-   synth_init(synth);
-   }
+    {
+    synth_init(synth);
+    }
 
 void mad_stream_init(struct mad_stream *stream)
-   {
-   stream_init(stream);
-   }
+    {
+    stream_init(stream);
+    }
 
 void mad_frame_init(struct mad_frame *frame)
-   {
-   frame_init(frame);
-   }
+    {
+    frame_init(frame);
+    }
 
 void mad_synth_frame(struct mad_synth *synth, struct mad_frame const *frame)
-   {
-   synth_frame(synth, frame);
-   }
+    {
+    synth_frame(synth, frame);
+    }
 
 #endif /* DYN_LAME */

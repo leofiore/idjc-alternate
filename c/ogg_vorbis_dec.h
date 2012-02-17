@@ -21,12 +21,12 @@
 #include "xlplayer.h"
 
 struct vorbisdec_vars
-   {
-   vorbis_info vi;
-   vorbis_comment vc;
-   vorbis_dsp_state v;
-   vorbis_block vb;
-   int resample;
-   };
+    {
+    vorbis_info vi;
+    vorbis_comment vc;
+    vorbis_dsp_state v;
+    vorbis_block vb;
+    int resample;
+    };
 
 int ogg_vorbisdec_init(struct xlplayer *xlplayer);

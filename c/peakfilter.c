@@ -26,60 +26,60 @@
 #include "dbconvert.h"
 
 struct peakfilter *peakfilter_create(float window, int sample_rate)
-   {
-   struct peakfilter *self;
-   int n_stages;
-   
-   if (!(self = malloc(sizeof (struct peakfilter))))
-      {
-      fprintf(stderr, "malloc failure\n");
-      exit(-5);
-      }
-   
-   if ((n_stages = (int)(window * sample_rate)) < 1)
-      n_stages = 1;
-   
-   if (!(self->ptr = self->start = calloc(n_stages, sizeof (float))))
-      {
-      fprintf(stderr, "malloc failure\n");
-      exit(-5);
-      }
-      
-   self->end = self->start + n_stages;   
-   self->peak = 0.0f;
-   
-   return self;
-   }
+    {
+    struct peakfilter *self;
+    int n_stages;
+    
+    if (!(self = malloc(sizeof (struct peakfilter))))
+        {
+        fprintf(stderr, "malloc failure\n");
+        exit(-5);
+        }
+    
+    if ((n_stages = (int)(window * sample_rate)) < 1)
+        n_stages = 1;
+    
+    if (!(self->ptr = self->start = calloc(n_stages, sizeof (float))))
+        {
+        fprintf(stderr, "malloc failure\n");
+        exit(-5);
+        }
+        
+    self->end = self->start + n_stages;   
+    self->peak = 0.0f;
+    
+    return self;
+    }
 
 void peakfilter_destroy(struct peakfilter *self)
-   {
-   free(self->start);
-   free(self);
-   }
+    {
+    free(self->start);
+    free(self);
+    }
 
 void peakfilter_process(struct peakfilter *self, float sample)
-   {
-   float least;
-   float *p;
-   
-   *self->ptr++ = fabsf(sample);
-   if (self->ptr == self->end)
-      self->ptr = self->start;
-      
-   for (p = self->start, least = HUGE_VALF; p < self->end; p++)
-      if (*p < least)
-         least = *p;
-   
-   if (least > self->peak)
-      self->peak = least;
-   }
+    {
+    float least;
+    float *p;
+    
+    *self->ptr++ = fabsf(sample);
+    if (self->ptr == self->end)
+        self->ptr = self->start;
+        
+    for (p = self->start, least = HUGE_VALF; p < self->end; p++)
+        if (*p < least)
+            least = *p;
+    
+    if (least > self->peak)
+        self->peak = least;
+    }
 
 float peakfilter_read(struct peakfilter *self)
-   {
-   float ret;
-   
-   ret = self->peak;
-   self->peak = 0.0f;
-   return ret;
-   }
+    {
+    float ret;
+    
+    ret = self->peak;
+    self->peak = 0.0f;
+    return ret;
+    }
 

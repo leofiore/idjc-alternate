@@ -29,24 +29,24 @@
 #include "xlplayer.h"
 
 struct speexdec_vars
-   {
-   SpeexHeader *header;
-   int stereo;
-   int channels;
-   void *dec_state;
-   SpeexBits bits;
-   float *frame;
-   int frame_size;
-   int nframes;
-   SpeexStereoState stereo_state;
-   int page_granule;
-   int last_granule;
-   int page_nb_packets;
-   int skip_samples;
-   int packet_no;
-   int lookahead;
-   int seek_dump_samples;
-   };
+    {
+    SpeexHeader *header;
+    int stereo;
+    int channels;
+    void *dec_state;
+    SpeexBits bits;
+    float *frame;
+    int frame_size;
+    int nframes;
+    SpeexStereoState stereo_state;
+    int page_granule;
+    int last_granule;
+    int page_nb_packets;
+    int skip_samples;
+    int packet_no;
+    int lookahead;
+    int seek_dump_samples;
+    };
 
 int ogg_speexdec_init(struct xlplayer *xlplayer);
 

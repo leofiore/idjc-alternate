@@ -24,19 +24,19 @@ enum fade_startpos { FADE_SET_LOW, FADE_SET_SAME, FADE_SET_HIGH };
 enum fade_direction { FADE_IN, FADE_OUT, FADE_DIRECTION_UNCHANGED };
 
 struct fade
-   {
-   float level;
-   enum fade_direction direction;
-   float rate;
-   float baselevel;
-   int samplerate;
-   int moving;
-   int newdata;
-   enum fade_startpos startpos;
-   int samples;
-   enum fade_direction newdirection;
-   pthread_mutex_t mutex;
-   };
+    {
+    float level;
+    enum fade_direction direction;
+    float rate;
+    float baselevel;
+    int samplerate;
+    int moving;
+    int newdata;
+    enum fade_startpos startpos;
+    int samples;
+    enum fade_direction newdirection;
+    pthread_mutex_t mutex;
+    };
 
 /* fade level l stands before -infinity dB */
 struct fade *fade_init(int samplerate, float l);

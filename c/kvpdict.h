@@ -22,13 +22,13 @@
 #include <pthread.h>
 
 struct kvpdict
-   {
-   char *key;           /* the key from a key value pair to match against */
-   char **target;       /* the aim here is to set another pointer to the new value
-                        rather than to make the new value a member of the dictionary */
-   pthread_mutex_t *pm; /* if a lock is supplied here it will be used */
-   };
-   
+    {
+    char *key;           /* the key from a key value pair to match against */
+    char **target;       /* the aim here is to set another pointer to the new value
+                                rather than to make the new value a member of the dictionary */
+    pthread_mutex_t *pm; /* if a lock is supplied here it will be used */
+    };
+    
 char *kvp_extract_value(char *keyvaluepair);
 int kvp_apply_to_dict(struct kvpdict *kvpdict, char *key, char *newtarget);
 void kvp_free_dict(struct kvpdict *dp);

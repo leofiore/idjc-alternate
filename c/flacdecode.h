@@ -23,15 +23,15 @@
 #include "xlplayer.h"
 
 struct flacdecode_vars
-   {
-   FLAC__StreamDecoder *decoder;
-   FLAC__StreamMetadata metainfo;
-   int decoderstate;
-   int resample_f;
-   int suppress_audio_output;
-   FLAC__uint64 totalsamples;
-   float *flbuf;
-   };
+    {
+    FLAC__StreamDecoder *decoder;
+    FLAC__StreamMetadata metainfo;
+    int decoderstate;
+    int resample_f;
+    int suppress_audio_output;
+    FLAC__uint64 totalsamples;
+    float *flbuf;
+    };
 
 int flacdecode_reg(struct xlplayer *xlplayer);
 

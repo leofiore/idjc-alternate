@@ -21,35 +21,35 @@
 #include <jack/jack.h>
 
 struct jack_ports
-   {
-   jack_port_t *dj_out_l;
-   jack_port_t *dj_out_r;
-   jack_port_t *dsp_out_l;
-   jack_port_t *dsp_out_r;
-   jack_port_t *dsp_in_l;
-   jack_port_t *dsp_in_r;
-   jack_port_t *str_out_l;
-   jack_port_t *str_out_r;
-   jack_port_t *voip_out_l;
-   jack_port_t *voip_out_r;
-   jack_port_t *voip_in_l;
-   jack_port_t *voip_in_r;
+    {
+    jack_port_t *dj_out_l;
+    jack_port_t *dj_out_r;
+    jack_port_t *dsp_out_l;
+    jack_port_t *dsp_out_r;
+    jack_port_t *dsp_in_l;
+    jack_port_t *dsp_in_r;
+    jack_port_t *str_out_l;
+    jack_port_t *str_out_r;
+    jack_port_t *voip_out_l;
+    jack_port_t *voip_out_r;
+    jack_port_t *voip_in_l;
+    jack_port_t *voip_in_r;
 
-   jack_port_t *midi_port;
-      
-   jack_port_t *output_in_l;
-   jack_port_t *output_in_r;
-   };
+    jack_port_t *midi_port;
+        
+    jack_port_t *output_in_l;
+    jack_port_t *output_in_r;
+    };
 
 struct globs
-   {
-   sig_atomic_t app_shutdown;
-   int main_timeout;          /* Inactive when negative. */
-   int jack_timeout;
-   int has_head;
-   int mixer_up;
-   jack_client_t *client;     /* Client handle to JACK. */
-   struct jack_ports port;    /* JACK port handles. */
-   };
+    {
+    sig_atomic_t app_shutdown;
+    int main_timeout;          /* Inactive when negative. */
+    int jack_timeout;
+    int has_head;
+    int mixer_up;
+    jack_client_t *client;     /* Client handle to JACK. */
+    struct jack_ports port;    /* JACK port handles. */
+    };
 
 extern struct globs g;

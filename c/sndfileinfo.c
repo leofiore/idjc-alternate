@@ -22,30 +22,30 @@
 #include "sndfileinfo.h"
 
 int sndfileinfo(char *pathname)
-   {
-   SF_INFO sfinfo;
-   SNDFILE *handle;
-   const char *artist, *title, *album;
+    {
+    SF_INFO sfinfo;
+    SNDFILE *handle;
+    const char *artist, *title, *album;
 
-   if (!(handle = sf_open(pathname, SFM_READ, &sfinfo)))
-      {
-      fprintf(stderr, "sndfileinfo failed to open file %s\n", pathname);
-      return 0;
-      }
-   artist = sf_get_string(handle, SF_STR_ARTIST);
-   title = sf_get_string(handle, SF_STR_TITLE);
-   album = sf_get_string(handle, SF_STR_ALBUM);
+    if (!(handle = sf_open(pathname, SFM_READ, &sfinfo)))
+        {
+        fprintf(stderr, "sndfileinfo failed to open file %s\n", pathname);
+        return 0;
+        }
+    artist = sf_get_string(handle, SF_STR_ARTIST);
+    title = sf_get_string(handle, SF_STR_TITLE);
+    album = sf_get_string(handle, SF_STR_ALBUM);
  
-   printf("idjcmixer: sndfileinfo length=%d\n", (int)(sfinfo.frames / sfinfo.samplerate));
-   if (artist && title)
-      {
-      printf("idjcmixer: sndfileinfo artist=%s\n", artist);
-      printf("idjcmixer: sndfileinfo title=%s\n", title);
-      if (album)
-         printf("idjcmixer: sndfileinfo album=%s\n", album);
-      }
-   printf("idjcmixer: sndfileinfo end\n");
-   sf_close(handle);
-   fflush(stdout);
-   return 1;
-   }
+    printf("idjcmixer: sndfileinfo length=%d\n", (int)(sfinfo.frames / sfinfo.samplerate));
+    if (artist && title)
+        {
+        printf("idjcmixer: sndfileinfo artist=%s\n", artist);
+        printf("idjcmixer: sndfileinfo title=%s\n", title);
+        if (album)
+            printf("idjcmixer: sndfileinfo album=%s\n", album);
+        }
+    printf("idjcmixer: sndfileinfo end\n");
+    sf_close(handle);
+    fflush(stdout);
+    return 1;
+    }

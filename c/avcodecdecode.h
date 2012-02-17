@@ -35,17 +35,17 @@
 #include "xlplayer.h"
 
 struct avcodecdecode_vars
-   {
-   AVCodec *codec;
-   AVPacket pkt;
-   AVCodecContext *c;
-   AVFormatContext *ic;
-   int resample;
-   unsigned int stream;
-   uint8_t *outbuf;
-   float *floatsamples;
-   float drop;
-   };
+    {
+    AVCodec *codec;
+    AVPacket pkt;
+    AVCodecContext *c;
+    AVFormatContext *ic;
+    int resample;
+    unsigned int stream;
+    uint8_t *outbuf;
+    float *floatsamples;
+    float drop;
+    };
 
 int avcodecdecode_reg(struct xlplayer *xlplayer);
 void avformatinfo(char *pathname);

@@ -29,31 +29,31 @@ struct recorder;
 struct audio_feed;
 
 struct threads_info
-   {
-   int n_encoders;
-   int n_streamers;
-   int n_recorders;
-   struct encoder **encoder;
-   struct streamer **streamer;
-   struct recorder **recorder;
-   struct audio_feed *audio_feed;
-   };
+    {
+    int n_encoders;
+    int n_streamers;
+    int n_recorders;
+    struct encoder **encoder;
+    struct streamer **streamer;
+    struct recorder **recorder;
+    struct audio_feed *audio_feed;
+    };
 
 struct universal_vars
-   {
-   char *command;
-   char *dev_type;
-   char *tab_id;
-   int tab;
-   };
+    {
+    char *command;
+    char *dev_type;
+    char *tab_id;
+    int tab;
+    };
 
 struct commandmap
-   {
-   char *key;
-   int (*function)(struct threads_info *ti, struct universal_vars *uv, void *other_parameter);
-   void *other_parameter;
-   };
-   
+    {
+    char *key;
+    int (*function)(struct threads_info *ti, struct universal_vars *uv, void *other_parameter);
+    void *other_parameter;
+    };
+    
 #include "encoder.h"
 #include "streamer.h"
 #include "recorder.h"

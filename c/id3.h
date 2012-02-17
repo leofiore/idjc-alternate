@@ -21,65 +21,65 @@
 enum { ID3_LATIN1=0x00, ID3_UTF_8=0x3 };
 
 struct id3_frame_header
-   {
-   char frame_id[5];
-   unsigned int size;
-   unsigned char status_flags;
-   unsigned char format_flags;
-   };
+    {
+    char frame_id[5];
+    unsigned int size;
+    unsigned char status_flags;
+    unsigned char format_flags;
+    };
 
 struct id3_frame
-   {
-   char *compiled_data;
-   int compiled_data_size;
-   int compiled_non_embedded_data_size;
-   struct id3_frame_header frame_header;
-   struct id3_frame *first_embedded_frame;
-   struct id3_frame *next;
-   struct id3_frame *prev;
-   struct id3_tag *tag;
-   void *data;          /* eg. points to struct id3_text_frame_data */
-   };
+    {
+    char *compiled_data;
+    int compiled_data_size;
+    int compiled_non_embedded_data_size;
+    struct id3_frame_header frame_header;
+    struct id3_frame *first_embedded_frame;
+    struct id3_frame *next;
+    struct id3_frame *prev;
+    struct id3_tag *tag;
+    void *data;          /* eg. points to struct id3_text_frame_data */
+    };
 
 struct id3_chap_frame_data
-   {
-   char *identifier;
-   unsigned char start_ms[4];
-   unsigned char end_ms[4];
-   unsigned char start_byte[4];
-   unsigned char end_byte[4];
-   };
+    {
+    char *identifier;
+    unsigned char start_ms[4];
+    unsigned char end_ms[4];
+    unsigned char start_byte[4];
+    unsigned char end_byte[4];
+    };
 
 struct id3_text_frame_data
-   {
-   unsigned char text_encoding;
-   char *text;
-   int null_terminator;
-   };
+    {
+    unsigned char text_encoding;
+    char *text;
+    int null_terminator;
+    };
 
 struct id3_extended_header
-   {
-   unsigned int size;
-   int n_flagbytes;
-   unsigned char data[1];
-   };
+    {
+    unsigned int size;
+    int n_flagbytes;
+    unsigned char data[1];
+    };
 
 struct id3_header
-   {
-   unsigned short int version;
-   unsigned int size;
-   unsigned char flags;
-   };
+    {
+    unsigned short int version;
+    unsigned int size;
+    unsigned char flags;
+    };
 
 struct id3_tag
-   {
-   void *tag_data;
-   size_t tag_data_size;
-   struct id3_header header;
-   struct id3_extended_header *extended_header;
-   struct id3_frame *first_frame;
-   int padding;
-   };
+    {
+    void *tag_data;
+    size_t tag_data_size;
+    struct id3_header header;
+    struct id3_extended_header *extended_header;
+    struct id3_frame *first_frame;
+    int padding;
+    };
 
 struct id3_tag *id3_tag_new(int flags, int padding);
 struct id3_frame *id3_text_frame_new(char *identifier, char *text, unsigned char encoding, int null_terminator);

@@ -23,24 +23,24 @@
 #include "sourceclient.h"
 
 struct streamer_vars
-   {
-   char *stream_source;
-   char *server_type;
-   char *host;
-   char *port;
-   char *mount;
-   char *login;
-   char *password;
-   char *useragent;
-   char *dj_name;
-   char *listen_url;
-   char *description;
-   char *genre;
-   char *irc;
-   char *aim;
-   char *icq;
-   char *make_public;
-   };
+    {
+    char *stream_source;
+    char *server_type;
+    char *host;
+    char *port;
+    char *mount;
+    char *login;
+    char *password;
+    char *useragent;
+    char *dj_name;
+    char *listen_url;
+    char *description;
+    char *genre;
+    char *irc;
+    char *aim;
+    char *icq;
+    char *make_public;
+    };
 
 enum stream_mode { SM_DISCONNECTED, SM_CONNECTING, SM_CONNECTED, SM_DISCONNECTING };
 
@@ -48,23 +48,23 @@ struct shout;
 struct _util_dict;
 
 struct streamer
-   {
-   struct threads_info *threads_info;
-   int numeric_id;
-   pthread_t thread_h;
-   int thread_terminate_f;
-   int disconnect_request;
-   int disconnect_pending;
-   struct encoder_op *encoder_op;
-   struct shout *shout;
-   struct _util_dict *shout_meta;
-   enum stream_mode stream_mode;
-   int brand_new_connection;    /* used for triggering actions in the gui */
-   long shout_status;
-   int initial_serial;  /* the enocoder serial number we commence streaming from */
-   int final_serial;    /* the serial number to cease streaming at the end of */
-   ssize_t max_shout_queue;     /* how much audio data we are willing to stockpile */
-   };
+    {
+    struct threads_info *threads_info;
+    int numeric_id;
+    pthread_t thread_h;
+    int thread_terminate_f;
+    int disconnect_request;
+    int disconnect_pending;
+    struct encoder_op *encoder_op;
+    struct shout *shout;
+    struct _util_dict *shout_meta;
+    enum stream_mode stream_mode;
+    int brand_new_connection;    /* used for triggering actions in the gui */
+    long shout_status;
+    int initial_serial;  /* the enocoder serial number we commence streaming from */
+    int final_serial;    /* the serial number to cease streaming at the end of */
+    ssize_t max_shout_queue;     /* how much audio data we are willing to stockpile */
+    };
 
 struct streamer *streamer_init(struct threads_info *ti, int numeric_id);
 void streamer_destroy(struct streamer *self);

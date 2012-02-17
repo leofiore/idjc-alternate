@@ -20,11 +20,11 @@
 #include "xlplayer.h"
 
 struct sndfiledecode_vars
-   {
-   float *flbuf;
-   int resample;
-   SNDFILE *sndfile;
-   SF_INFO sf_info;
-   };
+    {
+    float *flbuf;
+    int resample;
+    SNDFILE *sndfile;
+    SF_INFO sf_info;
+    };
 
 int  sndfiledecode_reg(struct xlplayer *xlplayer);

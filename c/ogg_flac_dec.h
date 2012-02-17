@@ -25,12 +25,12 @@
 #include "xlplayer.h"
 
 struct oggflacdec_vars
-   {
-   FLAC__StreamDecoder *dec;
-   int resample;
-   int suppress_audio_output;
-   float *flbuf;
-   };
+    {
+    FLAC__StreamDecoder *dec;
+    int resample;
+    int suppress_audio_output;
+    float *flbuf;
+    };
 
 int ogg_flacdec_init(struct xlplayer *xlplayer);
 

@@ -26,23 +26,23 @@
 #include "live_ogg_encoder.h"
 
 struct lofe_data
-   {
-   struct ogg_tag_data tag_data;
-   FLAC__StreamEncoder *enc;
-   int bits_per_sample;
-   int use_metadata;
-   FLAC__StreamMetadata *metadata[1];
-   FLAC__byte *pab;
-   size_t pab_rqd;
-   size_t pab_size;
-   size_t pab_head_size;
-   int n_writes;
-   unsigned samples;
-   enum packet_flags flags;
-   unsigned int seedp;
-   int uclip;
-   int lclip;
-   };
+    {
+    struct ogg_tag_data tag_data;
+    FLAC__StreamEncoder *enc;
+    int bits_per_sample;
+    int use_metadata;
+    FLAC__StreamMetadata *metadata[1];
+    FLAC__byte *pab;
+    size_t pab_rqd;
+    size_t pab_size;
+    size_t pab_head_size;
+    int n_writes;
+    unsigned samples;
+    enum packet_flags flags;
+    unsigned int seedp;
+    int uclip;
+    int lclip;
+    };
 
 int live_oggflac_encoder_init(struct encoder *encoder, struct encoder_vars *ev);
 
