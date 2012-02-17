@@ -38,7 +38,6 @@ from mutagen.monkeysaudio import MonkeysAudio
 from mutagen.asf import ASF, ASFUnicodeAttribute
 
 from idjc import FGlobs
-from .freefunctions import *
 from .tooltips import main_tips
 from idjc.prelims import ProfileManager
 

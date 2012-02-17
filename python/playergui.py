@@ -47,7 +47,7 @@ from mutagen.asf import ASF
 from idjc import FGlobs, PGlobs
 from . import popupwindow
 from .mutagentagger import *
-from .freefunctions import *
+from .utils import slot_object
 from .gtkstuff import threadslock
 from .prelims import *
 from .tooltips import main_tips

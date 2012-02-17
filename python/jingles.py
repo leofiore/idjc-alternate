@@ -29,7 +29,6 @@ import gtk
 import pango
 
 from idjc import *
-from .freefunctions import *
 from .gtkstuff import WindowSizeTracker
 from .prelims import *
 from .tooltips import main_tips

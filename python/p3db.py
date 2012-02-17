@@ -18,7 +18,6 @@
 __all__ = ['MediaPane', 'Prefs']
 
 
-import os
 import time
 from urllib import quote
 
@@ -503,7 +502,7 @@ class Prefs(gtk.Frame):
                     print inst
                     try:
                         c.close()
-                    except:
+                    except Exception:
                         pass
                     widget.set_active(False)
                 else:
@@ -593,3 +592,4 @@ class Prefs(gtk.Frame):
         self.proktoggle.connect("toggled", self.cb_proktoggle)
         table.attach(self.proktoggle, 2, 4, 2, 3)
         self.proktoggle.show()
+        self.db = None

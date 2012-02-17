@@ -43,7 +43,7 @@ from .playergui import *
 from .sourceclientgui import *
 from .preferences import *
 from .jingles import *
-from .freefunctions import slot_object
+from .utils import slot_object
 from .gtkstuff import threadslock, WindowSizeTracker
 from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog
 from . import midicontrols

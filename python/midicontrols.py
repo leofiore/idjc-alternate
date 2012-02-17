@@ -28,7 +28,6 @@ import gtk
 import pango
 
 from idjc import FGlobs, PGlobs
-from .freefunctions import *
 from .gtkstuff import threadslock
 from .prelims import ProfileManager
 from .tooltips import main_tips

@@ -32,28 +32,28 @@ from .utils import PathStr
 
 
 class FGlobs(object):
-   """Namespace class of variables which cannot be altered.
-   
-
-   These are set by the build process.
-   """
-
-   __metaclass__ = FixedAttributes
+    """Namespace class of variables which cannot be altered.
 
 
-   datarootdir = PathStr("""@datarootdir@""")
-   libexecdir = PathStr("""@libexecdir@""")
-   pkgdatadir = PathStr("""${pkgdatadir}""")
-   localedir = PathStr("""@localedir@""")
-   bindir = PathStr("""@bindir@""")
-   avformat = @HAVE_AVFORMAT@
-   avcodec = @HAVE_AVCODEC@
-   flacenabled = @HAVE_FLAC@
-   oggflacenabled = @HAVE_OGGFLAC@
-   speexenabled = @HAVE_SPEEX@
-   package_name = """@PACKAGE_NAME@"""
-   package_version = """@PACKAGE_VERSION@"""
-   enh_libshout = @ENH_SHOUT@
+    These are set by the build process.
+    """
+
+    __metaclass__ = FixedAttributes
+
+
+    datarootdir = PathStr("""@datarootdir@""")
+    libexecdir = PathStr("""@libexecdir@""")
+    pkgdatadir = PathStr("""${pkgdatadir}""")
+    localedir = PathStr("""@localedir@""")
+    bindir = PathStr("""@bindir@""")
+    avformat = @HAVE_AVFORMAT@
+    avcodec = @HAVE_AVCODEC@
+    flacenabled = @HAVE_FLAC@
+    oggflacenabled = @HAVE_OGGFLAC@
+    speexenabled = @HAVE_SPEEX@
+    package_name = """@PACKAGE_NAME@"""
+    package_version = """@PACKAGE_VERSION@"""
+    enh_libshout = @ENH_SHOUT@
 
 
 
@@ -64,33 +64,37 @@ _ = t.gettext
 
 
 class PGlobs(object):
-   """Values which cannot be changed once they have been read."""
+    """Values which cannot be changed once they have been read."""
       
-   
-   __metaclass__ = PolicedAttributes
 
-   
-   config_dir = PathStr(glib.get_user_config_dir()) / FGlobs.package_name
-   #config_dir = PathStr(os.path.expanduser("~")) / ("." + FGlobs.package_name)
-   profile_dir = config_dir / "profiles"
-   dbus_bus_basename = "net.sf." + FGlobs.package_name
-   dbus_objects_basename = "/net/sf/" + FGlobs.package_name
-   app_shortform = "IDJC"
-   app_longform = "Internet DJ Console"
-   default_icon = FGlobs.pkgdatadir / "icon.png"
-   autoload_profile_pathname = config_dir / "autoload-profile"
-   copyright = _("Copyright 2005-2012 Stephen Fairchild and others.")
-   license = _("Released under the GNU General Public License V2.0 or later.")
-   num_micpairs = 2
-   num_streamers = 6
-   num_encoders = 6
-   num_recorders = 2
+    __metaclass__ = PolicedAttributes
+
+
+    config_dir = PathStr(glib.get_user_config_dir()) / FGlobs.package_name
+    #config_dir = PathStr(os.path.expanduser("~")) / ("." + FGlobs.package_name)
+    profile_dir = config_dir / "profiles"
+    dbus_bus_basename = "net.sf." + FGlobs.package_name
+    dbus_objects_basename = "/net/sf/" + FGlobs.package_name
+    app_shortform = "IDJC"
+    app_longform = "Internet DJ Console"
+    default_icon = FGlobs.pkgdatadir / "icon.png"
+    autoload_profile_pathname = config_dir / "autoload-profile"
+    copyright = _("Copyright 2005-2012 Stephen Fairchild and others.")
+    license = _("Released under the GNU General Public License V2.0 or later.")
+    num_micpairs = 2
+    num_streamers = 6
+    num_encoders = 6
+    num_recorders = 2
 
 
 
 def main():
-   from .prelims import ProfileManager
-   ProfileManager()
+    """The package execution point."""
 
-   import maingui
-   return maingui.main()
+    # Profile manager ushered in here so command line only stuff can be
+    # done quickly.
+    from .prelims import ProfileManager
+    ProfileManager()
+
+    import maingui
+    return maingui.main()

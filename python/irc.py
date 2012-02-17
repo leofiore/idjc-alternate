@@ -96,7 +96,7 @@ codes_and_descriptions = zip((u"%r", u"%t", u"%l", u"%s", u"%n", u"%d", u"%u"),
 
 class IRCEntry(gtk.Entry):
     """Specialised IRC text entry widget.
-    
+
     Features pop-up menu and direct control character insertion.
     """
     
