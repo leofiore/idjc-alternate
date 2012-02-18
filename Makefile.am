@@ -12,10 +12,10 @@ appmenudir=${prefix}/share/applications
 
 
 ${PACKAGE_NAME}: idjc.in
-	@sed -e 's|$${prefix}|${prefix}|' $? >$@
+	@sed -e 's|$${prefix}|${prefix}|g' $? >$@
 
 ${PACKAGE_NAME}.desktop: idjc.desktop.in
-	@sed -e 's|$${prefix}|${prefix}|' -e 's|$${exec_prefix}|${exec_prefix}|' $? >$@
+	@sed -e 's|$${prefix}|${prefix}|g' -e 's|$${exec_prefix}|${exec_prefix}|g' $? >$@
 
 AUTHORS.gz: AUTHORS
 	@ gzip -c $? >$@

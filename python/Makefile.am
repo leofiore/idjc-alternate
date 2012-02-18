@@ -11,9 +11,10 @@ nodist_pkgpython_PYTHON=__init__.py
 dist_noinst_PYTHON=__init__.py.in.in
 
 __init__.py: __init__.py.in
-	@sed -e 's|$${pkgdatadir}|${pkgdatadir}|' \
-		 -e 's|$${exec_prefix}|${exec_prefix}|' \
-	     -e 's|$${prefix}|${prefix}|' $? >$@
+	@sed -e 's|$${pkgdatadir}|${pkgdatadir}|g'	\
+		 -e 's|$${exec_prefix}|${exec_prefix}|g' \
+	     -e 's|$${prefix}|${prefix}|g'			\
+	     -e 's|$${datarootdir}|${datarootdir}|g' $? >$@
 
 clean-local:
 	rm -f __init__.py
