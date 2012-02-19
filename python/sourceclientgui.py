@@ -42,16 +42,15 @@ from .utils import string_multireplace
 from .gtkstuff import DefaultEntry, threadslock, HistoryEntry, WindowSizeTracker
 from .dialogs import *
 from .irc import IRCPane
-from .tooltips import main_tips
+from .tooltips import set_tip
 from .prelims import ProfileManager
 
 
-t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
-_ = t.gettext
+_ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
+                                                        fallback=True).gettext
 
 
 pm = ProfileManager()
-set_tip = main_tips.set_tip
 
 
 ENCODER_START=1; ENCODER_STOP=0                                         # start_stop_encoder constants

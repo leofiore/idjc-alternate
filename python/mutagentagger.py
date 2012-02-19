@@ -38,7 +38,7 @@ from mutagen.monkeysaudio import MonkeysAudio
 from mutagen.asf import ASF, ASFUnicodeAttribute
 
 from idjc import FGlobs
-from .tooltips import main_tips
+from .tooltips import set_tip
 from idjc.prelims import ProfileManager
 
 
@@ -46,7 +46,6 @@ t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
 _ = t.gettext
 
 pm = ProfileManager()
-set_tip = main_tips.set_tip
 
 
 

@@ -1,5 +1,5 @@
 #   IDJCjingles.py: The jingles player GUI code for IDJC
-#   Copyright (C) 2005, 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright 2005-2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -31,14 +31,13 @@ import pango
 from idjc import *
 from .gtkstuff import WindowSizeTracker
 from .prelims import *
-from .tooltips import main_tips
+from .tooltips import set_tip
 
 
-t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
-_ = t.gettext
+_ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
+                                                        fallback=True).gettext
 
 pm = ProfileManager()
-set_tip = main_tips.set_tip
 
 
 
@@ -112,7 +111,8 @@ class Jingles(object):
         for each in numericlist:
             if each.count("-") == 0:
                 try:
-                    arglist.append(pm.jinglesdir / self.liststore[int(each)-1][1])
+                    arglist.append(pm.jinglesdir /
+                                                self.liststore[int(each)-1][1])
                 except:
                     pass
             elif each.count("-") == 1:
@@ -142,7 +142,8 @@ class Jingles(object):
         return output 
  
     def start_player(self, which):
-        self.nomute = not self.parent.mic_opener.any_mic_selected and self.parent.mixermode == self.parent.PRIVATE_PHONE
+        self.nomute = not self.parent.mic_opener.any_mic_selected and \
+                            self.parent.mixermode == self.parent.PRIVATE_PHONE
         if self.entry.get_text() == "":
             selection = self.treeview.get_selection()
             model, iter = selection.get_selected()
@@ -157,16 +158,10 @@ class Jingles(object):
                 self.volume1 = self.parent.deckadj.get_value()
                 self.volume2 = self.parent.deck2adj.get_value()
                 self.interludevolume = self.interadj.get_value()
-                self.lvl = self.m1.get_value() if which == 0 else self.m2.get_value()
-                #for each in (self.interadj, self.parent.deckadj, self.parent.deck2adj):
-                #   each.set_value(lvl)
+                self.lvl = self.m1.get_value() if which == 0 else \
+                                                            self.m2.get_value()
                 self.interadj.set_value(min(self.lvl, self.interludevolume))
                     
-                # Normalise main player volume to lvl on the highest of the two player volume levels
-                # have the lower of the two levels track the higher value.
-                # Where the highest volume level is below the normal level do nothing to the level.
-                # When the jingles player is done the volume levels are restored.
-                
                 if self.parent.prefs_window.dual_volume.get_active():
                     highest = max((self.volume1, self.volume2))
                 else:
@@ -177,7 +172,9 @@ class Jingles(object):
                 self.parent.deck2adj.set_value(self.volume2 + delta)
 
             self.parent.deckadj.value_changed()
-            string_to_send = "VOL2=%d\nLOOP=0\nPLPL=%s\nACTN=playmanyjingles\nend\n" % (self.play_ex.get_active(), self.pack_playlistlist(playlist))
+            string_to_send = \
+                    "VOL2=%d\nLOOP=0\nPLPL=%s\nACTN=playmanyjingles\nend\n" % (
+                    self.play_ex.get_active(), self.pack_playlistlist(playlist))
             self.parent.mixer_write(string_to_send)
             
             while 1:
@@ -209,7 +206,7 @@ class Jingles(object):
                 self.parent.mixer_write("ACTN=stopjingles\nend\n")
             else:
                 print "stop without flush"
-                self.stop.clicked() # this will take care of resetting the play button without triggering a flush
+                self.stop.clicked()
             if self.nomute == False:
                 # Don't move the level if user moved it upwards.
                 v1 = self.parent.deckadj.get_value()
@@ -217,7 +214,8 @@ class Jingles(object):
                 if max((v1, v2)) <= self.lvl:
                     self.parent.deckadj.set_value(self.volume1)
                     self.parent.deck2adj.set_value(self.volume2)
-                self.interludevolume = max(self.interludevolume, self.interadj.get_value())
+                self.interludevolume = max(self.interludevolume,
+                                                    self.interadj.get_value())
                 self.interadj.set_value(self.interludevolume)
             else:
                 self.parent.send_new_mixer_stats()
@@ -232,16 +230,20 @@ class Jingles(object):
         files = os.listdir(pm.jinglesdir)
         count = 0
         self.liststore.clear()
-        for each in files:        # files will be added with alpha numeric sorting
+
+        # files will be added with alpha numeric sorting
+        for each in files:
             if each == self.interlude_song:
-                self.liststore.append([ count, each, "<b>" + glib.markup_escape_text(each) + "</b>" ])
+                self.liststore.append([ count, each, "<b>" +
+                                glib.markup_escape_text(each) + "</b>" ])
             else:
-                self.liststore.append([ count, each, glib.markup_escape_text(each) ])
+                self.liststore.append(
+                                [ count, each, glib.markup_escape_text(each) ])
             count = count + 1
-        i = 0
-        while i < count:             # reorders the item numbers on the left column
-            self.liststore[i][0] = i+1
-            i = i + 1
+
+        for i in range(count):
+            self.liststore[i][0] = i + 1
+
         
     def alphanumeric_sort(self, model, iter1, iter2):
         data1 = model.get_value(iter1, 1)
@@ -260,7 +262,8 @@ class Jingles(object):
         
     def start_interlude_player(self, pathname):
         self.interlude_player_track = pathname
-        string_to_send = "LOOP=1\nPLPL=%s\nACTN=playmanyinterlude\nend\n" % self.pack_playlistlist([pathname,])
+        string_to_send = "LOOP=1\nPLPL=%s\nACTN=playmanyinterlude\nend\n" % \
+                                            self.pack_playlistlist([pathname,])
         print "string to send is:-"
         self.parent.mixer_write(string_to_send)
         while 1:
@@ -292,18 +295,18 @@ class Jingles(object):
             model, iter = treeselection.get_selected()
             if iter == None:
                 widget.set_active(False)
-                print "Can't start interlude player.  No file is selected."
+                print "no file selected"
                 return
             path = pm.jinglesdir / model.get_value(iter, 1)
             if os.path.isfile(path) == False:
                 widget.set_active(False)
-                print "Can't start the interlude player, the file", path, "is missing."
+                print "the interlude player audio file is missing"
                 return
             self.start_interlude_player(path)
             if self.interlude_playing:
-                model.set_value(iter, 2, '<b>' + model.get_value(iter, 2) + '</b>')
+                model.set_value(iter, 2, '<b>%s</b>' % model.get_value(iter, 2))
                 self.interlude_song = model.get_value(iter, 1)
-                print "Starting the interlude player"
+                print "starting interlude player"
             else:
                 print "Failed to start the interlude player"
         else:
@@ -378,7 +381,10 @@ class Jingles(object):
         self.play.connect("toggled", self.callback, "Play")
         bhbox.pack_start(self.play)
         self.play.show()
-        set_tip(self.play, _('Play the jingles sequence specified above or if none is specified play the jingle highlighted in the catalogue. The volume level of the main media players will be reduced somewhat during playback.'))
+        set_tip(self.play, _('Play the jingles sequence specified above or if '
+        'none is specified play the jingle highlighted in the catalogue. The '
+        'volume level of the main media players will be reduced somewhat during'
+        ' playback.'))
 
         image = gtk.image_new_from_file(FGlobs.pkgdatadir / "stop.png")
         self.stop = gtk.Button()
@@ -401,7 +407,10 @@ class Jingles(object):
         self.play_ex.connect("toggled", self.callback, "PlayEx")
         bhbox.pack_start(self.play_ex)
         self.play_ex.show()
-        set_tip(self.play_ex, _('This button works the same as the button to the left does except that the sound level of all the other media players is fully reduced.'))
+        set_tip(self.play_ex, _('This button works the same as the button to '
+        'the left does except that the sound level of all the other media '
+        'players is fully reduced.'))
+
         self.vboxvol.pack_start(bhbox, False)
         bhbox.show()
       
@@ -454,7 +463,7 @@ class Jingles(object):
         # A pictoral volume label
 
         pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(
-                                    FGlobs.pkgdatadir / "interlude2.png", 24, -1)
+                                FGlobs.pkgdatadir / "interlude2.png", 24, -1)
         image = gtk.image_new_from_pixbuf(pixbuf)
         self.interlude = gtk.ToggleButton()
         self.interlude.add(image)
@@ -462,7 +471,12 @@ class Jingles(object):
         self.interlude.show()
         # TC: {0}, {1} = Monitor Mix, Stream.
         # TC: Or whatever they become translated to.
-        set_tip(self.interlude, _("When you click this button the jingle or track selected in the catalogue will be looped continuously and will be audible during moments when the main media players are not active. The '{0}' feature needs to be set to '{1}' if you want to be able to hear it.".format(_("Monitor Mix"), _("Stream"))))
+        set_tip(self.interlude, _("When you click this button the jingle or "
+        "track selected in the catalogue will be looped continuously and will "
+        "be audible during moments when the main media players are not active."
+        " The '{0}' feature needs to be set to '{1}' if you want to be able to"
+        " hear it.".format(_("Monitor Mix"), _("Stream"))))
+
         self.vboxinter.pack_start(self.interlude, False)
         
         self.interadj = gtk.Adjustment(65.0, 0.0, 100.0, 1.0, 6.0, 0.0)
@@ -478,8 +492,11 @@ class Jingles(object):
         self.vboxinter.show()
         # TC: For context {0} and {1} refer to Monitor Mix and Stream.
         # TC: They are extracted to force consistency. 
-        set_tip(self.intervol, _("This adjusts the volume level of the music that plays whenever the other media players are not active. It is only audible to the DJ when '{0}' in the main application window is set to '{1}'.").format(_("Monitor Mix"), _("Stream")))
-                     
+        set_tip(self.intervol, _("This adjusts the volume level of the music "
+        "that plays whenever the other media players are not active. It is only"
+        " audible to the DJ when '{0}' in the main application window is set "
+        "to '{1}'.").format(_("Monitor Mix"), _("Stream")))
+
         vbox = gtk.VBox()
         vbox.set_spacing(6)
         vbox.set_border_width(0)
@@ -498,7 +515,8 @@ class Jingles(object):
         self.liststore = gtk.ListStore(int, str, str)
         self.treeview = gtk.TreeView(self.liststore)
         self.treeview.set_headers_visible(False)  
-        self.treeview.connect("row_activated", self.cb_doubleclick, "Double click") 
+        self.treeview.connect(
+                        "row_activated", self.cb_doubleclick, "Double click") 
         
         self.digicellrender = gtk.CellRendererText()
         self.digitvcolumn = gtk.TreeViewColumn("Numbers", self.digicellrender)
@@ -520,7 +538,12 @@ class Jingles(object):
         scrolllist.show()
         # TC: {0}, {1} = Add To Jingles, Item.
         # TC: Or whatever they get translated to.
-        set_tip(scrolllist, _('The jingles catalogue.\n\nFrom a main media player tracks can be exported here by right clicking on the playlist entry and selecting {0} from the {1} submenu.\n\nThe jingles catalogue can also be managed by modifying the contents of the \'{2}\' directory directly.'.format(_("Add To Jingles"), _("Item"), pm.jinglesdir)))
+        set_tip(scrolllist, _('The jingles catalogue.\n\nFrom a main media '
+        'player tracks can be exported here by right clicking on the playlist'
+        ' entry and selecting {0} from the {1} submenu.\n\nThe jingles '
+        'catalogue can also be managed by modifying the contents of the '
+        '\'{2}\' directory directly.'.format(_("Add To Jingles"), _("Item"),
+         pm.jinglesdir)))
         
         hbox = gtk.HBox()
         hbox.set_spacing(4)
@@ -539,18 +562,24 @@ class Jingles(object):
         self.entry.set_width_chars(10)
         lvbox.pack_start(self.entry)
         self.entry.show()
-        set_tip(self.entry, _('Select multiple jingles to play in sequence by entering the corresponding index number as part of a comma separated list, or double click entries in the catalogue to append them.'))
+        set_tip(self.entry, _('Select multiple jingles to play in sequence by '
+        'entering the corresponding index number as part of a comma separated '
+        'list, or double click entries in the catalogue to append them.'))
+        
         hbox.pack_start(lvbox)
         lvbox.show()
 
         self.refresh = gtk.Button()
-        image = gtk.image_new_from_stock(gtk.STOCK_REFRESH, gtk.ICON_SIZE_BUTTON)
+        image = gtk.image_new_from_stock(
+                                        gtk.STOCK_REFRESH, gtk.ICON_SIZE_BUTTON)
         self.refresh.set_image(image)
         image.show()
         self.refresh.connect("clicked", self.callback, "Refresh")
         hbox.pack_start(self.refresh, False)
         self.refresh.show()
-        set_tip(self.refresh, _("Cause the jingles catalogue to be refreshed. This is for when items have been added or removed from the jingles directory located at '%s'." % pm.jinglesdir))
+        set_tip(self.refresh, _("Cause the jingles catalogue to be refreshed. "
+        "This is for when items have been added or removed from the jingles "
+        "directory located at '%s'." % pm.jinglesdir))
         
         vbox.pack_start(hbox, False, False, 0)
         hbox.show()

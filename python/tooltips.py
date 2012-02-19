@@ -15,7 +15,6 @@
 #   along with this program in the file entitled COPYING.
 #   If not, see <http://www.gnu.org/licenses/>.
 
-
 import gtk
 
 
@@ -51,4 +50,9 @@ class TooltipsGroup:
 
 
 # An application wide tooltips group.
-main_tips = TooltipsGroup()
+MAIN_TIPS = TooltipsGroup()
+
+
+# Global tip setting function.
+def set_tip(widget, tip_text):
+    MAIN_TIPS.set_tip(widget, tip_text)

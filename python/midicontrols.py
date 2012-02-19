@@ -30,146 +30,138 @@ import pango
 from idjc import FGlobs, PGlobs
 from .gtkstuff import threadslock
 from .prelims import ProfileManager
-from .tooltips import main_tips
+from .tooltips import set_tip
 
 
-t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
-_ = t.gettext
+_ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
+                                                        fallback=True).gettext
 
 pm = ProfileManager()
-set_tip = main_tips.set_tip
 
 
 
 control_methods= {
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'c_tips': _('Prefs enable tooltips'),
 
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_pp': _('Player play/pause'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_stop': _('Player stop'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_advance': _('Player advance'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_prev': _('Player play previous'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_next': _('Player play next'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_sfire': _('Player play selected from start'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_sprev': _('Player select previous'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_snext': _('Player select next'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_stream': _('Player stream output enable'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_listen': _('Player DJ output enable'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_prep': _('Player DJ-only switch'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_vol': _('Player set volume'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_gain': _('Player set gain'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_pan': _('Player set balance'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_pitch': _('Player set pitchbend'),
 
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_tag': _('Playlist edit tags'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_istop': _('Playlist insert stop'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_istop2': _('Playlist insert stop 2'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_ianno': _('Playlist insert announce'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_itrans': _('Playlist insert transfer'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_ifade': _('Playlist insert crossfade'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_ipitch': _('Playlist insert pitchunbend'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'p_igotop': _('Playlist insert jump to top'),
 
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'x_fade': _('Players set crossfade'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'x_pass': _('Players pass crossfade'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'x_focus': _('Players set focus'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'x_pitch': _('Players show pitchbend'),
 
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'm_on': _('Channel output enable'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'm_vol': _('Channel set volume'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'm_gain': _('Channel set gain'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'm_pan': _('Channel set balance'),
 
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'v_on': _('VoIP output enable'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'v_prep': _('VoIP DJ-only switch'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'v_vol': _('VoIP set volume'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'v_gain': _('VoIP set gain'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'v_pan': _('VoIP set balance'),
 
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'k_fire': _('Jingle play from start'),
 
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'j_ps1': _('Jingles play/stop 1'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'j_ps2': _('Jingles play/stop 2'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'j_sprev': _('Jingles select previous'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'j_snext': _('Jingles select next'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'j_sfire': _('Jingles play selected from start'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'j_vol1': _('Jingles set jingles volume 1'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'j_vol2': _('Jingles set jingles volume 2'),
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'j_ivol': _('Jingles set interlude volume'),
 
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     's_on': _('Stream set connected'),
 
-    # TC: Control method. Please keep it as Target:Action. Please keep the targets consistent. Also,  Player != Players
+    # TC: Control method. Please keep it as Target:Action.
     'r_on': _('Recorder set recording'),
 }
 
+
 control_targets= {
-    # TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
     'p': _('Player'),
-    # TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
     'm': _('Channel'),
-    # TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
     'k': _('Jingle'),
-    # TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
     's': _('Stream'),
-    # TC: This text is followed by a number in a spinbutton and represents a specific user interface target.
     'r': _('Recorder')
 }
 
+
 control_targets_players= (
-    # TC: This text represents a specific user interface target.
     _('Left player'),
-    # TC: This text represents a specific user interface target.
     _('Right player'),
-    # TC: This text represents a specific user interface target.
     _('Focused player'),
-    # TC: This text represents a specific user interface target.
     _('Fadered player'),
 )
 
@@ -297,7 +289,9 @@ class Binding(tuple):
     def __str__(self):
         # Back to string
         #
-        return '%s%x.%x:%s%s.%x.%d' % (self.source, self.channel, self.control, self.mode, self.method, self.target, self.value)
+        return '%s%x.%x:%s%s.%x.%d' % (self.source, self.channel, self.control,
+                                self.mode, self.method, self.target, self.value)
+
 
     def __repr__(self):
         return 'Binding(%r)' % str(self)
@@ -348,7 +342,8 @@ class Binding(tuple):
         if self.mode==Binding.MODE_DIRECT:
             if self.value<0:
                 return ' (-)'
-            elif getattr(Controls, self.method).action_modes[0]!=Binding.MODE_DIRECT:
+            elif getattr(Controls, self.method).action_modes[0] != \
+                                                            Binding.MODE_DIRECT:
                 return ' (+)'
         elif self.mode==Binding.MODE_SET:
             return ' (%d)' % self.value
@@ -383,6 +378,7 @@ class Binding(tuple):
         if name is None:
             return '<%04X>' % k
         return name
+
     @staticmethod
     def str_to_key(s):
         s= s.strip()
@@ -412,12 +408,15 @@ class Binding(tuple):
     # Note names. Convert to/from MIDI note/octave format.
     #
     NOTES= u'C,C#,D,D#,E,F,F#,G,G#,A,A#,B'.replace(u'#', u'\u266F').split(',')
+
     @staticmethod
     def note_to_str(n):
         return '%s%d' % (Binding.NOTES[n%12], n//12-1)
+
     @staticmethod
     def str_to_note(s):
-        m= re.match(u'^([A-G](?:\u266F?))(-1|\d)$', s.replace(' ', '').replace(u'#', u'\u266F').upper())
+        m= re.match(u'^([A-G](?:\u266F?))(-1|\d)$', s.replace(' ', '').replace(
+                                                    u'#', u'\u266F').upper())
         if m is None:
             raise ValueError('Invalid note')
         n= Binding.NOTES.index(m.group(1))
@@ -442,18 +441,24 @@ class Binding(tuple):
         (gtk.gdk.HYPER_MASK, u'\u25CF'),
     )
     MODIFIERS_MASK= sum(m for m, c in MODIFIERS)
+
     @staticmethod
     def modifier_to_str(m):
-        return ''.join(c for mask, c in Binding.MODIFIERS if m&mask!=0)
+        return ''.join(c for mask, c in Binding.MODIFIERS if m & mask != 0)
+
     @staticmethod
     def str_to_modifier(s):
         return sum(mask for mask, c in Binding.MODIFIERS if c in s)
+
     @staticmethod
     def modifier_to_ord(m):
-        return sum(1<<i for i, (mask, c) in enumerate(Binding.MODIFIERS) if m&mask!=0)
+        return sum(1 << i for i, (mask, c) in enumerate(
+                                        Binding.MODIFIERS) if m & mask != 0)
+
     @staticmethod
     def ord_to_modifier(b):
-        return sum(mask for i, (mask, c) in enumerate(Binding.MODIFIERS) if b&(1<<i)!=0)
+        return sum(mask for i, (mask, c) in enumerate(
+                                        Binding.MODIFIERS) if b & (1 <<i ) !=0)
 
 
     METHOD_GROUPS= []
@@ -602,7 +607,8 @@ class Controls(object):
                     try:
                         self.bindings.append(Binding(line))
                     except ValueError, e:
-                        print >>sys.stderr, 'Warning: controls prefs file contained unreadable binding %r' % line
+                        print >>sys.stderr, 'Warning: controls prefs file ' \
+                                        'contained unreadable binding %r' % line
             fp.close()
             self.update_lookup()
 
@@ -611,7 +617,8 @@ class Controls(object):
         """
         self.lookup= {}
         for binding in self.bindings:
-            self.lookup.setdefault(str(binding).split(':', 1)[0], []).append(binding)
+            self.lookup.setdefault(
+                            str(binding).split(':', 1)[0], []).append(binding)
 
     def input(self, input, iv):
         """Dispatch incoming input to all bindings associated with it
@@ -704,7 +711,8 @@ class Controls(object):
         is_playing= player.is_playing
         if not is_playing:
             player.play.set_active(True)
-        if is_playing if isd else (not is_playing or player.is_paused)==(v>=0x40):
+        if is_playing if isd else (
+                                not is_playing or player.is_paused)==(v>=0x40):
             player.pause.set_active(not player.pause.get_active())
 
     @action_method(Binding.MODE_PULSE)
@@ -767,7 +775,8 @@ class Controls(object):
     def p_prep(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
-        other= self.owner.player_left if player is self.owner.player_right else self.owner.player_right
+        other= self.owner.player_left if player is self.owner.player_right \
+                                                else self.owner.player_right
         prep= player.stream.get_active() if isd else v>=0x40
         player.stream.set_active(not prep)
         other.listen.set_active(not prep)
@@ -789,7 +798,8 @@ class Controls(object):
     def p_vol(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
-        deckadj= self.owner.deck2adj if player is self.owner.player_right else self.owner.deckadj
+        deckadj= self.owner.deck2adj if player is self.owner.player_right \
+                                                        else self.owner.deckadj
         v= v/127.0*100
         cross= deckadj.get_value()+v if isd else v
         deckadj.set_value(cross)
@@ -820,56 +830,64 @@ class Controls(object):
     def p_tag(self, n, v, isd): #t
         player= self._get_player(n)
         if player is None: return
-        player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
+        player.menu_model, player.menu_iter= \
+                                player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'MetaTag')
 
     @action_method(Binding.MODE_PULSE)
     def p_istop(self, n, v, isd): #s
         player= self._get_player(n)
         if player is None: return
-        player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
+        player.menu_model, player.menu_iter= \
+                                player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Stop Control')
 
     @action_method(Binding.MODE_PULSE)
     def p_istop2(self, n, v, isd): #s
         player= self._get_player(n)
         if player is None: return
-        player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
+        player.menu_model, player.menu_iter= \
+                                player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Stop Control 2')
 
     @action_method(Binding.MODE_PULSE)
     def p_ianno(self, n, v, isd): #u
         player= self._get_player(n)
         if player is None: return
-        player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
+        player.menu_model, player.menu_iter= \
+                                player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Announcement Control')
 
     @action_method(Binding.MODE_PULSE)
     def p_itrans(self, n, v, isd): #a
         player= self._get_player(n)
         if player is None: return
-        player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
+        player.menu_model, player.menu_iter= \
+                                player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Transfer Control')
 
     @action_method(Binding.MODE_PULSE)
     def p_ifade(self, n, v, isd): #f
         player= self._get_player(n)
         if player is None: return
-        player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
+        player.menu_model, player.menu_iter= \
+                                player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Crossfade Control')
 
     @action_method(Binding.MODE_PULSE)
     def p_ipitch(self, n, v, isd): #n
         player= self._get_player(n)
         if player is None: return
-        player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
+        player.menu_model, player.menu_iter= \
+                                player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Normal Speed Control')
 
     @action_method(Binding.MODE_PULSE)
     def p_igotop(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
-        player.menu_model, player.menu_iter= player.treeview.get_selection().get_selected()
+        player.menu_model, player.menu_iter= \
+                                player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Jump To Top Control')
 
     # Both players
@@ -897,7 +915,8 @@ class Controls(object):
            else:
               player = self.owner.player_left
         else:
-           player= self.owner.player_right if v>=0x40 else self.owner.player_left
+           player= self.owner.player_right if v>=0x40 else \
+                                                        self.owner.player_left
         player.treeview.grab_focus()
 
     # Channel
@@ -962,14 +981,16 @@ class Controls(object):
     #
     @action_method(Binding.MODE_PULSE)
     def j_ps1(self, n, v, isd):
-        if self.owner.jingles.play.get_active() or self.owner.jingles.play_ex.get_active():
+        if self.owner.jingles.play.get_active() or \
+                                        self.owner.jingles.play_ex.get_active():
             self.owner.jingles.stop.clicked()
         else:
             self.owner.jingles.play.set_active(True)
 
     @action_method(Binding.MODE_PULSE)
     def j_ps2(self, n, v, isd):
-        if self.owner.jingles.play.get_active() or self.owner.jingles.play_ex.get_active():
+        if self.owner.jingles.play.get_active() or \
+                                        self.owner.jingles.play_ex.get_active():
             self.owner.jingles.stop.clicked()
         else:
             self.owner.jingles.play_ex.set_active(True)
@@ -1039,7 +1060,8 @@ def treeview_selectprevious(treeview):
     if iter is not None:
         while True:
             niter= model.iter_next(iter)
-            if niter is None or siter is not None and model.get_path(niter)==model.get_path(siter):
+            if niter is None or siter is not None and \
+                                model.get_path(niter)==model.get_path(siter):
                 break
             iter= niter
         selection.select_iter(iter)
@@ -1098,9 +1120,11 @@ class GroupedComboBox(gtk.ComboBox):
         model= gtk.TreeStore(int, str, bool)
         group_rows= {}
         for group in groups:
-            group_rows[group]= model.append(None, [-1, groupnames[group], False])
+            group_rows[group]= model.append(
+                                        None, [-1, groupnames[group], False])
         for i in range(len(values)):
-            iter= model.append(group_rows[valuegroups[i]], [i, valuenames[values[i]], True])
+            iter= model.append(group_rows[valuegroups[i]], 
+                                            [i, valuenames[values[i]], True])
             self._lookup[values[i]]= model.get_path(iter)
         gtk.ComboBox.__init__(self, model)
 
@@ -1147,7 +1171,8 @@ class CustomSpinButton(gtk.SpinButton):
     def _on_input(self, _, ptr):
         if not repr(ptr).startswith('<gpointer at 0x'):
             self._iscustom= False
-        if not self._iscustom or not isinstance(self.get_adjustment(), CustomAdjustment):
+        if not self._iscustom or not isinstance(self.get_adjustment(),
+                                                            CustomAdjustment):
             return False
         try:
             value= self.get_adjustment().read_input(self.get_text())
@@ -1158,7 +1183,8 @@ class CustomSpinButton(gtk.SpinButton):
         return True
 
     def _on_output(self, _):
-        if not self._iscustom or not isinstance(self.get_adjustment(), CustomAdjustment):
+        if not self._iscustom or not isinstance(self.get_adjustment(),
+                                                            CustomAdjustment):
             return False
         adj= self.get_adjustment()
         self.set_text(adj.write_output(adj.get_value()))
@@ -1247,7 +1273,7 @@ class BindingEditor(gtk.Dialog):
         'p': _('MIDI pitch-wheel'),
         # TC: binding editor, input pane, second row, dropdown text.
         'k': _('Keyboard press'),
-        # TC: binding editor, input pane, second row, dropdown text. Not implemented. 
+        # TC: binding editor, input pane, second row, dropdown text.
         'x': _('XChat command')
     }
    
@@ -1258,9 +1284,10 @@ class BindingEditor(gtk.Dialog):
             # TC: Dialog window title text.
             # TC: User is expected to edit a control binding.
             _('Edit control binding'), owner.owner.owner.prefs_window.window,
-            gtk.DIALOG_DESTROY_WITH_PARENT | gtk.DIALOG_NO_SEPARATOR | gtk.DIALOG_MODAL,
-            (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OK, gtk.RESPONSE_OK)
-        )
+            gtk.DIALOG_DESTROY_WITH_PARENT | gtk.DIALOG_NO_SEPARATOR | 
+            gtk.DIALOG_MODAL, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+            gtk.STOCK_OK, gtk.RESPONSE_OK))
+
         gtk.Dialog.set_resizable(self, False)
         owner.owner.owner.window_group.add_window(self)
         self.connect('delete_event', self.on_delete)
@@ -1269,15 +1296,16 @@ class BindingEditor(gtk.Dialog):
 
         # Input editing
         #
-        # TC: After clicking this button the binding editor will be listening for an input
-        # TC: this could be a key press or a settings change from a midi control surface.
+        # TC: After clicking this button the binding editor will be listening
+        # TC: for a key press or midi control surface input.
         self.learn_button= gtk.ToggleButton(_('Listen for input...'))
         self.learn_button.connect('toggled', self.on_learn_toggled)
         self.learn_timer= None
 
-        self.source_field= LookupComboBox(Binding.SOURCES, self.control_sources, self.owner.source_icons)
+        self.source_field= LookupComboBox(Binding.SOURCES,
+                                self.control_sources, self.owner.source_icons)
         self.source_field.connect('changed', self.on_source_changed)
-        # TC: Refers to the class of control input, the keyboard or some type of midi event.
+        # TC: The input source.
         self.source_label= gtk.Label(_('Source'))
 
         # TC: The midi channel.
@@ -1296,8 +1324,7 @@ class BindingEditor(gtk.Dialog):
         )
         self.method_field.connect('changed', self.on_method_changed)
 
-        # TC: Heading for interaction type e.g. one-shot, set value, alter value.
-        # TC: Basically, the information from the controls can be used in different ways.
+        # TC: The manner in which the input is interpreted.
         self.mode_label= gtk.Label(_('Interaction'))
         self.mode_field= LookupComboBox(Binding.MODES, self.control_modes)
         self.mode_field.connect('changed', self.on_mode_changed)
@@ -1314,17 +1341,20 @@ class BindingEditor(gtk.Dialog):
         # TC: Use reverse scale and invert the meaning of button presses.
         self.value_field_invert= gtk.CheckButton(_('Reversed'))
         self.value_field_pulse_noinvert= gtk.RadioButton(None, _('Pressed'))
-        self.value_field_pulse_inverted=gtk.RadioButton(self.value_field_pulse_noinvert, _('Released'))
+        self.value_field_pulse_inverted=gtk.RadioButton(
+                                self.value_field_pulse_noinvert, _('Released'))
 
         # Layout
         #
-        for label in self.source_label, self.channel_label, self.control_label, self.mode_label, self.target_label, self.value_label:
+        for label in (self.source_label, self.channel_label, self.control_label,
+                        self.mode_label, self.target_label, self.value_label):
             label.set_width_chars(10)
             label.set_alignment(0, 0.5)
 
         sg= gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
 
-        row0, row1, row2, row3= gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4)
+        row0, row1, row2, row3= gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), \
+                                gtk.HBox(spacing= 4), gtk.HBox(spacing= 4)
         row0.pack_start(self.learn_button)
         row1.pack_start(self.source_label, False, False)
         row1.pack_start(self.source_field)
@@ -1341,12 +1371,15 @@ class BindingEditor(gtk.Dialog):
         input_pane.pack_start(row2, False, False)
         input_pane.pack_start(row3, False, False)
         input_pane.show_all()
-        # TC: Frame heading. Contents pertain to a specific input source and type.
+
         input_frame= gtk.Frame(" %s " % _('Input'))
         input_frame.set_border_width(4)
         input_frame.add(input_pane)
         input_pane.show()
-        set_tip(input_pane, _("The first half of a binding is the input which comes in the form of the press of a keyboard key or an event from a midi device.\n\nInput selection can be done manually or with the help of the '%s' option." % _("Listen for input...")))
+        set_tip(input_pane, _("The first half of a binding is the input which "
+        "comes in the form of the press of a keyboard key or an event from a "
+        "midi device.\n\nInput selection can be done manually or with the help"
+        " of the '%s' option." % _("Listen for input...")))
 
         self.value_field_pulsebox= gtk.HBox()
         self.value_field_pulsebox.pack_start(self.value_field_pulse_noinvert)
@@ -1359,7 +1392,8 @@ class BindingEditor(gtk.Dialog):
         sg.add_widget(dummy)
         dummy.show()
 
-        row0, row1, row2, row3= gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), gtk.HBox(spacing= 4)
+        row0, row1, row2, row3= gtk.HBox(spacing= 4), gtk.HBox(spacing= 4), \
+                                gtk.HBox(spacing= 4), gtk.HBox(spacing= 4)
         row0.pack_start(self.method_field)
         row1.pack_start(self.mode_label, False, False)
         row1.pack_start(self.mode_field)
@@ -1377,13 +1411,14 @@ class BindingEditor(gtk.Dialog):
         action_pane.pack_start(row2, False, False)
         action_pane.pack_start(row3, False, False)
         action_pane.show_all()
-        # TC: Frame heading. Contents pertain to what action occurs for a specific input.
+
         action_frame= gtk.Frame(" %s " % _('Action'))
         action_frame.set_border_width(4)
         action_frame.add(action_pane)
         action_pane.show()
         # TC: %s is the translation of 'Action'.
-        set_tip(action_pane, _("The '%s' pane determines how the input is handled, and to what effect." % _("Action")))
+        set_tip(action_pane, _("The '%s' pane determines how the input is "
+                                "handled, and to what effect." % _("Action")))
 
         hbox= gtk.HBox(True, spacing= 4)
         hbox.pack_start(input_frame)
@@ -1439,8 +1474,6 @@ class BindingEditor(gtk.Dialog):
     #
     def on_learn_toggled(self, *args):
         if self.learn_button.get_active():
-            # TC: The binding editor will capture then next keyboard or midi event
-            # TC: for use in making the settings in the 'Input' pane.
             self.learn_button.set_label(_('Listening for input'))
             self.owner.owner.learner= self
         else:
@@ -1559,7 +1592,8 @@ class ValueSnapHScale(gtk.HBox):
         self.snap= snap
         if snap is not None:
             policy= gtk.UPDATE_DISCONTINUOUS
-            adj= gtk.Adjustment(val, lower, upper + snap - 1, snap * 2, snap * 2, snap-1)
+            adj= gtk.Adjustment(
+                    val, lower, upper + snap - 1, snap * 2, snap * 2, snap-1)
             adj.connect('notify::value', self.on_value_do_snap, lower, upper)
         else:
             policy= gtk.UPDATE_CONTINUOUS
@@ -1577,7 +1611,8 @@ class ValueSnapHScale(gtk.HBox):
     def on_change_value(self, range, scroll, _val):
         if self.snap:
             props= range.get_adjustment().props
-            value= props.upper - props.page_size if range.get_value() >= self.snap else props.lower
+            value= props.upper - props.page_size if \
+                                range.get_value() >= self.snap else props.lower
             self.label.set_text(str(int(value)))
 
     def on_value_changed(self, range):
@@ -1636,7 +1671,8 @@ class PlayerAdjustment(CustomAdjustment):
         return control_targets_players[max(min(int(value), 3), 0)]
 class TargetAdjustment(CustomAdjustment):
     def __init__(self, group, value= 0):
-        CustomAdjustment.__init__(self, value, 0, {'p': 3, 'm': 11, 'k': 99, 's': 8, 'r': 3}[group], 1)
+        CustomAdjustment.__init__(self, value, 0, {
+                        'p': 3, 'm': 11, 'k': 99, 's': 8, 'r': 3}[group], 1)
         self._group= group
     def read_input(self, text):
         return int(text.rsplit(' ', 1)[-1])-1
@@ -1648,7 +1684,6 @@ class SingularAdjustment(CustomAdjustment):
     def read_input(self, text):
         return 0.0
     def write_output(self, value):
-        # TC: Spinbutton text when there is only one user interface control that can be referenced.
         return _('Singular control')
         
 # SpinButton that can translate its underlying adjustment values to GTK shift
@@ -1710,7 +1745,8 @@ class ControlsUI(gtk.VBox):
         column_action.set_sort_column_id(1)
         column_action.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
         # TC: Tree column heading for targets e.g. Channel 1, Stream 2
-        column_target= gtk.TreeViewColumn(_('Target'), gtk.CellRendererText(), text= 7)
+        column_target= gtk.TreeViewColumn(
+                                _('Target'), gtk.CellRendererText(), text= 7)
         column_target.set_sort_column_id(2)
 
         model= BindingListModel(self)
@@ -1767,8 +1803,10 @@ class ControlsUI(gtk.VBox):
     def on_tooltip_query(self, tv, x, y, kb_mode, tooltip):
         if (x, y) != self.tooltip_coords:
             self.tooltip_coords = (x, y)
-        elif None not in (x, y) and self.owner.owner.prefs_window.enable_tooltips.get_active():
-            path = tv.get_path_at_pos(*tv.convert_widget_to_bin_window_coords(x, y))
+        elif None not in (x, y) and \
+                    self.owner.owner.prefs_window.enable_tooltips.get_active():
+            path = tv.get_path_at_pos(
+                                *tv.convert_widget_to_bin_window_coords(x, y))
             if path is not None:
                 row = tv.get_model()[path[0]]
                 hbox = gtk.HBox()
@@ -1864,7 +1902,8 @@ class BindingListModel(gtk.GenericTreeModel):
         self.highlights= owner.owner.highlights
         
     def on_realize(self, tree, column0, model_sort):
-        source= gobject.timeout_add(100, self.cb_highlights, tree, column0, model_sort)
+        source= gobject.timeout_add(
+                            100, self.cb_highlights, tree, column0, model_sort)
         tree.connect_object('destroy', gobject.source_remove, source)
         
     @threadslock
@@ -1932,10 +1971,14 @@ class BindingListModel(gtk.GenericTreeModel):
     column_types= [str, str, str, gtk.gdk.Pixbuf, str, str, str, str, str]
     def on_get_value(self, binding, i):
         if i<3: # invisible sort columns
-            inputix= '%02x.%02x.%04x' % (Binding.SOURCES.index(binding.source), binding.channel, binding.control)
+            inputix= '%02x.%02x.%04x' % (Binding.SOURCES.index(binding.source),
+                                            binding.channel, binding.control)
             methodix= '%02x' % Binding.METHODS.index(binding.method)
-            targetix= '%02x.%02x' % (Binding.METHOD_GROUPS.index(binding.method[0]), binding.target)
-            return ':'.join(((inputix, methodix, targetix), (methodix, targetix, inputix), (targetix, methodix, inputix))[i])
+            targetix= '%02x.%02x' % (Binding.METHOD_GROUPS.index(
+                                            binding.method[0]), binding.target)
+            return ':'.join(((inputix, methodix, targetix),
+            (methodix, targetix, inputix), (targetix, methodix, inputix))[i])
+
         elif i==3: # icon column
             return self.owner.source_icons[binding.source]
         elif i==4: # input channel/control column
@@ -1972,4 +2015,3 @@ class BindingListModel(gtk.GenericTreeModel):
         self.row_inserted(path, iter)
         self.owner.owner.update_lookup()
         return path
-

@@ -50,7 +50,7 @@ from .mutagentagger import *
 from .utils import slot_object
 from .gtkstuff import threadslock
 from .prelims import *
-from .tooltips import main_tips
+from .tooltips import set_tip
 
 
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
@@ -59,7 +59,6 @@ def N_(text):
     return text
 
 pm = ProfileManager()
-set_tip = main_tips.set_tip
 
 
 # Suppress warning when None is placed in a ListStore element where some kind of GObject should go. 
