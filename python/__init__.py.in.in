@@ -20,7 +20,10 @@ Generated from file __init__.py.in.in -- edit the original.
 
 
 
+import locale
+locale.setlocale(locale.LC_ALL, "")
 import os
+import gettext
 
 import pygtk
 pygtk.require("2.0")
@@ -57,9 +60,8 @@ class FGlobs(object):
 
 
 
-import gettext
-t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
-_ = t.gettext
+_ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
+                                                        fallback=True).gettext
 
 
 
@@ -88,13 +90,8 @@ class PGlobs(object):
 
 
 
-def main():
-    """The package execution point."""
+from .prelims import ProfileManager
+ProfileManager()
 
-    # Profile manager ushered in here so command line only stuff can be
-    # done quickly.
-    from .prelims import ProfileManager
-    ProfileManager()
-
-    import maingui
-    return maingui.main()
+from . import maingui
+exit(maingui.main())

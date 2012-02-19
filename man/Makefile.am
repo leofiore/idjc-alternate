@@ -10,12 +10,13 @@ nodist_man_MANS = $(TARGETS)
 $(TARGETS) : $(COMMON) Makefile.am
 
 .1_.1:
-	@sed -e 's|VERSION|${PACKAGE_NAME}-${PACKAGE_VERSION}|'			\
+	@sed  -e 's|VERSION|${PACKAGE_NAME}-${PACKAGE_VERSION}|'			\
 		  -e '/.SH REPORTING BUGS/r ./reporting_bugs.part'				\
-		  -e '/.SH SEE ALSO/r ./see_also.part'	$<	|						\
-	awk -v S="$(SOURCES)" -v R=$< 'BEGIN{sub(R,"",S);gsub(".1_","",S);split(S,A)}	\
-			$$0=="SEE_ALSO"{printf".BR %s (1), \\ %s (1), \\ %s (1)\n",A[++i],A[++i],A[++i]}	\
-			$$0!="SEE_ALSO"{print}' >$@
+		  -e '/.SH SEE ALSO/r ./see_also.part'	$<	|					\
+	awk -v S="$(SOURCES)" -v R=$<										\
+			'BEGIN{sub(R,"",S);gsub(".1_","",S);split(S,A)}				\
+			$$0=="SEE_ALSO"{printf".BR %s (1), \\ %s (1), \\ %s (1)\n",	\
+			A[++i],A[++i],A[++i]}$$0!="SEE_ALSO"{print}' >$@
 
 clean-local:
 	rm -f $(TARGETS)
