@@ -287,18 +287,16 @@ class JackMenu(MenuMixin):
 
                 if self.get_playback_port_qty() < 8:
                     cons += """
-                        ["{client_id}:str_out_l",
-                            ["system:playback_3", "{client_id}:output_in_l"]],
-                        ["{client_id}:str_out_r",
-                            ["system:playback_4", "{client_id}:output_in_r"]]]
-                        """
+                    ["{client_id}:str_out_l",
+                        ["system:playback_3", "{client_id}:output_in_l"]],
+                    ["{client_id}:str_out_r",
+                        ["system:playback_4", "{client_id}:output_in_r"]]] """
                 else:
                     cons += """
-                        ["{client_id}:str_out_l",
-                            ["system:playback_5", "{client_id}:output_in_l"]],
-                        ["{client_id}:str_out_r",
-                            ["system:playback_6", "{client_id}:output_in_r"]]]
-                        """
+                    ["{client_id}:str_out_l",
+                        ["system:playback_5", "{client_id}:output_in_l"]],
+                    ["{client_id}:str_out_r",
+                        ["system:playback_6", "{client_id}:output_in_r"]]] """
 
                 cons = eval(cons.format(client_id=os.environ["client_id"]))
 
@@ -2510,7 +2508,7 @@ class MainWindow:
                 self.jack.standard_save()
 
         except Exception:
-            if locking:  # ensure unlocking occurs whenever there is an exception
+            if locking:  # Ensure unlocking occurs when there is an exception.
                 gtk.gdk.threads_leave()
             raise
         if locking:

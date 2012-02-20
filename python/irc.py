@@ -1023,7 +1023,7 @@ class IRCPane(gtk.VBox):
         else:
             if mode / 2 < len(MESSAGE_CATEGORIES):
                 print "there is no data entry dialog implemented for the '%s'" \
-                                " message category" % message_category[mode / 2]
+                            " message category" % MESSAGE_CATEGORIES[mode / 2]
             else:
                 print "unknown message category with numerical code,", mode
      

@@ -45,17 +45,16 @@ class Singleton(type):
 
 
 
-def _PA_rlock(f):
+def _PA_rlock(func):
     """Policed Attributes helper for thread locking."""
 
-    @wraps(f)
+    @wraps(func)
     def _wrapper(cls, *args, **kwds):
-        bc = f.func_globals["bc"] = super(type(cls), cls)
-        rlock = bc.__getattribute__("_rlock")
+        rlock = type.__getattribute__(cls, "_rlock")
 
         try:
             rlock.acquire()
-            return f(cls, *args, **kwds)
+            return func(cls, *args, **kwds)
 
         finally:
             rlock.release()
@@ -74,18 +73,18 @@ class PolicedAttributes(type):
     def __new__(meta, name, bases, _dict):
         @classmethod
         @_PA_rlock
-        def peek(cls, attr, cb, *args, **kwds):
+        def peek(cls, attr, callback, *args, **kwds):
             """Allow read + write within a callback.
 
             Typical use might be to append to an existing string.
             No modification ban is placed or bypassed.
             """
 
-            if attr not in bc.__getattribute__("_banned"):
-                new = cb(
+            if attr not in super(type(cls), cls).__getattribute__("_banned"):
+                new = callback(
                         super(PolicedAttributes, cls).__getattribute__(attr),
                         *args, **kwds)
-                bc.__setattr__(attr, new)
+                base.__setattr__(attr, new)
 
             else:
                 raise NotImplementedError("variable is locked")
@@ -98,16 +97,16 @@ class PolicedAttributes(type):
 
     @_PA_rlock
     def __getattribute__(cls, name):
-        bc.__getattribute__("_banned").add(name)
-        return bc.__getattribute__(name)
+        type.__getattribute__(cls, "_banned").add(name)
+        return type.__getattribute__(cls, name)
 
 
     @_PA_rlock
     def __setattr__(cls, name, value):
-        if name in bc.__getattribute__("_banned"):
+        if name in type.__getattribute__(cls, "_banned"):
             raise NotImplementedError("value has already been read")
 
-        bc.__setattr__(name, value)
+        type.__setattr__(cls, name, value)
 
 
     def __call__(cls, *args, **kwds):

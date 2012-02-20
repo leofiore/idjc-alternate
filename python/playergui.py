@@ -1,5 +1,5 @@
 #   IDJCmedia.py: GUI code for main media players in IDJC
-#   Copyright (C) 2005-2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright 2005-2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ from mutagen.mp4 import MP4
 from mutagen.easyid3 import EasyID3
 from mutagen.apev2 import APEv2
 from mutagen.asf import ASF
-    
+
 from idjc import FGlobs, PGlobs
 from . import popupwindow
 from .mutagentagger import *
@@ -53,22 +53,28 @@ from .prelims import *
 from .tooltips import set_tip
 
 
-t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
-_ = t.gettext
+_ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
+                                                        fallback=True).gettext
+
 def N_(text):
     return text
 
-pm = ProfileManager()
+
+PM = ProfileManager()
 
 
-# Suppress warning when None is placed in a ListStore element where some kind of GObject should go. 
-warnings.filterwarnings("ignore", r"g_object_set_qdata: assertion `G_IS_OBJECT \(object\)' failed")
-# Suppress warning when drag 'n dropping tracks to an empty playlist window.
-warnings.filterwarnings("ignore", "IA__gtk_tree_view_scroll_to_cell: assertion `tree_view->priv->tree != NULL' failed.*")
+# Suppress the warning that occurs when None is placed in a ListStore element
+# where some kind of GObject is expected.
+warnings.filterwarnings("ignore",
+r"g_object_set_qdata: assertion `G_IS_OBJECT \(object\)' failed")
 
+# Suppress drag & drop warning to an empty playlist window.
+warnings.filterwarnings("ignore", "IA__gtk_tree_view_scroll_to_cell: assertion"
+                                    " `tree_view->priv->tree != NULL' failed.*")
 
 # Named tuple for a playlist row.
-class PlayerRow(namedtuple("PlayerRow", "rsmeta filename length meta encoding title artist replaygain cuesheet album")):
+class PlayerRow(namedtuple("PlayerRow",
+"rsmeta filename length meta encoding title artist replaygain cuesheet album")):
     def __nonzero__(self):
         return self.rsmeta != "<s>valid</s>"
 
@@ -78,18 +84,24 @@ NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None, "")
 # Replay Gain value to indicate default.
 RGDEF = 100.0
 
+# Delay in milliseconds between progress bar updates.
+PROGRESS_TIMEOUT = 200
+
 # Pathname is an absolute file path or 'missing' or 'pregap'.
-CueSheetTrack = namedtuple("CueSheetTrack", "pathname play tracknum index performer title offset duration replaygain")
+CueSheetTrack = namedtuple("CueSheetTrack",
+    "pathname play tracknum index performer title offset duration replaygain")
+
+
 
 class CueSheetListStore(gtk.ListStore):
     _columns = (str, int, int, int, str, str, int, int, float)
     assert len(_columns) == len(CueSheetTrack._fields)
     def __nonzero__(self):
         return len(self) != 0
-        
+
     def __getitem__(self, i):
         return CueSheetTrack(*gtk.ListStore.__getitem__(self, i))
-        
+
     def __iter__(self):
         i = 0
         while 1:
@@ -99,34 +111,38 @@ class CueSheetListStore(gtk.ListStore):
                 break
             yield val
             i += 1
-        
+
     def __init__(self):
         gtk.ListStore.__init__(self, *self._columns)
-        
+
+
+
 class NumberedLabel(gtk.Label):
     attrs = pango.AttrList()
     attrs.insert(pango.AttrFamily("Monospace" , 0, 3))
     #attrs.insert(pango.AttrWeight(pango.WEIGHT_BOLD, 0, 3))
-    
+
     def set_value(self, value):
         self.set_text("--" if value is None else "%02d" % value)
-        
+
     def get_value(self):
         text = self.get_text()
         return None if text == "--" else int(self.text)
-      
+
     def __init__(self, value=None):
         gtk.Label.__init__(self)
         self.set_attributes(self.attrs)
         self.set_value(value)
 
+
+
 class CellRendererDuration(gtk.CellRendererText):
     """Render a value in frames as a time mm:ss:hs right justified."""
-    
+
     __gproperties__ = { "duration" : (gobject.TYPE_UINT64, "duration",
         "playback time expressed in CD audio frames",
         0, long(3e9), 0, gobject.PARAM_WRITABLE) }
-    
+
     def __init__(self):
         gtk.CellRendererText.__init__(self)
         self.set_property("xalign", 1.0)
@@ -136,6 +152,8 @@ class CellRendererDuration(gtk.CellRendererText):
             s, f = divmod(value, 75)
             m, s = divmod(s, 60)
             self.props.text = "%d:%02d.%02d" % (m, s, f // 0.75)
+
+
 
 class CuesheetPlaylist(gtk.Frame):
     def description_col_func(self, column, cell, model, iter):
@@ -154,7 +172,7 @@ class CuesheetPlaylist(gtk.Frame):
     def __init__(self):
         gtk.Frame.__init__(self, " %s " % _('Cuesheet Playlist'))
         self.set_border_width(3)
-        
+
         vbox = gtk.VBox()
         vbox.set_border_width(4)
         vbox.set_spacing(2)
@@ -163,7 +181,7 @@ class CuesheetPlaylist(gtk.Frame):
         hbox = gtk.HBox()
         hbox.set_spacing(6)
         vbox.pack_start(hbox, False)
-        
+
         def nextprev_unit(label_text):
             def icon_button(stock_item):
                 button = gtk.Button()
@@ -171,30 +189,30 @@ class CuesheetPlaylist(gtk.Frame):
                 button.set_image(image)
                 image.show()
                 return button
-            
+
             box = gtk.HBox()
             box.set_spacing(6)
             prev = icon_button(gtk.STOCK_MEDIA_PREVIOUS)
             box.pack_start(prev)
             prev.show()
-            
+
             lhbox = gtk.HBox()
             box.pack_start(lhbox, False)
             lhbox.show()
-            
+
             label = gtk.Label(label_text + " ")
             lhbox.pack_start(label, False)
             label.show()
             numbered = NumberedLabel()
             lhbox.pack_start(numbered, False)
             numbered.show()
-            
+
             next = icon_button(gtk.STOCK_MEDIA_NEXT)
             box.pack_start(next)
             next.show()
             box.show()
             return box, prev, next
-            
+
         # TC: Cuesheet term.
         box_t, self.prev_track, self.next_track = nextprev_unit(_('Track'))
         # TC: Cuesheet term.
@@ -202,7 +220,7 @@ class CuesheetPlaylist(gtk.Frame):
         hbox.pack_start(box_t, fill=False)
         hbox.pack_start(box_i, fill=False)
         hbox.show()
-        
+
         scrolled = gtk.ScrolledWindow()
         scrolled.set_size_request(-1, 117)
         scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
@@ -214,7 +232,7 @@ class CuesheetPlaylist(gtk.Frame):
         scrolled.add(self.treeview)
         self.treeview.show()
         #self.treeview.set_fixed_height_mode(True)
-        
+
         renderer_toggle = gtk.CellRendererToggle()
         renderer_toggle.connect("toggled", self.play_clicked)
         renderer_text_desc = gtk.CellRendererText()
@@ -222,7 +240,7 @@ class CuesheetPlaylist(gtk.Frame):
         renderer_text_rjust = gtk.CellRendererText()
         renderer_text_rjust.set_property("xalign", 0.9)
         renderer_duration = CellRendererDuration()
-        
+
         # TC: Column heading, whether to play.
         play = gtk.TreeViewColumn(_('Play'), renderer_toggle, active=1)
         self.treeview.append_column(play)
@@ -234,7 +252,8 @@ class CuesheetPlaylist(gtk.Frame):
         self.treeview.append_column(index)
         description = gtk.TreeViewColumn(_('Description'), renderer_text_desc)
         description.set_expand(True)
-        description.set_cell_data_func(renderer_text_desc, self.description_col_func)
+        description.set_cell_data_func(renderer_text_desc,
+                                                    self.description_col_func)
         self.treeview.append_column(description)
         # TC: Playback time.
         duration = gtk.TreeViewColumn(_('Duration'), renderer_duration)
@@ -262,7 +281,7 @@ class ExternalPL(gtk.Frame):
         if next is None:
             return self._get_next()
         return next
-    
+
     def _get_next(self):
         if self.active.get_active():
             try:
@@ -272,10 +291,11 @@ class ExternalPL(gtk.Frame):
                 line = None
             return line
         return None
-    
+
     def cb_active(self, widget):
         if widget.get_active():
-            self.pathname = (self.filechooser, self.directorychooser)[self.radio_directory.get_active()].get_filename()
+            self.pathname = (self.filechooser, self.directorychooser
+                            )[self.radio_directory.get_active()].get_filename()
             if self.pathname is not None:
                 self.gen = self.player.get_elements_from([self.pathname])
                 try:
@@ -292,10 +312,10 @@ class ExternalPL(gtk.Frame):
                 widget.set_active(False)
         else:
             self.vbox.set_sensitive(True)
-    
+
     def cb_newselection(self, widget, radio):
         radio.set_active(True)
-    
+
     def make_line(self, radio, dialog):
         button = gtk.FileChooserButton(dialog)
         dialog.set_current_folder(os.path.expanduser("~"))
@@ -305,7 +325,7 @@ class ExternalPL(gtk.Frame):
         radio.show()
         button.show()
         return hbox
-    
+
     def __init__(self, player):
         self.player = player
         gtk.Frame.__init__(self, " %s " % _('External Playlist'))
@@ -329,24 +349,32 @@ class ExternalPL(gtk.Frame):
         filefilter.add_pattern("*.pls")
         filefilter.add_pattern("*.xspf")
 
-        self.filechooser = gtk.FileChooserDialog(title = _('Choose a playlist file') + pm.title_extra, buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+        self.filechooser = gtk.FileChooserDialog(title = 
+        _('Choose a playlist file') + PM.title_extra, buttons = \
+        (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OPEN,
+                                                        gtk.RESPONSE_ACCEPT))
         self.filechooser.set_filter(filefilter)
-        self.directorychooser = gtk.FileChooserDialog(title = _('Choose a media directory') + pm.title_extra, action = gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
-        
+        self.directorychooser = gtk.FileChooserDialog(title =
+            _('Choose a media directory') + PM.title_extra, action = \
+            gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, buttons = (gtk.STOCK_CANCEL,
+            gtk.RESPONSE_REJECT, gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+
         self.radio_file = gtk.RadioButton()
         self.radio_directory = gtk.RadioButton(self.radio_file)
-        
-        self.filechooser.connect("selection-changed", self.cb_newselection, self.radio_file)
-        self.directorychooser.connect("selection-changed", self.cb_newselection, self.radio_directory)
-        
+
+        self.filechooser.connect("selection-changed", self.cb_newselection,
+                                                                self.radio_file)
+        self.directorychooser.connect("selection-changed", self.cb_newselection,
+                                                        self.radio_directory)
+
         fbox = self.make_line(self.radio_file, self.filechooser)
         set_tip(fbox, _('Choose a playlist file.'))
         dbox = self.make_line(self.radio_directory, self.directorychooser)
         set_tip(dbox, _('Choose a folder/directory of music.'))
-        
+
         self.vbox.pack_start(fbox, True, True, 0)
         self.vbox.pack_start(dbox, True, True, 0)
-        
+
         fbox.show()
         dbox.show()
 
@@ -404,11 +432,14 @@ class AnnouncementDialog(gtk.Dialog):
         self.mode = mode
         if mode == "initial":
             model.set_value(iter, 3, "110000")
-            gtk.Dialog.__init__(self, _('Create a new announcement'), player.parent.window, gtk.DIALOG_MODAL)
+            gtk.Dialog.__init__(self, _('Create a new announcement'),
+                                        player.parent.window, gtk.DIALOG_MODAL)
         elif mode == "delete_modify":
-            gtk.Dialog.__init__(self, _('Modify or Delete this announcement'), player.parent.window, gtk.DIALOG_MODAL)
+            gtk.Dialog.__init__(self, _('Modify or Delete this announcement'),
+                                        player.parent.window, gtk.DIALOG_MODAL)
         elif mode == "active":
-            gtk.Dialog.__init__(self, _('Announcement'), player.parent.window, gtk.DIALOG_MODAL)
+            gtk.Dialog.__init__(self, _('Announcement'),
+                                        player.parent.window, gtk.DIALOG_MODAL)
         self.connect("key-press-event", self.cb_keypress)
         ivbox = gtk.VBox()
         ivbox.set_border_width(10)
@@ -429,9 +460,9 @@ class AnnouncementDialog(gtk.Dialog):
         ihbox = gtk.HBox()
         ivbox.pack_start(ihbox, False, False, 0)
         ihbox.show()
-        
+
         chbox = gtk.HBox()
-        
+
         if mode == "initial" or mode == "delete_modify":
             # TC: The time format as minutes and seconds.
             countdown_label = gtk.Label('(%s)   ' % _("mm:ss"))
@@ -448,7 +479,7 @@ class AnnouncementDialog(gtk.Dialog):
             sep.show()
             chbox.pack_start(self.seconds, False, False, 0)
             self.seconds.show()
-            
+
         if mode == "active":
             cdtime = model.get_value(iter, 3)[2:6]
             if cdtime != "0000":
@@ -468,10 +499,10 @@ class AnnouncementDialog(gtk.Dialog):
                 self.connect("destroy", self.timeout_remove)
                 chbox.pack_start(self.countdownlabel, True, False, 0)
                 self.countdownlabel.show()
-            
+
         ihbox.pack_start(chbox, True, False, 0)
         chbox.show()
-        
+
         if mode == "delete_modify" or mode == "active":
             lr = model.get_value(iter, 3)
             text = model.get_value(iter, 4)
@@ -481,7 +512,7 @@ class AnnouncementDialog(gtk.Dialog):
             self.seconds.set_value((int(lr[4:6])))
         if mode == "active":
             self.player.parent.mic_opener.open_auto("announcement")
-            
+
         thbox = gtk.HBox()
         thbox.set_spacing(4)
         ivbox.pack_start(thbox, False, False, 0)
@@ -494,11 +525,11 @@ class AnnouncementDialog(gtk.Dialog):
         entry.set_editable(False)
         entry.unset_flags(gtk.CAN_FOCUS)
         ni = model.iter_next(iter)
-        if ni and model.get_value(ni, 0)[0] != ">" : 
+        if ni and model.get_value(ni, 0)[0] != ">" :
             entry.set_text(model.get_value(ni, 3))
         thbox.pack_start(entry, True, True, 0)
         entry.show()
-        
+
         self.ok_button = gtk.Button(gtk.STOCK_OK)
         if mode == "initial" or mode == "delete_modify":
             self.ok_button.connect("clicked", self.write_changes)
@@ -519,13 +550,14 @@ class AnnouncementDialog(gtk.Dialog):
             self.connect("delete-event", self.delete_announcement)
             self.cancel_button.connect("clicked", self.delete_announcement)
         else:
-            self.cancel_button.connect_object("clicked", gtk.Dialog.destroy, self)
+            self.cancel_button.connect_object("clicked", gtk.Dialog.destroy,
+                                                                        self)
         self.cancel_button.set_use_stock(True)
         self.action_area.add(self.cancel_button)
         self.cancel_button.show()
         if mode == "active":
             self.ok_button.grab_focus()
-        
+
 class Supported(object):
     def _check(self, pathname, which):
         ext = os.path.splitext(pathname)[1].lower()
@@ -541,7 +573,7 @@ class Supported(object):
     def __init__(self):
         self.media = [ ".ogg", ".oga", ".wav", ".aiff", ".au", ".txt", ".cue" ]
         self.playlists = [ ".m3u", ".xspf", ".pls" ]
-        
+
         if FGlobs.avcodec and FGlobs.avformat:
             self.media.append(".avi")
             self.media.append(".wma")
@@ -577,7 +609,7 @@ def get_number_for(token, string):
         return int(float(string[start+1:end]))
     except ValueError:
         return 0
-    
+
 class nice_listen_togglebutton(gtk.ToggleButton):
     def __init__(self, label = None, use_underline = True):
         try:
@@ -585,7 +617,8 @@ class nice_listen_togglebutton(gtk.ToggleButton):
         except RuntimeError:
             gtk.ToggleButton.__init__(self, label)
     def __str__(self):
-        return gtk.ToggleButton.__str__(self) + " auto inconsistent when insensitive"
+        return gtk.ToggleButton.__str__(self) + \
+                                        " auto inconsistent when insensitive"
     def set_sensitive(self, bool):
         if bool is False:
             gtk.ToggleButton.set_sensitive(self, False)
@@ -593,7 +626,7 @@ class nice_listen_togglebutton(gtk.ToggleButton):
         else:
             gtk.ToggleButton.set_sensitive(self, True)
             gtk.ToggleButton.set_inconsistent(self, False)
-          
+
 
 class CueSheet(object):
     """A class for parsing cue sheets."""
@@ -615,7 +648,8 @@ class CueSheet(object):
         try:
             mm, ss, ff = [int(x) for x in time_str.split(":")]
         except ValueError:
-            raise ValueError("time must be in (m*)mm:ss:ff format %s" % self.line)
+            raise ValueError("time must be in (m*)mm:ss:ff format %s"
+                                                                    % self.line)
 
         if ff < 0 or ff > 74 or ss < 0 or ss > 59 or mm < 0:
             raise ValueError("a time value is out of range %s" % self.line)
@@ -628,20 +662,21 @@ class CueSheet(object):
         try:
             ret = int(int_str)
         except:
-            raise ValueError("expected integer value for %s %s", (int_str, self.line))
+            raise ValueError("expected integer value for %s %s", (
+                                                            int_str, self.line))
         return ret
 
     @classmethod
     def _tokenize(cls, iterable):
         """Scanner/tokenizer for cue sheets.
-        
+
         This routine will iteratively take one line at a time and return
         the line number, command, and any operands related to the command.
-        
+
         Quoted text will have spaces and tabs intact and counts as one,
         otherwise all consecutive non-whitespace is a token. The first
         token is the command, the rest are it's operands.
-        
+
         """
         for i, line in enumerate(iterable):
             line = line.strip() + " "
@@ -654,22 +689,22 @@ class CueSheet(object):
                 left = line.replace("\t", " ").split()
                 right = [""]
                 quoted = ""
-                    
+
             tokens = filter(lambda x: x, left + [quoted] + right)
             yield i + 1, tokens[0].upper(), tokens[1:]
 
     def _parse_PERFORMER(self):
         self.segment[self.tracknum][self.command].append(self.operand[0])
-        
+
     _parse_SONGWRITER = _parse_TITLE = _parse_PERFORMER
 
     def _parse_FILE(self):
         if not self.operand[1] in ("WAVE", "MP3", "AIFF"):
             raise ValueError("unsupported file type %s" % self.line)
-            
+
         self.filename = self.operand[0]
         self.prevframes = 0
-        
+
     def _parse_TRACK(self):
         if self.filename is None:
             raise ValueError("no filename yet specified %s" % self.line)
@@ -678,58 +713,65 @@ class CueSheet(object):
             raise ValueError("track %02d lacks a 01 index" % self.tracknum)
 
         if self.operand[1] != "AUDIO":
-            raise ValueError("only AUDIO track datatype supported %s" % self.line)
+            raise ValueError("only AUDIO track datatype supported %s" %
+                                                                    self.line)
 
         num = self._int_handler(self.operand[0])
         self.tracknum += 1
         self.index = -1
         if num != self.tracknum:
             raise ValueError("unexpected track number %s" % self.line)
-                        
+
     def _parse_PREGAP(self):
-        if self.tracknum == 0 or self.index != -1 or "PREGAP" in self.segment[self.tracknum]:
+        if self.tracknum == 0 or self.index != -1 or "PREGAP" in self.segment[
+                                                                self.tracknum]:
             raise ValueError("unexpected PREGAP command %s" % self.line)
-            
-        self.segment[self.tracknum]["PREGAP"] = self._time_handler(self.operand[0])
+
+        self.segment[self.tracknum]["PREGAP"] = self._time_handler(
+                                                                self.operand[0])
 
     def _parse_INDEX(self):
         if self.tracknum == 0:
             raise ValueError("no track yet specified %s" % self.line)
-        
+
         if "POSTGAP" in self.segment[self.tracknum]:
             raise ValueError("INDEX command following POSTGAP %s" % self.line)
-        
+
         num = self._int_handler(self.operand[0])
         frames = self._time_handler(self.operand[1])
-        
+
         if self.tracknum == 1 and self.index == -1 and frames != 0:
-            raise ValueError("first index must be zero for a file %s" % self.line)
+            raise ValueError("first index must be zero for a file %s" %
+                                                                    self.line)
 
         if self.index == -1 and num == 1:
             self.index += 1
         self.index += 1
         if num != self.index:
             raise ValueError("unexpected index number %s" % self.line)
-            
+
         if frames < self.prevframes:
-            raise ValueError("index time before the previous index %s" % self.line)
-            
+            raise ValueError("index time before the previous index %s" %
+                                                                    self.line)
+
         if self.prevframes and frames == self.prevframes:
-            raise ValueError("index time no different than previously %s" % self.line)
-            
+            raise ValueError("index time no different than previously %s" %
+                                                                    self.line)
+
         self.segment[self.tracknum][self.index] = (self.filename, frames)
-        
+
         self.prevframes = frames
-                        
+
     def _parse_POSTGAP(self):
-        if self.tracknum == 0 or self.index < 1 or "POSTGAP" in self.segment[self.tracknum]:
+        if self.tracknum == 0 or self.index < 1 or "POSTGAP" in self.segment[
+                                                                self.tracknum]:
             raise ValueError("unexpected POSTGAP command %s" % self.line)
-            
+
         self.segment[self.tracknum]["POSTGAP"] = self._time_handler(operand[0])
 
     def parse(self, iterable):
         """Return a parsed cuesheet object."""
-        
+
         self.filename = None
         self.tracknum = 0
         self.segment = defaultdict(partial(defaultdict, list))
@@ -741,30 +783,32 @@ class CueSheet(object):
             self.line = "on line %d" % self.i
 
             if len(self.operand) != self._operands[self.command]:
-                raise ValueError("wrong number of operands got %d required %d %s" %
-                        (len(self.operand), self._operands[self.command], self.line))
+                raise ValueError(
+                "wrong number of operands got %d required %d %s" %
+                (len(self.operand), self._operands[self.command], self.line))
             else:
                 getattr(self, "_parse_" + self.command)()
 
         if self.tracknum == 0:
             raise ValueError("no tracks")
-            
+
         if self.index < 1:
             raise ValueError("track %02d lacks a 01 index" % tracknum)
-         
+
         for each in self.segment.itervalues():
              del each.default_factory
         del self.segment.default_factory
-                      
+
         return self.segment
 
-         
+
 class IDJC_Media_Player:
     playlisttype_extension = tuple(zip(
         # File format selection items from a list (user can pick only one).
-        (_('By Extension'), _('M3U playlist'), _('XSPF playlist'), _('PLS playlist')),
+        (_('By Extension'), _('M3U playlist'),
+        _('XSPF playlist'), _('PLS playlist')),
         ('', 'm3u', 'xspf', 'pls'),))
-    
+
     def make_cuesheet_playlist_entry(self, cue_pathname):
         cuesheet_liststore = CueSheetListStore()
         try:
@@ -774,7 +818,7 @@ class IDJC_Media_Player:
             print "failed reading cue sheet", cue_pathname
             print e
             return NOTVALID
-        
+
         basepath = os.path.split(cue_pathname)[0]
         oldfilename = None
         totalframes = trackframes = cumulativeframes = 0
@@ -806,7 +850,8 @@ class IDJC_Media_Player:
                                 replaygain = RGDEF
 
                         if not cue_performer:
-                            cue_performer = track_data.artist or global_cue_performer
+                            cue_performer = track_data.artist or \
+                                                            global_cue_performer
                         if not cue_title:
                             cue_title = track_data.title or global_cue_title
 
@@ -820,15 +865,16 @@ class IDJC_Media_Player:
                                     nextoffset = segment_data[track + 1][1][1]
                                 except LookupError:
                                     nextoffset = trackframes
-                        
+
                         if nextoffset == 0:
                             nextoffset = trackframes
                         duration = nextoffset - frames
                         if not trackframes:
                             duration = frames = 0
 
-                        element = CueSheetTrack(pathname, bool(pathname), track, index,
-                                                    cue_performer, cue_title, frames, duration, replaygain)
+                        element = CueSheetTrack(pathname, bool(pathname), track,
+                                                index, cue_performer, cue_title,
+                                                frames, duration, replaygain)
                         cuesheet_liststore.append(element)
 
         if global_cue_performer and global_cue_title:
@@ -839,12 +885,14 @@ class IDJC_Media_Player:
         metadata = metadata or _('Unknown')
 
         # TC: Cuesheet data element as shown in the playlist.
-        element = PlayerRow('<span foreground="dark green">%s</span>' % _("(Cue sheet)") + glib.markup_escape_text(metadata),
-                cue_pathname, totalframes // 75 + 1, metadata, "utf-8",
-                global_cue_title, global_cue_performer, RGDEF, cuesheet_liststore, "")
-            
+        element = PlayerRow(
+            '<span foreground="dark green">%s</span>' % _("(Cue sheet)") + 
+            glib.markup_escape_text(metadata), cue_pathname, totalframes //
+            75 + 1, metadata, "utf-8", global_cue_title, global_cue_performer,
+            RGDEF, cuesheet_liststore, "")
+
         return element
-    
+
     def get_media_metadata(self, filename):
         artist = u""
         title = u""
@@ -853,31 +901,33 @@ class IDJC_Media_Player:
         artist_retval = u""
         title_retval = u""
         album_retval = u""
-        
+
         # Strip away any file:// prefix
         if filename.count("file://", 0, 7):
             filename = filename[7:]
         elif filename.count("file:", 0, 5):
             filename = filename[5:]
-            
+
         filext = supported.check_media(filename)
         if filext == False or os.path.isfile(filename) == False:
             return NOTVALID._replace(filename=filename)
- 
+
         if filext in (".cue", ".txt"):
             return self.make_cuesheet_playlist_entry(filename)
         else:
             cuesheet = None
- 
+
         # Use this name for metadata when we can't get anything from tags.
         # The name will also appear grey to indicate a tagless state.
-        meta_name = os.path.splitext(glib.filename_display_basename(filename))[0].lstrip("0123456789 -")
+        meta_name = os.path.splitext(glib.filename_display_basename(filename)
+                                                    )[0].lstrip("0123456789 -")
         encoding = None  # Obsolete
         # TC: Playlist text meaning the metadata tag is missing or incomplete.
-        rsmeta_name = '<span foreground="dark red">(%s)</span> %s' % (_('Bad Tag'), glib.markup_escape_text(meta_name))
+        rsmeta_name = '<span foreground="dark red">(%s)</span> %s' % (
+                            _('Bad Tag'), glib.markup_escape_text(meta_name))
         title_retval = meta_name
- 
-            
+
+
         # Obtain as much metadata from ubiquitous tags as possible.
         # Files can have ape and id3 tags. ID3 has priority in this case.
         try:
@@ -886,7 +936,7 @@ class IDJC_Media_Player:
             rg = RGDEF
             artist = title = ""
         else:
-            try: 
+            try:
                 rg = float(audio["REPLAYGAIN_TRACK_GAIN"][0].rstrip(" dB"))
             except:
                 rg = RGDEF
@@ -915,11 +965,12 @@ class IDJC_Media_Player:
                 album = audio["album"]
             except:
                 pass
-             
-            
+
+
         # Trying for metadata from native tagging formats.
         if FGlobs.avcodec and FGlobs.avformat and filext == ".avi":
-            self.parent.mixer_write("AVFP=%s\nACTN=avformatinforequest\nend\n" % filename)
+            self.parent.mixer_write("AVFP=%s\nACTN=avformatinforequest\nend\n" %
+                                                                    filename)
             while 1:
                 line = self.parent.mixer_read()
                 if line.startswith("avformatinfo: artist="):
@@ -932,9 +983,10 @@ class IDJC_Media_Player:
                     length = int(line[23:-1])
                 if line == "avformatinfo: end\n":
                     break
-        
+
         elif (filext == ".wav" or filext == ".aiff" or filext == ".au"):
-            self.parent.mixer_write("SNDP=%s\nACTN=sndfileinforequest\nend\n" % filename)
+            self.parent.mixer_write("SNDP=%s\nACTN=sndfileinforequest\nend\n" %
+                                                                    filename)
             while 1:
                 line = self.parent.mixer_read()
                 if line == "idjcmixer: sndfileinfo Not Valid\n" or line == "":
@@ -951,10 +1003,11 @@ class IDJC_Media_Player:
                     break
             if length == None:
                 return NOTVALID._replace(filename=filename)
-      
+
         # This handles chained ogg files as generated by IDJC.
         elif filext == ".ogg" or filext == ".oga" or filext == ".spx":
-            self.parent.mixer_write("OGGP=%s\nACTN=ogginforequest\nend\n" % filename)
+            self.parent.mixer_write("OGGP=%s\nACTN=ogginforequest\nend\n" %
+                                                                    filename)
             while 1:
                 line = self.parent.mixer_read()
                 if line == "OIR:NOT VALID\n" or line == "":
@@ -1011,7 +1064,7 @@ class IDJC_Media_Player:
                     x += list(audio.get("Author", []))
                     if x:
                         artist = "/".join((unicode(y) for y in x))
-                    
+
                     try:
                         x = list(audio["Title"])
                     except:
@@ -1025,27 +1078,28 @@ class IDJC_Media_Player:
                         pass
                     else:
                         album = "/".join((unicode(y) for y in x))
-                    
+
                     try:
-                        rg = float(unicode(audio["replaygain_track_gain"][-1]).rstrip(" dB"))
+                        rg = float(unicode(audio["replaygain_track_gain"][-1]
+                                                                ).rstrip(" dB"))
                     except:
-                        pass 
-        
+                        pass
+
         if isinstance(artist, list):
             artist = u"/".join(artist)
-            
+
         if isinstance(title, list):
             title = u"/".join(title)
 
         if isinstance(album, list):
             album = u"/".join(album)
-        
+
         if isinstance(artist, str):
             try:
                 artist = artist.decode("utf-8", "strict")
             except:
                 artist = artist.decode("latin1", "replace")
-                
+
         if isinstance(title, str):
             try:
                 title = title.decode("utf-8", "strict")
@@ -1057,19 +1111,21 @@ class IDJC_Media_Player:
                 album = album.decode("utf-8", "strict")
             except:
                 album = album.decode("latin1", "replace")
-                
+
         assert(isinstance(artist, unicode))
         assert(isinstance(title, unicode))
         assert(isinstance(album, unicode))
-        
+
         if length == 0:
             length = 1
-        
+
         if artist and title:
             meta_name = artist + u" - " + title
-            return PlayerRow(glib.markup_escape_text(meta_name), filename, length, meta_name, encoding, title, artist, rg, cuesheet, album)
+            return PlayerRow(glib.markup_escape_text(meta_name), filename,
+                length, meta_name, encoding, title, artist, rg, cuesheet, album)
         else:
-            return PlayerRow(rsmeta_name, filename, length, meta_name, encoding, title_retval, artist, rg, cuesheet, album)
+            return PlayerRow(rsmeta_name, filename, length, meta_name, encoding,
+                                    title_retval, artist, rg, cuesheet, album)
 
     # Update playlist entries for a given filename e.g. when tag has been edited
     def update_playlist(self, newdata):
@@ -1090,10 +1146,10 @@ class IDJC_Media_Player:
             self.album = active[9].encode("utf-8")
             self.player_restart()
             self.parent.send_new_mixer_stats()
-        
+
     # Shut down our media players when we exit.
     def cleanup(self):
-        self.exiting = True 
+        self.exiting = True
         if self.player_is_playing:
             self.stop.clicked()
         self.save_session()
@@ -1115,7 +1171,7 @@ class IDJC_Media_Player:
         fh.write("fade_mode=" + str(self.pl_delay.get_active()) + "\n")
         if self.plsave_folder is not None:
             fh.write("plsave_folder=" + self.plsave_folder + "\n")
-        
+
         for entry in self.liststore:
             fh.write("pe=")
             if entry[0].startswith("<b>"):  # clean off any accidental bold tags
@@ -1161,7 +1217,8 @@ class IDJC_Media_Player:
                 if line.startswith("extlist="):
                     self.external_pl.filechooser.set_filename(line[8:-1])
                 if line.startswith("extdir="):
-                    self.external_pl.directorychooser.set_current_folder(line[7:-1])
+                    self.external_pl.directorychooser.set_current_folder(
+                                                                    line[7:-1])
                 if line.startswith("digiprogress_type="):
                     if int(line[18]) != self.digiprogress_type:
                         self.digiprogress_click()
@@ -1189,15 +1246,17 @@ class IDJC_Media_Player:
                     path = line[7:-1]
                     try:
                         self.treeview.get_selection().select_path(path)
-                        self.treeview.scroll_to_cell(path, None, False) 
+                        self.treeview.scroll_to_cell(path, None, False)
                     except:
                         pass
             except ValueError:
                 pass
         if self.playlist_todo:
-            print self.playername + " player: the stored playlist data is not compatible with this version\nfiles placed in a queue for rescanning"
+            print self.playername + (" player: the stored playlist data is not "
+                                    "compatible with this version\nfiles placed"
+                                    " in a queue for rescanning")
             gobject.idle_add(self.cb_playlist_todo)
-            
+
     @threadslock
     def cb_playlist_todo(self):
         if self.no_more_files:
@@ -1213,16 +1272,19 @@ class IDJC_Media_Player:
             print "file missing or type unsupported %s" % pathname
         return True
 
-    def pl_unpack(self, text):            # converts a string encoded list to a python list
-        start = 0 
-        item = 0  
+    def pl_unpack(self, text):
+        """Unmarshall a string to a list."""
+        
+        
+        start = 0
+        item = 0
         reply = []
         while text[start] != "\n":
             end = start
             while text[end] != ":":
-                end = end + 1                                        
+                end = end + 1
             nextstart = int(text[start + 1 : end]) + end + 1
-            
+
             value = text[end + 1 : nextstart]
             try:
                 t = text[start]
@@ -1233,7 +1295,8 @@ class IDJC_Media_Player:
                 elif t == "s":
                     pass
                 elif t == "c":
-                    csts = eval(value, {"__builtins__":None},{"CueSheetTrack":CueSheetTrack})
+                    csts = eval(value, {"__builtins__":None},{
+                                                "CueSheetTrack":CueSheetTrack})
                     value = CueSheetListStore()
                     for cst in csts:
                         value.append(cst)
@@ -1252,22 +1315,21 @@ class IDJC_Media_Player:
             return PlayerRow._make(reply)
         except:
             return NOTVALID._replace(filename=reply[1])
-                 
+
     def handle_stop_button(self, widget):
         self.restart_cancel = True
         if self.is_playing == True:
             self.is_playing = False
             if self.timeout_source_id:
                 gobject.source_remove(self.timeout_source_id)
-            # This will make our play button code branch to its shutdown code.
+            # This will enable the play button to be toggled off.
             self.is_stopping = True
-            # This will emit a signal which will trigger the play button handler code.
             self.play.set_active(False)
             # Must do pause as well if it is pressed.
             if self.pause.get_active() == True:
                 self.pause.set_active(False)
             self.parent.send_new_mixer_stats()
-            
+
     def handle_pause_button(self, widget, selected):
         if self.is_playing == True:
             if self.is_paused == False:
@@ -1287,12 +1349,10 @@ class IDJC_Media_Player:
                 widget.set_active(False)
             else:
                 self.is_paused = False
-    
+
     def handle_play_button(self, widget, selected):
         if selected == False:
-            # Prevent the button from being toggled off by clicking on a selected play button.
-            # This emits a toggled signal so we will handle this eventuality too.
-            # Note that when flag is_stopping is set we don't want to reactivate this button.
+            # Prevent stopping except when the is_stopping flag is true.
             if self.is_stopping == False:
                 widget.set_active(True)
             else:
@@ -1310,8 +1370,8 @@ class IDJC_Media_Player:
                         self.player_is_playing = True
                     if self.is_paused:
                         self.pause.set_active(False)
-                else:    
-                    print "Someone probably clicked Play when we were already playing"
+                else:
+                    print "suppressed the toggle off of the play button"
             else:
                 self.is_playing = True
                 self.new_title = False
@@ -1320,7 +1380,7 @@ class IDJC_Media_Player:
                     print "Player has started"
                 else:
                     self.stop.clicked()
-    
+
     def player_startup(self):
         # remember which player started last so we can decide on metadata
         print "player_startup %s" % self.playername
@@ -1343,18 +1403,21 @@ class IDJC_Media_Player:
                 return False
             print "We start at the beginning"
             treeselection.select_iter(iter)
-            
+
         self.treeview.scroll_to_cell(model.get_path(iter)[0], None, False)
 
         self.music_filename = model.get_value(iter, 1)
         if self.music_filename != "":
-            # Songname is used for metadata for mp3         
+            # Songname is used for metadata for mp3
             self.songname = unicode(model.get_value(iter, 3))
             # These two are used for ogg metadata
-            self.title = unicode(model.get_value(iter, 5)).encode("utf-8", "replace")
-            self.artist = unicode(model.get_value(iter, 6)).encode("utf-8", "replace")
-            self.album = unicode(model.get_value(iter, 9)).encode("utf-8", "replace")
-            self.parent.send_new_mixer_stats()      
+            self.title = unicode(model.get_value(iter, 5)).encode(
+                                                            "utf-8", "replace")
+            self.artist = unicode(model.get_value(iter, 6)).encode(
+                                                            "utf-8", "replace")
+            self.album = unicode(model.get_value(iter, 9)).encode(
+                                                            "utf-8", "replace")
+            self.parent.send_new_mixer_stats()
         # rt is the run time in seconds of our song
         rt = model.get_value(iter, 2)
         if rt < 0:
@@ -1363,33 +1426,35 @@ class IDJC_Media_Player:
         # Used for when seek is moved before play is pressed.
         if os.path.isfile(self.music_filename):
             try:
-                self.start_time = int(self.progressadj.get_value() / self.max_seek * float(rt))
+                self.start_time = int(self.progressadj.get_value() / 
+                                                    self.max_seek * float(rt))
             except ZeroDivisionError:
                 self.start_time = 0
         else:
             self.start_time = rt    # Seek to the end when file is missing.
         print "Seek time is %d seconds" % self.start_time
-          
+
         if self.parent.prefs_window.rg_adjust.get_active():
             self.gain = model.get_value(iter, 7)
             if self.gain == RGDEF:
                 self.gain = self.parent.prefs_window.rg_defaultgain.get_value()
             self.gain += self.parent.prefs_window.rg_boost.get_value()
-            print "final gain value of %f dB" % self.gain       
+            print "final gain value of %f dB" % self.gain
         else:
             self.gain = 0.0
             print "not using replay gain"
-              
+
         # Now we recalibrate the progress bar to the current song length
         self.digiprogress_f = True
-        self.progressadj.set_all(float (self.start_time) , 0.0, rt, rt/1000.0, rt/100.0, 0.0)
+        self.progressadj.set_all(float (self.start_time) , 0.0, rt, rt/1000.0,
+                                                                rt/100.0, 0.0)
         self.progressadj.emit("changed")
         # Set the stop figure used by the progress bar's timeout function
         self.progress_stop_figure = model.get_value(iter, 2)
         self.progress_current_figure = self.start_time
-        
+
         self.player_is_playing = True
-        
+
         # Bold highlight the file we are playing
         text = model.get_value(iter, 0)
         if not text.startswith("<b>"):
@@ -1399,10 +1464,12 @@ class IDJC_Media_Player:
         self.model_playing = model
         self.max_seek = rt
         self.silence_count = 0
-        
+
         if self.music_filename != "":
-            self.parent.mixer_write("PLRP=%s\nSEEK=%d\nSIZE=%d\nRGDB=%f\nACTN=playnoflush%s\nend\n" % (
-                                            self.music_filename, self.start_time, self.max_seek, self.gain, self.playername))
+            self.parent.mixer_write(
+                "PLRP=%s\nSEEK=%d\nSIZE=%d\nRGDB=%f\nACTN=playnoflush%s\nend\n"
+                % (self.music_filename, self.start_time, self.max_seek,
+                self.gain, self.playername))
             while 1:
                 line = self.parent.mixer_read()
                 if line.startswith("context_id="):
@@ -1415,20 +1482,23 @@ class IDJC_Media_Player:
             print "skipping play for empty filename"
             self.player_cid = -1
         if self.player_cid == -1:
-            print "player startup was unsuccessful for file", self.music_filename
-            # we will treat this as successful and not return false so that end of track processing will take care of it
-            self.timeout_source_id = gobject.timeout_add(0, self.cb_play_progress_timeout, self.player_cid)
+            print "player startup was unsuccessful for file", \
+                                                            self.music_filename
+            # The regular code path can handle this.
+            self.timeout_source_id = gobject.idle_add(
+                                self.cb_play_progress_timeout, self.player_cid)
         else:
             print "player context id is %d\n" % self.player_cid
             if self.player_cid & 1:
-                self.timeout_source_id = gobject.timeout_add(200, self.cb_play_progress_timeout, self.player_cid)
+                self.timeout_source_id = gobject.timeout_add(PROGRESS_TIMEOUT,
+                                self.cb_play_progress_timeout, self.player_cid)
             else:
                 self.invoke_end_of_track_policy()
         return True
 
     def player_shutdown(self):
         print "player shutdown code was called"
-        
+
         if self.iter_playing:
             # Unhighlight this track
             text = self.model_playing.get_value(self.iter_playing, 0)
@@ -1436,28 +1506,29 @@ class IDJC_Media_Player:
                 text = text[3:-4]
                 self.model_playing.set_value(self.iter_playing, 0, text)
             self.file_iter_playing = 0
-        
+
         self.player_is_playing = False
         if self.timeout_source_id:
             gobject.source_remove(self.timeout_source_id)
-            
+
         self.progress_current_figure = 0
         self.playtime_elapsed.set_value(0)
         self.progressadj.set_value(0.0)
         self.progressadj.value_changed()
-        
+
         if self.gapless == False:
             self.parent.mixer_write("ACTN=stop%s\nend\n" % self.playername)
-        
+
         self.digiprogress_f = False
         self.other_player_initiated = False
         self.crossfader_initiated = False
-    
+
     def set_fade_mode(self, mode):
         if self.parent.simplemixer:
             mode = 0
-        self.parent.mixer_write("FADE=%d\nACTN=fademode_%s\nend\n" % (mode, self.playername))
-    
+        self.parent.mixer_write("FADE=%d\nACTN=fademode_%s\nend\n" %
+                                                        (mode, self.playername))
+
     def player_restart(self):
         # remember which player started last so we can decide on metadata
         print "player_restart %s" % self.playername
@@ -1467,7 +1538,7 @@ class IDJC_Media_Player:
         self.start_time = int (self.progressadj.get_value())
         self.silence_count = 0
         self.parent.mixer_write("PLRP=%s\nSEEK=%d\nACTN=play%s\nend\n" % (
-                                          self.music_filename, self.start_time, self.playername))
+                        self.music_filename, self.start_time, self.playername))
         while 1:
             line = self.parent.mixer_read()
             if line.startswith("context_id="):
@@ -1477,19 +1548,20 @@ class IDJC_Media_Player:
                 self.player_cid = -1
                 break
         if self.player_cid == -1:
-            print "player startup was unsuccessful for file", self.music_filename
+            print "player startup was unsuccessful for", self.music_filename
             return False
-        
+
         print "player context id is %d\n" % self.player_cid
-        
+
         # Restart a callback to update the progressbar.
-        self.timeout_source_id = gobject.timeout_add(100, self.cb_play_progress_timeout, self.player_cid)
+        self.timeout_source_id = gobject.timeout_add(
+            PROGRESS_TIMEOUT, self.cb_play_progress_timeout, self.player_cid)
         return True
 
     def next_real_track(self, i):
         if i == None:
             return None
-        
+
         m = self.model_playing
         while 1:
             i = m.iter_next(i)
@@ -1501,7 +1573,7 @@ class IDJC_Media_Player:
     def first_real_track(self):
         m = self.model_playing
         i = m.get_iter_first()
-        
+
         while 1:
             if i == None:
                 return None
@@ -1516,7 +1588,7 @@ class IDJC_Media_Player:
             if self.is_playing == False:
                 print "Assertion failed in: invoke_end_of_track_policy"
                 return
-        
+
         if mode_text == N_('Manual'):
             # For Manual mode just stop the player at the end of the track.
             print "Stopping in accordance with manual mode"
@@ -1529,7 +1601,8 @@ class IDJC_Media_Player:
                 treeselection = self.treeview.get_selection()
                 if self.is_playing == False:
                     treeselection.select_path(0) # park on the first menu item
-        elif mode_text == N_('Loop All') or mode_text == N_('Cue Up') or mode_text == N_('Fade Over'):
+        elif mode_text == N_('Loop All') or mode_text == N_('Cue Up') or \
+                                                mode_text == N_('Fade Over'):
             iter = self.next_real_track(self.iter_playing)
             if iter is None:
                 iter = self.first_real_track()
@@ -1545,7 +1618,7 @@ class IDJC_Media_Player:
             # Not truly random. Effort is made to break the appearance of
             # having a set play order to a long term listener without
             # re-playing the same track too soon.
-            
+
             self.stop.clicked()
 
             poolsize = len(self.liststore) // 10
@@ -1556,25 +1629,29 @@ class IDJC_Media_Player:
                 if poolsize > len(self.liststore):
                     poolsize = len(self.liststore)
 
-            if self.parent.server_window.is_streaming or self.parent.server_window.is_recording:
+            if self.parent.server_window.is_streaming or \
+                                        self.parent.server_window.is_recording:
                 fp = self.parent.files_played
             else:
                 fp = self.parent.files_played_offline
             timestamped_pathnames = []
             while not timestamped_pathnames:
-                random_pathnames = [PlayerRow(*x).filename for x in random.sample(self.liststore, poolsize)]
-                timestamped_pathnames = [(fp.get(pn, 0), pn) for pn in random_pathnames if pn]
+                random_pathnames = [PlayerRow(*x).filename 
+                            for x in random.sample(self.liststore, poolsize)]
+                timestamped_pathnames = [(fp.get(pn, 0), pn) 
+                                            for pn in random_pathnames if pn]
                 timestamped_pathnames.sort()
                 least_recent_ts = timestamped_pathnames[0][0]
-                timestamped_pathnames = [x for x in timestamped_pathnames if x[0] == least_recent_ts]
+                timestamped_pathnames = [x for x in timestamped_pathnames
+                                                    if x[0] == least_recent_ts]
                 least_recent = random.choice(timestamped_pathnames)[1]
-            
+
             for path, entry in enumerate(self.liststore):
                 entry_filename = PlayerRow(*entry).filename
                 if least_recent == entry_filename:
                     break
-                
-            treeselection = self.treeview.get_selection()         
+
+            treeselection = self.treeview.get_selection()
             treeselection.select_path(path)
             self.play.clicked()
         elif mode_text == N_('External'):
@@ -1582,7 +1659,7 @@ class IDJC_Media_Player:
             self.stop.clicked()
             next_track = self.external_pl.get_next()
             if next_track is None:
-                print "Cannot obtain anything from external directory/playlist - stopping"
+                print "playlist or directory has no more audio files - stopping"
             else:
                 self.model_playing.insert_after(self.iter_playing, next_track)
                 self.model_playing.remove(self.iter_playing)
@@ -1610,7 +1687,7 @@ class IDJC_Media_Player:
             elif mode_text == N_('Random Hop'):
                 other_player.invoke_end_of_track_policy(N_('Random'))
         else:
-            print 'The mode "%s" is not currently supported - stopping' % mode_text
+            print 'handler missing for playlist mode: %s' % mode_text
             self.stop.clicked()
 
     def handle_playlist_control(self):
@@ -1619,7 +1696,7 @@ class IDJC_Media_Player:
         iter = self.iter_playing
         control = model.get_value(iter, 0)
         print "control is", control
-        
+
         if control == "<b>>normalspeed</b>":
             self.pbspeedzerobutton.clicked()
             self.next.clicked()
@@ -1627,8 +1704,11 @@ class IDJC_Media_Player:
                 treeselection.select_path(0)
         def x(control_type, open_auto_type):
             if control == "<b>>%s</b>" % control_type:
-                print "player", self.playername, "stopping due to playlist control"
-                if (self.playername == "left" and self.parent.crossfade.get_value() < 50) or (self.playername == "right" and self.parent.crossfade.get_value() >= 50):
+                print "player", self.playername, "stopping by playlist control"
+                if (self.playername == "left" and \
+                                self.parent.crossfade.get_value() < 50) or \
+                                (self.playername == "right" and \
+                                self.parent.crossfade.get_value() >= 50):
                     self.parent.mic_opener.open_auto(open_auto_type)
                 self.stop.clicked()
                 if model.iter_next(iter):
@@ -1689,7 +1769,7 @@ class IDJC_Media_Player:
             self.set_fade_mode(0)
             if self.is_playing == False:
                 treeselection.select_path(0)
-        
+
     def get_pl_block_size(self, iter):
         size = 0
         speedfactor = self.pbspeedfactor
@@ -1699,7 +1779,8 @@ class IDJC_Media_Player:
                 text = self.liststore.get_value(iter, 0)
                 if text.startswith("<b>"):
                     text = text[3:-4]
-                if text in (">stopplayer", ">stopplayer2", ">transfer", ">crossfade", ">announcement", ">jumptotop"):
+                if text in (">stopplayer", ">stopplayer2", ">transfer",
+                                ">crossfade", ">announcement", ">jumptotop"):
                     break
                 if text == ">normalspeed":
                     speedfactor = 1.0
@@ -1709,10 +1790,16 @@ class IDJC_Media_Player:
         return size
 
     def update_time_stats(self):
-        if self.pl_mode.get_active() != 0:                   # optimisation -- this function uses a lot of cpu
+        """In playlist mode 0 the block times are calculated and displayed.
+        
+        Block times give the DJ an idea when the playlist will finish.
+        """
+
+        if self.pl_mode.get_active() != 0:
             return
         if self.player_is_playing:
-            tr = int((self.max_seek - self.progressadj.value) / self.pbspeedfactor)
+            tr = int((self.max_seek - self.progressadj.value)
+                                                        / self.pbspeedfactor)
             model = self.model_playing
             iter = model.iter_next(self.iter_playing)
             tr += self.get_pl_block_size(iter)
@@ -1749,7 +1836,10 @@ class IDJC_Media_Player:
                         # TC: The estimated finish time of the playlist.
                         _('Finish'), tm_end_h, tm_end_m, tm_end_s))
             else:
-                self.statusbar_update("%s -%2d:%02d | %s %02d:%02d:%02d | %s %2d:%02d" % (_('Remaining'), trm, trs, _('Finish'), tm_end_h, tm_end_m, tm_end_s, _('Block size'), bsm, bss))
+                self.statusbar_update(
+                            "%s -%2d:%02d | %s %02d:%02d:%02d | %s %2d:%02d" % (
+                            _('Remaining'), trm, trs, _('Finish'), tm_end_h,
+                            tm_end_m, tm_end_s, _('Block size'), bsm, bss))
         else:
             if bs == 0:
                 self.statusbar_update("")
@@ -1759,10 +1849,12 @@ class IDJC_Media_Player:
                 bf_m = bft[4]
                 bf_s = bft[5]
                 self.statusbar_update("%s %2d:%02d | %s %02d:%02d:%02d" % (
-                        # TC: The remaining play time of the block of audio tracks from the highlighted track onwards until the next interruption.
-                        _('Block size'), bsm, bss, _('Finish'), bf_h, bf_m, bf_s))
-                
-    def statusbar_update(self, newtext):            # optimisation -- only update the status bars when the text changes
+                    # TC: The play duration of the block of audio tracks.
+                    _('Block size'), bsm, bss,
+                    # TC: The estimated finish time of the playlist (ETA).
+                    _('Finish'), bf_h, bf_m, bf_s))
+
+    def statusbar_update(self, newtext):
         if newtext != self.oldstatusbartext:
             if self.pbspeedfactor < 0.999 or self.pbspeedfactor > 1.001:
                 newtext = ("%03.1f%% | " % (self.pbspeedfactor * 100)) + newtext
@@ -1770,13 +1862,25 @@ class IDJC_Media_Player:
             self.oldstatusbartext = newtext
 
     def check_mixer_signal(self):
-        if self.parent.feature_set.get_active() and self.progress_press == False and self.progressadj.upper - self.progress_current_figure < float(self.silence) and self.progressadj.upper > 10.0:
-            if self.mixer_signal_f.value == 0 and int(self.mixer_cid) == self.player_cid + 1 and self.parent.prefs_window.silence_killer.get_active() and self.eos_inspect() == False:
+        """The silence killer implementation for quiet endings."""
+
+
+        if self.parent.feature_set.get_active() and not self.progress_press \
+                    and self.progressadj.upper - self.progress_current_figure \
+                    < float(self.silence) and self.progressadj.upper > 10.0:
+
+            if not self.mixer_signal_f.value and int(self.mixer_cid) == \
+                    self.player_cid + 1 and \
+                    self.parent.prefs_window.silence_killer.get_active() and \
+                    self.eos_inspect() == False:
                 print "termination by check mixer signal"
                 self.invoke_end_of_track_policy()
 
     @threadslock
     def cb_play_progress_timeout(self, cid):
+        """The mover of the play progress bar among other things."""
+        
+        
         if cid % 2 == 0:
             # player started at end of track
             self.invoke_end_of_track_policy()
@@ -1786,7 +1890,8 @@ class IDJC_Media_Player:
             treeselection = self.treeview.get_selection()
             (model, iter) = treeselection.get_selected()
             if iter is not None:
-                self.treeview.scroll_to_cell(model.get_path(iter)[0], None, False)
+                self.treeview.scroll_to_cell(model.get_path(iter)[0], None,
+                                                                        False)
             else:
                 self.reselect_please = True
             self.reselect_cursor_please = False
@@ -1800,15 +1905,21 @@ class IDJC_Media_Player:
                 print "Iter was cancelled probably due to song dragging"
             self.reselect_please = False
         if self.progress_press == False:
-            if self.runout.value and self.is_paused == False and self.mixer_cid.value > self.player_cid:
+            if self.runout.value and self.is_paused == False and \
+                                        self.mixer_cid.value > self.player_cid:
                 self.gapless = True
                 print "termination due to end of track"
                 self.invoke_end_of_track_policy()
                 self.gapless = False
                 return False
+                
+            # Mid-track silence killer.
             if self.mixer_signal_f.value == False:
                 self.silence_count += 1
-                if self.parent.feature_set.get_active() and self.silence_count >= 120 and self.playtime_elapsed.value > 15 and self.parent.prefs_window.bonus_killer.get_active():
+                if self.parent.feature_set.get_active() and \
+                            self.silence_count >= 120 and \
+                            self.playtime_elapsed.value > 15 and \
+                            self.parent.prefs_window.bonus_killer.get_active():
                     print "termination due to excessive silence"
                     self.invoke_end_of_track_policy()
                     return False
@@ -1817,17 +1928,20 @@ class IDJC_Media_Player:
 
             if self.progress_current_figure != self.playtime_elapsed.value:
                 # Code runs once a second.
-                
+
                 # Check whether a track is hitting a stream or being recorded.
-                if self.stream.get_active() and (self.parent.server_window.is_streaming or
-                    self.parent.server_window.is_recording) and (
-                    (self.playername == "left" and self.parent.crossadj.value < 90)
-                    or
-                    (self.playername == "right" and self.parent.crossadj.value > 10)):
+                if self.stream.get_active() and (
+                                self.parent.server_window.is_streaming or
+                                self.parent.server_window.is_recording) and (
+                                (self.playername == "left" and 
+                                self.parent.crossadj.value < 90) or
+                                (self.playername == "right" and
+                                self.parent.crossadj.value > 10)):
                         # Log the time the file was last played.
                     self.parent.files_played[self.music_filename] = time.time()
                 else:
-                    self.parent.files_played_offline[self.music_filename] = time.time()
+                    self.parent.files_played_offline[self.music_filename
+                                                                ] = time.time()
 
             self.progress_current_figure = self.playtime_elapsed.value
             self.progressadj.set_value(self.playtime_elapsed.value)
@@ -1835,21 +1949,31 @@ class IDJC_Media_Player:
                 self.progressadj.emit("value_changed")
             self.update_time_stats()
         else:
-            # we stop monitoring the play progress during the progress bar drag operation
-            # by cancelling this timeout
+            # Cease running the timeout. It will not resume.
             return False
-        # Calclulate when to sound the DJ alarm (end of music notification)
-        # Bugs: does not deep scan the playlist controls for >stopplayer so the alarm will not sound if
-        # preceeded by another playlist control
-        if self.progress_current_figure == self.progress_stop_figure -10 and self.progressadj.upper > 11 and self.parent.prefs_window.djalarm.get_active():
-            if ((self.playername == "left" and self.parent.crossadj.get_value() < 50) or (self.playername == "right" and self.parent.crossadj.get_value() >= 50)) and (self.pl_mode.get_active() == 3 or self.pl_mode.get_active() == 4 or (self.pl_mode.get_active() == 0 and (self.model_playing.iter_next(self.iter_playing) is None or (self.pl_mode.get_active() == 0 and self.stop_inspect())))):
-                if self.alarm_cid != cid:
-                    gobject.timeout_add(1000, self.deferred_alarm)
-                    self.alarm_cid = cid
-        # Check if the crossfade needs scheduling.      
-        if self.pl_mode.get_active_text() == N_('Fade Over') or (self.pl_mode.get_active() == 0 and self.fade_inspect()):
-            eot_crosstime = int(self.progress_stop_figure) - self.parent.passspeed_adj.props.value - int(self.progress_current_figure)
-            # Start other player
+        
+        pl_mode = self.pl_mode.get_active()
+        
+        # Calclulate whether to sound the DJ alarm (end of music notification)
+        if self.progress_current_figure == self.progress_stop_figure -10 and \
+                    self.progressadj.upper > 11 and self.alarm_cid != cid and \
+                    self.parent.prefs_window.djalarm.get_active():
+            # DJ Alarm is on and we are at the correct play position.
+            # The alarm has not sounded yet.
+            fader = "left" if self.parent.crossadj.value < 50.0 else "right"
+            
+            # The alarm does not sound for every track except in certain modes.
+            if self.playername == fader and (pl_mode in (3, 4) or
+                                        (pl_mode == 0 and self.stop_inspect())):
+                gobject.timeout_add(1000, self.deferred_alarm)
+                self.alarm_cid = cid
+
+        # Check if the crossfade needs scheduling.
+        if pl_mode == 7 or (pl_mode == 0 and self.fade_inspect()):
+            eot_crosstime = int(self.progress_stop_figure) - \
+                                    self.parent.passspeed_adj.props.value - \
+                                    int(self.progress_current_figure)
+            # Start other player.
             if not self.other_player_initiated and eot_crosstime <= 1:
                 if self.playername == "left":
                     self.parent.player_right.play.clicked()
@@ -1863,16 +1987,17 @@ class IDJC_Media_Player:
                 desired_direction = (self.playername == "left")
                 if desired_direction != self.parent.crossdirection:
                     self.parent.passbutton.clicked()
-        
+
+        # Check if it is fade time.
         rem = self.progress_stop_figure - self.progress_current_figure
-        if (rem == 5 or rem == 10) and not self.crossfader_initiated and not self.parent.simplemixer:
-            mode = self.pl_mode.get_active()
+        if (rem == 5 or rem == 10) and not self.crossfader_initiated and not \
+                                                        self.parent.simplemixer:
             next = self.model_playing.iter_next(self.iter_playing)
             if next is not None:
                 nextval = self.model_playing.get_value(next, 0)
             else:
                 nextval = ""
-            if mode == 0 and nextval.startswith(">"):
+            if pl_mode == 0 and nextval.startswith(">"):
                 if rem == 5 and nextval == ">fade5":
                     fade = 1
                 elif rem == 10 and nextval == ">fade10":
@@ -1893,13 +2018,15 @@ class IDJC_Media_Player:
                     self.set_fade_mode(0)
             else:
                 fade = self.pl_delay.get_active()
-                if (fade == 1 and rem == 10) or (fade == 2 and rem == 5) or self.pl_mode.get_active() in (3, 4, 6) or (mode == 0 and self.islastinplaylist()):
+                if (fade == 1 and rem == 10) or (fade == 2 and rem == 5) or \
+                                    pl_mode in (3, 4, 6) or \
+                                    (pl_mode == 0 and self.islastinplaylist()):
                     fade = 0
                 if fade:
                     self.set_fade_mode(fade)
                     self.invoke_end_of_track_policy()
                     self.set_fade_mode(0)
-        
+
         return True
 
     @threadslock
@@ -1927,7 +2054,8 @@ class IDJC_Media_Player:
 
     def fade_inspect(self):
         stoppers = (">crossfade")
-        horizon = (">transfer", ">stopplayer", ">stopplayer2", ">announcement", ">jumptotop")
+        horizon = (">transfer", ">stopplayer", ">stopplayer2", ">announcement",
+                                                                ">jumptotop")
         i = self.iter_playing
         m = self.model_playing
         while 1:
@@ -1970,7 +2098,7 @@ class IDJC_Media_Player:
             return True
         else:
             return False
-             
+
     def arrow_up(self):
         treeselection = self.treeview.get_selection()
         (model, iter) = treeselection.get_selected()
@@ -1982,7 +2110,7 @@ class IDJC_Media_Player:
                 other_iter = model.get_iter(path[0]-1)
                 self.liststore.swap(iter, other_iter)
                 self.treeview.scroll_to_cell(path[0]-1, None, False)
-                
+
     def arrow_down(self):
         treeselection = self.treeview.get_selection()
         (model, iter) = treeselection.get_selected()
@@ -1996,7 +2124,7 @@ class IDJC_Media_Player:
                 self.treeview.scroll_to_cell(path[0]+1, None, False)
             except ValueError:
                 pass
-             
+
     def advance(self):
         #self.set_fade_mode(self.pl_delay.get_active())
         if self.is_playing:
@@ -2010,20 +2138,20 @@ class IDJC_Media_Player:
             self.parent.mic_opener.close_all()
             self.play.clicked()
         #self.set_fade_mode(0)
-             
+
     def callback(self, widget, data):
         if data == "pbspeedzero":
             self.pbspeedbar.set_value(0.0)
 
         if data == "Arrow Up":
             self.arrow_up()
-        
+
         if data == "Arrow Dn":
             self.arrow_down()
-                    
+
         if data == "Stop":
             self.handle_stop_button(widget)
-            
+
         if data == "Next":
             if self.is_playing:
                 path = self.model_playing.get_path(self.iter_playing)[0]+1
@@ -2034,11 +2162,11 @@ class IDJC_Media_Player:
                 except:
                     self.stop.clicked()
                     return
-                treeselection = self.treeview.get_selection()             
+                treeselection = self.treeview.get_selection()
                 treeselection.select_path(path)
                 self.new_title = True
-                self.play.clicked()       
-                    
+                self.play.clicked()
+
         if data == "Prev":
             if self.is_playing:
                 treeselection = self.treeview.get_selection()
@@ -2048,7 +2176,7 @@ class IDJC_Media_Player:
                 treeselection.select_path(path[0]-1)
                 self.new_title = True
                 self.play.clicked()
-                    
+
         # This is for adding files to the playlist using the file requester.
         if data == "Add Files":
             if self.showing_file_requester == False:
@@ -2058,9 +2186,12 @@ class IDJC_Media_Player:
                 else:
                     # TC: File dialog title text.
                     filerqtext = _('Add music to right playlist')
-                self.filerq = gtk.FileChooserDialog(filerqtext + pm.title_extra, None, gtk.FILE_CHOOSER_ACTION_OPEN, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+                self.filerq = gtk.FileChooserDialog(filerqtext + PM.title_extra,
+                    None, gtk.FILE_CHOOSER_ACTION_OPEN, (gtk.STOCK_CANCEL,
+                    gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
                 self.filerq.set_select_multiple(True)
-                self.filerq.set_current_folder(str(self.file_requester_start_dir))
+                self.filerq.set_current_folder(
+                                            str(self.file_requester_start_dir))
                 self.filerq.add_filter(self.plfilefilter_all)
                 self.filerq.add_filter(self.plfilefilter_playlists)
                 self.filerq.add_filter(self.plfilefilter_media)
@@ -2089,7 +2220,8 @@ class IDJC_Media_Player:
     def file_response(self, dialog, response_id):
         chosenfiles = self.filerq.get_filenames()
         if chosenfiles:
-            self.file_requester_start_dir.set_text(os.path.split(chosenfiles[0])[0])
+            self.file_requester_start_dir.set_text(
+                                            os.path.split(chosenfiles[0])[0])
             self.plsave_filtertype = self.filerq.get_filter()
         self.filerq.destroy()
         if response_id != gtk.RESPONSE_ACCEPT:
@@ -2102,26 +2234,28 @@ class IDJC_Media_Player:
             self.liststore.append(each)
             while gtk.events_pending():
                 gtk.main_iteration()
-     
+
     def file_destroy(self, widget):
         self.showing_file_requester = False
-      
+
     def plfile_new_savetype(self, widget):
-        self.plsave_filetype = self.pltreeview.get_selection().get_selected_rows()[1][0][0]
-        # TC: Expander text which appears as "Select File Type (.pls)" for the pls file type.
-        self.expander.set_label(_('Select File Type') + " (" +  self.playlisttype_extension[self.plsave_filetype][0] + ")")
+        self.plsave_filetype = self.pltreeview.get_selection(
+                                                ).get_selected_rows()[1][0][0]
+        # TC: Expander text "Select File Type (.pls)" for the pls file type.
+        self.expander.set_label(_('Select File Type') + " (" +
+                    self.playlisttype_extension[self.plsave_filetype][0] + ")")
 
     def plfile_response(self, dialog, response_id):
         self.plsave_filtertype = dialog.get_filter()
         self.plsave_open = self.expander.get_expanded()
         self.plsave_folder = dialog.get_current_folder()
-        
+
         if response_id == gtk.RESPONSE_ACCEPT:
             chosenfile = self.plfilerq.get_filename()
         self.plfilerq.destroy()
         if response_id != gtk.RESPONSE_ACCEPT:
             return
-        
+
         main, ext = os.path.splitext(chosenfile)
         ext = ext.lower()
         if self.plsave_filetype == 0:
@@ -2139,7 +2273,7 @@ class IDJC_Media_Player:
                 ext = useext
         chosenfile = main + ext
 
-        validlist = [ x for x in self.liststore if x[0][0] != ">" and x[2] >= 0 ]
+        validlist = [x for x in self.liststore if x[0][0] != ">" and x[2] >= 0]
 
         print "Chosenfile is", chosenfile
         try:
@@ -2151,84 +2285,92 @@ class IDJC_Media_Player:
                 try:
                     pl.write("#EXTM3U\r\n")
                     for each in validlist:
-                        pl.write("#EXTINF:%d,%s\r\n" % (each[2], each[3].decode("UTF-8").encode("ISO8859-1", "replace")))
+                        pl.write("#EXTINF:%d,%s\r\n" % (each[2], each[3].decode(
+                                    "UTF-8").encode("ISO8859-1", "replace")))
                         pl.write(each[1] + "\r\n")
                 except IndexError:
                     pl.close()
                 except IOError:
                     pl.close()
                     print "That was odd\n"
-            
+
             if ext == ".pls":
-                pl.write("[playlist]\r\nNumberOfEntries=%d\r\n\r\n" % len(validlist))
+                pl.write("[playlist]\r\nNumberOfEntries=%d\r\n\r\n" % \
+                                                                len(validlist))
                 for i in range(1, len(validlist) + 1):
                     each = validlist[i - 1]
                     pl.write("File%d=%s\r\n" % (i, each[1]))
                     pl.write("Title%d=%s\r\n" % (i, each[3]))
                     pl.write("Length%d=%d\r\n\r\n" % (i, each[2]))
                 pl.write("Version=2\r\n")
-                
+
             if ext == ".xspf":
-                doc = mdom.getDOMImplementation().createDocument('http://xspf.org/ns/0/', 'playlist', None)
-                
+                doc = mdom.getDOMImplementation().createDocument(
+                                    'http://xspf.org/ns/0/', 'playlist', None)
+
                 playlist = doc.documentElement
                 playlist.setAttribute('version', '1')
                 playlist.setAttribute('xmlns', 'http://xspf.org/ns/0/')
-                playlist.setAttribute('xmlns:idjc', 'http://idjc.sourceforge.net/ns/')
-                
+                playlist.setAttribute(
+                                'xmlns:idjc', 'http://idjc.sourceforge.net/ns/')
+
                 trackList = doc.createElement('trackList')
                 playlist.appendChild(trackList)
-                
+
                 for each in self.liststore:
                     row = PlayerRow(*each)
-                    
+
                     track = doc.createElement('track')
                     trackList.appendChild(track)
 
                     if row.rsmeta.startswith(">"):
                         extension = doc.createElement('extension')
                         track.appendChild(extension)
-                        extension.setAttribute('application', 'http://idjc.sourceforge.net/ns/')
-                        
-                        pld = doc.createElementNS('http://idjc.sourceforge.net/ns/', 'idjc:pld')
+                        extension.setAttribute(
+                            'application', 'http://idjc.sourceforge.net/ns/')
+
+                        pld = doc.createElementNS(
+                            'http://idjc.sourceforge.net/ns/', 'idjc:pld')
                         extension.appendChild(pld)
                         pld.setAttribute('rsmeta', row.rsmeta)
                         pld.setAttribute('length', str(row.length))
                     else:
                         location = doc.createElement('location')
                         track.appendChild(location)
-                        locationText = doc.createTextNode("file://" + urllib.quote(each[1]))
+                        locationText = doc.createTextNode(
+                                            "file://" + urllib.quote(each[1]))
                         location.appendChild(locationText)
-                        
+
                         if each[6]:
                             creator = doc.createElement('creator')
                             track.appendChild(creator)
                             creatorText = doc.createTextNode(each[6])
                             creator.appendChild(creatorText)
-                            
+
                         if each[5]:
                             title = doc.createElement('title')
                             track.appendChild(title)
                             titleText = doc.createTextNode(each[5])
                             title.appendChild(titleText)
-                            
+
                         if each[9]:
                             album = doc.createElement('album')
                             track.appendChild(album)
                             albumText = doc.createTextNode(each[9])
                             album.appendChild(albumText)
-                            
+
                         duration = doc.createElement('duration')
                         track.appendChild(duration)
                         durationText = doc.createTextNode(str(each[2] * 1000))
                         duration.appendChild(durationText)
-                
+
                 xmltext = doc.toxml("UTF-8").replace("><", ">\n<").splitlines()
                 spc = ""
                 for i in range(len(xmltext)):
                     if xmltext[i][1] == "/":
                         spc = spc[2:]
-                    if len(xmltext[i]) < 3 or xmltext[i].startswith("<?") or xmltext[i][-2] == "/" or xmltext[i].count("<") == 2:
+                    if len(xmltext[i]) < 3 or xmltext[i].startswith("<?") or \
+                            xmltext[i][-2] == "/" or xmltext[i].count("<") == 2:
                         xmltext[i] = spc + xmltext[i]
                     else:
                         xmltext[i] = spc + xmltext[i]
@@ -2241,10 +2383,11 @@ class IDJC_Media_Player:
 
     def plfile_destroy(self, widget):
         self.showing_pl_save_requester = False
- 
+
     def cb_toggle(self, widget, data):
-        print "Toggle %s recieved for signal: %s" % (("OFF","ON")[widget.get_active()], data)
-    
+        print "Toggle %s recieved for signal: %s" % (("OFF","ON")[
+                                                    widget.get_active()], data)
+
         if data == "Play":
             self.handle_play_button(widget, widget.get_active())
         if data == "Pause":
@@ -2253,11 +2396,12 @@ class IDJC_Media_Player:
             self.parent.send_new_mixer_stats();
         if data == "Listen":
             self.parent.send_new_mixer_stats();
-    
+
     def cb_progress(self, progress):
         if self.digiprogress_f:
             if self.max_seek > 0:
-                if self.digiprogress_type == 0 or self.player_is_playing == False:
+                if self.digiprogress_type == 0 or self.player_is_playing == \
+                                                                        False:
                     count = int(progress.value)
                 else:
                     count = self.max_seek - int(progress.value)
@@ -2268,10 +2412,12 @@ class IDJC_Media_Player:
             minutes = count / 60
             seconds = count - (minutes * 60)
             if self.digiprogress_type == 0:
-                self.digiprogress.set_text("%d:%02d:%02d" % (hours, minutes, seconds))
+                self.digiprogress.set_text("%d:%02d:%02d" % (
+                                                    hours, minutes, seconds))
             else:
                 if self.max_seek != 0:
-                    self.digiprogress.set_text(" -%02d:%02d " % (minutes, seconds))
+                    self.digiprogress.set_text(" -%02d:%02d " % (
+                                                    minutes, seconds))
                 else:
                     self.digiprogress.set_text(" -00:00 ")
         if self.handle_motion_as_drop:
@@ -2286,7 +2432,7 @@ class IDJC_Media_Player:
         self.pbspeedfactor = pow(10.0, widget.get_value() * 0.05)
         self.parent.send_new_mixer_stats()
 
-    def digiprogress_click(self):    
+    def digiprogress_click(self):
         self.digiprogress_type = not self.digiprogress_type
         if not self.digiprogress_f:
             if self.digiprogress_type == 0:
@@ -2302,8 +2448,9 @@ class IDJC_Media_Player:
             if event.button == 1:
                 self.digiprogress_click()
             if event.button == 3:
-                self.parent.app_menu.popup(None, None, None, event.button, event.time)
-            return True                                  # Prevent any focus therefore any cursor appearing
+                self.parent.app_menu.popup(
+                                    None, None, None, event.button, event.time)
+            return True
         if event.button == 1:
             # Handle click to the play progress bar
             if callback_data == "ProgressPress":
@@ -2317,17 +2464,14 @@ class IDJC_Media_Player:
                     self.handle_motion_as_drop = True
                     gobject.idle_add(self.player_progress_value_changed_emitter)
         return False
-        
-    # This is really a very convoluted workaround to achieve the effect of a connect_after
-    # method on a button_release_event on the player progress bar to run player_restart
-    # I tried using connect_after but no such luck hence this retarded idle function.
+
     @threadslock
     def player_progress_value_changed_emitter(self):
         self.progressadj.emit("value_changed")
         return False
 
     def cb_menu_select(self, widget, data):
-        print "The %s was chosen from the %s menu" % (data, self.playername)    
+        print "The %s was chosen from the %s menu" % (data, self.playername)
 
     def delete_event(self, widget, event, data=None):
         return False
@@ -2352,7 +2496,7 @@ class IDJC_Media_Player:
             meta = self.get_media_metadata(each)
             if meta:
                 yield meta
-    
+
     def get_elements_from_directory_orig(self, chosendir):
         files = os.listdir(chosendir)
         files.sort()
@@ -2385,14 +2529,15 @@ class IDJC_Media_Player:
                 meta = self.get_media_metadata(pathname)
                 if meta:
                     yield meta
-                    
+
         if depth:
             for subdir in directories:
                 print "examining", "/".join((chosendir, subdir))
-                gen = self.get_elements_from_directory("/".join((chosendir, subdir)), visited, depth)
+                gen = self.get_elements_from_directory("/".join(
+                                        (chosendir, subdir)), visited, depth)
                 for meta in gen:
                     yield meta
- 
+
     def get_elements_from_m3u(self, filename):
         try:
             file = open(filename, "r")
@@ -2418,7 +2563,7 @@ class IDJC_Media_Player:
             if meta:
                 yield meta
             line += 1
-            
+
     def get_elements_from_pls(self, filename):
         import ConfigParser
         cfg = ConfigParser.RawConfigParser()
@@ -2450,29 +2595,30 @@ class IDJC_Media_Player:
                     meta = self.get_media_metadata(path)
                     if meta:
                         yield meta
-            
+
     def get_elements_from_xspf(self, filename):
         class BadXspf(ValueError):
             pass
         class GotLocation(Exception):
             pass
-        
+
         try:
             baseurl = []
-            
+
             try:
                 dom = mdom.parse(filename)
             except:
                 raise BadXspf
- 
-            if dom.hasChildNodes() and len(dom.childNodes) == 1 and dom.documentElement.nodeName == u'playlist':
+
+            if dom.hasChildNodes() and len(dom.childNodes) == 1 and \
+                                    dom.documentElement.nodeName == u'playlist':
                 playlist = dom.documentElement
             else:
                 raise BadXspf
 
             if playlist.namespaceURI != u"http://xspf.org/ns/0/":
                 raise BadXspf
-                
+
             try:
                 v = int(playlist.getAttribute('version'))
             except:
@@ -2481,30 +2627,35 @@ class IDJC_Media_Player:
                 print "only xspf playlist versions 0 and 1 supported"
                 raise BadXspf
             del v
-            
+
             # obtain base URLs for relative URLs encountered in trackList
             # only one location tag is allowed
-            locations = [ x for x in playlist.childNodes if x.nodeName == u"location" ]
+            locations = [x for x in playlist.childNodes 
+                                                if x.nodeName == u"location"]
             if len(locations) == 1:
                 url = locations[0].childNodes[0].wholeText
                 if url.startswith(u"file:///"):
                     baseurl.append(url)
             elif locations:
                 raise BadXspf
-            # lesser priority given to the path of the playlist in the filesystem
-            baseurl.append(u"file://" + urllib.quote(os.path.split(os.path.realpath(filename))[0].decode("ASCII") + u"/"))
-            # as before but without realpath
-            baseurl.append(u"file://" + urllib.quote(os.path.split(filename)[0].decode("ASCII") + u"/"))
+                
+            def append_baseurl(fname):
+                baseurl.append(u"file://" + urllib.quote(os.path.split(
+                                            fname)[0].decode("ASCII") + u"/"))
+                
+            for each in (os.path.realpath(filename), filename):
+                append_baseurl(each)
+
             if baseurl[-1] == baseurl[-2]:
                 del baseurl[-1]
-            
+
             trackLists = playlist.getElementsByTagName('trackList')
             if len(trackLists) != 1:
                 raise BadXspf
             trackList = trackLists[0]
             if trackList.parentNode != playlist:
                 raise BadXspf
-                
+
             tracks = trackList.getElementsByTagName('track')
             for track in tracks:
                 if track.parentNode != trackList:
@@ -2513,20 +2664,26 @@ class IDJC_Media_Player:
                 try:
                     for location in locations:
                         for base in baseurl:
-                            url = urllib.unquote(urllib.basejoin(base, location.firstChild.wholeText).encode("ASCII"))
+                            url = urllib.unquote(urllib.basejoin(base, 
+                                location.firstChild.wholeText).encode("ASCII"))
                             meta = self.get_media_metadata(url)
                             if meta:
                                 yield meta
                                 raise GotLocation
                     # Support namespaced pld tag for literal playlist data.
-                    # This is only used for non playable data such as playlist controls.
+                    # This is only used for data such as playlist controls.
                     extensions = track.getElementsByTagName('extension')
                     for extension in extensions:
-                        if extension.getAttribute("application") == "http://idjc.sourceforge.net/ns/":
-                            customtags = extension.getElementsByTagNameNS("http://idjc.sourceforge.net/ns/", "pld")
+                        if extension.getAttribute("application") == \
+                                            "http://idjc.sourceforge.net/ns/":
+                            customtags = extension.getElementsByTagNameNS(
+                                    "http://idjc.sourceforge.net/ns/", "pld")
                             for tag in customtags:
                                 try:
-                                    literal_entry = NOTVALID._replace(**dict((k, type(getattr(NOTVALID, k))(tag.attributes.get(k).nodeValue)) for k in tag.attributes.keys()))
+                                    literal_entry = NOTVALID._replace(**dict((
+                                            k, type(getattr(NOTVALID, k))(
+                                            tag.attributes.get(k).nodeValue))
+                                            for k in tag.attributes.keys()))
                                 except Exception, e:
                                     print e
                                     pass
@@ -2539,7 +2696,7 @@ class IDJC_Media_Player:
         except BadXspf:
             print "could not parse playlist", filename
             return
-     
+
     def drag_data_delete(self, treeview, context):
         if context.action == gtk.gdk.ACTION_MOVE:
             treeselection = treeview.get_selection()
@@ -2549,19 +2706,22 @@ class IDJC_Media_Player:
                 self.iter_playing = 0
                 self.stop.clicked()
 
-    def drag_data_get_data(self, treeview, context, selection, target_id, etime):
+    def drag_data_get_data(self, treeview, context, selection, target_id,
+                                                                        etime):
         treeselection = treeview.get_selection()
         model, iter = treeselection.get_selected()
         if model.get_value(iter, 1) != "":
             data = "file://" + model.get_value(iter, 1)
         else:
-            data = "idjcplayercontrol://" + model.get_value(iter, 0) + "+" + str(model.get_value(iter, 2)) + "+" + model.get_value(iter, 3) + "+" + model.get_value(iter, 4)
+            data = "idjcplayercontrol://" + "+".join(
+                            str(model.get_value(iter, x)) for x in (0, 2, 3, 4))
         print "data for drag_get =", data
         selection.set(selection.target, 8, data)
         self.reselect_please = True
         return True
 
-    def drag_data_received_data(self, treeview, context, x, y, dragged, info, etime):
+    def drag_data_received_data(self, treeview, context, x, y, dragged, info,
+                                                                        etime):
         if info != 0:
             text = str(dragged.data)
             if text[:20] == "idjcplayercontrol://":
@@ -2574,7 +2734,8 @@ class IDJC_Media_Player:
                 else:
                     path, position = drop_info
                     dest_iter = model.get_iter(path)
-                    if(position == gtk.TREE_VIEW_DROP_BEFORE or position == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE):
+                    if(position == gtk.TREE_VIEW_DROP_BEFORE or position == \
+                                            gtk.TREE_VIEW_DROP_INTO_OR_BEFORE):
                         model.insert_before(dest_iter, newrow)
                     else:
                         model.insert_after(dest_iter, newrow)
@@ -2583,7 +2744,8 @@ class IDJC_Media_Player:
             else:
                 if context.action == gtk.gdk.ACTION_MOVE:
                     context.finish(True, True, etime)
-                gobject.idle_add(self.drag_data_received_data_idle, treeview, x, y, text)
+                gobject.idle_add(self.drag_data_received_data_idle, treeview,
+                                                                    x, y, text)
         else:
             treeselection = treeview.get_selection()
             model, iter = treeselection.get_selected()
@@ -2593,22 +2755,24 @@ class IDJC_Media_Player:
             else:
                 path, position = drop_info
                 dest_iter = model.get_iter(path)
-                if(position == gtk.TREE_VIEW_DROP_BEFORE or position == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE):
+                if(position == gtk.TREE_VIEW_DROP_BEFORE or position == \
+                                            gtk.TREE_VIEW_DROP_INTO_OR_BEFORE):
                     self.liststore.move_before(iter, dest_iter)
                 else:
                     self.liststore.move_after(iter, dest_iter)
             if context.action == gtk.gdk.ACTION_MOVE:
                 context.finish(False, False, etime)
         return True
-    
+
     def drag_data_received_data_idle(self, treeview, x, y, dragged):
         gtk.gdk.threads_enter()
         model = treeview.get_model()
         gtk.gdk.threads_leave()
-          
-        pathnames = [ urllib.unquote(t[7:]) for t in dragged.strip().splitlines() if t.startswith("file://") ]
+
+        pathnames = [urllib.unquote(t[7:]) for t in dragged.strip().splitlines(
+                                                ) if t.startswith("file://")]
         gen = self.get_elements_from(pathnames)
-        
+
         first = True
         for media_data in gen:
             if self.no_more_files:
@@ -2623,7 +2787,8 @@ class IDJC_Media_Player:
                     gtk.gdk.threads_enter()
                     iter = model.get_iter(path)
                     gtk.gdk.threads_leave()
-                    if(position == gtk.TREE_VIEW_DROP_BEFORE or position == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE):
+                    if(position == gtk.TREE_VIEW_DROP_BEFORE or position == \
+                                            gtk.TREE_VIEW_DROP_INTO_OR_BEFORE):
                         gtk.gdk.threads_enter()
                         iter = model.insert_before(iter, media_data)
                         gtk.gdk.threads_leave()
@@ -2650,32 +2815,29 @@ class IDJC_Media_Player:
             gtk.gdk.threads_leave()
         self.reselect_please = True
         return False
-    
+
     sourcetargets = [
         ('MY_TREE_MODEL_ROW', gtk.TARGET_SAME_WIDGET, 0),
         ('text/plain', 0, 1),
         ('TEXT', 0, 2),
         ('STRING', 0, 3),
         ]
-        
+
     droptargets = [
         ('MY_TREE_MODEL_ROW', gtk.TARGET_SAME_WIDGET, 0),
         ('text/plain', 0, 1),
         ('TEXT', 0, 2),
         ('STRING', 0, 3),
-        ('text/uri-list', 0, 4)                      # Need drop target for prokyon3
-        ] 
-        
+        ('text/uri-list', 0, 4)
+        ]
+
     def cb_doubleclick(self, treeview, path, tvcolumn, user_data):
-        # Our play button handler will manage to get the song title.
-        # All we need to do is set a flag and issue a play button started signal.
         if self.is_playing:
-            # The new_title flag allows a new song to be played when the player is going.
             self.new_title = True
             self.play.clicked()
         else:
             self.play.clicked()
-                                    
+
     def cb_selection_changed(self, treeselection):
         self.cuesheet_playlist.hide()
         self.cuesheet_playlist.treeview.set_model(None)
@@ -2686,22 +2848,24 @@ class IDJC_Media_Player:
                 self.cuesheet_playlist.treeview.set_model(row.cuesheet)
                 self.cuesheet_playlist.show()
         self.update_time_stats()
-            
+
     def cb_playlist_changed(self, treemodel, path, iter = None):
         self.playlist_changed = True        # used by the request system
-            
+
     def menu_activate(self, widget, event):
         if event.type == gtk.gdk.BUTTON_PRESS and event.button == 3:
             self.menu_model = self.treeview.get_model()
-            row_info = self.treeview.get_dest_row_at_pos(int(event.x + 0.5), int(event.y + 0.5))
+            row_info = self.treeview.get_dest_row_at_pos(int(event.x + 0.5),
+                                                            int(event.y + 0.5))
             if row_info:
                 sens = True
                 path, position = row_info
                 selection = self.treeview.get_selection()
                 selection.select_path(path)
-                self.menu_iter = self.menu_model.get_iter(path)   # store the context of the menu action
+                self.menu_iter = self.menu_model.get_iter(path)
                 pathname = self.menu_model.get_value(self.menu_iter, 1)
-                self.item_tag.set_sensitive(MutagenGUI.is_supported(pathname) != False)
+                self.item_tag.set_sensitive(
+                                    MutagenGUI.is_supported(pathname) != False)
             else:
                 pathname = ""
                 self.menu_iter = None
@@ -2725,8 +2889,8 @@ class IDJC_Media_Player:
                 self.pl_menu_control.set_sensitive(False)
             else:
                 self.pl_menu_control.set_sensitive(True)
-            
-            if self.playername == "left":  # determine if anything is selected in the other playlist
+
+            if self.playername == "left":
                 tv = self.parent.player_right.treeview.get_selection()
             else:
                 tv = self.parent.player_left.treeview.get_selection()
@@ -2738,29 +2902,30 @@ class IDJC_Media_Player:
             self.copy_append_cursor.set_sensitive(sens3)
             self.copy_prepend_cursor.set_sensitive(sens3)
             self.transfer_append_cursor.set_sensitive(sens3)
-            self.transfer_prepend_cursor.set_sensitive(sens3)   
-                
+            self.transfer_prepend_cursor.set_sensitive(sens3)
+
             widget.popup(None, None, None, event.button, event.time)
             return True
         return False
-        
+
     def cb_plexpander(self, widget, param_spec):
         if widget.get_expanded():
             self.plframe.show()
         else:
             self.plframe.hide()
-        
+
     def menuitem_response(self, widget, text):
         print "The %s menu option was chosen" % text
         model = self.menu_model
         iter = self.menu_iter
-        
-        if text == "Announcement Control" and iter is not None and model.get_value(iter, 0) == ">announcement":
+
+        if text == "Announcement Control" and iter is not None and \
+                                    model.get_value(iter, 0) == ">announcement":
             # modify existing announcement dialog
             dia = AnnouncementDialog(self, model, iter, "delete_modify")
             dia.show()
             return
-        
+
         dict = {
                  "Stop Control"               : ">stopplayer",
                  "Stop Control 2"               : ">stopplayer2",
@@ -2788,13 +2953,13 @@ class IDJC_Media_Player:
             model.set_value(iter, 5, "")
             model.set_value(iter, 6, "")
             self.treeview.get_selection().select_iter(iter)
-            
+
             if text == "Announcement Control":
                 # brand new announcement dialog
                 dia = AnnouncementDialog(self, model, iter, "initial")
                 dia.show()
             return
-        
+
         if text == "MetaTag":
             try:
                 pathname = model.get_value(iter, 1)
@@ -2802,10 +2967,10 @@ class IDJC_Media_Player:
                 pass
             else:
                 MutagenGUI(pathname, model.get_value(iter, 4) , self.parent)
-        
+
         if text == "Add File":
             self.add.clicked()
-        
+
         if text == "Playlist Save":
             if self.showing_pl_save_requester == False:
                 if self.playername == "left":
@@ -2817,32 +2982,38 @@ class IDJC_Media_Player:
                 self.expander.connect("notify::expanded", self.cb_plexpander)
                 vbox.add(self.expander)
                 self.expander.show()
-                
+
                 self.plframe = gtk.Frame()
                 self.plliststore = gtk.ListStore(str, str)
                 for row in self.playlisttype_extension:
                     self.plliststore.append(row)
                 self.pltreeview = gtk.TreeView(self.plliststore)
                 self.plframe.add(self.pltreeview)
-                
+
                 self.pltreeview.show()
                 self.pltreeview.set_rules_hint(True)
                 cellrenderer1 = gtk.CellRendererText()
-                self.pltreeviewcol1 = gtk.TreeViewColumn(_('File Type'), cellrenderer1, text = 0)
+                self.pltreeviewcol1 = gtk.TreeViewColumn(
+                                        _('File Type'), cellrenderer1, text = 0)
                 self.pltreeviewcol1.set_expand(True)
                 cellrenderer2 = gtk.CellRendererText()
                 # TC: File extension.
-                self.pltreeviewcol2 = gtk.TreeViewColumn(_('Extension'), cellrenderer2, text = 1)
+                self.pltreeviewcol2 = gtk.TreeViewColumn(
+                                        _('Extension'), cellrenderer2, text = 1)
                 self.pltreeview.append_column(self.pltreeviewcol1)
                 self.pltreeview.append_column(self.pltreeviewcol2)
-                self.pltreeview.connect("cursor-changed", self.plfile_new_savetype)
+                self.pltreeview.connect(
+                                    "cursor-changed", self.plfile_new_savetype)
                 self.pltreeview.set_cursor(self.plsave_filetype)
-                
+
                 if (self.plsave_open):
                     self.expander.set_expanded(True)
                 vbox.add(self.plframe)
-                    
-                self.plfilerq = gtk.FileChooserDialog(filerqtext + pm.title_extra, None, gtk.FILE_CHOOSER_ACTION_SAVE, (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+
+                self.plfilerq = gtk.FileChooserDialog(filerqtext + 
+                            PM.title_extra, None, gtk.FILE_CHOOSER_ACTION_SAVE,
+                            (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
+                            gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
                 self.plfilerq.set_current_folder(self.home)
                 self.plfilerq.add_filter(self.plfilefilter_all)
                 self.plfilerq.add_filter(self.plfilefilter_playlists)
@@ -2860,20 +3031,20 @@ class IDJC_Media_Player:
                 self.showing_pl_save_requester = True
             else:
                 self.plfilerq.present()
-         
+
         if text == "Remove All":
             if self.is_playing:
                 self.stop.clicked()
             self.no_more_files = True
             self.liststore.clear()
-        
+
         if text == "Remove This" and iter != None:
             name = model.get_value(iter, 0)
             if name[:3] == "<b>":
                 self.stop.clicked()
             self.liststore.remove(iter)
-            
-        if text == "Remove From Here" and iter != None:  
+
+        if text == "Remove From Here" and iter != None:
             path = model.get_path(iter)
             try:
                 while 1:
@@ -2884,7 +3055,7 @@ class IDJC_Media_Player:
                     self.liststore.remove(iter)
             except:
                 print "Nothing more to delete"
-            
+
         if text == "Remove To Here" and iter != None:
             self.no_more_files = True
             path = model.get_path(iter)[0] -1
@@ -2900,7 +3071,7 @@ class IDJC_Media_Player:
             if row[0][:3] == "<b>":                  # strip off any bold tags
                 row[0] = row[0][3:-4]
             model.insert_after(iter, row)
-        
+
         if text == "Playlist Exchange":
             self.no_more_files = True
             if self.playername == "left":
@@ -2933,42 +3104,42 @@ class IDJC_Media_Player:
             except IndexError:
                 pass
             self.templist.clear()
-            
+
         if text == "Copy Append":
             self.copy_playlist("end")
-            
+
         if text == "Transfer Append":
             self.copy_playlist("end")
             self.stop.clicked()
             self.liststore.clear()
-                      
+
         if text == "Copy Prepend":
             self.copy_playlist("start")
-            
+
         if text == "Transfer Prepend":
             self.copy_playlist("start")
             self.stop.clicked()
             self.liststore.clear()
-            
+
         if text == "Copy Append Cursor":
             self.copy_playlist("after")
-            
+
         if text == "Transfer Append Cursor":
             self.copy_playlist("after")
             self.stop.clicked()
             self.liststore.clear()
-            
+
         if text == "Copy Prepend Cursor":
             self.copy_playlist("before")
-            
+
         if text == "Transfer Prepend Cursor":
             self.copy_playlist("before")
             self.stop.clicked()
             self.liststore.clear()
-          
+
         if text == "ToJingles":
             source = model.get_value(iter, 1)
-            dest = pm.jinglesdir / os.path.split(source)[1]
+            dest = PM.jinglesdir / os.path.split(source)[1]
             try:
                 source = open(source, "r")
                 dest = open(dest, "w")
@@ -2982,16 +3153,16 @@ class IDJC_Media_Player:
             source.close
             dest.close
             self.parent.jingles.refresh.clicked()
-                    
-        if self.player_is_playing:        # put the cursor on the file playing after a brief pause.
-            self.reselect_please = True
+
+        if self.player_is_playing:
+            self.reselect_please = True  # Cursor placement on current track.
 
     def stripbold(self, playlist_item):
         copy = list(playlist_item)
         if copy[0][:3] == "<b>":
             copy[0] = copy[0][3:-4]
         return copy
-                      
+
     def copy_playlist(self, dest):
         if self.playername == "left":
             other = self.parent.player_right
@@ -3007,20 +3178,22 @@ class IDJC_Media_Player:
                 while 1:
                     other.liststore.append(self.stripbold(self.liststore[i]))
                     i = i + 1
-            
-            (model, iter) = other.treeview.get_selection().get_selected()           
-            
+
+            (model, iter) = other.treeview.get_selection().get_selected()
+
             if dest == "after":
                 while 1:
-                    iter = other.liststore.insert_after(iter, self.stripbold(self.liststore[i]))
+                    iter = other.liststore.insert_after(
+                                        iter, self.stripbold(self.liststore[i]))
                     i = i + 1
             if dest == "before":
                 while 1:
-                    other.liststore.insert_before(iter, self.stripbold(self.liststore[i]))
+                    other.liststore.insert_before(
+                                        iter, self.stripbold(self.liststore[i]))
                     i = i + 1
         except IndexError:
             pass
-                
+
     def cb_keypress(self, widget, event):
         # Handle shifted arrow keys for rearranging stuff in the playlist.
         if event.state & gtk.gdk.SHIFT_MASK:
@@ -3037,7 +3210,8 @@ class IDJC_Media_Player:
                     name = s_model.get_value(s_iter, 0)
                     if name[:3] == "<b>":
                         self.stop.clicked()
-                    otherselection = self.parent.player_left.treeview.get_selection()
+                    otherselection = \
+                                self.parent.player_left.treeview.get_selection()
                     d_model, d_iter = otherselection.get_selected()
                     row = list(s_model[s_model.get_path(s_iter)])
                     path = s_model.get_path(s_iter)
@@ -3048,8 +3222,10 @@ class IDJC_Media_Player:
                     else:
                         d_iter = d_model.insert_after(d_iter, row)
                     otherselection.select_iter(d_iter)
-                    self.parent.player_left.treeview.set_cursor(d_model.get_path(d_iter))
-                    self.parent.player_left.treeview.scroll_to_cell(d_model.get_path(d_iter), None, False)
+                    self.parent.player_left.treeview.set_cursor(
+                                                    d_model.get_path(d_iter))
+                    self.parent.player_left.treeview.scroll_to_cell(
+                                        d_model.get_path(d_iter), None, False)
                 return True
             if event.keyval == 65363 and self.playername == "left":
                 treeselection = widget.get_selection()
@@ -3058,7 +3234,8 @@ class IDJC_Media_Player:
                     name = s_model.get_value(s_iter, 0)
                     if name[:3] == "<b>":
                         self.stop.clicked()
-                    otherselection = self.parent.player_right.treeview.get_selection()
+                    otherselection = \
+                            self.parent.player_right.treeview.get_selection()
                     d_model, d_iter = otherselection.get_selected()
                     row = list(s_model[s_model.get_path(s_iter)])
                     path = s_model.get_path(s_iter)
@@ -3069,14 +3246,17 @@ class IDJC_Media_Player:
                     else:
                         d_iter = d_model.insert_after(d_iter, row)
                     otherselection.select_iter(d_iter)
-                    self.parent.player_right.treeview.set_cursor(d_model.get_path(d_iter))
-                    self.parent.player_right.treeview.scroll_to_cell(d_model.get_path(d_iter), None, False)
+                    self.parent.player_right.treeview.set_cursor(
+                                                    d_model.get_path(d_iter))
+                    self.parent.player_right.treeview.scroll_to_cell(
+                                        d_model.get_path(d_iter), None, False)
                 return True
         if event.keyval == 65361 and self.playername == "right":
             treeselection = self.parent.player_left.treeview.get_selection()
             model, iter = treeselection.get_selected()
             if iter is not None:
-                self.parent.player_left.treeview.set_cursor(model.get_path(iter))
+                self.parent.player_left.treeview.set_cursor(
+                                                        model.get_path(iter))
             else:
                 treeselection.select_path(0)
             self.parent.player_left.treeview.grab_focus()
@@ -3085,13 +3265,16 @@ class IDJC_Media_Player:
             treeselection = self.parent.player_right.treeview.get_selection()
             model, iter = treeselection.get_selected()
             if iter is not None:
-                self.parent.player_right.treeview.set_cursor(model.get_path(iter))
+                self.parent.player_right.treeview.set_cursor(
+                                                        model.get_path(iter))
             else:
                 treeselection.select_path(0)
             self.parent.player_right.treeview.grab_focus()
             return True
-        if event.keyval == 65535 or event.keyval == 65439:          # The Main and NK Delete keys
-            treeselection = widget.get_selection()          # Delete to cause playlist entry removal
+        # Handle delete key press.
+        if event.keyval == 65535 or event.keyval == 65439:
+            # Remove entry on the playlist under the cursor.
+            treeselection = widget.get_selection()
             model, iter = treeselection.get_selected()
             if iter is not None:
                 path = model.get_path(iter)
@@ -3110,15 +3293,17 @@ class IDJC_Media_Player:
                 if next is not None:
                     treeselection.select_iter(next)
                     widget.set_cursor(model.get_path(next))
-                    self.treeview.scroll_to_cell(model.get_path(next), None, False)
+                    self.treeview.scroll_to_cell(
+                                            model.get_path(next), None, False)
                 elif prev is not None:
                     treeselection.select_iter(prev)
                     widget.set_cursor(model.get_path(prev))
-                    self.treeview.scroll_to_cell(model.get_path(prev), None, False)
+                    self.treeview.scroll_to_cell(
+                                            model.get_path(prev), None, False)
             else:
                 print "Playlist is empty!"
             return True
-        # Allow certain key presses to work but not allow a text entry box to appear.
+
         if event.string =="\r":
             self.stop.clicked()
             self.play.clicked()
@@ -3126,7 +3311,7 @@ class IDJC_Media_Player:
         if event.string == "":
             return False
         return True
-                
+
     def rgrowconfig(self, tv_column, cell_renderer, model, iter):
         if self.exiting:
             return
@@ -3136,11 +3321,13 @@ class IDJC_Media_Player:
         else:
             if model.get_value(iter, 7) == RGDEF:
                 # Red triangle.
-                cell_renderer.set_property("markup", '<span foreground="dark red">&#x25b5;</span>')
+                cell_renderer.set_property("markup",
+                                '<span foreground="dark red">&#x25b5;</span>')
             else:
                 # Small green bullet point.
-                cell_renderer.set_property("markup", '<span foreground="dark green">&#x2022;</span>')
-          
+                cell_renderer.set_property("markup",
+                                '<span foreground="dark green">&#x2022;</span>')
+
     def playtimerowconfig(self, tv_column, cell_renderer, model, iter):
         if self.exiting:
             return
@@ -3164,124 +3351,129 @@ class IDJC_Media_Player:
                 cell_renderer.set_property("text", "")
         elif playtime == 0:
             cell_renderer.set_property("text", "? : ??")
-        else:   
+        else:
             secs = playtime % 60
             playtime -= secs
             mins = playtime / 60
             text = "%d:%02d" % (mins, secs)
             cell_renderer.set_property("text", text)
 
+    # Class variable for use by rowconfig.
+    control_cell_properties = {
+        ">fade10":          (("cell-background", "dark red"),
+                            ("background", "gray"),
+                            ("foreground", "dark red"),
+                            # TC: Playlist control.
+                            ("text", _('Fade 10s'))),
+                    
+        ">fade5":           (("cell-background", "dark red"),
+                            ("background", "gray"),
+                            ("foreground", "dark red"),
+                            # TC: Playlist control.
+                            ("text", _('Fade 5s'))),
+        ">fadenone":        (("cell-background", "dark red"),
+                            ("background", "gray"),
+                            ("foreground", "dark red"),
+                            # TC: Playlist control.
+                            ("text", _('No Fade'))),
+        ">announcement":    (("cell-background", "dark blue"),
+                            ("background", "gray"),
+                            ("foreground", "dark blue"),
+                            # TC: Playlist control.
+                            ("text", _('Announcement'))),
+        ">normalspeed":     (("cell-background", "dark green"),
+                            ("background", "gray"),
+                            ("foreground", "dark green"),
+                            # TC: Playlist control.
+                            ("text", _('>> Normal Speed <<'))),
+        ">stopplayer":      (("cell-background", "red"),
+                            ("background", "gray"),
+                            ("foreground", "red"),
+                            # TC: Playlist control.
+                            ("text", _('Player stop'))),
+        ">stopplayer2":     (("cell-background", "red"),
+                            ("background", "gray"),
+                            ("foreground", "red"),
+                            # TC: Playlist control.
+                            ("text", _('Player stop 2'))),
+        ">jumptotop":       (("cell-background", "dark magenta"),
+                            ("background", "gray"),
+                            ("foreground", "dark magenta"),
+                            # TC: Playlist control.
+                            ("text", _('Jump To Top'))),
+        ">stopstreaming":   (("cell-background", "black"),
+                            ("background", "gray"),
+                            ("foreground", "black"),
+                            # TC: Playlist control.
+                            ("text", _('Stop streaming'))),
+        ">stoprecording":   (("cell-background", "black"),
+                            ("background", "gray"),
+                            ("foreground", "black"),
+                            # TC: Playlist control.
+                            ("text", _('Stop recording'))),
+        ">transfer":        (("cell-background", "magenta"),
+                            ("background", "gray"),
+                            ("foreground", "magenta")),
+        ">crossfade":       (("cell-background", "blue"),
+                            ("background", "gray"),
+                            ("foreground", "blue"))
+        }
+
     def rowconfig(self, tv_column, cell_renderer, model, iter):
         if self.exiting:
             return
+        crprop = cell_renderer.set_property
         celltext = model.get_value(iter, 0)
         if celltext[:4] == "<b>>":
             celltext = celltext[3:-4]
         if celltext[0] == ">":
-            cell_renderer.set_property("xalign", 0.45)
-            cell_renderer.set_property("ypad", 0)
-            cell_renderer.set_property("scale", 0.75)
-            cell_renderer.set_property("cell-background-set", True)
-            cell_renderer.set_property("background-set", True)
-            cell_renderer.set_property("foreground-set", True)
+            crprop("xalign", 0.45)
+            crprop("ypad", 0)
+            crprop("scale", 0.75)
+            crprop("cell-background-set", True)
+            crprop("background-set", True)
+            crprop("foreground-set", True)
             if self.pl_mode.get_active() == 0:
-                if celltext == ">fade10":
-                    cell_renderer.set_property("cell-background", "dark red")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "dark red")
-                    # TC: Playlist control.
-                    cell_renderer.set_property("text", _('Fade 10s'))
-                if celltext == ">fade5":
-                    cell_renderer.set_property("cell-background", "dark red")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "dark red")
-                    # TC: Playlist control.
-                    cell_renderer.set_property("text", _('Fade 5s'))
-                if celltext == ">fadenone":
-                    cell_renderer.set_property("cell-background", "dark red")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "dark red")
-                    # TC: Playlist control.
-                    cell_renderer.set_property("text", _('No Fade'))
-                if celltext == ">announcement":
-                    cell_renderer.set_property("cell-background", "dark blue")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "dark blue")
-                    # TC: Playlist control.
-                    cell_renderer.set_property("text", _('Announcement'))
-                if celltext == ">normalspeed":
-                    cell_renderer.set_property("cell-background", "dark green")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "dark green")
-                    # TC: Playlist control.
-                    cell_renderer.set_property("text", _('>> Normal Speed <<'))
-                if celltext == ">stopplayer":
-                    cell_renderer.set_property("cell-background", "red")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "red")
-                    # TC: Playlist control.
-                    cell_renderer.set_property("text", _('Player stop'))
-                if celltext == ">stopplayer2":
-                    cell_renderer.set_property("cell-background", "red")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "red")
-                    # TC: Playlist control.
-                    cell_renderer.set_property("text", _('Player stop 2'))
-                if celltext == ">jumptotop":
-                    cell_renderer.set_property("cell-background", "dark magenta")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "dark magenta")
-                    # TC: Playlist control.
-                    cell_renderer.set_property("text", _('Jump To Top'))
-                if celltext == ">stopstreaming":
-                    cell_renderer.set_property("cell-background", "black")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "black")
-                    # TC: Playlist control.
-                    cell_renderer.set_property("text", _('Stop streaming'))
-                if celltext == ">stoprecording":
-                    cell_renderer.set_property("cell-background", "black")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "black")
-                    # TC: Playlist control.
-                    cell_renderer.set_property("text", _('Stop recording'))
+                try:
+                    properties = self.control_cell_properties[celltext]
+                except KeyError:
+                    pass
+                else:
+                    for name, value in properties:
+                        crprop(name, value)
+                    
                 if celltext == ">transfer":
-                    cell_renderer.set_property("cell-background", "magenta")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "magenta")
                     if self.playername == "left":
                         # TC: Playlist control.
-                        cell_renderer.set_property("text", _('>>> Transfer across >>>'))
+                        crprop("text", _('>>> Transfer across >>>'))
                     else:
                         # TC: Playlist control.
-                        cell_renderer.set_property("text", _('<<< Transfer across <<<'))
-                if celltext == ">crossfade":
-                    cell_renderer.set_property("cell-background", "blue")
-                    cell_renderer.set_property("background", "gray")
-                    cell_renderer.set_property("foreground", "blue")
-                    if self.playername == "left":
-                        # TC: Playlist control.
-                        cell_renderer.set_property("text", _('>>> Fade across >>>'))
-                    else:
-                        # TC: Playlist control.
-                        cell_renderer.set_property("text", _('<<< Fade across <<<'))
-            else:
-                cell_renderer.set_property("cell-background", "darkgray")
-                cell_renderer.set_property("background", "darkgray")
-                cell_renderer.set_property("foreground", "white")
-                # TC: Playlist control.
-                cell_renderer.set_property("markup", "<i>%s</i>" % _("Ignored playlist control"))
-        else:
-            cell_renderer.set_property("foreground-set", False)
-            cell_renderer.set_property("cell-background-set", False)
-            cell_renderer.set_property("background-set", False)
-            cell_renderer.set_property("scale", 1.0)
-            cell_renderer.set_property("xalign", 0.0)
-            cell_renderer.set_property("ypad", 2)
+                        crprop("text", _('<<< Transfer across <<<'))
                 
+                if celltext == ">crossfade":
+                    if self.playername == "left":
+                        # TC: Playlist control.
+                        crprop("text", _('>>> Fade across >>>'))
+                    else:
+                        # TC: Playlist control.
+                        crprop("text", _('<<< Fade across <<<'))
+            else:
+                crprop("cell-background", "darkgray")
+                crprop("background", "darkgray")
+                crprop("foreground", "white")
+                # TC: Playlist control.
+                crprop("markup", "<i>%s</i>" % _("Ignored playlist control"))
+        else:
+            crprop("foreground-set", False)
+            crprop("cell-background-set", False)
+            crprop("background-set", False)
+            crprop("scale", 1.0)
+            crprop("xalign", 0.0)
+            crprop("ypad", 2)
+
     def cb_playlist_delay(self, widget):
         print "inter track fade was changed"
-                
+
     def cb_playlist_mode(self, widget):
         self.pl_delay.set_sensitive(self.pl_mode.get_active() in (0, 1, 2, 5))
         if widget.get_active() == 0:
@@ -3292,7 +3484,7 @@ class IDJC_Media_Player:
             self.external_pl.show()
         else:
             self.external_pl.hide()
-        
+
     def popupwindow_populate(self, window, parentwidget, parent_x, parent_y):
         frame = gtk.Frame()
         frame.set_shadow_type(gtk.SHADOW_OUT)
@@ -3314,7 +3506,7 @@ class IDJC_Media_Player:
         hbox.add(vbox)
         vbox.show()
         hbox.show()
-        
+
         trackscount = 0
         tracknum = 0
         tracktitle = self.songname
@@ -3330,9 +3522,11 @@ class IDJC_Media_Player:
         if trackscount:
             duration, seconds = divmod(duration, 60)
             hours, minutes = divmod(duration, 60)
-            hms = hours and "%d:%02d:%02d" % (hours, minutes, seconds) or "%d:%02d" % (minutes, seconds)
+            hms = hours and "%d:%02d:%02d" % (hours, minutes, seconds
+                                            ) or "%d:%02d" % (minutes, seconds)
             if tracknum:
-                label1 = gtk.Label(_('Playing track {0} of {1}').format(tracknum, trackscount))
+                label1 = gtk.Label(_('Playing track {0} of {1}').format(
+                                                        tracknum, trackscount))
                 vbox.add(label1)
                 label1.show()
                 if self.album:
@@ -3362,16 +3556,19 @@ class IDJC_Media_Player:
             label4.show()
         else:
             return -1
-        
+
     def popupwindow_inhibit(self):
-        return self.pl_menu.flags() & gtk.MAPPED             # we don't want a popup window when there is a popup menu around
+        """Block popup window if the menu is displayed."""
+        
+        
+        return self.pl_menu.flags() & gtk.MAPPED
 
     def pl_mode_data_function(self, celllayout, cell, model, iter):
-        cell.props.text = t.gettext(model.get_value(iter, 0))
-        
+        cell.props.text = _(model.get_value(iter, 0))
+
     def __init__(self, pbox, name, parent):
         self.parent = parent
-        self.exiting = False                                        # used to stop the running of problem code - don't ask
+        self.exiting = False
         # A box for the Stop/Start/Pause widgets
         self.hbox1 = gtk.HBox(True, 0)
         self.hbox1.set_border_width(2)
@@ -3383,23 +3580,25 @@ class IDJC_Media_Player:
         frame.show()
         pbox.pack_start(frame, False, False, 0)
 
-        # A box for the progress bar, which may at a later date contain other stuff
-        # Like an elapsed timer for instance.
+        # A box for the progress bar and elapsed timer.
         self.progressbox = gtk.HBox(False, 0)
         self.progressbox.set_border_width(3)
         self.progressbox.set_spacing(4)
         pbox.pack_start(self.progressbox, False, False, 0)
-              
+
         # The numerical play progress box
         self.digiprogress = gtk.Entry()
         self.digiprogress.set_text("0:00:00")
         self.digiprogress.set_width_chars(6)
         self.digiprogress.set_editable(False)
-        self.digiprogress.connect("button_press_event", self.cb_event, "DigitalProgressPress")
+        self.digiprogress.connect("button_press_event", self.cb_event,
+                                                        "DigitalProgressPress")
         self.progressbox.pack_start(self.digiprogress, False, False, 1)
         self.digiprogress.show()
-        set_tip(self.digiprogress, _('Left click toggles between showing the amount of time elapsed or remaining on the current track being played.'))
-        
+        set_tip(self.digiprogress, _('Left click toggles between showing the '
+                                    'amount of time elapsed or remaining on '
+                                    'the current track being played.'))
+
         # The play progress and seek bar
         self.progressadj = gtk.Adjustment(0.0, 0.0, 100.0, 0.1, 1.0, 0.0)
         self.progressadj.connect("value_changed", self.cb_progress)
@@ -3408,15 +3607,19 @@ class IDJC_Media_Player:
         self.progressbar.set_digits(1)
         self.progressbar.set_value_pos(gtk.POS_TOP)
         self.progressbar.set_draw_value(False)
-        self.progressbar.connect("button_press_event", self.cb_event, "ProgressPress")
-        self.progressbar.connect("button_release_event", self.cb_event, "ProgressRelease")
+        self.progressbar.connect("button_press_event", self.cb_event,
+                                                            "ProgressPress")
+        self.progressbar.connect("button_release_event", self.cb_event,
+                                                            "ProgressRelease")
         self.progressbox.pack_start(self.progressbar, True, True, 0)
         self.progressbar.show()
-        set_tip(self.progressbar, _('This slider acts as both a play progress indicator and as a means for seeking within the currently playing track.'))
-        
+        set_tip(self.progressbar, _('This slider acts as both a play progress '
+                                    'indicator and as a means for seeking'
+                                    ' within the currently playing track.'))
+
         # Finished filling the progress box so lets show it.
         self.progressbox.show()
-        
+
         # A frame for our playlist
         if name == "left":
             plframe = gtk.Frame(" %s " % _('Playlist 1'))
@@ -3435,21 +3638,23 @@ class IDJC_Media_Player:
         self.scrolllist.set_border_width(4)
         self.scrolllist.set_shadow_type(gtk.SHADOW_IN)
         # A liststore object for our playlist
-        # The first one gets rendered and is derived from id3 tags or just is the filename
-        # when the id3 tag is not sufficient.
-        # The second one always is the filename and is passed to the player.
-        self.liststore = gtk.ListStore(str, str, int, str, str, str, str, float, CueSheetListStore, str)
-        self.templist = gtk.ListStore(str, str, int, str, str, str, str, float, CueSheetListStore, str)
+        self.liststore = gtk.ListStore(str, str, int, str, str, str,
+                                            str, float, CueSheetListStore, str)
+        self.templist = gtk.ListStore(str, str, int, str, str, str,
+                                            str, float, CueSheetListStore, str)
         self.treeview = gtk.TreeView(self.liststore)
         self.rgcellrender = gtk.CellRendererText()
         self.playtimecellrender = gtk.CellRendererText()
         self.cellrender = gtk.CellRendererText()
         self.cellrender.set_property("ellipsize", pango.ELLIPSIZE_END)
         self.rgtvcolumn = gtk.TreeViewColumn("", self.rgcellrender)
-        self.playtimetvcolumn = gtk.TreeViewColumn("Time", self.playtimecellrender)
-        self.tvcolumn = gtk.TreeViewColumn("Playlist", self.cellrender, markup=0)
+        self.playtimetvcolumn = gtk.TreeViewColumn(
+                                        "Time", self.playtimecellrender)
+        self.tvcolumn = gtk.TreeViewColumn(
+                                        "Playlist", self.cellrender, markup=0)
         self.rgtvcolumn.set_cell_data_func(self.rgcellrender, self.rgrowconfig)
-        self.playtimetvcolumn.set_cell_data_func(self.playtimecellrender, self.playtimerowconfig)
+        self.playtimetvcolumn.set_cell_data_func(
+                                self.playtimecellrender, self.playtimerowconfig)
         self.tvcolumn.set_cell_data_func(self.cellrender, self.rowconfig)
         self.playtimetvcolumn.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
         self.tvcolumn.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
@@ -3460,39 +3665,40 @@ class IDJC_Media_Player:
         self.treeview.set_headers_visible(False)
         self.treeview.set_enable_search(False)
         self.treeview.enable_model_drag_source( gtk.gdk.BUTTON1_MASK,
-                                                                self.sourcetargets,
-                                                                gtk.gdk.ACTION_DEFAULT |
-                                                                gtk.gdk.ACTION_MOVE)
+            self.sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_MOVE)
         self.treeview.enable_model_drag_dest( self.droptargets,
-                                                                gtk.gdk.ACTION_DEFAULT)
-          
+                                                        gtk.gdk.ACTION_DEFAULT)
+
         self.treeview.connect("drag_data_get", self.drag_data_get_data)
-        self.treeview.connect("drag_data_received", self.drag_data_received_data)
+        self.treeview.connect("drag_data_received",
+                                                self.drag_data_received_data)
         self.treeview.connect("drag_data_delete", self.drag_data_delete)
-        
-        self.treeview.connect("row_activated", self.cb_doubleclick, "Double click")
-        self.treeview.get_selection().connect("changed", self.cb_selection_changed)
-        
+
+        self.treeview.connect("row_activated",
+                                            self.cb_doubleclick, "Double click")
+        self.treeview.get_selection().connect(
+                                        "changed", self.cb_selection_changed)
+
         self.treeview.connect("key_press_event", self.cb_keypress)
-        
+
         self.liststore.connect("row-inserted", self.cb_playlist_changed)
         self.liststore.connect("row-deleted", self.cb_playlist_changed)
-        
+
         self.scrolllist.add(self.treeview)
         self.treeview.show()
-        
+
         plvbox.pack_start(self.scrolllist, True, True, 0)
         self.scrolllist.show()
-        
+
         # Cue sheet playlist controls.
-        
+
         self.cuesheet_playlist = CuesheetPlaylist()
         plvbox.pack_start(self.cuesheet_playlist)
-        
+
         # External playlist control unit
         self.external_pl = ExternalPL(self)
         plvbox.pack_start(self.external_pl, False, False, 0)
-        
+
         # File filters for file dialogs
         self.plfilefilter_all = gtk.FileFilter()
         # TC: File filter text.
@@ -3500,7 +3706,8 @@ class IDJC_Media_Player:
         self.plfilefilter_all.add_pattern("*")
         self.plfilefilter_playlists = gtk.FileFilter()
         # TC: File filter text.
-        self.plfilefilter_playlists.set_name(_('Playlist types (*.m3u, *.xspf, *.pls)'))
+        self.plfilefilter_playlists.set_name(
+                                    _('Playlist types (*.m3u, *.xspf, *.pls)'))
         self.plfilefilter_playlists.add_mime_type("audio/x-mpegurl")
         self.plfilefilter_playlists.add_mime_type("application/xspf+xml")
         self.plfilefilter_playlists.add_mime_type("audio/x-scpls")
@@ -3509,22 +3716,26 @@ class IDJC_Media_Player:
         for each in supported.media:
             self.plfilefilter_media.add_pattern("*" + each)
             self.plfilefilter_media.add_pattern("*" + each.upper())
-        
+
         # An information display for playlist stats
         self.pl_statusbar = gtk.Statusbar()
         self.pl_statusbar.set_has_resize_grip(False)
         plvbox.pack_start(self.pl_statusbar, False, False, 0)
         self.pl_statusbar.show()
-        set_tip(self.pl_statusbar, _("'Block size' indicates the amount of time that it will take to play from the currently selected track to the next stop.\n'Remaining' is the amount of time until the next stop.\n'Finish' Is the computed time when the tracks will have finished playing."))
+        set_tip(self.pl_statusbar, _("'Block size' indicates the amount of time"
+        " that it will take to play from the currently selected track to the "
+        "next stop.\n'Remaining' is the amount of time until the next stop."
+        "\n'Finish' Is the computed time when the tracks will have finished"
+        " playing."))
 
-        pbox.pack_start(plframe, True, True, 0) 
-        
+        pbox.pack_start(plframe, True, True, 0)
+
         # A box for the playback speed controls
         self.pbspeedbox = gtk.HBox(False, 0)
         self.pbspeedbox.set_border_width(3)
         self.pbspeedbox.set_spacing(3)
         pbox.pack_start(self.pbspeedbox, False, False, 0)
-        
+
         # The playback speed control
         self.pbspeedadj = gtk.Adjustment(0.0, -12.0, 12.0, 0.0125, 0.0, 0.0)
         self.pbspeedadj.connect("value_changed", self.cb_pbspeed)
@@ -3535,11 +3746,13 @@ class IDJC_Media_Player:
         self.pbspeedbar.set_draw_value(False)
         self.pbspeedbox.pack_start(self.pbspeedbar, True, True, 0)
         self.pbspeedbar.show()
-        set_tip(self.pbspeedbar, _('This adjusts the playback speed anywhere from 25% to 400%.'))
-        
+        set_tip(self.pbspeedbar,
+                _('This adjusts the playback speed anywhere from 25% to 400%.'))
+
         self.pbspeedzerobutton = gtk.Button()
         self.pbspeedzerobutton.connect("clicked", self.callback, "pbspeedzero")
-        pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "speedicon.png")
+        pixbuf = gtk.gdk.pixbuf_new_from_file(
+                                            FGlobs.pkgdatadir / "speedicon.png")
         pixbuf = pixbuf.scale_simple(55, 14, gtk.gdk.INTERP_BILINEAR)
         image = gtk.Image()
         image.set_from_pixbuf(pixbuf)
@@ -3547,8 +3760,9 @@ class IDJC_Media_Player:
         self.pbspeedzerobutton.add(image)
         self.pbspeedbox.pack_start(self.pbspeedzerobutton, False, False, 1)
         self.pbspeedzerobutton.show()
-        set_tip(self.pbspeedzerobutton, _('This sets the playback speed back to normal.'))
-        
+        set_tip(self.pbspeedzerobutton,
+                            _('This sets the playback speed back to normal.'))
+
         # The box for the mute widgets.
         self.hbox2 = gtk.HBox(False, 0)
         self.hbox2.set_border_width(4)
@@ -3559,7 +3773,6 @@ class IDJC_Media_Player:
         pbox.pack_start(frame, False, False, 0)
         frame.show()
 
-        # A set of buttons for hbox1 namely Prev/Play/Pause/Stop/Next/Playlist : XMMS order
         image = gtk.Image()
         image.set_from_file(FGlobs.pkgdatadir / "prev.png")
         image.show()
@@ -3569,7 +3782,7 @@ class IDJC_Media_Player:
         self.hbox1.add(self.prev)
         self.prev.show()
         set_tip(self.prev, _('Previous track.'))
-        
+
         pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "play2.png")
         pixbuf = pixbuf.scale_simple(14, 14, gtk.gdk.INTERP_BILINEAR)
         image=gtk.Image()
@@ -3581,7 +3794,7 @@ class IDJC_Media_Player:
         self.hbox1.add(self.play)
         self.play.show()
         set_tip(self.play, _('Play.'))
-        
+
         image=gtk.Image()
         image.set_from_file(FGlobs.pkgdatadir / "pause.png")
         image.show()
@@ -3591,7 +3804,7 @@ class IDJC_Media_Player:
         self.hbox1.add(self.pause)
         self.pause.show()
         set_tip(self.pause, _('Pause.'))
-        
+
         image=gtk.Image()
         image.set_from_file(FGlobs.pkgdatadir / "stop.png")
         image.show()
@@ -3601,7 +3814,7 @@ class IDJC_Media_Player:
         self.hbox1.add(self.stop)
         self.stop.show()
         set_tip(self.stop, _('Stop.'))
-                
+
         image=gtk.Image()
         image.set_from_file(FGlobs.pkgdatadir / "next.png")
         image.show()
@@ -3623,18 +3836,19 @@ class IDJC_Media_Player:
         self.hbox1.add(self.add)
         self.add.show()
         set_tip(self.add, _('Add tracks to the playlist.'))
-        
+
         # hbox1 is done so it is time to show it
         self.hbox1.show()
 
         # The playlist mode dropdown menu.
-        
+
         frame = ButtonFrame(_('Playlist Mode'))
         self.hbox2.pack_start(frame, True, True, 0)
         frame.show()
-        
+
         self.pl_mode = gtk.combo_box_new_text()
-        self.pl_mode.set_cell_data_func(self.pl_mode.get_cells()[0], self.pl_mode_data_function)
+        self.pl_mode.set_cell_data_func(
+                        self.pl_mode.get_cells()[0], self.pl_mode_data_function)
         self.pl_mode.append_text(N_('Play All'))
         self.pl_mode.append_text(N_('Loop All'))
         self.pl_mode.append_text(N_('Random'))
@@ -3646,16 +3860,34 @@ class IDJC_Media_Player:
         self.pl_mode.append_text(N_('Random Hop'))
         self.pl_mode.set_active(0)
         self.pl_mode.connect("changed", self.cb_playlist_mode)
-        set_tip(self.pl_mode, _("This sets the playlist mode which defines player behaviour after a track has finished playing.\n\n'Play All' is the most versatile mode since it allows the use of embeddable playlist control elements which are accessible using the right click context menu in the playlist. When no playlist controls are present the tracks are played sequentially until the end of the playlist is reached at which point the player will stop.\n\n'Loop All' causes the tracks to be played in sequence, restarting with the first track once the end of the playlist is reached.\n\n'Random' causes the tracks to be played indefinitely with the tracks selected at random.\n\n'Manual' causes the player to stop at the end of each track.\n\n'Cue Up' is similar to manual except that the next track in the playlist will also be highlighted.\n\n'External' draws it's tracks from an external playlist or directory one at a time. Useful for when you want to stream massive playlists.\n\n'Alternate' causes the next track to be cued up before starting the opposite player. The crossfader is moved over.\n\n'Fade Over' will crossfade to the other player at the end of every track.\n\n'Random Hop' will pick a track at random from the other playlist."))
-        
+        set_tip(self.pl_mode, _("This sets the playlist mode which defines "
+        "player behaviour after a track has finished playing.\n\n'Play All' is"
+        " the most versatile mode since it allows the use of embeddable "
+        "playlist control elements which are accessible using the right click "
+        "context menu in the playlist. When no playlist controls are present "
+        "the tracks are played sequentially until the end of the playlist is "
+        "reached at which point the player will stop.\n\n'Loop All' causes the"
+        " tracks to be played in sequence, restarting with the first track "
+        "once the end of the playlist is reached.\n\n'Random' causes the "
+        "tracks to be played indefinitely with the tracks selected at random."
+        "\n\n'Manual' causes the player to stop at the end of each track.\n\n"
+        "'Cue Up' is similar to manual except that the next track in the "
+        "playlist will also be highlighted.\n\n'External' draws it's tracks "
+        "from an external playlist or directory one at a time. Useful for when"
+        " you want to stream massive playlists.\n\n'Alternate' causes the next"
+        " track to be cued up before starting the opposite player. The "
+        "crossfader is moved over.\n\n'Fade Over' will crossfade to the other"
+        " player at the end of every track.\n\n'Random Hop' will pick a track"
+        " at random from the other playlist."))
+
         frame.hbox.pack_start(self.pl_mode, True, True, 0)
         self.pl_mode.show()
-        
+
         # TC: Fade time heading.
         frame = ButtonFrame(_('Fade'))
         self.hbox2.pack_start(frame, True, True, 0)
         frame.show()
-        
+
         self.pl_delay = gtk.combo_box_new_text()
         # TC: Fade time is zero. No fade, none.
         self.pl_delay.append_text(_('None'))
@@ -3663,37 +3895,39 @@ class IDJC_Media_Player:
         self.pl_delay.append_text("10")
         self.pl_delay.set_active(0)
         self.pl_delay.connect("changed", self.cb_playlist_delay)
-        set_tip(self.pl_delay, _('This controls the amount of fade between tracks.'))
-        
+        set_tip(self.pl_delay,
+                        _('This controls the amount of fade between tracks.'))
+
         frame.hbox.pack_start(self.pl_delay, True, True, 0)
         self.pl_delay.show()
-        
+
         # Mute buttons
-        
-        # TC: The audio feed (mix) that the DJ listens to, could be DJ mix or Stream mix.
+
         frame = ButtonFrame(" %s " % _('Audio Feed'))
         self.hbox2.pack_start(frame, True, True, 0)
         frame.show()
-        
+
         self.stream = gtk.ToggleButton(" %s " % _('Stream'))
         self.stream.set_active(True)
         self.stream.connect("toggled", self.cb_toggle, "Stream")
         frame.hbox.pack_start(self.stream, True, True, 0)
         self.stream.show()
-        set_tip(self.stream, _('Make output from this player available for streaming.'))
-                
+        set_tip(self.stream,
+                    _('Make output from this player available for streaming.'))
+
         self.listen = nice_listen_togglebutton(" %s " % _('DJ'))
         self.listen.set_active(True)
         self.listen.connect("toggled", self.cb_toggle, "Listen")
         frame.hbox.pack_start(self.listen, True, True, 0)
         self.listen.show()
-        set_tip(self.listen, _('Make output from this player audible to the DJ.'))
-        
+        set_tip(self.listen,
+                        _('Make output from this player audible to the DJ.'))
+
         # hbox2 is now filled so lets show it
         self.hbox2.show()
-        
+
         # Popup menu code here
-        
+
         # Main popup menu
         self.pl_menu = gtk.Menu()
 
@@ -3705,308 +3939,328 @@ class IDJC_Media_Player:
         separator = gtk.SeparatorMenuItem()
         self.pl_menu.append(separator)
         separator.show()
-        
+
         # TC: The Item submenu.
         self.pl_menu_item = gtk.MenuItem(_('Item'))
         self.pl_menu.append(self.pl_menu_item)
         self.pl_menu_item.show()
-        
+
         # TC: The Playlist submenu.
         self.pl_menu_playlist = gtk.MenuItem(_('Playlist'))
         self.pl_menu.append(self.pl_menu_playlist)
         self.pl_menu_playlist.show()
-        
+
         self.pl_menu.show()
-        
+
         # Control element submenu of main popup menu
-        
+
         self.control_menu = gtk.Menu()
-        
+
         # TC: Insert playlist control to set playback speed to normal.
         self.control_normal_speed_control = gtk.MenuItem(_('Normal Speed'))
-        self.control_normal_speed_control.connect("activate", self.menuitem_response, "Normal Speed Control")
+        self.control_normal_speed_control.connect("activate",
+                                self.menuitem_response, "Normal Speed Control")
         self.control_menu.append(self.control_normal_speed_control)
         self.control_normal_speed_control.show()
-        
+
         # TC: Insert playlist control to stop the player.
         self.control_menu_stop_control = gtk.MenuItem(_('Player Stop'))
-        self.control_menu_stop_control.connect("activate", self.menuitem_response, "Stop Control")
+        self.control_menu_stop_control.connect("activate",
+                                        self.menuitem_response, "Stop Control")
         self.control_menu.append(self.control_menu_stop_control)
         self.control_menu_stop_control.show()
 
         # TC: Insert playlist control to stop the player.
         self.control_menu_stop_control = gtk.MenuItem(_('Player Stop 2'))
-        self.control_menu_stop_control.connect("activate", self.menuitem_response, "Stop Control 2")
+        self.control_menu_stop_control.connect("activate",
+                                    self.menuitem_response, "Stop Control 2")
         self.control_menu.append(self.control_menu_stop_control)
         self.control_menu_stop_control.show()
 
         # TC: Insert playlist control to jump to the top of the playlist.
         self.control_menu_jumptop_control = gtk.MenuItem(_('Jump To Top'))
-        self.control_menu_jumptop_control.connect("activate", self.menuitem_response, "Jump To Top Control")
+        self.control_menu_jumptop_control.connect("activate",
+                                self.menuitem_response, "Jump To Top Control")
         self.control_menu.append(self.control_menu_jumptop_control)
         self.control_menu_jumptop_control.show()
-        
+
         # TC: Insert playlist control to transfer to the opposite player.
         self.control_menu_transfer_control = gtk.MenuItem(_('Transfer'))
-        self.control_menu_transfer_control.connect("activate", self.menuitem_response, "Transfer Control")
+        self.control_menu_transfer_control.connect("activate",
+                                    self.menuitem_response, "Transfer Control")
         self.control_menu.append(self.control_menu_transfer_control)
         self.control_menu_transfer_control.show()
-        
+
         # TC: Insert playlist control to crossfade to the opposite player.
         self.control_menu_crossfade_control = gtk.MenuItem(_('Crossfade'))
-        self.control_menu_crossfade_control.connect("activate", self.menuitem_response, "Crossfade Control")
+        self.control_menu_crossfade_control.connect("activate",
+                                    self.menuitem_response, "Crossfade Control")
         self.control_menu.append(self.control_menu_crossfade_control)
         self.control_menu_crossfade_control.show()
-                
+
         # TC: Embed a DJ announcement text into the playlist.
         self.control_menu_announcement_control = gtk.MenuItem(_('Announcement'))
-        self.control_menu_announcement_control.connect("activate", self.menuitem_response, "Announcement Control")
+        self.control_menu_announcement_control.connect("activate",
+                                self.menuitem_response, "Announcement Control")
         self.control_menu.append(self.control_menu_announcement_control)
         self.control_menu_announcement_control.show()
-        
+
         separator = gtk.SeparatorMenuItem()
         self.control_menu.append(separator)
         separator.show()
-        
+
         # TC: Insert playlist control to do a ten second fade to the next track.
         self.control_menu_fade_10_control = gtk.MenuItem(_('Fade 10s'))
-        self.control_menu_fade_10_control.connect("activate", self.menuitem_response, "Fade 10")
+        self.control_menu_fade_10_control.connect("activate",
+                                            self.menuitem_response, "Fade 10")
         self.control_menu.append(self.control_menu_fade_10_control)
         self.control_menu_fade_10_control.show()
-        
+
         # TC: Insert playlist control to do a five second fade to the next track.
         self.control_menu_fade_5_control = gtk.MenuItem(_('Fade 5s'))
-        self.control_menu_fade_5_control.connect("activate", self.menuitem_response, "Fade 5")
+        self.control_menu_fade_5_control.connect("activate",
+                                            self.menuitem_response, "Fade 5")
         self.control_menu.append(self.control_menu_fade_5_control)
         self.control_menu_fade_5_control.show()
-        
+
         # TC: Insert playlist control to not do a fade to the next track.
         self.control_menu_fade_none_control = gtk.MenuItem(_('No Fade'))
-        self.control_menu_fade_none_control.connect("activate", self.menuitem_response, "Fade none")
+        self.control_menu_fade_none_control.connect("activate",
+                                            self.menuitem_response, "Fade none")
         self.control_menu.append(self.control_menu_fade_none_control)
         self.control_menu_fade_none_control.show()
-        
+
         separator = gtk.SeparatorMenuItem()
         self.control_menu.append(separator)
         separator.show()
-        
+
         # TC: Insert playlist control to stop all the streams.
-        self.control_menu_stream_disconnect_control = gtk.MenuItem(_('Stop streaming'))
-        self.control_menu_stream_disconnect_control.connect("activate", self.menuitem_response, "Stream Disconnect Control")
+        self.control_menu_stream_disconnect_control = gtk.MenuItem(
+                                                            _('Stop streaming'))
+        self.control_menu_stream_disconnect_control.connect("activate",
+                            self.menuitem_response, "Stream Disconnect Control")
         self.control_menu.append(self.control_menu_stream_disconnect_control)
         self.control_menu_stream_disconnect_control.show()
-        
+
         # TC: Insert playlist control to stop all recording.
-        self.control_menu_stop_recording_control = gtk.MenuItem(_('Stop recording'))
-        self.control_menu_stop_recording_control.connect("activate", self.menuitem_response, "Stop Recording Control")
+        self.control_menu_stop_recording_control = gtk.MenuItem(
+                                                            _('Stop recording'))
+        self.control_menu_stop_recording_control.connect("activate",
+                            self.menuitem_response, "Stop Recording Control")
         self.control_menu.append(self.control_menu_stop_recording_control)
         self.control_menu_stop_recording_control.show()
-        
+
         self.pl_menu_control.set_submenu(self.control_menu)
         self.control_menu.show()
-        
+
         # Item submenu of main popup menu
         self.item_menu = gtk.Menu()
-        
+
         # TC: Menu item. Opens the metadata tagger on the selected track.
         self.item_tag = gtk.MenuItem(_('Meta Tag'))
         self.item_tag.connect("activate", self.menuitem_response, "MetaTag")
         self.item_menu.append(self.item_tag)
         self.item_tag.show()
-        
+
         # TC: Menu Item. Duplicates the selected track in the playlist.
         self.item_duplicate = gtk.MenuItem(_('Duplicate'))
-        self.item_duplicate.connect("activate", self.menuitem_response, "Duplicate")
+        self.item_duplicate.connect("activate",
+                                            self.menuitem_response, "Duplicate")
         self.item_menu.append(self.item_duplicate)
         self.item_duplicate.show()
-        
+
         # TC: Menu Item. Remove the selected track.
         self.item_remove = gtk.MenuItem(_('Remove'))
         self.item_menu.append(self.item_remove)
         self.item_remove.show()
-        
+
         # TC: Menu Item. The selected track is copied to the jingles catalogue.
         self.item_tojingles = gtk.MenuItem(_('Add To Jingles'))
-        self.item_tojingles.connect("activate", self.menuitem_response, "ToJingles")
+        self.item_tojingles.connect("activate",
+                                            self.menuitem_response, "ToJingles")
         self.item_menu.append(self.item_tojingles)
         self.item_tojingles.show()
-        
+
         self.pl_menu_item.set_submenu(self.item_menu)
         self.item_menu.show()
-        
+
         # Remove submenu of Item submenu
         self.remove_menu = gtk.Menu()
 
         # TC: Submenu Item. Parent menu item is Remove.
         self.remove_this = gtk.MenuItem(_('This'))
-        self.remove_this.connect("activate", self.menuitem_response, "Remove This")
+        self.remove_this.connect("activate",
+                                        self.menuitem_response, "Remove This")
         self.remove_menu.append(self.remove_this)
         self.remove_this.show()
-        
+
         # TC: Submenu Item. Parent menu item is Remove.
         self.remove_all = gtk.MenuItem(_('All'))
-        self.remove_all.connect("activate", self.menuitem_response, "Remove All")
+        self.remove_all.connect("activate",
+                                        self.menuitem_response, "Remove All")
         self.remove_menu.append(self.remove_all)
         self.remove_all.show()
-        
+
         # TC: Submenu Item. Parent menu item is Remove.
         self.remove_from_here = gtk.MenuItem(_('From Here'))
-        self.remove_from_here.connect("activate", self.menuitem_response, "Remove From Here")
+        self.remove_from_here.connect("activate",
+                                    self.menuitem_response, "Remove From Here")
         self.remove_menu.append(self.remove_from_here)
         self.remove_from_here.show()
-        
+
         # TC: Submenu Item. Parent menu item is Remove.
         self.remove_to_here = gtk.MenuItem(_('To Here'))
-        self.remove_to_here.connect("activate", self.menuitem_response, "Remove To Here")
+        self.remove_to_here.connect("activate",
+                                    self.menuitem_response, "Remove To Here")
         self.remove_menu.append(self.remove_to_here)
         self.remove_to_here.show()
-        
+
         self.item_remove.set_submenu(self.remove_menu)
         self.remove_menu.show()
-        
+
         # Playlist submenu of main popup menu.
         self.playlist_menu = gtk.Menu()
-        
+
         # TC: Open the file dialog for adding music to the chosen playlist.
         self.playlist_add_file = gtk.MenuItem(_('Add Music'))
-        self.playlist_add_file.connect("activate", self.menuitem_response, "Add File")
+        self.playlist_add_file.connect("activate", self.menuitem_response,
+                                                                    "Add File")
         self.playlist_menu.append(self.playlist_add_file)
         self.playlist_add_file.show()
-        
+
         # TC: Submenu Item. Parent menu is Playlist.
         self.playlist_save = gtk.MenuItem(_('Save'))
-        self.playlist_save.connect("activate", self.menuitem_response, "Playlist Save")
+        self.playlist_save.connect("activate", self.menuitem_response,
+                                                                "Playlist Save")
         self.playlist_menu.append(self.playlist_save)
         self.playlist_save.show()
-        
+
         separator = gtk.SeparatorMenuItem()
         self.playlist_menu.append(separator)
         separator.show()
-        
+
         # TC: Submenu Item. Parent menu is Playlist.
         self.playlist_copy = gtk.MenuItem(_('Copy'))
         self.playlist_menu.append(self.playlist_copy)
         self.playlist_copy.show()
-        
+
         # TC: Submenu Item. Parent menu is Playlist.
         self.playlist_transfer = gtk.MenuItem(_('Transfer'))
         self.playlist_menu.append(self.playlist_transfer)
         self.playlist_transfer.show()
-        
+
         # TC: Submenu Item. Parent menu is Playlist.
         self.playlist_exchange = gtk.MenuItem(_('Exchange'))
-        self.playlist_exchange.connect("activate", self.menuitem_response, "Playlist Exchange")
+        self.playlist_exchange.connect("activate", self.menuitem_response,
+                                                            "Playlist Exchange")
         self.playlist_menu.append(self.playlist_exchange)
         self.playlist_exchange.show()
-        
+
         # TC: Submenu Item. Parent menu is Playlist.
         self.playlist_empty = gtk.MenuItem(_('Empty'))
-        self.playlist_empty.connect("activate", self.menuitem_response, "Remove All")
+        self.playlist_empty.connect("activate", self.menuitem_response,
+                                                                "Remove All")
         self.playlist_menu.append(self.playlist_empty)
         self.playlist_empty.show()
-        
+
         self.pl_menu_playlist.set_submenu(self.playlist_menu)
         self.playlist_menu.show()
-        
+
         # Position Submenu of Playlist-Copy menu item
-        
+
         self.copy_menu = gtk.Menu()
-        
+
         # TC: Submenu Item. Parent menus are Playlist->Copy.
         self.copy_append = gtk.MenuItem(_('Append'))
-        self.copy_append.connect("activate", self.menuitem_response, "Copy Append")
+        self.copy_append.connect("activate", self.menuitem_response,
+                                                                "Copy Append")
         self.copy_menu.append(self.copy_append)
         self.copy_append.show()
-        
+
         # TC: Submenu Item. Parent menus are Playlist->Copy.
         self.copy_prepend = gtk.MenuItem(_('Prepend'))
-        self.copy_prepend.connect("activate", self.menuitem_response, "Copy Prepend")
+        self.copy_prepend.connect("activate", self.menuitem_response,
+                                                                "Copy Prepend")
         self.copy_menu.append(self.copy_prepend)
         self.copy_prepend.show()
-        
+
         separator = gtk.SeparatorMenuItem()
         self.copy_menu.append(separator)
         separator.show()
-        
+
         # TC: Submenu Item. Parent menus are Playlist->Copy.
         self.copy_append_cursor = gtk.MenuItem(_('Append Cursor'))
-        self.copy_append_cursor.connect("activate", self.menuitem_response, "Copy Append Cursor")
+        self.copy_append_cursor.connect("activate", self.menuitem_response,
+                                                        "Copy Append Cursor")
         self.copy_menu.append(self.copy_append_cursor)
         self.copy_append_cursor.show()
-        
+
         # TC: Submenu Item. Parent menus are Playlist->Copy.
         self.copy_prepend_cursor = gtk.MenuItem(_('Prepend Cursor'))
-        self.copy_prepend_cursor.connect("activate", self.menuitem_response, "Copy Prepend Cursor")
+        self.copy_prepend_cursor.connect("activate", self.menuitem_response,
+                                                        "Copy Prepend Cursor")
         self.copy_menu.append(self.copy_prepend_cursor)
         self.copy_prepend_cursor.show()
 
         self.playlist_copy.set_submenu(self.copy_menu)
         self.copy_menu.show()
-        
+
         # Position Submenu of Playlist-Transfer menu item
-        
+
         self.transfer_menu = gtk.Menu()
-        
+
         # TC: Submenu Item. Parent menus are Playlist->Transfer.
         self.transfer_append = gtk.MenuItem(_('Append'))
-        self.transfer_append.connect("activate", self.menuitem_response, "Transfer Append")
+        self.transfer_append.connect("activate", self.menuitem_response,
+                                                            "Transfer Append")
         self.transfer_menu.append(self.transfer_append)
         self.transfer_append.show()
-        
+
         # TC: Submenu Item. Parent menus are Playlist->Transfer.
         self.transfer_prepend = gtk.MenuItem(_('Prepend'))
-        self.transfer_prepend.connect("activate", self.menuitem_response, "Transfer Prepend")
+        self.transfer_prepend.connect("activate", self.menuitem_response,
+                                                            "Transfer Prepend")
         self.transfer_menu.append(self.transfer_prepend)
         self.transfer_prepend.show()
-        
+
         separator = gtk.SeparatorMenuItem()
         self.transfer_menu.append(separator)
         separator.show()
-        
+
         # TC: Submenu Item. Parent menus are Playlist->Transfer.
         self.transfer_append_cursor = gtk.MenuItem(_('Append at Cursor'))
-        self.transfer_append_cursor.connect("activate", self.menuitem_response, "Transfer Append Cursor")
+        self.transfer_append_cursor.connect("activate", self.menuitem_response,
+                                                    "Transfer Append Cursor")
         self.transfer_menu.append(self.transfer_append_cursor)
         self.transfer_append_cursor.show()
-        
+
         # TC: Submenu Item. Parent menus are Playlist->Transfer.
         self.transfer_prepend_cursor = gtk.MenuItem(_('Prepend at Cursor'))
-        self.transfer_prepend_cursor.connect("activate", self.menuitem_response, "Transfer Prepend Cursor")
+        self.transfer_prepend_cursor.connect("activate", self.menuitem_response,
+                                                    "Transfer Prepend Cursor")
         self.transfer_menu.append(self.transfer_prepend_cursor)
         self.transfer_prepend_cursor.show()
 
         self.playlist_transfer.set_submenu(self.transfer_menu)
-        self.transfer_menu.show()       
- 
- 
+        self.transfer_menu.show()
+
+
         self.treeview.connect_object("event", self.menu_activate, self.pl_menu)
-        popupwindow.PopupWindow(self.treeview, 12, 120, 10, self.popupwindow_populate, self.popupwindow_inhibit)
+        popupwindow.PopupWindow(self.treeview, 12, 120, 10,
+                            self.popupwindow_populate, self.popupwindow_inhibit)
 
         # Initialisations
-        self.playername = name 
+        self.playername = name
         self.showing_file_requester = False
         self.showing_pl_save_requester = False
 
-        # Get the users home directory and test that the environment variable is okay.
-        # Actually this is more than bullet proof because when HOME is wrong I cant even run it.
-        self.home = os.getenv("HOME")
-        if os.path.exists(self.home):
-            if os.path.isdir(self.home) == False:
-                self.home = os.path.basename(self.home)
-            else:
-                # Make sure there is a trailing slash or the filerequester will mess up a bit.
-                if self.home[-1:] != '/':
-                    self.home = self.home + '/'
-                    
+        self.home = os.path.expanduser("~")
         self.file_requester_start_dir = slot_object(self.home)
         self.plsave_filetype = 0
         self.plsave_open = False
         self.plsave_filtertype = self.plfilefilter_all
         self.plsave_folder = None
-        
-        # This is used for mouse-click debounce when deleting files in the playlist.
-        self.last_time = time.time()
-        
+
         # This flag symbolises if we are playing music or not.
         self.is_playing = False
         self.is_paused = False
@@ -4033,7 +4287,7 @@ class IDJC_Media_Player:
         self.other_player_initiated = False
         self.crossfader_initiated = False
         self.music_filename = ""
-        self.session_filename = pm.basedir / (self.playername + "_session")
+        self.session_filename = PM.basedir / (self.playername + "_session")
         self.oldstatusbartext = ""
         self.pbspeedfactor = 1.0
         self.playlist_changed = True
