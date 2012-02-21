@@ -20,8 +20,6 @@ Generated from file __init__.py.in.in -- edit the original.
 
 
 
-import locale
-locale.setlocale(locale.LC_ALL, "")
 import os
 import gettext
 
@@ -90,8 +88,9 @@ class PGlobs(object):
 
 
 
-from .prelims import ProfileManager
-ProfileManager()
+def main():
+    from .prelims import ProfileManager
+    ProfileManager()
 
-from . import maingui
-exit(maingui.main())
+    from . import maingui
+    exit(maingui.main())
