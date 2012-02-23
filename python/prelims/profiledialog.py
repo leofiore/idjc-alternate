@@ -247,7 +247,8 @@ class ProfileDialog(gtk.Dialog):
         w.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         w.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
         self.get_content_area().add(w)
-        self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, str, int, str, str, int, int)
+        self.store = gtk.ListStore(
+                            gtk.gdk.Pixbuf, str, str, int, str, str, int, int)
         self.sorted = gtk.TreeModelSort(self.store)
         self.sorted.set_sort_func(1, self._sort_func)
         self.sorted.set_sort_column_id(1, gtk.SORT_ASCENDING)
@@ -279,7 +280,7 @@ class ProfileDialog(gtk.Dialog):
         c1.add_attribute(strrend, "text", 1)
         c1.set_spacing(2)
         self.treeview.append_column(c1)
-        # TC: column heading. The profile nicknames. Non latin characters supported.
+        # TC: column heading. The profile nicknames.
         c2 = gtk.TreeViewColumn(_("Nickname"), strrend, text=5)
         self.treeview.append_column(c2)
         # TC: column heading.
@@ -299,11 +300,11 @@ class ProfileDialog(gtk.Dialog):
         box = self.get_action_area()
         box.set_spacing(6)
         for attr, label, sec, stock in zip(
-                                ("new", "clone", "edit", "delete", "auto", "cancel", "choose"), 
-                                (gtk.STOCK_NEW, gtk.STOCK_COPY, gtk.STOCK_EDIT,
-                                 gtk.STOCK_DELETE, _("_Auto"), gtk.STOCK_QUIT, gtk.STOCK_OPEN),
-                                (True,) * 4 + (False,) * 3,
-                                (True,) * 4 + (False,) + (True,) * 2):
+                ("new", "clone", "edit", "delete", "auto", "cancel", "choose"), 
+                (gtk.STOCK_NEW, gtk.STOCK_COPY, gtk.STOCK_EDIT,
+                 gtk.STOCK_DELETE, _("_Auto"), gtk.STOCK_QUIT, gtk.STOCK_OPEN),
+                (True,) * 4 + (False,) * 3,
+                (True,) * 4 + (False,) + (True,) * 2):
             w = gtk.Button(label)
             w.set_use_stock(stock)
             box.add(w)
@@ -317,7 +318,8 @@ class ProfileDialog(gtk.Dialog):
         for each in self._signal_names:
             getattr(self, each).connect("clicked", self._cb_click, each)
         for each in self._new_profile_dialog_signal_names:
-            getattr(self, each).connect("clicked", self._cb_new_profile_dialog, each)
+            getattr(self, each).connect("clicked", self._cb_new_profile_dialog,
+                                                                        each)
      
     
     def display_error(self, message, transient_parent=None, markup=False):
@@ -359,10 +361,15 @@ class ProfileDialog(gtk.Dialog):
 
             if signal == "delete":
                 if self._highlighted == self._default:
-                    message = _("<span weight='bold' size='12000'>Delete the data of profile '%s'?</span>\n\nThe profile will remain available with initial settings.")
+                    message = _("<span weight='bold' size='12000'>Delete the"
+                            " data of profile '%s'?</span>\n\nThe profile will"
+                            " remain available with initial settings.")
                 else:
-                    message = _("<span weight='bold' size='12000'>Delete profile '%s' and all its data?</span>\n\nThe data of deleted profiles cannot be recovered.")
-                conf = ConfirmationDialog("", message % self._highlighted, markup=True)
+                    message = _("<span weight='bold' size='12000'>Delete "
+                            "profile '%s' and all its data?</span>\n\nThe"
+                            " data of deleted profiles cannot be recovered.")
+                conf = ConfirmationDialog("", message % self._highlighted,
+                                                                markup=True)
                 conf.set_transient_for(self)
                 conf.ok.connect("clicked", lambda w: commands())
                 conf.show_all()
@@ -509,7 +516,8 @@ class ProfileDialog(gtk.Dialog):
                     nick = d["nickname"] or ""
                     uptime = d["uptime"]
                     auto = d["auto"]
-                    self.store.append((pb, d["profile"], desc, active, i or "", nick, uptime, auto))
+                    self.store.append((pb, d["profile"], desc, active, i or "",
+                                                            nick, uptime, auto))
                 self.selection.handler_unblock_by_func(self._cb_selection)
                 self.highlight_profile(h, scroll=False)
         return self.props.visible

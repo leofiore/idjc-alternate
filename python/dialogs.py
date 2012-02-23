@@ -1,5 +1,6 @@
-#   IDJCservdialog.py: Server dialogs for IDJC
-#   Copyright (C) 2006 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+"""Server dialogs for IDJC."""
+
+#   Copyright 2006-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -36,9 +37,13 @@ pm = ProfileManager()
 
 
 
-# A mutually exclusive list of dialogs so that only one can be on screen at a time
-# The dialogs below can call the hide method to remove any other dialogs
 class dialog_group:
+    """A mutually exclusive list of dialogs
+    
+    Only one can be on screen at a time.
+    The dialogs below can call the hide method to remove any other dialogs.
+    """
+
     def __init__(self):
         self.dialist = []
     def add(self, newdialog):
@@ -48,8 +53,10 @@ class dialog_group:
             if each is not apartfrom:
                 each.hide()
 
-# Used to show a dialog related to the failure of the server connection
 class disconnection_notification_dialog(gtk.Dialog):
+    """Used to show a dialog related to the failure of the server connection."""
+
+
     def window_attn(self, widget, event):
         if event.new_window_state | gtk.gdk.WINDOW_STATE_ICONIFIED:
             widget.set_urgency_hint(True)
@@ -57,20 +64,23 @@ class disconnection_notification_dialog(gtk.Dialog):
             widget.set_urgency_hint(False)
     
     def respond(self, dialog, response):
-        if response == gtk.RESPONSE_CLOSE or response == gtk.RESPONSE_DELETE_EVENT:
+        if response in (gtk.RESPONSE_CLOSE, gtk.RESPONSE_DELETE_EVENT):
             dialog.hide()
     
     def present(self):
         self.dial_group.hide(self)
         gtk.Dialog.present(self)
 
-    def __init__(self, dial_group = None, window_group = None, window_title = None, text = None):
+    def __init__(self, dial_group = None, window_group = None,
+                                            window_title = None, text = None):
         if window_title is None:
             window_title = pm.title_extra.strip()
         else:
             window_title += pm.title_extra
         
-        gtk.Dialog.__init__(self, window_title, None, gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE))
+        gtk.Dialog.__init__(self, window_title, None,
+                                        gtk.DIALOG_DESTROY_WITH_PARENT,
+                                        (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE))
         if window_group is not None:
             window_group.add_window(self)
         self.set_resizable(False)
@@ -107,8 +117,11 @@ class disconnection_notification_dialog(gtk.Dialog):
         # Dialog is not shown upon creation, but rather is (re)shown when needed.
 
 
-# Used to show when autodisconnection is imminent with the option to cancel
+
 class autodisconnection_notification_dialog(gtk.Dialog):
+    """Used to show when autodisconnection is imminent."""
+
+
     def window_attn(self, widget, event):
         if event.new_window_state | gtk.gdk.WINDOW_STATE_ICONIFIED:
             widget.set_urgency_hint(True)
@@ -128,8 +141,13 @@ class autodisconnection_notification_dialog(gtk.Dialog):
         self.dial_group.hide(self)
         gtk.Dialog.present(self)
 
-    def __init__(self, dial_group = None, window_group = None, window_title = "", additional_text = None, actionok = None, actioncancel = None):
-        gtk.Dialog.__init__(self, window_title, None, gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OK, gtk.RESPONSE_OK))
+    def __init__(self, dial_group = None, window_group = None,
+                                    window_title = "", additional_text = None,
+                                    actionok = None, actioncancel = None):
+
+        gtk.Dialog.__init__(self, window_title, None,
+                        gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL,
+                        gtk.RESPONSE_CANCEL, gtk.STOCK_OK, gtk.RESPONSE_OK))
         if window_group is not None:
             window_group.add_window(self)
         self.set_resizable(False)
@@ -165,12 +183,21 @@ class autodisconnection_notification_dialog(gtk.Dialog):
         if dial_group is not None:
             dial_group.add(self)
         self.dial_group = dial_group
-        # Dialog is not shown upon creation, but rather is (re)shown when needed.
+
+
 
 class ReconnectionDialog(gtk.Dialog):
+    """Displayed when a reconnection is scheduled.
+    
+    User may expedite or cancel the reconnection operation using this widget.
+    """
+    
     td = (0.0,)
     # TC: The contents of <> and {} must not be changed.
-    lines = _('<span weight="bold" size="12000">The connection to the server in tab {servertab} has failed.</span>\nA reconnection attempt will be made in {countdown} seconds.\nThis is attempt number {attempt} of {maxtries}.').splitlines()
+    lines = _('<span weight="bold" size="12000">The connection to the server '
+        'in tab {servertab} has failed.</span>\nA reconnection attempt will'
+        ' be made in {countdown} seconds.\nThis is attempt number {attempt}'
+        ' of {maxtries}.').splitlines()
     
     def update_countdown_text(self):
         remaining = self.remaining
@@ -198,7 +225,8 @@ class ReconnectionDialog(gtk.Dialog):
         if self.active == False:
             self.trycount = 0
             self.td = []
-            for each in self.config.reconnection_times.child.get_text().split(","):
+            for each in \
+                    self.config.reconnection_times.child.get_text().split(","):
                 try:
                     x = max(float(each), 5.0)
                 except:
@@ -220,9 +248,11 @@ class ReconnectionDialog(gtk.Dialog):
         self.event_time = time.time() + self.remaining
         self.update_countdown_text()
         if repeat:
-            self.label3.set_text(_('This is attempt number %d. There is no retry limit.') % (self.trycount + 1))
+            self.label3.set_text(_('This is attempt number %d. There is no '
+                                        'retry limit.') % (self.trycount + 1))
         else:
-            self.label3.set_text(self.lines[2].format(attempt = self.trycount + 1, maxtries = len(self.td)))
+            self.label3.set_text(self.lines[2].format(
+                        attempt = self.trycount + 1, maxtries = len(self.td)))
         if self.config.reconnection_quiet.get_active():
             self.realize()
         else:
@@ -245,9 +275,9 @@ class ReconnectionDialog(gtk.Dialog):
 
     def __init__(self, tab):
         self.tab = tab
-        # TC: Dialog button label _ preceeds accelerator key.
-        # TC: Whatever accelerator is chosen for "Retry Now" must not clash with that of the Cancel button.
-        gtk.Dialog.__init__(self, pm.title_extra.strip(), None, gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, _('_Retry Now'), gtk.RESPONSE_OK))
+        gtk.Dialog.__init__(self, pm.title_extra.strip(), None,
+                    gtk.DIALOG_DESTROY_WITH_PARENT, (gtk.STOCK_CANCEL,
+                    gtk.RESPONSE_CANCEL, _('_Retry Now'), gtk.RESPONSE_OK))
         self.set_modal(False)
         self.set_resizable(False)
         self.set_border_width(6)
@@ -265,7 +295,8 @@ class ReconnectionDialog(gtk.Dialog):
         vbox = gtk.VBox()
         vbox.set_spacing(3)
         hbox.pack_start(vbox, False)
-        self.label1 = gtk.Label(self.lines[0].format(servertab = tab.numeric_id + 1) + "\n")
+        self.label1 = gtk.Label(self.lines[0].format(
+                                        servertab = tab.numeric_id + 1) + "\n")
         self.label1.set_use_markup(True)
         self.label2 = gtk.Label(self.lines[1].format(countdown = 0))
         self.label3 = gtk.Label(self.lines[2].format(attempt = 1, maxtries = 1))

@@ -32,6 +32,11 @@ from .utils import PolicedAttributes
 from .utils import PathStr
 
 
+# pylint: disable=R0903
+#
+# namespace classes typically have no public methods
+
+
 class FGlobs(object):
     """Namespace class of variables which cannot be altered.
 
@@ -89,8 +94,11 @@ class PGlobs(object):
 
 
 def main():
-    from .prelims import ProfileManager
+    """Package execution entry point."""
+
+
+    from .prelims import ProfileManager  # pylint: disable=W0404
     ProfileManager()
 
-    from . import maingui
+    from . import maingui  # pylint: disable=W0404
     exit(maingui.main())

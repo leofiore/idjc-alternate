@@ -101,26 +101,29 @@ class TreePopulate(object):
                 self.mp.treescroll.show()
                 self.mp.tree_idle = None
                 retval = False
-                #print "Database parsed in %f seconds" % (time.time() - self.start_time)
                 break
             else:
                 while 1:
                     if d == 0:
                         self.art = row[1]
                         self.artlower = self.art.lower()
-                        self.iter1 = append(None, (-1, self.art, 0, 0, 0, "", "")) 
+                        self.iter1 = append(
+                                        None, (-1, self.art, 0, 0, 0, "", "")) 
                         d = 1
                     if d == 1:
                         if self.artlower == row[1].lower():
                             self.alb = row[2]
                             self.alblower = self.alb.lower()
-                            self.iter2 = append(self.iter1, (-2, self.alb, 0, 0, 0, "", "")) 
+                            self.iter2 = append(
+                                    self.iter1, (-2, self.alb, 0, 0, 0, "", "")) 
                             d = 2
                         else:
                             d = 0
                     if d == 2:
-                        if self.artlower == row[1].lower() and self.alblower == row[2].lower():
-                            append(self.iter2, (row[0], row[4], row[3], row[5], row[6], row[7], row[8]))
+                        if self.artlower == row[1].lower() and self.alblower \
+                                                            == row[2].lower():
+                            append(self.iter2, (row[0], row[4], row[3],
+                                        row[5], row[6], row[7], row[8]))
                             break
                         else:
                             d = 1
@@ -190,7 +193,8 @@ class MediaPane(gtk.Frame):
     def cb_drag_begin(self, widget, context):
         context.set_icon_stock(gtk.STOCK_CDROM, -5, -5)
 
-    def cb_tree_drag_data_get(self, treeview, context, selection, target_id, etime):
+    def cb_tree_drag_data_get(self, treeview, context, selection, target_id,
+                                                                        etime):
         treeselection = treeview.get_selection()
         model, paths = treeselection.get_selected_rows()
         data = DNDAccumulator()
@@ -207,10 +211,12 @@ class MediaPane(gtk.Frame):
             for each in paths:
                 if len(each) == 3:
                     iter = model.get_iter(each)
-                    data.append(model.get_value(iter, 6), model.get_value(iter,5))
+                    data.append(model.get_value(iter, 6),
+                                                        model.get_value(iter,5))
         selection.set(selection.target, 8, str(data))
 
-    def cb_flat_drag_data_get(self, treeview, context, selection, target_id, etime):
+    def cb_flat_drag_data_get(self, treeview, context, selection, target_id,
+                                                                        etime):
         treeselection = treeview.get_selection()
         model, paths = treeselection.get_selected_rows()
         data = DNDAccumulator()
@@ -244,7 +250,9 @@ class MediaPane(gtk.Frame):
     def cb_tree_update(self, widget):
         c = self.db.cursor()
         try:
-            total = c.execute("""SELECT id,artist,album,tracknumber,title,length,bitrate,filename,path FROM tracks ORDER BY artist,album,path,tracknumber,title""")
+            total = c.execute("SELECT id,artist,album,tracknumber,title,"
+                        "length,bitrate,filename,path FROM tracks ORDER BY"
+                        " artist,album,path,tracknumber,title")
         except dberror.MySQLError, inst:
             print inst
             c.close()
@@ -272,18 +280,24 @@ class MediaPane(gtk.Frame):
             if fuzzy:
                 while 1:
                     try:
-                        c.execute("""SELECT id,artist,album,tracknumber,title,length,bitrate,filename,path FROM tracks WHERE MATCH (artist,album,title,filename) AGAINST (%s)""", (fuzzy, ))
+                        c.execute("SELECT id,artist,album,tracknumber,title,"
+                            "length,bitrate,filename,path FROM tracks WHERE "
+                            "MATCH (artist,album,title,filename) AGAINST (%s)",
+                            (fuzzy, ))
                         break
                     except dberror.OperationalError, inst:
                         if "FULLTEXT" in str(inst):
                             print "adding fulltext index to database"
-                            c.execute("""ALTER TABLE tracks ADD FULLTEXT(artist,album,title,filename)""")
+                            c.execute("ALTER TABLE tracks ADD FULLTEXT"
+                                            "(artist,album,title,filename)")
                         else:
                             raise
             else:
                 if where:
                     where = "WHERE %s " % where
-                c.execute("""SELECT id,artist,album,tracknumber,title,length,bitrate,filename,path FROM tracks %sORDER BY artist,album,path,tracknumber,title""" % where)
+                c.execute("SELECT id,artist,album,tracknumber,title,length,"
+                            "bitrate,filename,path FROM tracks %sORDER BY "
+                            "artist,album,path,tracknumber,title" % where)
         except dberror.MySQLError, inst:
             print inst
             c.close()
@@ -305,7 +319,8 @@ class MediaPane(gtk.Frame):
         c.close()
 
     def getcolwidths(self, cols):
-        return ",".join([ str(x.get_width() or x.get_fixed_width()) for x in cols ])
+        return ",".join([ str(x.get_width() or x.get_fixed_width())
+                                                            for x in cols ])
     
     def setcolwidths(self, cols, data):
         c = cols.__iter__()
@@ -354,19 +369,23 @@ class MediaPane(gtk.Frame):
         buttonbox.show()
 
         # TC: Refers to the tree view of the tracks database.
-        self.treeview, self.treescroll, self.treealt = makeview(self.notebook, _('Tree'), buttonbox)
+        self.treeview, self.treescroll, self.treealt = makeview(
+                                        self.notebook, _('Tree'), buttonbox)
         self.treeview.set_enable_tree_lines(True)
         self.treeview.set_rubber_banding(True)
         treeselection = self.treeview.get_selection()
         treeselection.set_mode(gtk.SELECTION_MULTIPLE)
         treeselection.set_select_function(self.tree_select_func)
-        self.tree_expand.connect_object("clicked", gtk.TreeView.expand_all, self.treeview)
-        self.tree_collapse.connect_object("clicked", gtk.TreeView.collapse_all, self.treeview)
+        self.tree_expand.connect_object("clicked", gtk.TreeView.expand_all,
+                                                                self.treeview)
+        self.tree_collapse.connect_object("clicked", gtk.TreeView.collapse_all,
+                                                                self.treeview)
         # id, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path
         self.treestore = gtk.TreeStore(int, str, int, int, int, str, str)
         self.treeview.set_model(self.treestore)
         self.treecols = makecolumns(self.treeview, (
-                ("%s - %s - %s" % (_('Artist'), _('Album'), _('Title')), 1, self.cell_show_unknown, 180),
+                ("%s - %s - %s" % (_('Artist'), _('Album'), _('Title')), 1,
+                                                self.cell_show_unknown, 180),
                 # TC: The album track number.
                 (_('Track'), 2, self.cell_ralign, -1),
                 # TC: Track playback time.
@@ -377,14 +396,15 @@ class MediaPane(gtk.Frame):
                 (_('Path'), 6, None, -1),
                 ))
         
-        self.treeview.enable_model_drag_source(gtk.gdk.BUTTON1_MASK, self.sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
+        self.treeview.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
+            self.sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
         self.treeview.connect_after("drag-begin", self.cb_drag_begin)
         self.treeview.connect("drag_data_get", self.cb_tree_drag_data_get)
         
         vbox = gtk.VBox()
         vbox.set_border_width(20)
         vbox.set_spacing(20)
-        # TC: Shown with a progress bar as the database tree view is being built.
+        # TC: The database tree view is being built (populated).
         label = gtk.Label(_('Populating'))
         vbox.pack_start(label, False, False, 0)
         self.tree_pb = gtk.ProgressBar()
@@ -395,7 +415,7 @@ class MediaPane(gtk.Frame):
         self.tree_idle = None
         
         # flat gui
-        # TC: The user enters search filter text here e.g. fuzzy match text or a more formal SQL search filtering term. 
+        # TC: User specified search filter entry box title text.
         filterframe = gtk.Frame(" %s " % _('Filters'))
         filterframe.set_shadow_type(gtk.SHADOW_OUT)
         filterframe.set_border_width(1)
@@ -410,7 +430,7 @@ class MediaPane(gtk.Frame):
         fuzzyhbox = gtk.HBox()
         filtervbox.pack_start(fuzzyhbox, False, False, 0)
         fuzzyhbox.show()
-        # TC: A fuzzy search e.g. 'Metal' searches for metal in artists titles, and albums. 
+        # TC: A type of search on any data field matching paritial strings.
         fuzzylabel = gtk.Label(_('Fuzzy Search'))
         fuzzyhbox.pack_start(fuzzylabel, False, False, 0)
         fuzzylabel.show()
@@ -422,7 +442,7 @@ class MediaPane(gtk.Frame):
         wherehbox = gtk.HBox()
         filtervbox.pack_start(wherehbox, False, False, 0)
         wherehbox.show()
-        # TC: User may type in an SQL query as is applicable after the WHERE keyword.
+        # TC: WHERE is an SQL keyword.
         wherelabel = gtk.Label(_('WHERE'))
         wherehbox.pack_start(wherelabel, False, False, 0)
         wherelabel.show()
@@ -430,7 +450,8 @@ class MediaPane(gtk.Frame):
         self.whereentry.connect("activate", self.cb_update)
         wherehbox.pack_start(self.whereentry, True, True, 0)
         self.whereentry.show()
-        image = gtk.image_new_from_stock(gtk.STOCK_EXECUTE, gtk.ICON_SIZE_BUTTON)
+        image = gtk.image_new_from_stock(gtk.STOCK_EXECUTE,
+                                                        gtk.ICON_SIZE_BUTTON)
         self.update = gtk.Button()
         self.update.connect("clicked", self.cb_update)
         self.update.set_image(image)
@@ -438,12 +459,14 @@ class MediaPane(gtk.Frame):
         wherehbox.pack_start(self.update, False, False, 0)
         self.update.show()
         
-        self.flatview, self.flatscroll, self.flatalt = makeview(self.notebook, _('Flat'), filterframe)
+        self.flatview, self.flatscroll, self.flatalt = makeview(
+                                        self.notebook, _('Flat'), filterframe)
         self.flatview.set_rules_hint(True)
         self.flatview.set_rubber_banding(True)
         treeselection = self.flatview.get_selection()
         treeselection.set_mode(gtk.SELECTION_MULTIPLE)
-        # found, id, ARTIST, ALBUM, TRACKNUM, TITLE, DURATION, BITRATE, path, filename
+        #                           found, id, ARTIST, ALBUM, TRACKNUM, TITLE,
+        #                           DURATION, BITRATE, path, filename
         self.flatstore = gtk.ListStore(int, int, str, str, int, str, int, int, str, str)
         self.flatview.set_model(self.flatstore)
         self.flatcols = makecolumns(self.flatview, (
@@ -457,8 +480,9 @@ class MediaPane(gtk.Frame):
                 (_('Filename'), 8, None, 100),
                 (_('Path'), 9, None, -1),
                 ))
-            
-        self.flatview.enable_model_drag_source(gtk.gdk.BUTTON1_MASK, self.sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
+
+        self.flatview.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
+            self.sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
         self.flatview.connect_after("drag-begin", self.cb_drag_begin)
         self.flatview.connect("drag_data_get", self.cb_flat_drag_data_get)
 
@@ -471,10 +495,12 @@ class Prefs(gtk.Frame):
         self.prokuser.set_sensitive(sens)
         self.prokdatabase.set_sensitive(sens)
         self.prokpassword.set_sensitive(sens)
-        self.prok_led_image.set_from_pixbuf(self.led["green" if state else "clear"])
+        self.prok_led_image.set_from_pixbuf(self.led["green" 
+                                                        if state else "clear"])
         if state:
-            # TC: P3 refers to Prokyon3, a program which scans and records music collections.
-            self.main.topleftpane.activate(self.db, " %s " % (_('P3 Database View (%s)') % self.prokdatabase.get_text()))
+            # TC: P3 refers to Prokyon3, a music cataloging program.
+            self.main.topleftpane.activate(self.db, " %s " % 
+                    (_('P3 Database View (%s)') % self.prokdatabase.get_text()))
         else:
             self.main.topleftpane.deactivate()
             
@@ -487,16 +513,22 @@ class Prefs(gtk.Frame):
                 if qitem[0] in checkitems:
                     refcount += 1
             if refcount != len(checkitems):
-                raise dberror.ProgrammingError, "database format not supported due to missing reference to one or more of:\n    %s,\n   for command: %s" % (str(checkitems), command)
+                raise dberror.ProgrammingError, "database format not supported"
+                " due to missing reference to one or more of:\n    "
+                "%s,\n   for command: %s" % (str(checkitems), command)
 
         if sql is not None:
             if widget.get_active():
                 try:
-                    self.db = sql.connect(host=self.prokhostname.get_text(), user=self.prokuser.get_text(), passwd=self.prokpassword.get_text(), db=self.prokdatabase.get_text(), connect_timeout=3)
+                    self.db = sql.connect(host=self.prokhostname.get_text(),
+                            user=self.prokuser.get_text(),
+                            passwd=self.prokpassword.get_text(),
+                            db=self.prokdatabase.get_text(), connect_timeout=3)
                     c = self.db.cursor()
                     # check this database looks familiar enough to use
                     dbtest(c, "SHOW tables", ("tracks", ))
-                    dbtest(c, "DESCRIBE tracks", ("artist", "title", "album", "tracknumber", "bitrate", "path", "filename"))
+                    dbtest(c, "DESCRIBE tracks", ("artist", "title", "album",
+                                "tracknumber", "bitrate", "path", "filename"))
                     c.close()
                 except dberror.MySQLError, inst:
                     print inst

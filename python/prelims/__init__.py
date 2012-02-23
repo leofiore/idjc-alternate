@@ -93,106 +93,148 @@ class ArgumentParserImplementation(object):
         if description is None:
             description = PGlobs.app_longform
             
-        ap = self._ap = ArgumentParser(description=description, epilog=epilog, add_help=False)
-        ap.add_argument("-h", "--help", action="help", help=_('show this help message and exit -- additional help is available on each of the sub-commands for example: "%(prog)s run --help" shows the help for the run command'))
+        ap = self._ap = ArgumentParser(description=description, epilog=epilog,
+                                                                add_help=False)
+        ap.add_argument("-h", "--help", action="help", help=_('show this help '
+        'message and exit -- additional help is available on each of the '
+        'sub-commands for example: "%(prog)s run --help" shows the help '
+        'for the run command'))
         ap.add_argument("-v", "--version", action='version', 
-                            version=FGlobs.package_name + " " + FGlobs.package_version,
-                            # TC: a command line option help string.
-                            help=_("show the version number and exit"))
+                version=FGlobs.package_name + " " + FGlobs.package_version,
+                # TC: a command line option help string.
+                help=_("show the version number and exit"))
         sp = self._sp = ap.add_subparsers()
         # TC: a command line option help string.
 
-        sp_run = sp.add_parser("run", add_help=False, help=_("run the main idjc application -- this is the default when no command line options are specified"),
+        sp_run = sp.add_parser("run", add_help=False, help=_("run the main "
+        "idjc application -- this is the default when no command line options"
+        " are specified"),
             # TC: do not translate run.
-            description=description + " " + _("-- sub-command: run -- launch the idjc application"), epilog=epilog)
+            description=description + " " + _("-- sub-command: run -- launch "
+            "the idjc application"), epilog=epilog)
 
         # TC: a command line option help string.
-        sp_new = sp.add_parser("new", add_help=False, help=_("make a new profile"),
+        sp_new = sp.add_parser("new", add_help=False,
+                                                help=_("make a new profile"),
             # TC: do not translate the word new.
-            description=description + " " + _("-- sub-command: new -- make a new profile"), epilog=epilog)
+            description=description + " " + _("-- sub-command: new -- "
+            "make a new profile"), epilog=epilog)
         
         # TC: a command line option help string.
         sp_rm = sp.add_parser("rm", add_help=False, help=_("remove profile(s)"),
             # TC: do not translate the word rm.
-            description=description + " " + _("-- sub-command: rm -- remove profile(s)"), epilog=epilog)
+            description=description + " " + _("-- sub-command: rm -- remove "
+            "profile(s)"), epilog=epilog)
         
         # TC: a command line option help string.
-        sp_auto = sp.add_parser("auto", add_help=False, help=_("select which profile is to automatically launch"),
+        sp_auto = sp.add_parser("auto", add_help=False, help=_("select which "
+        "profile is to automatically launch"),
             # TC: do not translate the word auto.
-            description=description + " " + _("-- sub-command: auto -- mark a profile for auto-launch"), epilog=epilog)
+            description=description + " " + _("-- sub-command: auto -- mark a"
+            " profile for auto-launch"), epilog=epilog)
 
         # TC: a command line option help string.
-        sp_noauto = sp.add_parser("noauto", add_help=False, help=_("remove auto-launch"),
-            description=description + " " + _("-- sub-command: noauto -- remove auto-launch"), epilog=epilog)
+        sp_noauto = sp.add_parser("noauto", add_help=False,
+                                                help=_("remove auto-launch"),
+            description=description + " " + _("-- sub-command: noauto -- "
+            "remove auto-launch"), epilog=epilog)
         
         # TC: a command line option help string.
-        sp_ls = sp.add_parser("ls", add_help=False, help=_("list available profiles"),
+        sp_ls = sp.add_parser("ls", add_help=False,
+                                            help=_("list available profiles"),
             # TC: do not translate the word ls.
-            description=description + " " + _("-- sub-command: ls -- list available profiles"), epilog=epilog)
+            description=description + " " + _("-- sub-command: ls -- list "
+                                        "available profiles"), epilog=epilog)
 
-        sp_run.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
+        sp_run.add_argument("-h", "--help", action="help",
+                                    help=_('show this help message and exit'))
         sp_run.add_argument("-d", "--dialog", dest="dialog", nargs=1, 
                 choices=("true", "false"), 
                 help=_("""force the appearance or non-appearance of the
                 profile chooser dialog -- when used with the -p option
                 the chosen profile is preselected"""))
         # TC: command line help placeholder.
-        sp_run.add_argument("-p", "--profile", dest="profile", nargs=1, metavar=_("profile_choice"), 
+        sp_run.add_argument("-p", "--profile", dest="profile", nargs=1,
+                                                    metavar=_("profile_choice"), 
                 help=_("""the profile to use -- overrides the user interface
                 preferences "show profile dialog" option"""))
         sp_run.add_argument("-j", "--jackserver", dest="jackserver", nargs=1,
                 # TC: command line help placeholder.
-                metavar=_("server_name"), help=_("the named jack sound-server to connect with"))
+                metavar=_("server_name"), help=_("the named jack sound-server "
+                                                            "to connect with"))
         sp_run.add_argument("-S", "--session", dest="session", nargs=1,
                 # TC: command line help placeholder.
                 metavar=_("session_details"),
-                help=_("e.g. 'L1:name' for a named Ladish [L1] session called 'name' -- refer to the idjc man page for more details"))
-        sp_run.add_argument("--no-jack-connections", dest="no_jack_connections", action="store_true",
-                help=_('At start-up do not make any JACK connections. This option delegates all control over restored connections to the session handler.'))
-        sp_run.add_argument("-C", "--no-default-jack-connections", dest="no_default_jack_connections", action="store_true",
-                help=_('No JACK ports will be connected except those listed in the session file.'))
+                help=_("e.g. 'L1:name' for a named Ladish [L1] session called "
+                "'name' -- refer to the idjc man page for more details"))
+        sp_run.add_argument("--no-jack-connections", dest="no_jack_connections",
+                action="store_true",
+                help=_('At start-up do not make any JACK connections. This '
+                'option delegates all control over restored connections to '
+                'the session handler.'))
+        sp_run.add_argument("-C", "--no-default-jack-connections",
+                        dest="no_default_jack_connections", action="store_true",
+                help=_('No JACK ports will be connected except those listed in'
+                ' the session file.'))
         group = sp_run.add_argument_group(_("user interface settings"))
-        group.add_argument("-c", "--channels", dest="channels", nargs="+", metavar="c",
+        group.add_argument("-c", "--channels", dest="channels", nargs="+",
+                metavar="c",
                 help=_("the audio channels to have open at startup"))
         group.add_argument("-V", "--voip", dest="voip", nargs=1, choices=
                 ("off", "private", "public"),
                 help=_("the voip mode at startup"))
-        group.add_argument("-P", "--players", dest="players", nargs="+", metavar="p",
+        group.add_argument("-P", "--players", dest="players", nargs="+",
+                metavar="p",
                 help="the players to start among values {1,2}")
-        group.add_argument("-s", "--servers", dest="servers", nargs="+", metavar="s",
+        group.add_argument("-s", "--servers", dest="servers", nargs="+",
+                metavar="s",
                 help=_("attempt connection with the specified servers"))
-        group.add_argument("-x", "--crossfader", dest="crossfader", choices=("1", "2"), 
+        group.add_argument("-x", "--crossfader", dest="crossfader",
+                choices=("1", "2"), 
                 help=_("position the crossfader for the specified player"))
                 
-        sp_new.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
+        sp_new.add_argument("-h", "--help", action="help",
+                                    help=_('show this help message and exit'))
         # TC: command line help placeholder.
         sp_new.add_argument("newprofile", metavar=_("profile_name"),
                 help=_("""new profile name -- will form part of the dbus
                 bus/object/interface name and the JACK client ID --
                 restrictions therefore apply"""))
         # TC: command line help placeholder.
-        sp_new.add_argument("-t", "--template", dest="template", metavar=_("template_profile"),
+        sp_new.add_argument("-t", "--template", dest="template",
+                                                metavar=_("template_profile"),
                 help=_("an existing profile to use as a template"))
         # TC: command line help placeholder.
-        sp_new.add_argument("-i", "--icon", dest="icon", metavar=_("icon_pathname"),
+        sp_new.add_argument("-i", "--icon", dest="icon",
+                metavar=_("icon_pathname"),
                 help=_("pathname to an icon -- defaults to idjc logo"))
         # TC: Command line help placeholder for the profile's nickname.
-        # TC: Actual profile names are very restricted in what characters can be used.
-        sp_new.add_argument("-n", "--nickname", dest="nickname", metavar=_("nickname"),
-                help=_("""the alternate profile name to appear in window title bars"""))
-        sp_new.add_argument("-d", "--description", dest="description", metavar=_("description_text"),
+        # TC: Profile names are very restricted in what characters can be used.
+        sp_new.add_argument("-n", "--nickname", dest="nickname",
+                metavar=_("nickname"),
+                help=_("the alternate profile name to appear in window title"
+                " bars"))
+        sp_new.add_argument("-d", "--description", dest="description",
+                metavar=_("description_text"),
                 help=_("a description of the profile"))
 
-        sp_rm.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
-        sp_rm.add_argument("rmprofile", metavar=_("profile_name"), nargs="+", help=_('the profile(s) to remove'))
+        sp_rm.add_argument("-h", "--help", action="help",
+                help=_('show this help message and exit'))
+        sp_rm.add_argument("rmprofile", metavar=_("profile_name"), nargs="+",
+                help=_('the profile(s) to remove'))
         
-        sp_auto.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
-        sp_auto.add_argument("autoprofile", metavar="profile_name", help=_('the profile to make automatic'))
+        sp_auto.add_argument("-h", "--help", action="help",
+                help=_('show this help message and exit'))
+        sp_auto.add_argument("autoprofile", metavar="profile_name",
+                help=_('the profile to make automatic'))
         
-        sp_noauto.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
-        sp_noauto.add_argument("--dummyarg", dest="noauto", help=argparse.SUPPRESS)
+        sp_noauto.add_argument("-h", "--help", action="help",
+                help=_('show this help message and exit'))
+        sp_noauto.add_argument("--dummyarg", dest="noauto",
+                help=argparse.SUPPRESS)
       
-        sp_ls.add_argument("-h", "--help", action="help", help=_('show this help message and exit'))
+        sp_ls.add_argument("-h", "--help", action="help",
+                help=_('show this help message and exit'))
         sp_ls.add_argument("--dummyarg", dest="ls", help=argparse.SUPPRESS)
 
 
@@ -277,7 +319,7 @@ class DBusUptimeReporter(dbus.service.Object):
         except KeyError:
             try:
                 p = dbus.SessionBus().get_object(PGlobs.dbus_bus_basename + \
-                                                            "." + profile, self.obj_path)
+                                                "." + profile, self.obj_path)
                 interface = dbus.Interface(p, self.interface_name)
             except dbus.exceptions.DBusException as e:
                 eh(e)
@@ -320,6 +362,18 @@ class ProfileError(Exception):
     def __init__(self, str1, str2=None):
         Exception.__init__(self, str1)
         self.gui_text = str2
+
+
+
+def profileclosure(cmd, name):
+    """A factory function of sorts."""
+    
+
+    busbase = PGlobs.dbus_bus_basename
+    def inner(profname):
+        return cmd(".".join((busbase, profname)))
+    inner.__name__ = name
+    return staticmethod(inner)
 
 
 
@@ -416,14 +470,18 @@ class ProfileManager(object):
             self._profile_dialog.connect("delete", self._delete_profile)
             self._profile_dialog.connect("choose", self._choose_profile)
 
-            def new_profile(dialog, profile, template, icon, nickname, description):
+            def new_profile(dialog, profile, template, icon, nickname,
+                                                                description):
                 try:
                     self._generate_profile(profile, template, icon=icon,
                                     nickname=nickname, description=description)
                     dialog.destroy_new_profile_dialog()
                 except ProfileError as e:
-                    dialog.display_error(_("<span weight='bold' size='12000'>Error while creating new profile.</span>\n\n%s") % e.gui_text,
-                    transient_parent=dialog.get_new_profile_dialog(), markup=True)
+                    dialog.display_error(_("<span weight='bold' size='12000'>"
+                        "Error while creating new profile.</span>\n\n%s") %
+                        e.gui_text,
+                        transient_parent=dialog.get_new_profile_dialog(),
+                        markup=True)
 
             self._profile_dialog.connect("new", new_profile)
             self._profile_dialog.connect("clone", new_profile)
@@ -434,7 +492,8 @@ class ProfileManager(object):
                 self._profile_dialog.run()
                 self._profile_dialog.hide()
             else:
-                self._choose_profile(self._profile_dialog, profile, verbose=True)
+                self._choose_profile(self._profile_dialog, profile,
+                                                                verbose=True)
             if self._profile is None:
                 ap.error(_("no profile is set"))
 
@@ -483,7 +542,8 @@ class ProfileManager(object):
             return self._session_filename
         else:
             # With no absolute path we shall use the profile directory.
-            return self.basedir / "_".join(("ports", self._session_type, self._session_filename))
+            return self.basedir / "_".join(("ports", self._session_type,
+                                                        self._session_filename))
 
 
     @property
@@ -545,12 +605,15 @@ class ProfileManager(object):
                 if s[1][0] in list("/~."):
                     sf = os.path.realpath(os.path.expanduser(s[1]))
                     if os.path.exists(sf) and not os.path.isfile(sf):
-                        ap.error(_('session pathname exists but is not a file: %s') % sf)
+                        ap.error(_(
+                        'session pathname exists but is not a file: %s') % sf)
                     print "session pathname is", sf
                 elif not any(True for x in s[1] if x in ("/", " ")):
                     sf = s[1]
                 else:
-                    ap.error(_("unsupported session name or session pathname -- pathnames must start with one of '/~.' -- names must not contain / characters or spaces: %s") % s[1])
+                    ap.error(_("unsupported session name or session pathname "
+                    "-- pathnames must start with one of '/~.' -- names must "
+                    "not contain / characters or spaces: %s") % s[1])
             elif len(s) == 1:
                 sf = default
               
@@ -570,7 +633,8 @@ class ProfileManager(object):
         
 
     def _auto(self, dialog, profile):
-        if dialog is None and profile != default and not os.path.isdir(PGlobs.profile_dir / profile):
+        if dialog is None and profile != default and not \
+                                    os.path.isdir(PGlobs.profile_dir / profile):
             raise ProfileError(_('profile %s does not exist') % profile, None)
 
         try:
@@ -605,21 +669,21 @@ class ProfileManager(object):
                     busses.append(self._grab_bus_name_for_profile(newprofile))
             except dbus.DBusException:
                 raise ProfileError(None, _("Profile %s is active.") % 
-                                                (oldprofile, newprofile)[len(busses)])
+                                        (oldprofile, newprofile)[len(busses)])
 
             if newprofile != oldprofile:
                 try:
                     shutil.copytree(PGlobs.profile_dir / oldprofile,
-                                                    PGlobs.profile_dir / newprofile)
+                                                PGlobs.profile_dir / newprofile)
                 except EnvironmentError as e:
                     if e.errno == 17:
                         raise ProfileError(None, 
-                        _("Cannot rename profile {0} to {1}, {1} currently exists.").format(
-                                                                oldprofile, newprofile))
+                        _("Cannot rename profile {0} to {1}, {1} currently "
+                                    "exists.").format(oldprofile, newprofile))
                     else:
                         raise ProfileError(None, 
-                            _("Error during attempt to rename {0} to {1}.").format(
-                                                                oldprofile, newprofile))
+                            _("Error during attempt to rename {0} to {1}."
+                                            ).format(oldprofile, newprofile))
 
                 shutil.rmtree(PGlobs.profile_dir / oldprofile)
 
@@ -628,9 +692,10 @@ class ProfileManager(object):
                     f.write(data or "")
 
         except ProfileError, e:
-            text = _("<span weight='bold' size='12000'>Error while editing profile: {0}.</span>\n\n{1}").format(oldprofile, e.gui_text)
+            text = _("<span weight='bold' size='12000'>Error while editing "
+                "profile: {0}.</span>\n\n{1}").format(oldprofile, e.gui_text)
             dialog.display_error(text, markup=True,
-                                transient_parent=dialog.get_new_profile_dialog())
+                            transient_parent=dialog.get_new_profile_dialog())
         else:
             dialog.destroy_new_profile_dialog()
         
@@ -646,7 +711,8 @@ class ProfileManager(object):
                     busnames.append(self._grab_bus_name_for_profile(profile))
                 except (dbus.DBusException, ValueError) as e:
                     if dialog is None:
-                        raise ProfileError(_("could not get a lock on profile {0}: {1}").format(profile, str(e)), None)
+                        raise ProfileError(_("could not get a lock on profile"
+                                    " {0}: {1}").format(profile, str(e)), None)
                 
             # Check all directories exist beforehand.
             if not any(os.path.isdir(PGlobs.profile_dir / x) for x in profiles):
@@ -679,41 +745,49 @@ class ProfileManager(object):
                                          profile, "nickname") or ""
                 self._iconpathname = self._grab_profile_filetext(
                                          profile, "icon") or PGlobs.default_icon
-                dialog.set_profile(profile, self.title_extra, self._iconpathname)
-                self._uprep.activate_for_profile(self._dbus_bus_name, self.get_uptime)
+                dialog.set_profile(
+                                profile, self.title_extra, self._iconpathname)
+                self._uprep.activate_for_profile(
+                                self._dbus_bus_name, self.get_uptime)
         else:
-            print "%s run -p %s" % (FGlobs.bindir / FGlobs.package_name, profile)
-            subprocess.Popen([FGlobs.bindir / FGlobs.package_name, "run", "-p", profile], close_fds=True)
+            print "%s run -p %s" % (FGlobs.bindir / 
+                                                FGlobs.package_name, profile)
+            subprocess.Popen([FGlobs.bindir / FGlobs.package_name,
+                                        "run", "-p", profile], close_fds=True)
 
 
     def _generate_profile(self, newprofile, template=None, **kwds):
         if PGlobs.profile_dir is not None:
             if len(newprofile) > MAX_PROFILE_LENGTH:
-                raise ProfileError(_("the profile length is too long (max %d characters)") % MAX_PROFILE_LENGTH,
-                    _("The profile length is too long (max %d characters).") % MAX_PROFILE_LENGTH)
+                raise ProfileError(_("the profile length is too long "
+                        "(max %d characters)") % MAX_PROFILE_LENGTH,
+                        _("The profile length is too long (max %d characters).") 
+                        % MAX_PROFILE_LENGTH)
 
             if not profile_name_valid(newprofile):
                 raise ProfileError(_("the new profile name is not valid"),
-                                            _("The new profile name is not valid."))
+                        _("The new profile name is not valid."))
               
             try:
                 busname = self._grab_bus_name_for_profile(newprofile)
             except dbus.DBusException:
                 raise ProfileError(_("the chosen profile is currently running"),
-                                            _("The chosen profile is currently running."))
+                        _("The chosen profile is currently running."))
 
             try:
                 tmp = PathStr(tempfile.mkdtemp())
             except EnvironmentError:
                 raise ProfileError(_("temporary directory creation failed"),
-                                            _("Temporary directory creation failed."))
+                        _("Temporary directory creation failed."))
                 
             try:
                 if template is not None:
                     if not profile_name_valid(template):
                         raise ProfileError(
-                                _("the specified template '%s' is not valid") % template,
-                                _("The specified template '%s' is not valid.") % template)
+                            _("the specified template '%s' is not valid") %
+                                                                    template,
+                            _("The specified template '%s' is not valid.") %
+                                                                    template)
                     
                     tdir = PGlobs.profile_dir / template
                     if os.path.isdir(tdir):
@@ -722,15 +796,18 @@ class ProfileManager(object):
                                 for expr in self._optionals + config_files:
                                     if re.match(expr + "$", filename):
                                         try:
-                                            shutil.copyfile(tdir / filename, tmp / filename)
+                                            shutil.copyfile(tdir / filename,
+                                                                tmp / filename)
                                         except EnvironmentError as e:
                                             print e
 
                         shutil.copytree(tdir / "jingles", tmp / "jingles")
                     else:
                         raise ProfileError(
-                            _("the template profile '%s' does not exist") % template,
-                            _("The template profile '%s' does not exist.") % template)
+                            _("the template profile '%s' does not exist") %
+                                                                    template,
+                            _("The template profile '%s' does not exist.") %
+                                                                    template)
                         
                 for fname in self._optionals:
                     if kwds.get(fname):
@@ -738,8 +815,9 @@ class ProfileManager(object):
                             with open(tmp / fname, "w") as f:
                                 f.write(kwds[fname])
                         except EnvironmentError:
-                            raise ProfileError(_("could not write file %s") + fname,
-                                                     _("Could not write file %s.") % fname)
+                            raise ProfileError(
+                                        _("could not write file %s") + fname,
+                                        _("Could not write file %s.") % fname)
                 
 
                 dest = PGlobs.profile_dir / newprofile
@@ -747,8 +825,10 @@ class ProfileManager(object):
                     shutil.copytree(tmp, dest)
                 except EnvironmentError as e:
                     if e.errno == 17 and os.path.isdir(dest):
-                        msg1 = _("the profile directory '%s' already exists") % dest
-                        msg2 = _("The profile directory '%s' already exists.") % dest
+                        msg1 = _("the profile directory '%s' already" \
+                                                            " exists") % dest
+                        msg2 = _("The profile directory '%s' already" \
+                                                            " exists.") % dest
                     else:
                         msg1 = _("a non directory path exists at: '%s'") % dest
                         msg2 = _("A Non directory path exists at: '%s'.") % dest
@@ -784,7 +864,8 @@ class ProfileManager(object):
                         rslt[each] = None
                     
                 rslt["active"] = self._profile_has_owner(profname)
-                rslt["uptime"] = math.floor(self._uprep.get_uptime_for_profile(profname))
+                rslt["uptime"] = math.floor(self._uprep.get_uptime_for_profile(
+                                                                    profname))
                 rslt["auto"] = (1 if a == profname else 0)
                 yield rslt
 
@@ -797,28 +878,20 @@ class ProfileManager(object):
             row.append("*" if pd["auto"] else " ")
             row.append(str(datetime.timedelta(seconds=pd["uptime"])))
             for each in self._textoptionals:
-                row.append(self._grab_profile_filetext(pd["profile"], each) or "\b")
+                row.append(self._grab_profile_filetext(pd["profile"], each) or
+                                                                        "\b")
             table.append(row)
 
         for row in sorted(table):
-            print "{1} {0:{5}} {2:>16} {3} {4}".format(*(tuple(row) + (MAX_PROFILE_LENGTH,)))
-        
+            print "{1} {0:{5}} {2:>16} {3} {4}".format(*(tuple(row) + 
+                                                        (MAX_PROFILE_LENGTH,)))
 
 
-    def closure(cmd, name):
-        busbase = PGlobs.dbus_bus_basename
-        def inner(profname):
-            return cmd(".".join((busbase, profname)))
-        inner.__name__ = name
-        return staticmethod(inner)
-
-    _profile_has_owner = closure(dbus.SessionBus().name_has_owner,
+    _profile_has_owner = profileclosure(dbus.SessionBus().name_has_owner,
                             "_profile_has_owner")
         
-    _grab_bus_name_for_profile = closure(partial(dbus.service.BusName, do_not_queue=True),
-                            "_grab_bus_name_for_profile")
-                            
-    del closure
+    _grab_bus_name_for_profile = profileclosure(partial(
+        dbus.service.BusName, do_not_queue=True), "_grab_bus_name_for_profile")
 
 
     @staticmethod

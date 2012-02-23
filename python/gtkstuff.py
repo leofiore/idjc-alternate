@@ -141,9 +141,10 @@ class StandardDialog(gtk.Dialog):
 class ConfirmationDialog(StandardDialog):
     """This needs to be pulled out since it's generic."""
     
-    def __init__(self, title, message, label_width=300, modal=True, markup=False):
+    def __init__(self, title, message, label_width=300, modal=True,
+                                                                markup=False):
         StandardDialog.__init__(self, title, message,
-                            gtk.STOCK_DIALOG_WARNING, label_width, modal, markup)
+                        gtk.STOCK_DIALOG_WARNING, label_width, modal, markup)
         aa = self.get_action_area()
         cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
         cancel.connect("clicked", lambda w: self.destroy())
@@ -157,7 +158,8 @@ class ConfirmationDialog(StandardDialog):
 class ErrorMessageDialog(StandardDialog):
     """This needs to be pulled out since it's generic."""
     
-    def __init__(self, title, message, label_width=300, modal=True, markup=False):
+    def __init__(self, title, message, label_width=300, modal=True,
+                                                                markup=False):
         StandardDialog.__init__(self, title, message,
                             gtk.STOCK_DIALOG_ERROR, label_width, modal, markup)
         b = gtk.Button(stock=gtk.STOCK_CLOSE)
@@ -194,15 +196,19 @@ class DefaultEntry(gtk.Entry):
 
     def on_realize(self, entry):
         layout = self.get_layout().copy()
-        layout.set_markup("<span foreground='dark gray'>%s</span>" % self.default_text)
+        layout.set_markup("<span foreground='dark gray'>%s</span>" %
+                                                            self.default_text)
         extents = layout.get_pixel_extents()[1]
-        drawable = gtk.gdk.Pixmap(self.get_parent_window(), extents[2], extents[3])
+        drawable = gtk.gdk.Pixmap(self.get_parent_window(), extents[2],
+                                                            extents[3])
         gc = gtk.gdk.GC(drawable)
         gc2 = entry.props.style.base_gc[0]
         drawable.draw_rectangle(gc2, True, *extents)
         drawable.draw_layout(gc, 0, 0, layout)
-        pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, extents[2], extents[3])
-        pixbuf.get_from_drawable(drawable, drawable.get_colormap(), 0, 0, *extents)
+        pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, extents[2],
+                                                            extents[3])
+        pixbuf.get_from_drawable(drawable, drawable.get_colormap(), 0, 0,
+                                                            *extents)
         self.empty_pixbuf = pixbuf
         if not gtk.Entry.get_text(self):
             self.props.primary_icon_pixbuf = pixbuf
@@ -322,7 +328,8 @@ class NamedTreeRowReference(object):
         try:
             return self.get_index_for_name(self._tree_row_ref, name)
         except Exception:
-            raise AttributeError("%s has no attribute: %s" % (repr(self._tree_row_ref), name))
+            raise AttributeError("%s has no attribute: %s" %
+                                            (repr(self._tree_row_ref), name))
 
 
     def __getitem__(self, path):
@@ -405,7 +412,8 @@ class WindowSizeTracker(object):
 
     def _on_window_state_event(self, widget, event): 
         if self._is_tracking:
-            self._max = event.new_window_state & gtk.gdk.WINDOW_STATE_MAXIMIZED != 0
+            self._max = event.new_window_state & \
+                                        gtk.gdk.WINDOW_STATE_MAXIMIZED != 0
 
 
 
@@ -416,7 +424,8 @@ class IconChooserButton(gtk.Button):
     """
     
     __gsignals__ = {
-            "filename-changed" : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,)),
+            "filename-changed" : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                                                    (gobject.TYPE_PYOBJECT,)),
     }
     
     def __init__(self, dialog):

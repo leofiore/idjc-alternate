@@ -27,18 +27,24 @@ class PopupWindow:
     def message(self, text):
         if self.messages:
             print "PopupWindow:", text
+
         
-    def set_messages(self, boolean):                            # show status messages on the console when true
+    def set_messages(self, boolean):
+        """Show status messages on the console when boolean = true."""
+        
+
         self.messages = boolean and True or False
         
     def get_messages(self):
         return self.messages
     
+
     class new_popup_window(gtk.Window):
         def __init__(self):
             gtk.Window.__init__(self, gtk.WINDOW_POPUP)
             gtk.Window.set_decorated(self, False)
     
+
     @threadslock
     def timeout_callback(self):
         class bugout:
@@ -51,24 +57,31 @@ class PopupWindow:
             self.timer_count += 1
             self.total_timer_count += 1
             if self.timer_count == self.popuptime:
-                if not self.timeout or self.total_timer_count < self.popuptime + self.timeout:
+                if not self.timeout or self.total_timer_count < \
+                                                self.popuptime + self.timeout:
                     self.popup_window = self.new_popup_window()
-                    if self.winpopulate_callback(self.popup_window, self.widget, self.x, self.y) != -1:
+                    if self.winpopulate_callback(self.popup_window, \
+                                            self.widget, self.x, self.y) != -1:
                         self.popup_window.realize()
-                        # calculate the popup window positioning
-                        w_popup = self.popup_window.get_size()[0]     # width of popup window
-                        w_root = self.popup_window.get_screen().get_root_window().get_geometry()[2] # width of root window
+                        # Calculate the popup window positioning.
+                        w_popup = self.popup_window.get_size()[0]
+                        # Get root window width.
+                        w_root = self.popup_window.get_screen(
+                                        ).get_root_window().get_geometry()[2]
                         offset = w_root - int(self.x_root) - w_popup - 4
-                        if offset > 0:                   # right justify only when needed
+                        if offset > 0:  # Right justify if needed.
                             offset = 0
                         x_pos = int(self.x_root) + 4 + offset
-                        if x_pos < 0:                     # cancel right justification for popups that won't fit in the root window
-                            x_pos = 0                       # and display against the left edge of the root window
+                        # No right justification for popups that won't fit.
+                        if x_pos < 0:
+                            # Display against left window edge.
+                            x_pos = 0
                         self.popup_window.move(x_pos, int(self.y_root) + 4)
                         self.popup_window.show()
                         self.message("popup window created")
                     else:
-                        raise bugout(self, "window populate callback returned -1 -- window cancelled")
+                        raise bugout(self, "window populate callback returned"
+                                                    " -1 -- window cancelled")
                 else:
                     raise bugout(self, "timeout exceeded")
             if self.timer_count > self.popdowntime:
@@ -80,15 +93,19 @@ class PopupWindow:
     
     def handle_mouse(self, widget, event, data):
         self.timer_count = 0
-        self.x_root = event.x_root        # store absolute mouse x and y coordiates
+        # Store absolute mouse x and y coordiates.
+        self.x_root = event.x_root
         self.y_root = event.y_root
-        self.x = event.x                        # can be used in the callback to obtain context information
+        # This information could be useful too.
+        self.x = event.x
         self.y = event.y
-        if self.popup_window is not None: # any event triggers destruction of popup windows currently open
+        # Any event triggers destruction of popup windows currently open.
+        if self.popup_window is not None:
             self.popup_window.destroy()
             gobject.source_remove(self.timeout)
             self.popup_window = None
-            self.message("popup window destroyed due to the sensing of an event, timer removed")
+            self.message("popup window destroyed due to the sensing of an "
+                                                        "event, timer removed")
             if data == "leave": return False
         if data == "enter" and self.inside_widget == False:
             self.timeout = gobject.timeout_add(100, self.timeout_callback)
@@ -99,13 +116,15 @@ class PopupWindow:
             gobject.source_remove(self.timeout)
             self.inside_widget = False
             self.message("timer removed")
-        if data == "button" or data == "scroll" or self.inhibit_callback() and self.inside_widget:
+        if data == "button" or data == "scroll" or self.inhibit_callback() \
+                                                        and self.inside_widget:
             gobject.source_remove(self.timeout)
             self.message("timer removed")
     
     def dummy(self): return False
     
-    def __init__(self, widget, popuptime, popdowntime, timeout, winpopulate_callback, inhibit_callback = None):
+    def __init__(self, widget, popuptime, popdowntime, timeout, \
+                                winpopulate_callback, inhibit_callback = None):
         self.widget = widget
         self.popuptime = popuptime
         self.popdowntime = popdowntime

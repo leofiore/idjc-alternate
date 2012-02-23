@@ -382,7 +382,8 @@ Public License instead of this License.
         self.add(text_view)
         text_buffer = gtk.TextBuffer()
         tag = text_buffer.create_tag()
-        tag.set_property("font", "sans 7")
-        text_buffer.insert_with_tags(text_buffer.get_start_iter(), self.gpl_text, tag)
+        tag.set_property("font", "sans 8")
+        text_buffer.insert_with_tags(text_buffer.get_start_iter(),
+                                                            self.gpl_text, tag)
         text_view.set_buffer(text_buffer)
         text_view.show()

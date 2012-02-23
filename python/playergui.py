@@ -47,7 +47,7 @@ from mutagen.asf import ASF
 from idjc import FGlobs, PGlobs
 from . import popupwindow
 from .mutagentagger import *
-from .utils import slot_object
+from .utils import SlotObject
 from .gtkstuff import threadslock
 from .prelims import *
 from .tooltips import set_tip
@@ -767,7 +767,8 @@ class CueSheet(object):
                                                                 self.tracknum]:
             raise ValueError("unexpected POSTGAP command %s" % self.line)
 
-        self.segment[self.tracknum]["POSTGAP"] = self._time_handler(operand[0])
+        self.segment[self.tracknum]["POSTGAP"] = self._time_handler(
+                                                            self.operand[0])
 
     def parse(self, iterable):
         """Return a parsed cuesheet object."""
@@ -793,7 +794,7 @@ class CueSheet(object):
             raise ValueError("no tracks")
 
         if self.index < 1:
-            raise ValueError("track %02d lacks a 01 index" % tracknum)
+            raise ValueError("track %02d lacks a 01 index" % self.tracknum)
 
         for each in self.segment.itervalues():
              del each.default_factory
@@ -1308,7 +1309,6 @@ class IDJC_Media_Player:
                     return NOTVALID._replace(filename=reply[1])
                 except IndexError:
                     return NOTVALID
-                return nv
             reply.append(value)
             start = nextstart
         try:
@@ -2488,7 +2488,7 @@ class IDJC_Media_Player:
             elif ext == ".xspf":
                 return self.get_elements_from_xspf(pathnames[0])
             elif os.path.isdir(pathnames[0]):
-                return self.get_elements_from_directory(pathnames[0], set(), 2)
+                return self.get_elements_from_directory(pathnames[0], 2)
         return self.get_elements_from_chosen(pathnames)
 
     def get_elements_from_chosen(self, chosenfiles):
@@ -2497,17 +2497,10 @@ class IDJC_Media_Player:
             if meta:
                 yield meta
 
-    def get_elements_from_directory_orig(self, chosendir):
-        files = os.listdir(chosendir)
-        files.sort()
-        for each in files:
-            path = "/".join((chosendir, each))
-            meta = self.get_media_metadata(path)
-            if meta:
-                yield meta
-
-    def get_elements_from_directory(self, chosendir, visited, depth):
+    def get_elements_from_directory(self, chosendir, depth=1, visited=None):
         depth -= 1
+        if visited is None:
+            visited = set()
         chosendir = os.path.realpath(chosendir)
         if chosendir in visited or not os.path.isdir(chosendir):
             return
@@ -2534,7 +2527,7 @@ class IDJC_Media_Player:
             for subdir in directories:
                 print "examining", "/".join((chosendir, subdir))
                 gen = self.get_elements_from_directory("/".join(
-                                        (chosendir, subdir)), visited, depth)
+                                        (chosendir, subdir)), depth, visited)
                 for meta in gen:
                     yield meta
 
@@ -2725,8 +2718,10 @@ class IDJC_Media_Player:
         if info != 0:
             text = str(dragged.data)
             if text[:20] == "idjcplayercontrol://":
-                ct = text[20:].split("+")
-                newrow = [ ct[0], "", int(ct[1]), ct[2], ct[3], "", "" ]
+                newrow = NOTVALID._replace(**dict(zip(
+                                "rsmeta length meta encoding".split(),
+                                (x[0](x[1]) for x in zip((str, int, str, str),
+                                text[20:].split("+"))))))
                 drop_info = treeview.get_dest_row_at_pos(x, y)
                 model = treeview.get_model()
                 if drop_info == None:
@@ -3138,11 +3133,11 @@ class IDJC_Media_Player:
             self.liststore.clear()
 
         if text == "ToJingles":
-            source = model.get_value(iter, 1)
-            dest = PM.jinglesdir / os.path.split(source)[1]
+            sourcepathname = model.get_value(iter, 1)
+            destpathname = PM.jinglesdir / os.path.split(source)[1]
             try:
-                source = open(source, "r")
-                dest = open(dest, "w")
+                source = open(sourcepathname, "r")
+                dest = open(destpathname, "w")
                 while True:
                     data = source.read(4096)
                     dest.write(data)
@@ -4255,7 +4250,7 @@ class IDJC_Media_Player:
         self.showing_pl_save_requester = False
 
         self.home = os.path.expanduser("~")
-        self.file_requester_start_dir = slot_object(self.home)
+        self.file_requester_start_dir = SlotObject(self.home)
         self.plsave_filetype = 0
         self.plsave_open = False
         self.plsave_filtertype = self.plfilefilter_all
@@ -4294,3 +4289,4 @@ class IDJC_Media_Player:
         self.alarm_cid = 0
         self.playlist_todo = deque()
         self.no_more_files = False
+        self.model_playing = None

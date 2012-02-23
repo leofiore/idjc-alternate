@@ -1,4 +1,5 @@
-#   irc.py: IRC bots for IDJC
+"""IRC bots for IDJC."""
+
 #   Copyright (C) 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
@@ -94,7 +95,7 @@ CODES_AND_DESCRIPTIONS = zip((u"%r", u"%t", u"%l", u"%s", u"%n", u"%d", u"%u"),
 
 
 
-class IRCEntry(gtk.Entry):
+class IRCEntry(gtk.Entry):  # pylint: disable=R0904
     """Specialised IRC text entry widget.
 
     Features pop-up menu and direct control character insertion.
@@ -110,7 +111,7 @@ class IRCEntry(gtk.Entry):
         self.connect("populate-popup", self._popup_menu_populate)
 
 
-    def _on_key_press_event(self, entry, event, data=None):
+    def _on_key_press_event(self, entry, event):
         """Handle direct insertion of control characters."""
 
 
@@ -135,6 +136,9 @@ class IRCEntry(gtk.Entry):
 
 
     def _popup_menu_populate(self, entry, menu):
+        """Builds the right click pop-up menu on the IRCEntry widget."""
+        
+        
         # TC: Popup menu item for a GTK text entry widget.
         menuitem = gtk.MenuItem(_('Insert Attribute or Colour Code'))
         menu.append(menuitem)
@@ -142,24 +146,37 @@ class IRCEntry(gtk.Entry):
         menuitem.set_submenu(submenu)
         menuitem.show()
         
-        def sub(pairs):
-            for code, menutext in pairs:
-                mi = gtk.MenuItem()
-                l = gtk.Label()
-                l.set_alignment(0.0, 0.5)
-                l.set_markup(menutext)
-                mi.add(l)
-                l.show()
-                mi.connect("activate", self._on_menu_item_activate, entry, code)
-                submenu.append(mi)
-                mi.show()
+        self._popup_menu_add_substitutions(entry, submenu)
+        self._popup_menu_add_colourselectors(entry, submenu)
 
-        
+
+    def _popup_menu_add_substitutions(self, entry, submenu):
+        """Adder for menu items that insert substitute characters or codes."""
+
+
+        def sub(pairs):
+            """Build the attribute inserting menu elements."""
+
+
+            for code, menutext in pairs:
+                menuitem = gtk.MenuItem()
+                label = gtk.Label()
+                label.set_alignment(0.0, 0.5)
+                label.set_markup(menutext)
+                menuitem.add(label)
+                label.show()
+                menuitem.connect_object("activate", self._on_menu_item_activate,
+                                                                    entry, code)
+                submenu.append(menuitem)
+                menuitem.show()
+
+
         sub(CODES_AND_DESCRIPTIONS)
 
-        s = gtk.SeparatorMenuItem()
-        submenu.append(s)
-        s.show()
+        # Separate data tokens from formatting tokens.
+        sep = gtk.SeparatorMenuItem()
+        submenu.append(sep)
+        sep.show()
         
         sub(zip((u"\u0002", u"\u001F", u"\u000F"), (
                     # TC: Text formatting style.
@@ -168,46 +185,53 @@ class IRCEntry(gtk.Entry):
                     _('<u>Underline</u>'),
                     # TC: Text formatting style.
                     _('Normal'))))
-        
-        for each in ("0-7", "8-15"):
-            mi = gtk.MenuItem(" ".join((_("Colours"), each)))
-            submenu.append(mi)
-            cmenu = gtk.Menu()
-            mi.set_submenu(cmenu)
-            cmenu.show()
-            lower, upper = [int(x) for x in each.split("-")]
+
+
+    def _popup_menu_add_colourselectors(self, entry, submenu):
+        """Adder for menuitems that choose text colour."""
+
+
+        for lower, upper in ((0, 7), (8, 15)):
+            menuitem = gtk.MenuItem(_("Colours") + " %d-%d" % (lower, upper))
+            submenu.append(menuitem)
+            colourmenu = gtk.Menu()
+            menuitem.set_submenu(colourmenu)
+            colourmenu.show()
             for i in xrange(lower, upper + 1):
                 try:
                     rgba = XCHAT_COLOR[i]
-                except:
+                except (IndexError, TypeError):
                     continue
 
-                cmi = gtk.MenuItem()
-                cmi.connect("activate",
+                colourmenuitem = gtk.MenuItem()
+                colourmenuitem.connect_object("activate",
                                     self._on_menu_insert_colour_code, entry, i)
                 hbox = gtk.HBox()
                 
-                l = gtk.Label()
-                l.set_alignment(0, 0.5)
-                l.set_markup("<span font_family='monospace'>%02d</span>" % i)
-                hbox.pack_start(l)
-                l.show()
+                label = gtk.Label()
+                label.set_alignment(0, 0.5)
+                label.set_markup(
+                                "<span font_family='monospace'>%02d</span>" % i)
+                hbox.pack_start(label)
+                label.show()
 
                 pixbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, 20, 20)
                 pixbuf.fill(rgba)
                 image = gtk.image_new_from_pixbuf(pixbuf)
-                image.connect_after("expose-event", self._on_colour_box_expose)
+                image.connect_after("expose-event", 
+                                    lambda w,e: self._on_colour_box_expose(w))
                 hbox.pack_start(image)
                 image.show()
 
-                cmi.add(hbox)
+                colourmenuitem.add(hbox)
                 hbox.show()
-                cmenu.append(cmi)
-                cmi.show()
-            mi.show()
+                colourmenu.append(colourmenuitem)
+                colourmenuitem.show()
+            menuitem.show()
 
 
-    def _on_menu_item_activate(self, menuitem, entry, code):
+    @staticmethod
+    def _on_menu_item_activate(entry, code):
         """Perform relevant character code insertion."""
         
         
@@ -216,8 +240,9 @@ class IRCEntry(gtk.Entry):
         entry.set_position(cursor + len(code))
 
 
-    def _on_menu_insert_colour_code(self, menuitem, entry, code):
-        """One of the colour palette items was chosen."""
+    @staticmethod
+    def _on_menu_insert_colour_code(entry, code):
+        """Insert the colour palette control code."""
         
         
         cursor = entry.get_position()
@@ -230,27 +255,32 @@ class IRCEntry(gtk.Entry):
         entry.set_position(cursor + 3)
 
 
-    def _on_colour_box_expose(self, widget, event, data=None):
-        """A colour palette item is hovered over.
+    @staticmethod
+    def _on_colour_box_expose(widget):
+        """If we are here the mouse is hovering over a colour palette item.
         
-        This implies also prelight which needs to be cancelled.
+        This causes pre-light which messes up the colour so all we do here
+        is cancel it.
         """ 
-
 
         widget.set_state(gtk.STATE_NORMAL)
 
 
 
-class IRCView(gtk.TextView):
-    """Viewer for IRC text."""
+class IRCView(gtk.TextView):  # pylint: disable=R0904
+    """A viewer for IRC text.
+    
+    This text window shows the text as it would be displayed to other users.
+    Variables are substituted for human readable place markers.
+    """
     
 
     matches = tuple((a, re.compile(b)) for a, b in (
-        ("fgbg", "\x03[0-9]{1,2},[0-9]{1,2}"),
-        ("fg",  "\x03[0-9]{1,2}(?!=,)"),
+        ("foreground_background", "\x03[0-9]{1,2},[0-9]{1,2}"),
+        ("foreground",  "\x03[0-9]{1,2}(?!=,)"),
         ("bold", "\x02"),
-        ("ul",  "\x1F"),
-        ("norm", "\x0F"),
+        ("underline",  "\x1F"),
+        ("normal", "\x0F"),
         ("text", "[^\x00-\x1F]*"),
         ))
 
@@ -264,70 +294,107 @@ class IRCView(gtk.TextView):
         self.set_wrap_mode(gtk.WRAP_CHAR)
         self.set_editable(False)
         self.set_cursor_visible(False)
+        self._rslt = self._foreground = self._background = None
+        self._bold = self._underline = False
 
 
     def set_text(self, text):
+        """Apply text to the viewer.
+        
+        IRC text formatting is handled and the view updated.
+        """
+
         text = string_multireplace(text, self.readable_equiv)
         
-        b = self.get_buffer()
-        b.remove_all_tags(b.get_start_iter(), b.get_end_iter())
-        b.delete(b.get_start_iter(), b.get_end_iter())
+        buf = self.get_buffer()
+        buf.remove_all_tags(buf.get_start_iter(), buf.get_end_iter())
+        buf.delete(buf.get_start_iter(), buf.get_end_iter())
 
-        fg = bg = None
-        bold = ul = False
         start = 0
         
         while start < len(text):
             for name, match in self.matches:
-                rslt = match.match(text, start)
-                if rslt is not None and rslt.group():
-                    if name == "bold":
-                        bold = not bold
+                self._rslt = match.match(text, start)
+                if self._rslt is not None and self._rslt.group():
+                    # Execute the handler routine.
+                    getattr(self, "_handle_" + name)()
 
-                    elif name == "ul":
-                        ul = not ul
-
-                    elif name == "fg":
-                        try:
-                            fg = rslt.group()[1:]
-                        except IndexError:
-                            fg = None
-
-                    elif name == "fgbg":
-                        try:
-                            fg, bg = rslt.group()[1:].split(",")
-                        except IndexError:
-                            fg = bg = None
-
-                    elif name == "norm":
-                        bold = ul = False
-                        fg = bg = None
-
-                    elif name == "text":
-                        tag = b.create_tag()
-                        p = tag.props
-                        p.family = "monospace"
-                        try:
-                            p.foreground = self._colour_string(fg)
-                            p.background = self._colour_string(bg)
-                        except (TypeError, KeyError):
-                            pass
-
-                        if ul:
-                            p.underline = pango.UNDERLINE_SINGLE
-                        if bold:
-                            p.weight = pango.WEIGHT_BOLD
-                            
-                        b.insert_with_tags(b.get_end_iter(), rslt.group(), tag)
-                    start = rslt.end()
+                    start = self._rslt.end()
                     break                   
             else:
                 start += 1
 
+        self._foreground = self._background = None
+        self._bold = self._underline = False
+
 
     @staticmethod
     def _colour_string(code):
-        return "#%000000X" % (XCHAT_COLOR[int(code)] >> 8)
+        """The colour as a string of format "#rrggbb.
+        
+        rgb = red, green, blue as a 2 digit hex number."""
+        
+        return "#%06X" % (XCHAT_COLOR[int(code)] >> 8)
+
+
+    def _handle_bold(self):
+        """Bold toggle."""
+        
+        self._bold = not self._bold
+
+
+    def _handle_underline(self):
+        """Underline toggle."""
+        
+        self._underline = not self._underline
+
+
+    def _handle_foreground(self):
+        """Foreground colour setting."""
+
+        try:
+            self._foreground = self._rslt.group()[1:]
+        except IndexError:
+            self._foreground = None
+
+
+    def _handle_foreground_background(self):
+        """Foreground and background colour setting."""
+        
+        try:
+            self._foreground, self._background = \
+                            self._rslt.group()[1:].split(",")
+        except IndexError:
+            self._foreground = self._background = None
+
+
+    def _handle_normal(self):
+        """The normal formatting tag."""
+        
+        self._bold = self._underline = False
+        self._foreground = self._background = None
+
+
+    def _handle_text(self):
+        """Normal printable text."""
+
+        buf = self.get_buffer()
+        tag = buf.create_tag()
+        props = tag.props
+        props.family = "monospace"
+        try:
+            props.foreground = self._colour_string(self._foreground)
+            props.background = self._colour_string(self._background)
+        except (TypeError, KeyError):
+            pass
+
+        if self._underline:
+            props.underline = pango.UNDERLINE_SINGLE
+        if self._bold:
+            props.weight = pango.WEIGHT_BOLD
+            
+        buf.insert_with_tags(buf.get_end_iter(), self._rslt.group(),
+                                                            tag)      
 
 
 
@@ -348,7 +415,10 @@ class EditDialogMixin(object):
 
 
     def delete_confirmation(self, deleter):
-        """Override in subclass to install a confirmation dialog."""
+        """Override in subclass to install a confirmation dialog.
+        
+        In this case the deleter function is run without question.
+        """
 
         return deleter
 
@@ -359,7 +429,7 @@ server_port_adj = gtk.Adjustment(6667.0, 0.0, 65535.0, 1.0, 10.0)
 
 
 class ServerDialog(gtk.Dialog):
-    """Data entry dialog for adding a new irc server."""
+    """Data entry dialog for adding a new IRC server."""
 
 
     optinfo = _("Optional data entry field for information only.")
@@ -457,6 +527,8 @@ class ServerDialog(gtk.Dialog):
         
         
     def as_tuple(self):
+        """Data extraction method."""
+
         return (self.port.get_value(), self.ssl.get_active(),
             self.network.get_text().strip(), self.hostname.get_text().strip(),
             self.username.get_text().strip(), self.password.get_text().strip(),
@@ -467,6 +539,9 @@ class ServerDialog(gtk.Dialog):
 
 
 class EditServerDialog(ServerDialog, EditDialogMixin):
+    """Adds a delete and restore button to the standard server dialog."""
+
+    
     def __init__(self, orig_data):
         ServerDialog.__init__(self)
         EditDialogMixin.__init__(self, orig_data)
@@ -485,6 +560,9 @@ class EditServerDialog(ServerDialog, EditDialogMixin):
         
          
     def from_tuple(self, orig_data):
+        """The data restore method."""
+
+        
         n = iter(orig_data).next
         self.port.set_value(n())
         self.ssl.set_active(n())
@@ -507,6 +585,9 @@ message_interval_adj = gtk.Adjustment(600, 60, 9999, 1, 10)
 
             
 class MessageDialog(gtk.Dialog):
+    """Base class for a message creation dialog."""
+    
+    
     icon = gtk.STOCK_NEW
 
     def __init__(self, title=None):
@@ -583,11 +664,16 @@ class MessageDialog(gtk.Dialog):
 
 
     def as_tuple(self):
+        """Data extraction method."""
+
         return self._from_channels(), self.message.get_text().strip()
 
 
 
 class EditMessageDialog(MessageDialog, EditDialogMixin):
+    """Adds delete and restore buttons to a message creation dialog."""
+
+    
     icon = gtk.STOCK_EDIT
 
     def __init__(self, title, orig_data):
@@ -596,12 +682,18 @@ class EditMessageDialog(MessageDialog, EditDialogMixin):
         
         
     def from_tuple(self, orig_data):
+        """The data restore method."""
+        
+        
         self.channels.set_text(orig_data[0])
         self.message.set_text(orig_data[1])
 
 
 
 class AnnounceMessageDialog(MessageDialog):
+    """Adds delay functionality to the message dialog."""
+
+
     # TC: Dialog window title text.
     title = _("IRC track announce")
 
@@ -621,6 +713,8 @@ class AnnounceMessageDialog(MessageDialog):
         
         
     def as_tuple(self):
+        """Data extraction method."""
+        
         return (self.delay.get_value(), ) + MessageDialog.as_tuple(self)
 
 
@@ -747,6 +841,9 @@ def highlight(f):
     
     
 class IRCTreeView(gtk.TreeView):
+    """A gtk.TreeView that has a tooltip which handles IRC text formatting."""
+
+
     def __init__(self, model=None):
         gtk.TreeView.__init__(self, model)
         self.set_headers_visible(False)
@@ -757,6 +854,8 @@ class IRCTreeView(gtk.TreeView):
         
     
     def _on_query_tooltip(self, tv, x, y, kb_mode, tooltip):
+        """Display an IRCView tooltip for appropriate data elements."""
+
         if (x, y) != self.tooltip_coords:
             self.tooltip_coords = (x, y)
         elif None not in (x, y):
@@ -776,6 +875,11 @@ class IRCTreeView(gtk.TreeView):
 
 
 class IRCRowReference(NamedTreeRowReference):
+    """A gtk.TreeRowReference but with named attributes.
+    
+    The naming scheme depends on the data type of each row.
+    """
+    
     _lookup = {
         1: {"port":2, "ssl":3, "network":4, "hostname":5, "username":6,
              "password":7, "nick1":8, "nick2":9, "nick3":10, "realname":11,
@@ -792,6 +896,8 @@ class IRCRowReference(NamedTreeRowReference):
     
 
     def get_index_for_name(self, tree_row_ref, name):
+        """An abstract method of the base class that performs the lookup."""
+        
         if name == "type":
             return 0
         elif name == "active":
@@ -803,6 +909,8 @@ class IRCRowReference(NamedTreeRowReference):
 
 
 class IRCTreeStore(gtk.TreeStore):
+    """The data storage object."""
+
     @property
     def data_format(self):
         return (int,) * 4 + (str,) * 10
@@ -841,11 +949,16 @@ class IRCTreeStore(gtk.TreeStore):
 
 
     def __getitem__(self, path):
+        """Properly wrap the TreeRowReference."""
+        
         return IRCRowReference(gtk.TreeStore.__getitem__(self, path))
         
 
 
 class IRCPane(gtk.VBox):
+    """The main user interface."""
+    
+    
     def __init__(self):
         gtk.VBox.__init__(self)
         self.set_border_width(8)
@@ -914,6 +1027,8 @@ class IRCPane(gtk.VBox):
 
 
     def marshall(self):
+        """Convert all our data into a string."""
+
         if HAVE_IRCLIB:
             store = [self._m_signature()]
             self._treestore.foreach(self._m_read, store)
@@ -928,6 +1043,8 @@ class IRCPane(gtk.VBox):
 
 
     def unmarshall(self, data):
+        """Set the TreeStore with data from a string."""
+        
         if HAVE_IRCLIB:
             try:
                 store = json.loads(data)
@@ -964,6 +1081,12 @@ class IRCPane(gtk.VBox):
 
 
     def _cell_data_func(self, column, cell, model, iter):
+        """Converts tree data into something viewable.
+        
+        There is only one line to display on so the actual text is not
+        given too much priority. For that there is the tooltip IRCView.
+        """
+
         row = model[model.get_path(iter)]
         text = ""
         
@@ -1137,10 +1260,13 @@ class ConnectionsController(list):
         while i is not None:
             model.row_changed(model.get_path(i), i)
             i = model.iter_next(i)
-                    
+
 
 
 class IRCConnection(gtk.TreeRowReference, threading.Thread):
+    """Self explanatory really."""
+    
+    
     def __init__(self, model, path, stream_active):
         gtk.TreeRowReference.__init__(self, model, path)
         threading.Thread.__init__(self)
@@ -1552,6 +1678,10 @@ class MessageHandler(gobject.GObject):
         pass
 
 
+    def on_new_metadata(self):
+        pass
+
+
     def new_metadata(self, new_meta):
         assert not frozenset(new_meta).difference(frozenset(self.subst_keys))
 
@@ -1559,10 +1689,6 @@ class MessageHandler(gobject.GObject):
         self.on_new_metadata()
         
         
-    def on_new_metadata(self):
-        pass
-
-
     def channels_evaluate(self, model, path, iter=None):
         pp = self.tree_row_ref.get_path()
         if path[:-1] == pp:

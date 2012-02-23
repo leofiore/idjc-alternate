@@ -1,10 +1,8 @@
 SUBDIRS = prelims
 
-pkgpython_PYTHON = dialogs.py gtkstuff.py irc.py jingles.py licence_window.py maingui.py	 \
-					\
-						midicontrols.py mutagentagger.py p3db.py playergui.py popupwindow.py \
-					\
-						preferences.py sourceclientgui.py tooltips.py utils.py
+pkgpython_PYTHON = dialogs.py gtkstuff.py irc.py jingles.py licence_window.py \
+		maingui.py midicontrols.py mutagentagger.py p3db.py playergui.py \
+		popupwindow.py preferences.py sourceclientgui.py tooltips.py utils.py
 
 nodist_pkgpython_PYTHON=__init__.py
 

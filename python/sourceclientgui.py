@@ -1384,8 +1384,8 @@ class StreamTab(Tab):
                 self.test_monitor.set_sensitive(sens)
             elif self.format_page == 1:
                 if self.subformat_page == 0:
+                    sens = self.vorbis_settings_valid
                     self.recorder_valid_override = sens
-                    self.vorbis_settings_valid = sens
                 elif self.subformat_page == 1:  # OggFLAC
                     sr = self.stream_resample_frame.resample_rate
                     self.recorder_valid_override = sens = sr <= 65535 or \
@@ -3144,14 +3144,6 @@ class SourceClientGui:
             # If this is the initial call the stream tabs will not exist yet.
             pass
         self.uptime = time.time()
-
-    def source_client_close(self):
-        try:
-            self.comms_cmd
-        except:
-            pass
-        else:
-            self.comms_cmd.close()
 
     def cb_delete_event(self, widget, event, data = None):
         self.window.hide()

@@ -69,10 +69,10 @@ class InitialPlayerConfig(gtk.Frame):
         
         pl_label = gtk.Label(_("Playlist Mode"))
         fade_label = gtk.Label(_("Fade"))
-        try:
+        if hasattr(gtk, "ComboBoxText"):
             self.pl_mode = gtk.ComboBoxText(player.pl_mode.get_model())
             self.fade = gtk.ComboBoxText(player.fade.get_model())
-        except AttributeError:
+        else:
             self.pl_mode = gtk.combo_box_new_text()
             self.pl_mode.set_model(player.pl_mode.get_model())
             self.fade = gtk.combo_box_new_text()

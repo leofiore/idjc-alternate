@@ -29,27 +29,39 @@ import threading
 from functools import wraps
 
 
+# pylint: disable=C0203
+#
+# The mcs parameter goes to the __new__ method, not any other.
+
+
 class Singleton(type):
     """Enforce the singleton pattern upon the user class."""
 
 
+    def __init__(cls, name, bases, dict_):
+        super(Singleton, cls).__init__(name, bases, dict_)
+        cls._instance = None
+
+
     def __call__(cls, *args, **kwds):
-        try:
+        if cls._instance is not None:
             # Return an existing instance.
             return cls._instance
 
-        except AttributeError:
+        else:
             # No existing instance so instantiate just this once.
             cls._instance = super(Singleton, cls).__call__(*args, **kwds)
             return cls._instance
 
 
 
-def _PA_rlock(func):
+def _pa_rlock(func):
     """Policed Attributes helper for thread locking."""
 
     @wraps(func)
     def _wrapper(cls, *args, **kwds):
+        """Wrapper with locking feature. Performs rlock."""
+        
         rlock = type.__getattribute__(cls, "_rlock")
 
         try:
@@ -63,16 +75,29 @@ def _PA_rlock(func):
 
 
 
-class PolicedAttributes(type):
+class FixedAttributes(type):
+    """Implements a namespace class of constants."""
+
+
+    def __setattr__(cls, name, value):
+        raise AttributeError("attribute is locked")
+
+
+    def __call__(cls, *args, **kwds):
+        raise TypeError("%s object is not callable" % cls.__name__)
+
+
+
+class PolicedAttributes(FixedAttributes):
     """Polices data access to a namespace class.
 
     Prevents write access to attributes after they have been read.
     Envisioned useful for the implementation of "safe" global variables.
     """
 
-    def __new__(meta, name, bases, _dict):
+    def __new__(mcs, name, bases, dict_):
         @classmethod
-        @_PA_rlock
+        @_pa_rlock
         def peek(cls, attr, callback, *args, **kwds):
             """Allow read + write within a callback.
 
@@ -80,50 +105,33 @@ class PolicedAttributes(type):
             No modification ban is placed or bypassed.
             """
 
-            if attr not in super(type(cls), cls).__getattribute__("_banned"):
+            if attr not in type.__getattribute__(cls, "_banned"):
                 new = callback(
                         super(PolicedAttributes, cls).__getattribute__(attr),
                         *args, **kwds)
-                base.__setattr__(attr, new)
+                type.__setattr__(attr, new)
 
             else:
-                raise NotImplementedError("variable is locked")
+                raise AttributeError("attribute is locked")
 
-        _dict["peek"] = peek
-        _dict["_banned"] = set()
-        _dict["_rlock"] = threading.RLock()
-        return super(PolicedAttributes, meta).__new__(meta, name, bases, _dict)
+        dict_["peek"] = peek
+        dict_["_banned"] = set()
+        dict_["_rlock"] = threading.RLock()
+        return super(PolicedAttributes, mcs).__new__(mcs, name, bases, dict_)
 
 
-    @_PA_rlock
+    @_pa_rlock
     def __getattribute__(cls, name):
         type.__getattribute__(cls, "_banned").add(name)
         return type.__getattribute__(cls, name)
 
 
-    @_PA_rlock
+    @_pa_rlock
     def __setattr__(cls, name, value):
         if name in type.__getattribute__(cls, "_banned"):
-            raise NotImplementedError("value has already been read")
+            FixedAttributes.__setattr__(cls, name, value)
 
         type.__setattr__(cls, name, value)
-
-
-    def __call__(cls, *args, **kwds):
-        raise NotImplementedError("this class cannot be instantiated")
-
-
-
-class FixedAttributes(type):
-    """Implements a namespace class of constants."""
-
-
-    def __setattr__(cls, name, value):
-        raise NotImplementedError("value cannot be changed")
-
-
-    def __call__(cls, *args, **kwds):
-        raise NotImplementedError("this class cannot be instantiated")
 
 
 
@@ -132,6 +140,9 @@ class PathStr(str):
 
     In this case the higher precedence of / is unfortunate.
     """
+
+    # pylint: disable=R0904
+
 
     def __div__(self, other):
         return PathStr(os.path.join(str(self), other))
@@ -146,8 +157,11 @@ class PathStr(str):
 
 
 
-class slot_object(object):
+class SlotObject(object):
     """A mutable object containing an immutable object."""
+
+
+    # pylint: disable=R0903
 
 
     __slots__ = ['value']
@@ -170,11 +184,15 @@ class slot_object(object):
 
 
     def __repr__(self):
-        return "slot_object(%s)" % repr(self.value)
+        return "SlotObject(%s)" % repr(self.value)
 
 
     def __getattr__(self, what):
+        """Universal getter for get_ prefix."""
+        
         def assign(value):
+            """Returned by set_ prefix call. A setter function."""
+            
             self.value = value
 
         if what.startswith("get_"):

@@ -43,7 +43,7 @@ from .playergui import *
 from .sourceclientgui import *
 from .preferences import *
 from .jingles import *
-from .utils import slot_object
+from .utils import SlotObject
 from .gtkstuff import threadslock, WindowSizeTracker
 from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog
 from . import midicontrols
@@ -140,6 +140,10 @@ class JackMenu(MenuMixin):
         self.ports = []
         self.pathname = pm.session_pathname
         self.session_type = pm.session_type
+
+        # pylint: disable=E1103
+        #
+        # member really exists, was created by setattr
 
         self.build(menu.jackmenu)(zip(
                     "channels voip dsp mix midi output".split(), (_('Channels'),
@@ -367,6 +371,7 @@ class MicButton(gtk.ToggleButton):
     @property
     def flash(self):
         return self.__flash
+
     @flash.setter
     def flash(self, value):
         self.__flash = bool(value) and self.has_reminder_flash()
@@ -1904,9 +1909,9 @@ class MainWindow:
             song = artist.decode("utf-8", "replace") + u" - " + \
                                                 title.decode("utf-8", "replace")
         if infotype == 2:
-            song = artist_title.decode("utf-8", "replace")
             if not artist and " - " in title:
                 artist, title = title.split(" - ")
+            song = artist + " - " + title
         if infotype == 3:
             if not artist and " - " in title:
                 artist, title = title.split(" - ")
@@ -2321,7 +2326,6 @@ class MainWindow:
         gobject.source_remove(self.statstimeout)
         gobject.source_remove(self.vutimeout)
         gobject.source_remove(self.savetimeout)
-        self.server_window.source_client_close()
         self._mixer_ctrl.close()
         if gtk.main_level():
             gtk.main_quit()
@@ -3315,31 +3319,31 @@ class MainWindow:
         self.PUBLIC_PHONE = 1
         self.PRIVATE_PHONE = 2
         self.mixermode = self.NO_PHONE
-        self.jingles_playing = slot_object(0)
-        self.interlude_playing = slot_object(0)
-        self.player_left.playtime_elapsed = slot_object(0)
-        self.player_right.playtime_elapsed = slot_object(0)
-        self.player_left.mixer_playing = slot_object(0)
-        self.player_right.mixer_playing = slot_object(0)
-        self.player_left.mixer_signal_f = slot_object(0)
-        self.player_right.mixer_signal_f = slot_object(0)
-        self.player_left.mixer_cid = slot_object(0)
-        self.player_right.mixer_cid = slot_object(0)
-        self.left_compression_level = slot_object(0)
-        self.right_compression_level = slot_object(0)
-        self.left_deess_level = slot_object(0)
-        self.right_deess_level = slot_object(0)
-        self.left_noisegate_level = slot_object(0)
-        self.right_noisegate_level = slot_object(0)
-        self.jingles.mixer_jingles_cid = slot_object(0)
-        self.jingles.mixer_interlude_cid = slot_object(0)
-        self.player_left.runout = slot_object(0)
-        self.player_right.runout = slot_object(0)
-        self.metadata_left_ctrl = slot_object(0)
-        self.metadata_right_ctrl = slot_object(0)
-        self.player_left.silence = slot_object(0.0)
-        self.player_right.silence = slot_object(0.0)
-        self.sample_rate = slot_object(0)
+        self.jingles_playing = SlotObject(0)
+        self.interlude_playing = SlotObject(0)
+        self.player_left.playtime_elapsed = SlotObject(0)
+        self.player_right.playtime_elapsed = SlotObject(0)
+        self.player_left.mixer_playing = SlotObject(0)
+        self.player_right.mixer_playing = SlotObject(0)
+        self.player_left.mixer_signal_f = SlotObject(0)
+        self.player_right.mixer_signal_f = SlotObject(0)
+        self.player_left.mixer_cid = SlotObject(0)
+        self.player_right.mixer_cid = SlotObject(0)
+        self.left_compression_level = SlotObject(0)
+        self.right_compression_level = SlotObject(0)
+        self.left_deess_level = SlotObject(0)
+        self.right_deess_level = SlotObject(0)
+        self.left_noisegate_level = SlotObject(0)
+        self.right_noisegate_level = SlotObject(0)
+        self.jingles.mixer_jingles_cid = SlotObject(0)
+        self.jingles.mixer_interlude_cid = SlotObject(0)
+        self.player_left.runout = SlotObject(0)
+        self.player_right.runout = SlotObject(0)
+        self.metadata_left_ctrl = SlotObject(0)
+        self.metadata_right_ctrl = SlotObject(0)
+        self.player_left.silence = SlotObject(0.0)
+        self.player_right.silence = SlotObject(0.0)
+        self.sample_rate = SlotObject(0)
         
         self.feature_set = gtk.ToggleButton()
         self.feature_set.set_active(True)
