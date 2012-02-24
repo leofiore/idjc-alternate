@@ -3,7 +3,7 @@
 idjc-rm - Remove a profile
 .SH SYNOPSIS
 .P
-idjc rm [-h] profile_name [profile_name ...]
+idjc rm [-h] [-D config_directory] profile_name [profile_name ...]
 .SH DESCRIPTION
 Removes an
 .B idjc
@@ -14,10 +14,16 @@ profile or profiles from the relevant config directory.
 Show a help message.
 .RE
 .PP
+.BR "-D, --configdir" =CONFIGDIRECTORY
+.RS
+An alternate config directory may be specified to store all the config settings.
+.RE
+.PP
 .SS Requirements
 .B "profile_name"
 .RS
 The name of a profile to remove. Additional profiles can be specified.
 .RE
+.PP
 .SH REPORTING BUGS
 .SH SEE ALSO

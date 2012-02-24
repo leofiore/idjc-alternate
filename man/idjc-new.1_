@@ -4,7 +4,7 @@ idjc-new - Create a new profile
 .SH SYNOPSIS
 .P
 idjc new [-h] [-t template_profile] [-i icon_pathname] [-n nickname]
-         [-d description_text]
+         [-d description_text] [-D config_directory]
          profile_name
 .SH DESCRIPTION
 Each running instance of
@@ -34,6 +34,11 @@ NICKNAME=an alternative name to the profile. Unlike the profile any unicode is p
 .BR "-d, --description" =DESC
 .RS
 DESC=some description text. A label for your profile stating what it will be used for.
+.RE
+.PP
+.BR "-D, --configdir" =CONFIGDIRECTORY
+.RS
+An alternate config directory may be specified to store all the config settings.
 .RE
 .PP
 .SS Requirements

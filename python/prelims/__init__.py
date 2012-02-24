@@ -167,6 +167,7 @@ class ArgumentParserImplementation(object):
                 metavar=_("session_details"),
                 help=_("e.g. 'L1:name' for a named Ladish [L1] session called "
                 "'name' -- refer to the idjc man page for more details"))
+
         sp_run.add_argument("--no-jack-connections", dest="no_jack_connections",
                 action="store_true",
                 help=_('At start-up do not make any JACK connections. This '
@@ -176,6 +177,7 @@ class ArgumentParserImplementation(object):
                         dest="no_default_jack_connections", action="store_true",
                 help=_('No JACK ports will be connected except those listed in'
                 ' the session file.'))
+                
         group = sp_run.add_argument_group(_("user interface settings"))
         group.add_argument("-c", "--channels", dest="channels", nargs="+",
                 metavar="c",
@@ -236,6 +238,13 @@ class ArgumentParserImplementation(object):
         sp_ls.add_argument("-h", "--help", action="help",
                 help=_('show this help message and exit'))
         sp_ls.add_argument("--dummyarg", dest="ls", help=argparse.SUPPRESS)
+
+        # Each subprogram takes the -D option.
+        for each in (sp_run, sp_new, sp_rm, sp_auto, sp_noauto, sp_ls):
+            each.add_argument("-D", "--config-dir", dest="configdir", nargs=1,
+                                # TC: command line help placeholder.
+                                metavar=_("config_directory"),
+                                help=_("An alternative config directory."))
 
 
 
@@ -396,6 +405,13 @@ class ProfileManager(object):
     def __init__(self):
         ap = ArgumentParserImplementation()
         args = ap.parse_args()
+
+        if "configdir" in args and args.configdir is not None:
+            if os.path.isdir(args.configdir[0]):
+                PGlobs.profile_dir = PathStr(args.configdir[0])
+            else:
+                ap.error(_("specified config directory does not exist: %s") %
+                                                            args.configdir[0])
 
         if PGlobs.profile_dir is not None:
             try:
@@ -753,7 +769,7 @@ class ProfileManager(object):
             print "%s run -p %s" % (FGlobs.bindir / 
                                                 FGlobs.package_name, profile)
             subprocess.Popen([FGlobs.bindir / FGlobs.package_name,
-                                        "run", "-p", profile], close_fds=True)
+                "run", "-p", profile, "-D", PGlobs.profile_dir], close_fds=True)
 
 
     def _generate_profile(self, newprofile, template=None, **kwds):

@@ -6,7 +6,7 @@ idjc-run - Launch the idjc main application
 idjc run [-h] [-d {true,false}] [-p profile_choice] [-j server_name]
          [-S session_details] [--no-jack-connections] [-C]
          [-c c [c ...]] [-V {off,private,public}] [-P p [p ...]]
-         [-s s [s ...]] [-x {1,2}]
+         [-s s [s ...]] [-x {1,2}] [-D config_directory]
 .SH DESCRIPTION
 .SS General options
 .B -h, --help
@@ -42,6 +42,11 @@ A possibly useful option if you are using some kind of session manager. On start
 .B --no-default-jack-connections
 .RS
 No JACK ports will be connected except those listed in the session file. Naturally that means if the session file doesn't exist no connections will be made.
+.RE
+.PP
+.BR "-D, --configdir" =CONFIGDIRECTORY
+.RS
+An alternate config directory may be specified to store all the config settings.
 .RE
 .PP
 .SS User interface options

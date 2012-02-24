@@ -3,7 +3,7 @@
 idjc-noauto - No automatic profile
 .SH SYNOPSIS
 .P
-idjc noauto [-h]
+idjc noauto [-h] [-D config_directory]
 .SH DESCRIPTION
 Removes the automatic profile property after which when starting
 .B idjc
@@ -12,6 +12,11 @@ if no profile is chosen on the command line the Profile Manager will appear in o
 .B -h, --help
 .RS
 Show a help message.
+.RE
+.PP
+.BR "-D, --configdir" =CONFIGDIRECTORY
+.RS
+An alternate config directory may be specified to store all the config settings.
 .RE
 .PP
 .SH REPORTING BUGS
