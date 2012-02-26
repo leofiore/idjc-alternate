@@ -31,6 +31,7 @@ import gettext
 import itertools
 import collections
 import json
+import uuid
 
 import glib
 import gobject
@@ -138,7 +139,7 @@ class JackMenu(MenuMixin):
         self.write = write
         self.read = read
         self.ports = []
-        self.pathname = pm.session_pathname
+        self.pathname = pm.ports_pathname
         self.session_type = pm.session_type
 
         # pylint: disable=E1103
@@ -1863,8 +1864,7 @@ class MainWindow:
                 adjustment = self.history_window.get_vadjustment()
                 adjustment.set_value(adjustment.upper)
                 try:
-                    file = open(PGlobs.profile_dir / pm.profile /
-                                                            "history.log", "a")
+                    file = open(pm.basedir / "history.log", "a")
                 except IOError:
                     print "unable to open history.log for writing"
                 else:
@@ -2603,7 +2603,7 @@ class MainWindow:
         
         # Resources to reserve.
         config = ConfigParser.RawConfigParser()
-        config.read(PGlobs.profile_dir / pm.profile / 'config')
+        config.read(pm.basedir / 'config')
         try:
             PGlobs.num_micpairs = config.getint(
                                         'resource_count', 'num_micpairs') // 2
@@ -2626,8 +2626,14 @@ class MainWindow:
             os.environ["jack_parameter"] = args.jackserver[0]
         else:
             os.environ["jack_parameter"] = "default"
-                
-        os.environ["client_id"] = client_id = "idjc_" + pm.profile
+
+        if pm.profile is not None:
+            client_id = "idjc_" + pm.profile
+        else:
+            # Client ID is by session type and name.
+            client_id = "idjc_%s_%s" % (pm.session_type, pm.session_name)
+            
+        os.environ["client_id"] = client_id
         os.environ["mic_qty"] = str(PGlobs.num_micpairs * 2)
         os.environ["num_streamers"] = str(PGlobs.num_streamers)
         os.environ["num_encoders"] = str(PGlobs.num_encoders)
@@ -3409,8 +3415,11 @@ class MainWindow:
                     "activate", lambda w: self.prefs_window.window.present())
         self.menu.jinglesmenu_i.connect(
                     "activate", lambda w: self.jingles.window.present())
-        self.menu.profilesmenu_i.connect(
+        if pm.profile is not None:
+            self.menu.profilesmenu_i.connect(
                     "activate", lambda w: pm.profile_dialog.present())
+        else:
+            self.menu.profilesmenu_i.set_sensitive(False)
         self.menu.aboutmenu_i.connect(
                     "activate", lambda w: self.prefs_window.show_about())
 

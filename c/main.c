@@ -92,6 +92,7 @@ int main(void)
     char *buffer = NULL;
     size_t n = 10;
     int keep_running = TRUE;
+    jack_options_t options = 0;
 
     /* Without these being set the backend will segfault. */
         {
@@ -119,7 +120,12 @@ int main(void)
     /* Signal handling. */
     sig_init();
 
-    if ((g.client = jack_client_open(getenv("client_id"), JackUseExactName | JackServerName, NULL, getenv("jack_parameter"))) == 0)
+    if (!(strcmp(getenv("session_type"), "JACK")))
+        options = JackSessionID;
+    else
+        options = JackUseExactName | JackServerName;
+
+    if ((g.client = jack_client_open(getenv("client_id"), options, NULL, getenv("jack_parameter"))) == 0)
         {
         fprintf(stderr, "main.c: jack_client_open failed");
         exit(5);

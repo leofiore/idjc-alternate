@@ -28,6 +28,7 @@ import time
 import math
 import fcntl
 import re
+import glob
 import datetime
 import subprocess
 from functools import partial
@@ -70,10 +71,10 @@ class ArgumentParser(argparse.ArgumentParser):
     def error(self, text):
         raise ArgumentParserError(text)
 
-        
+
     def exit_with_message(self, text):
         """This is just error on the superclass."""
-        
+
         super(ArgumentParser, self).error(text)
 
 
@@ -92,14 +93,14 @@ class ArgumentParserImplementation(object):
 
         if description is None:
             description = PGlobs.app_longform
-            
+
         ap = self._ap = ArgumentParser(description=description, epilog=epilog,
                                                                 add_help=False)
         ap.add_argument("-h", "--help", action="help", help=_('show this help '
         'message and exit -- additional help is available on each of the '
         'sub-commands for example: "%(prog)s run --help" shows the help '
         'for the run command'))
-        ap.add_argument("-v", "--version", action='version', 
+        ap.add_argument("-v", "--version", action='version',
                 version=FGlobs.package_name + " " + FGlobs.package_version,
                 # TC: a command line option help string.
                 help=_("show the version number and exit"))
@@ -119,13 +120,13 @@ class ArgumentParserImplementation(object):
             # TC: do not translate the word new.
             description=description + " " + _("-- sub-command: new -- "
             "make a new profile"), epilog=epilog)
-        
+
         # TC: a command line option help string.
         sp_rm = sp.add_parser("rm", add_help=False, help=_("remove profile(s)"),
             # TC: do not translate the word rm.
             description=description + " " + _("-- sub-command: rm -- remove "
             "profile(s)"), epilog=epilog)
-        
+
         # TC: a command line option help string.
         sp_auto = sp.add_parser("auto", add_help=False, help=_("select which "
         "profile is to automatically launch"),
@@ -138,7 +139,7 @@ class ArgumentParserImplementation(object):
                                                 help=_("remove auto-launch"),
             description=description + " " + _("-- sub-command: noauto -- "
             "remove auto-launch"), epilog=epilog)
-        
+
         # TC: a command line option help string.
         sp_ls = sp.add_parser("ls", add_help=False,
                                             help=_("list available profiles"),
@@ -148,14 +149,14 @@ class ArgumentParserImplementation(object):
 
         sp_run.add_argument("-h", "--help", action="help",
                                     help=_('show this help message and exit'))
-        sp_run.add_argument("-d", "--dialog", dest="dialog", nargs=1, 
-                choices=("true", "false"), 
+        sp_run.add_argument("-d", "--dialog", dest="dialog", nargs=1,
+                choices=("true", "false"),
                 help=_("""force the appearance or non-appearance of the
                 profile chooser dialog -- when used with the -p option
                 the chosen profile is preselected"""))
         # TC: command line help placeholder.
         sp_run.add_argument("-p", "--profile", dest="profile", nargs=1,
-                                                    metavar=_("profile_choice"), 
+                                                    metavar=_("profile_choice"),
                 help=_("""the profile to use -- overrides the user interface
                 preferences "show profile dialog" option"""))
         sp_run.add_argument("-j", "--jackserver", dest="jackserver", nargs=1,
@@ -177,7 +178,7 @@ class ArgumentParserImplementation(object):
                         dest="no_default_jack_connections", action="store_true",
                 help=_('No JACK ports will be connected except those listed in'
                 ' the session file.'))
-                
+
         group = sp_run.add_argument_group(_("user interface settings"))
         group.add_argument("-c", "--channels", dest="channels", nargs="+",
                 metavar="c",
@@ -192,9 +193,9 @@ class ArgumentParserImplementation(object):
                 metavar="s",
                 help=_("attempt connection with the specified servers"))
         group.add_argument("-x", "--crossfader", dest="crossfader",
-                choices=("1", "2"), 
+                choices=("1", "2"),
                 help=_("position the crossfader for the specified player"))
-                
+
         sp_new.add_argument("-h", "--help", action="help",
                                     help=_('show this help message and exit'))
         # TC: command line help placeholder.
@@ -224,28 +225,20 @@ class ArgumentParserImplementation(object):
                 help=_('show this help message and exit'))
         sp_rm.add_argument("rmprofile", metavar=_("profile_name"), nargs="+",
                 help=_('the profile(s) to remove'))
-        
+
         sp_auto.add_argument("-h", "--help", action="help",
                 help=_('show this help message and exit'))
         sp_auto.add_argument("autoprofile", metavar="profile_name",
                 help=_('the profile to make automatic'))
-        
+
         sp_noauto.add_argument("-h", "--help", action="help",
                 help=_('show this help message and exit'))
         sp_noauto.add_argument("--dummyarg", dest="noauto",
                 help=argparse.SUPPRESS)
-      
+
         sp_ls.add_argument("-h", "--help", action="help",
                 help=_('show this help message and exit'))
         sp_ls.add_argument("--dummyarg", dest="ls", help=argparse.SUPPRESS)
-
-        # Each subprogram takes the -D option.
-        for each in (sp_run, sp_new, sp_rm, sp_auto, sp_noauto, sp_ls):
-            each.add_argument("-D", "--config-dir", dest="configdir", nargs=1,
-                                # TC: command line help placeholder.
-                                metavar=_("config_directory"),
-                                help=_("An alternative config directory."))
-
 
 
     def parse_args(self):
@@ -263,12 +256,12 @@ class ArgumentParserImplementation(object):
 
     def error(self, text):
         self._ap.exit_with_message(text)
-        
-        
+
+
     def exit(self, status=0, message=None):
         self._ap.exit(status, message)
 
-      
+
 
 class DBusUptimeReporter(dbus.service.Object):
     """Supply uptime to other idjc instances."""
@@ -276,18 +269,18 @@ class DBusUptimeReporter(dbus.service.Object):
 
     interface_name = PGlobs.dbus_bus_basename + ".profile"
     obj_path  = PGlobs.dbus_objects_basename + "/uptime"
-    
-    
+
+
     def __init__(self):
         self._uptime_cache = defaultdict(float)
         self._interface_cache = {}
         # Defer base class initialisation.
-                                    
-                                    
+
+
     @dbus.service.method(interface_name, out_signature="d")
     def get_uptime(self):
         """Broadcast uptime from the current profile."""
-        
+
         return self._get_uptime()
 
 
@@ -298,10 +291,10 @@ class DBusUptimeReporter(dbus.service.Object):
 
     def get_uptime_for_profile(self, profile):
         """Ask and return the uptime of an active profile.
-        
+
         Step 1, Issue an async request for new data.
         Step 2, Return immediately with the cached value.
-        
+
         Note: On error the cache is purged.
 
         Supports synchronous mode in the absence of an event loop.
@@ -310,8 +303,8 @@ class DBusUptimeReporter(dbus.service.Object):
 
         def rh(retval):
             self._uptime_cache[profile] = retval
-            
-        
+
+
         def eh(exception):
             try:
                 del self._uptime_cache[profile]
@@ -333,7 +326,7 @@ class DBusUptimeReporter(dbus.service.Object):
             except dbus.exceptions.DBusException as e:
                 eh(e)
                 return self._uptime_cache.default_factory()
-            
+
             self._interface_cache[profile] = interface
 
         if glib.main_depth():
@@ -364,10 +357,10 @@ def profile_name_valid(p):
 
 class ProfileError(Exception):
     """General purpose exception used within the ProfileManager class.
-    
+
     Takes two strings so that one can be used for command line messages
     and the other for displaying in dialog boxes."""
-    
+
     def __init__(self, str1, str2=None):
         Exception.__init__(self, str1)
         self.gui_text = str2
@@ -376,7 +369,7 @@ class ProfileError(Exception):
 
 def profileclosure(cmd, name):
     """A factory function of sorts."""
-    
+
 
     busbase = PGlobs.dbus_bus_basename
     def inner(profname):
@@ -388,15 +381,16 @@ def profileclosure(cmd, name):
 
 class ProfileManager(object):
     """The profile gives each application instance a unique identity.
-    
-    This identity extends to the config file directory if present, 
+
+    This identity extends to the config file directory if present,
     to the JACK application ID, to the DBus bus name.
     """
-    
+
     __metaclass__ = Singleton
-    
+
 
     _profile = _dbus_bus_name = _profile_dialog = _init_time = None
+    _iconpathname = PGlobs.default_icon
 
     _textoptionals = ("nickname", "description")
     _optionals = ("icon",) + _textoptionals
@@ -406,53 +400,53 @@ class ProfileManager(object):
         ap = ArgumentParserImplementation()
         args = ap.parse_args()
 
-        if "configdir" in args and args.configdir is not None:
-            if os.path.isdir(args.configdir[0]):
-                PGlobs.profile_dir = PathStr(args.configdir[0])
-            else:
-                ap.error(_("specified config directory does not exist: %s") %
-                                                            args.configdir[0])
+        try:
+            if not os.path.isdir(PGlobs.profile_dir / default):
+                self._generate_default_profile()
 
-        if PGlobs.profile_dir is not None:
-            try:
-                if not os.path.isdir(PGlobs.profile_dir / default):
-                    self._generate_default_profile()
+            if "newprofile" in args:
+                self._generate_profile(**vars(args))
+                ap.exit(0)
+        except ProfileError as e:
+            ap.error(_("failed to create profile: %s") % str(e))
 
-                if "newprofile" in args:
-                    self._generate_profile(**vars(args))
-                    ap.exit(0)
-            except ProfileError as e:
-                ap.error(_("failed to create profile: %s") % str(e))
+        try:
+            if "rmprofile" in args:
+                self._delete_profile(None, args.rmprofile)
+                ap.exit(0)
+        except ProfileError as e:
+            ap.error(_("failed to delete profile: %s") % str(e))
 
-            try:
-                if "rmprofile" in args:
-                    self._delete_profile(None, args.rmprofile)
-                    ap.exit(0)
-            except ProfileError as e:
-                ap.error(_("failed to delete profile: %s") % str(e))
-                
-            try:
-                if "autoprofile" in args:
-                    self._auto(None, args.autoprofile)
-                    ap.exit(0)
-            except ProfileError as e:
-                ap.error(_("auto failed: %s") % str(e))
-              
-            try:
-                if "noauto" in args:
-                    self._noauto()
-                    ap.exit(0)
-            except EnvironmentError as e:
-                ap.error(_("noauto failed: %s") % e)
+        try:
+            if "autoprofile" in args:
+                self._auto(None, args.autoprofile)
+                ap.exit(0)
+        except ProfileError as e:
+            ap.error(_("auto failed: %s") % str(e))
 
-            self._uprep = DBusUptimeReporter()
+        try:
+            if "noauto" in args:
+                self._noauto()
+                ap.exit(0)
+        except EnvironmentError as e:
+            ap.error(_("noauto failed: %s") % e)
 
-            try:
-                if "ls" in args:
-                    self._ls()
-                    ap.exit(0)
-            except EnvironmentError as e:
-                ap.error(_("ls failed: %s") % e)
+        self._uprep = DBusUptimeReporter()
+
+        try:
+            if "ls" in args:
+                self._ls()
+                ap.exit(0)
+        except EnvironmentError as e:
+            ap.error(_("ls failed: %s") % e)
+
+        self._session_type, self._session_dir, self._session_name = \
+                                                self._parse_session(ap, args)
+
+        print "##", self._session_type, self._session_dir, self._session_name
+
+        if self._session_dir is None:
+            # Not in session mode so do the profile init stuff.
 
             profile = self.autoloadprofilename
             if profile is None:
@@ -469,19 +463,17 @@ class ProfileManager(object):
 
             if args.dialog is not None:
                 dialog_selects = args.dialog[0] == "true"
-            
+
             if not dialog_selects and profile:
                 if not profile_name_valid(profile):
                     ap.error(_('profile name is bad'))
-                    
+
                 if profile not in os.walk(PGlobs.profile_dir).next()[1]:
                     ap.error(_('profile %s does not exist') % profile)
-                    
+
                 if self._profile_has_owner(profile):
                     ap.error(_('profile %s is already running') % profile)
-                
-            self._parse_session(ap, args)
-          
+
             self._profile_dialog = self._get_profile_dialog()
             self._profile_dialog.connect("delete", self._delete_profile)
             self._profile_dialog.connect("choose", self._choose_profile)
@@ -528,21 +520,24 @@ class ProfileManager(object):
     def dbus_bus_name(self):
         return self._dbus_bus_name
 
-        
+
     @property
     def basedir(self):
-        """The base directory of this profile."""
-        
-        return PGlobs.profile_dir / self.profile
-        
-        
+        """The root save directory."""
+
+        if self._session_dir is not None:
+            return self._session_dir
+        else:
+            return PGlobs.profile_dir / self.profile
+
+
     @property
     def jinglesdir(self):
         """The directory for jingles storage."""
-        
+
         return self.basedir / "jingles"
-        
-        
+
+
     @property
     def session_type(self):
         """Session mode: L0 for none, L1 for Ladish L1 mode."""
@@ -551,38 +546,46 @@ class ProfileManager(object):
 
 
     @property
-    def session_pathname(self):
-        """Where to save jack session to and load it from."""
+    def session_name(self):
+        """The name of the session."""
         
-        if self._session_filename.startswith("/"):
-            return self._session_filename
-        else:
-            # With no absolute path we shall use the profile directory.
-            return self.basedir / "_".join(("ports", self._session_type,
-                                                        self._session_filename))
+        return self._session_name
+
+
+    @property
+    def ports_pathname(self):
+        """Where to save jack session to and load it from."""
+
+        return self.basedir / ("ports-%s-%s" % (
+                                        self.session_type, self.session_name))
 
 
     @property
     def title_extra(self):
         """Window title text indicating which profile is in use."""
-        
-        n = self._nickname
-        if n:
-            return "  (%s:%s)" % ((self.profile, n))
+
+        if self.profile is not None:
+            n = self._nickname
+            if n:
+                return "  (%s:%s)" % ((self.profile, n))
+            else:
+                if self.profile == default:
+                    return ""
+                return "  (%s)" % self.profile
         else:
-            if self.profile == default:
-                return ""
-            return "  (%s)" % self.profile
+            # TC: text appears in the title bar when in session mode.
+            return "  (%s)" % _('session={type}:{name}').format(
+                                type=self.session_type, name=self.session_name)
 
 
     @property
     def autoloadprofilename(self):
         """Which profile would automatically load if given the chance?"""
-        
+
         al_profile = self._autoloadprofilename()
         if al_profile is None:
             return None
-        
+
         try:
             profiledirs = os.walk(PGlobs.profile_dir).next()[1]
         except (EnvironmentError, StopIteration):
@@ -603,37 +606,98 @@ class ProfileManager(object):
             return 0.0
 
 
-    def _parse_session(self, ap, args):
+    @staticmethod
+    def _parse_session(ap, args):
+        """User supplied session details are parsed and checked for validity."""
+
         if args.session is None:
-            s = ["L0", default]
+            # The None parameter below indicates profile mode is on and the
+            # profile will determine the save directory, otherwise we return
+            # the save directory instead.
+
+            # L0 relates to Ladish [L0] mode which is an unmanaged session.
+            # The final return value is the save location of the JACK port
+            # connections file.
+            # Since it's not a pathname it goes in the standard save directory.
+            return "L0", None, "default"
+
+        if ":" in args.session[0]:
+            session_type, rest = args.session[0].split(":", 1)
+            if ":" in rest:
+                session_name, session_dir = rest.split(":", 1)
+            else:
+                session_name = rest
+                session_dir = None
         else:
-            s = args.session[0].split(":", 1)
+            session_type = args.session[0]
+            session_name = "default"
+            session_dir = None
 
+        # Check validity of session_type and normalize it.
+        supported_sessions = {"l0": "L0", "l1": "L1", "jack": "JACK"}
         try:
-            self._session_type = {"l0":"L0", "l1":"L1"}[s[0].lower()]
+            session_type = supported_sessions[session_type.lower()]
         except KeyError:
-            ap.error(_("unsupported session mode: %s") % s[0])
+            ap.error(_("unknown session type: %s: must be one of %s") %
+                            (session_type, str(supported_sessions.values())))
 
-        os.environ["session_type"] = self._session_type
+        # The backend when started needs to know what session type we are using.
+        os.environ["session_type"] = session_type
 
-        if self._session_type in ("L0", "L1"):
-            if len(s) == 2:
-                if s[1][0] in list("/~."):
-                    sf = os.path.realpath(os.path.expanduser(s[1]))
-                    if os.path.exists(sf) and not os.path.isfile(sf):
-                        ap.error(_(
-                        'session pathname exists but is not a file: %s') % sf)
-                    print "session pathname is", sf
-                elif not any(True for x in s[1] if x in ("/", " ")):
-                    sf = s[1]
-                else:
-                    ap.error(_("unsupported session name or session pathname "
-                    "-- pathnames must start with one of '/~.' -- names must "
-                    "not contain / characters or spaces: %s") % s[1])
-            elif len(s) == 1:
-                sf = default
-              
-        self._session_filename = sf
+        if re.match("^[a-zA-Z0-9_]+$", session_name) is None:
+            ap.error("session name must match [a-zA-Z0-9_]+")
+
+        if session_dir is not None:
+            session_dir = os.path.realpath(os.path.expanduser(session_dir))
+            
+            if not os.path.isdir(session_dir):
+                ap.error(_('save directory does not exist: %s') % session_dir)
+            
+            # Make subdir for the actual save path based on the mode and name.
+            session_dir = os.path.join(session_dir, "idjc-%s-%s" % (
+                                                session_type, session_name))
+
+            # Copy settings from a specified profile.
+            if args.profile is not None:
+                # Checks for profile validity.
+                if not profile_name_valid(args.profile[0]):
+                    ap.error(
+                    _('specified profile is not valid %s') % args.profile[0])
+
+                if not os.path.isdir(PGlobs.profile_dir / args.profile[0]):
+                    ap.error(_('specified profile does not exist: %s') % \
+                                                                args.profile[0])
+
+                # Perform copy of profile data.
+                try:
+                    shutil.copytree(PGlobs.profile_dir / args.profile[0],
+                                                                    session_dir)
+                except EnvironmentError as e:
+                    if e.errno != 17:
+                        ap.error(
+                        "failed to copy data from the profile directory: %s" % \
+                                                                            e)
+
+                # Delete files relating to JACK ports.
+                try:
+                    for each in glob.iglob(
+                                        os.path.join(session_dir, "ports_*")):
+                        os.unlink(each)
+                except EnvironmentError as e:
+                    print str(e)
+
+            else:
+                # Just make the empty session directory.
+                os.makedirs(session_dir)
+
+        if session_type == "JACK":
+            try:
+                uuid.UUID(args.jackserver[0])
+            except TypeError:
+                ap.error(
+                _("session mode is JACK but no UUID specified to -j option"))
+
+        return session_type, PathStr(session_dir), session_name
 
 
     def _autoloadprofilename(self):
@@ -646,7 +710,7 @@ class ProfileManager(object):
         except IOError:
             return None
         return al_profile
-        
+
 
     def _auto(self, dialog, profile):
         if dialog is None and profile != default and not \
@@ -664,7 +728,7 @@ class ProfileManager(object):
         except IOError as e:
             if dialog is None:
                 raise ProfileError(str(e), None)
-            
+
 
     def _noauto(self):
         try:
@@ -677,14 +741,14 @@ class ProfileManager(object):
 
     def _cb_edit_profile(self, dialog, newprofile, oldprofile, *opts):
         busses = []
-        
+
         try:
             try:
                 busses.append(self._grab_bus_name_for_profile(oldprofile))
                 if newprofile != oldprofile:
                     busses.append(self._grab_bus_name_for_profile(newprofile))
             except dbus.DBusException:
-                raise ProfileError(None, _("Profile %s is active.") % 
+                raise ProfileError(None, _("Profile %s is active.") %
                                         (oldprofile, newprofile)[len(busses)])
 
             if newprofile != oldprofile:
@@ -693,11 +757,11 @@ class ProfileManager(object):
                                                 PGlobs.profile_dir / newprofile)
                 except EnvironmentError as e:
                     if e.errno == 17:
-                        raise ProfileError(None, 
+                        raise ProfileError(None,
                         _("Cannot rename profile {0} to {1}, {1} currently "
                                     "exists.").format(oldprofile, newprofile))
                     else:
-                        raise ProfileError(None, 
+                        raise ProfileError(None,
                             _("Error during attempt to rename {0} to {1}."
                                             ).format(oldprofile, newprofile))
 
@@ -714,8 +778,8 @@ class ProfileManager(object):
                             transient_parent=dialog.get_new_profile_dialog())
         else:
             dialog.destroy_new_profile_dialog()
-        
-        
+
+
     def _delete_profile(self, dialog, profiles):
         if isinstance(profiles, str):
             profiles = [profiles]
@@ -729,18 +793,18 @@ class ProfileManager(object):
                     if dialog is None:
                         raise ProfileError(_("could not get a lock on profile"
                                     " {0}: {1}").format(profile, str(e)), None)
-                
+
             # Check all directories exist beforehand.
             if not any(os.path.isdir(PGlobs.profile_dir / x) for x in profiles):
                 raise ProfileError(_('profile does not exist'))
-                
+
             for profile in profiles:
                 try:
                     shutil.rmtree(PGlobs.profile_dir / profile)
                 except OSError as e:
                     if dialog is None:
                         raise ProfileError(e, None)
-                        
+
             del busnames
 
             if profile == default:
@@ -766,10 +830,10 @@ class ProfileManager(object):
                 self._uprep.activate_for_profile(
                                 self._dbus_bus_name, self.get_uptime)
         else:
-            print "%s run -p %s" % (FGlobs.bindir / 
+            print "%s run -p %s" % (FGlobs.bindir /
                                                 FGlobs.package_name, profile)
             subprocess.Popen([FGlobs.bindir / FGlobs.package_name,
-                "run", "-p", profile, "-D", PGlobs.profile_dir], close_fds=True)
+                "run", "-p", profile], close_fds=True)
 
 
     def _generate_profile(self, newprofile, template=None, **kwds):
@@ -777,13 +841,13 @@ class ProfileManager(object):
             if len(newprofile) > MAX_PROFILE_LENGTH:
                 raise ProfileError(_("the profile length is too long "
                         "(max %d characters)") % MAX_PROFILE_LENGTH,
-                        _("The profile length is too long (max %d characters).") 
+                        _("The profile length is too long (max %d characters).")
                         % MAX_PROFILE_LENGTH)
 
             if not profile_name_valid(newprofile):
                 raise ProfileError(_("the new profile name is not valid"),
                         _("The new profile name is not valid."))
-              
+
             try:
                 busname = self._grab_bus_name_for_profile(newprofile)
             except dbus.DBusException:
@@ -795,7 +859,7 @@ class ProfileManager(object):
             except EnvironmentError:
                 raise ProfileError(_("temporary directory creation failed"),
                         _("Temporary directory creation failed."))
-                
+
             try:
                 if template is not None:
                     if not profile_name_valid(template):
@@ -804,7 +868,7 @@ class ProfileManager(object):
                                                                     template,
                             _("The specified template '%s' is not valid.") %
                                                                     template)
-                    
+
                     tdir = PGlobs.profile_dir / template
                     if os.path.isdir(tdir):
                         for top, dirs, files in os.walk(tdir):
@@ -824,7 +888,7 @@ class ProfileManager(object):
                                                                     template,
                             _("The template profile '%s' does not exist.") %
                                                                     template)
-                        
+
                 for fname in self._optionals:
                     if kwds.get(fname):
                         try:
@@ -834,7 +898,7 @@ class ProfileManager(object):
                             raise ProfileError(
                                         _("could not write file %s") + fname,
                                         _("Could not write file %s.") % fname)
-                
+
 
                 dest = PGlobs.profile_dir / newprofile
                 try:
@@ -878,7 +942,7 @@ class ProfileManager(object):
                             rslt[each] = f.read()
                     except EnvironmentError:
                         rslt[each] = None
-                    
+
                 rslt["active"] = self._profile_has_owner(profname)
                 rslt["uptime"] = math.floor(self._uprep.get_uptime_for_profile(
                                                                     profname))
@@ -899,13 +963,13 @@ class ProfileManager(object):
             table.append(row)
 
         for row in sorted(table):
-            print "{1} {0:{5}} {2:>16} {3} {4}".format(*(tuple(row) + 
+            print "{1} {0:{5}} {2:>16} {3} {4}".format(*(tuple(row) +
                                                         (MAX_PROFILE_LENGTH,)))
 
 
     _profile_has_owner = profileclosure(dbus.SessionBus().name_has_owner,
                             "_profile_has_owner")
-        
+
     _grab_bus_name_for_profile = profileclosure(partial(
         dbus.service.BusName, do_not_queue=True), "_grab_bus_name_for_profile")
 
@@ -921,5 +985,5 @@ class ProfileManager(object):
 
     def _get_profile_dialog(self):
         from .profiledialog import ProfileDialog
-        
+
         return ProfileDialog(default=default, data_function=self._profile_data)

@@ -3,18 +3,13 @@
 idjc-auto - Make a profile be automatic
 .SH SYNOPSIS
 .P
-idjc auto [-h] [-D config_directory] profile_name
+idjc auto [-h] profile_name
 .SH DESCRIPTION
 When a profile is made automatic the Profile Manager window will not appear at startup and instead the automatic profile will load. Only one profile can be automatic at any one time.
 .SS Options
 .B -h, --help
 .RS
 Show a help message.
-.RE
-.PP
-.BR "-D, --configdir" =CONFIGDIRECTORY
-.RS
-An alternate config directory may be specified to store all the config settings.
 .RE
 .PP
 .SS Requirements

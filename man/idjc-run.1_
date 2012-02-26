@@ -6,7 +6,7 @@ idjc-run - Launch the idjc main application
 idjc run [-h] [-d {true,false}] [-p profile_choice] [-j server_name]
          [-S session_details] [--no-jack-connections] [-C]
          [-c c [c ...]] [-V {off,private,public}] [-P p [p ...]]
-         [-s s [s ...]] [-x {1,2}] [-D config_directory]
+         [-s s [s ...]] [-x {1,2}]
 .SH DESCRIPTION
 .SS General options
 .B -h, --help
@@ -42,11 +42,6 @@ A possibly useful option if you are using some kind of session manager. On start
 .B --no-default-jack-connections
 .RS
 No JACK ports will be connected except those listed in the session file. Naturally that means if the session file doesn't exist no connections will be made.
-.RE
-.PP
-.BR "-D, --configdir" =CONFIGDIRECTORY
-.RS
-An alternate config directory may be specified to store all the config settings.
 .RE
 .PP
 .SS User interface options
@@ -102,8 +97,8 @@ and
 environment variables.
 .SH SESSION SUPPORT
 .B idjc
-supports Ladish [L0] and [L1] session modes. On the command line you could specify --session=L1, --session=L1:session-name, or --session=L1:./relative-pathname. Relative pathnames are useful for storing the session file in the Ladish room directory.
-The default mode is L0 which does periodic saving and also saves at exit. You may specify a name or pathname for L0 mode also.
+supports Ladish [L0] and [L1] session modes. On the command line you could specify --session=L1, --session=L1:session-name, or --session=L1:session-name:/path/to/savedir. If a save path is supplied IDJC operates in session rather than profile mode.
+The default mode is L0:default which does periodic saving and also saves at exit. You may specify an alternate name or a session pathname for L0 mode also.
 .PP
 When using L1 mode in Gladish if you choose "Studio/Save Studio" or "Project/Save Project" from the main menu
 .B idjc

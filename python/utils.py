@@ -135,6 +135,17 @@ class PolicedAttributes(FixedAttributes):
 
 
 
+class PathStrMeta(type):
+    """PathStr() returns None if called with None."""
+    
+    def __call__(cls, arg):
+        if arg is None:
+            return None
+        else:
+            return cls.__new__(cls, arg)
+
+
+
 class PathStr(str):
     """A data type to perform path joins using the / operator.
 
@@ -142,6 +153,9 @@ class PathStr(str):
     """
 
     # pylint: disable=R0904
+
+
+    __metaclass__ = PathStrMeta
 
 
     def __div__(self, other):
