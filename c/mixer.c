@@ -1685,7 +1685,7 @@ int mixer_main()
         if (ports_diff)
             {
             port_reports += ports_diff;
-            fprintf(stderr, "port connection changed qty %d\n", ports_diff);
+            fprintf(stderr, "%d JACK port connection(s) changed\n", ports_diff);
             }
             
         /* tell the jack mixer it can reset its vu stats now */

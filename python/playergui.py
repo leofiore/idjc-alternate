@@ -1153,7 +1153,7 @@ class IDJC_Media_Player:
         self.exiting = True
         if self.player_is_playing:
             self.stop.clicked()
-        self.save_session()
+
 
     def save_session(self):
         fh = open(self.session_filename, "w")
@@ -3134,7 +3134,7 @@ class IDJC_Media_Player:
 
         if text == "ToJingles":
             sourcepathname = model.get_value(iter, 1)
-            destpathname = PM.jinglesdir / os.path.split(source)[1]
+            destpathname = PM.jinglesdir / os.path.split(sourcepathname)[1]
             try:
                 source = open(sourcepathname, "r")
                 dest = open(destpathname, "w")

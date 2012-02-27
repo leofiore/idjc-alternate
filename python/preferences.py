@@ -574,10 +574,12 @@ class mixprefs:
         self.parent.mixer_write("RSQT=%d\nACTN=resamplequality\nend\n"
                                                         % self.resample_quality)
 
+
     def cb_resample_quality(self, widget, data):
         if widget.get_active():
             self.resample_quality = data
             self.send_new_resampler_stats()
+
         
     def cb_dither(self, widget, data = None):
         if widget.get_active():
@@ -586,17 +588,31 @@ class mixprefs:
             string_to_send = "ACTN=dontdither\nend\n"
         self.parent.mixer_write(string_to_send)
 
+
     def cb_dj_aud(self, widget):
         self.parent.send_new_mixer_stats()
-        
+
+
     def cb_restore_session(self, widget, data=None):
         state = not widget.get_active()
         for each in (self.lpconfig, self.rpconfig, self.misc_session_frame):
             each.set_sensitive(state)
-            
+
+
     def delete_event(self, widget, event, data=None):
         self.window.hide()
         return True
+
+
+    def save_resource_template(self):
+        try:
+            with open(pm.basedir / "config", "w") as f:
+                f.write("[resource_count]\n")
+                for name, widget in self.rrvaluesdict.iteritems():
+                    f.write(name + "=" + str(int(widget.get_value())) + "\n")
+        except IOError:
+            print "Error while writing out player defaults"
+
 
     def save_player_prefs(self):
         try:
@@ -609,13 +625,7 @@ class mixprefs:
                     f.write(name + "=" + widget.get_text() + "\n")
         except IOError:
             print "Error while writing out player defaults"
-        try:
-            with open(pm.basedir / "config", "w") as f:
-                f.write("[resource_count]\n")
-                for name, widget in self.rrvaluesdict.iteritems():
-                    f.write(name + "=" + str(int(widget.get_value())) + "\n")
-        except IOError:
-            print "Error while writing out player defaults"
+
             
     def load_player_prefs(self):
         proktogglevalue = False

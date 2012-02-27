@@ -179,6 +179,7 @@ class JackMenu(MenuMixin):
             
         self._port_data = []
 
+
     def add_port(self, menu, port):
         pport = os.environ["client_id"] + ":" + port
         self.ports.append(pport)
@@ -186,7 +187,8 @@ class JackMenu(MenuMixin):
         mi = getattr(self, port + "menu_i")
         sub = self.submenu(mi, port)
         mi.connect("activate", self.cb_port_connections, pport, sub)
-        
+
+
     def cb_port_connections(self, mi, port, menu):
         reply = ""
         
@@ -218,10 +220,12 @@ class JackMenu(MenuMixin):
                 mi.connect(
                     "activate", self.cb_activate, port, destport.lstrip("@"))
 
+
     def cb_activate(self, mi, local, dest):
         cmd = "connect" if mi.get_active() else "disconnect"
         self.write(cmd, "JPRT=%s\nJPT2=%s\nend\n" % (local, dest))
         # Defer save until backend reports connections have changed.
+
 
     def get_playback_port_qty(self):
         self.write("portread", "JFIL=\nJPRT=\nend\n")
@@ -232,6 +236,7 @@ class JackMenu(MenuMixin):
         pbports = len([x for x in reply[10:].strip().split()
                                         if x.startswith("system:playback_")])
         return pbports
+
         
     def standard_save(self):
         self._port_data = self._get_port_data()
@@ -239,16 +244,24 @@ class JackMenu(MenuMixin):
         if self.session_type == "L0":
             self._save(self._port_data)
 
+
     def session_save(self, where=None):
         self._port_data = self._get_port_data()
 
-        self._save(where)
+        self._save(self._port_data, where)
+        
+        if pm.profile is not None:
+            arg = _("{0} profile={1}:{2} settings saved.").format(
+                    PGlobs.app_shortform, self.session_type, pm.profile)
+        else:
+            arg = _("{0} session={1}:{2} settings saved.").format(
+                    PGlobs.app_shortform, self.session_type, pm.session_name)
         
         try:
-            subprocess.call(["notify-send", "%s:%s %s Session Saved" %
-                        (PGlobs.app_shortform, pm.profile, self.session_type)])
+            subprocess.call(["notify-send", arg])
         except OSError:
             pass
+
 
     def _get_port_data(self):
         total = []
@@ -263,7 +276,8 @@ class JackMenu(MenuMixin):
                                                         if x.startswith("@")])
             total.append(element)
         return total
-        
+
+
     def _save(self, data, where=None):
         try:
             with open(where or self.pathname, "w") as f:
@@ -272,7 +286,8 @@ class JackMenu(MenuMixin):
             print "problem writing", self.pathname
         else:
             print "jack connections saved"
-            
+
+
     def load(self, where=None , startup=False):
         try:
             with open(where or self.pathname) as f:
@@ -308,7 +323,8 @@ class JackMenu(MenuMixin):
         self._port_data = cons
         if not startup or not args.no_jack_connections:
             self.restore(cons)
-                        
+
+
     def restore(self, cons=None, restrict=""):
         cons = cons or self._port_data
         for port, targets in cons:
@@ -2131,8 +2147,22 @@ class MainWindow:
         self.send_new_mixer_stats()
 
 
-    def save_session(self):
-        print "saving profile settings"
+    def save_session(self, trigger):
+        print "save_session called"
+
+        if trigger in ("atexit", "periodic") and pm.profile is None \
+                                                and pm.session_type != "L0":
+            if trigger == "periodic":
+                print "periodic save cancelled"
+            else:
+                print "save at exit blocked"
+            # Cancel the periodic timeout with this return value.
+            return False
+
+        self.prefs_window.save_resource_template()
+        if trigger == "template":
+            print "saving template only"
+            return True
 
         try:
             fh = open(self.session_filename, "w")
@@ -2204,13 +2234,16 @@ class MainWindow:
             fh.close()
         except Exception as e:
             print "Error writing out tracks played data", e
-            
+
         self.prefs_window.save_player_prefs()
         self.controls.save_prefs()
         self.server_window.save_session_settings()
+        self.player_left.save_session()
+        self.player_right.save_session()
         # JACK ports are saved at the moment of change, not here.
         
         return True  # This is also a timeout routine
+
 
     def restore_session(self):
         try:
@@ -2301,7 +2334,7 @@ class MainWindow:
 
     def destroy_hard(self, widget=None, data=None):
         if self.session_loaded:
-            self.save_session()
+            self.save_session("atexit")
         try:
             gtk.main_quit()
         except:
@@ -2312,7 +2345,7 @@ class MainWindow:
 
 
     def destroy(self, widget=None, data=None):
-        self.save_session()
+        self.save_session("atexit")
         if self.crosspass:
             gobject.source_remove(self.crosspass)
         self.server_window.cleanup()
@@ -2367,7 +2400,7 @@ class MainWindow:
                 print "launching backend"
             else:
                 print str(e)
-            for i in range(1, 4):
+            for i in range(1, 4 if self.session_loaded else 2):
                 print "backend launch attempt", i
                 try:
                     subproc = subprocess.Popen([FGlobs.libexecdir / "idjcbe"],
@@ -2503,10 +2536,10 @@ class MainWindow:
                 for midi in midis.split(','):
                     input, _, value = midi.partition(':')
                     self.controls.input(input, int(value, 16))
-                    
-            if session_cmd:
-                if session_cmd == "save_L1" and pm.session_type == "L1":
-                    self.jack.session_save()
+
+            if session_cmd == "save_L1" and pm.session_type == "L1":
+                self.jack.session_save()
+                self.save_session("trigger")
 
             if cons_changed:
                 self.jack.standard_save()
@@ -3429,8 +3462,9 @@ class MainWindow:
 
         self.vutimeout = gobject.timeout_add(50, self.vu_update)
         self.statstimeout = gobject.timeout_add(100, self.stats_update)
+
         self.savetimeout = gobject.timeout_add_seconds(
-                                        120, threadslock(self.save_session))
+                                120, threadslock(self.save_session), "periodic")
 
         for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
             signal.signal(sig, lambda s, f: glib.idle_add(

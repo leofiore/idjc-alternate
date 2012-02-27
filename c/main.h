@@ -19,6 +19,7 @@
 
 #include <signal.h>
 #include <jack/jack.h>
+#include <jack/ringbuffer.h>
 
 struct jack_ports
     {
@@ -50,6 +51,7 @@ struct globs
     int mixer_up;
     jack_client_t *client;     /* Client handle to JACK. */
     struct jack_ports port;    /* JACK port handles. */
+    jack_ringbuffer_t *session_event_rb; /* Session event buffer */
     };
 
 extern struct globs g;

@@ -23,6 +23,7 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <jack/session.h>
 #include "sig.h"
 #include "mixer.h"
 #include "sourceclient.h"
@@ -64,6 +65,21 @@ static void custom_jack_info_callback(const char *message)
 static void custom_jack_on_shutdown_callback()
     {
     g.app_shutdown = TRUE;
+    }
+
+static void session_callback(jack_session_event_t *event, void *arg)
+    {
+    /* Store the address of the event so the data can be retrieved later by
+     * user interface polling. This is done in mixer.c.
+     */
+    if (jack_ringbuffer_write(g.session_event_rb, (char *)&event, sizeof &event) < 
+                                                                sizeof &event)
+        {
+        /* The ringbuffer is good for 512 writes in 1/20th second. (32 bit) */
+        fprintf(stderr,
+                    "main.c: session event ringbuffer is stuffed -- exiting\n");
+        exit(5);
+        }
     }
     
 static void cleanup_jack()
@@ -121,7 +137,11 @@ int main(void)
     sig_init();
 
     if (!(strcmp(getenv("session_type"), "JACK")))
+        {
         options = JackSessionID;
+        g.session_event_rb = jack_ringbuffer_create(2048);
+        }
+
     else
         options = JackUseExactName | JackServerName;
 
@@ -137,6 +157,7 @@ int main(void)
     jack_set_info_function(custom_jack_info_callback);
     jack_on_shutdown(g.client, custom_jack_on_shutdown_callback, NULL);
 
+    jack_set_session_callback(g.client, session_callback, NULL);
     jack_set_process_callback(g.client, main_process_audio, NULL);
 
     /* Registration of JACK ports. */
@@ -215,6 +236,9 @@ int main(void)
     
     if (buffer)
         free(buffer);
+
+    if (g.session_event_rb)
+        jack_ringbuffer_free(g.session_event_rb);
 
     return 0;
     }

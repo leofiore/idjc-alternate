@@ -29,6 +29,7 @@ import math
 import fcntl
 import re
 import glob
+import uuid
 import datetime
 import subprocess
 from functools import partial
@@ -443,8 +444,6 @@ class ProfileManager(object):
         self._session_type, self._session_dir, self._session_name = \
                                                 self._parse_session(ap, args)
 
-        print "##", self._session_type, self._session_dir, self._session_name
-
         if self._session_dir is None:
             # Not in session mode so do the profile init stuff.
 
@@ -688,7 +687,12 @@ class ProfileManager(object):
 
             else:
                 # Just make the empty session directory.
-                os.makedirs(session_dir)
+                try:
+                    os.makedirs(session_dir)
+                except EnvironmentError as e:
+                    if e.errno != 17:
+                        ap.error(
+                        _('problem with specified session directory: %s') % e)
 
         if session_type == "JACK":
             try:

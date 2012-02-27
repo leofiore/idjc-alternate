@@ -467,7 +467,8 @@ class MediaPane(gtk.Frame):
         treeselection.set_mode(gtk.SELECTION_MULTIPLE)
         #                           found, id, ARTIST, ALBUM, TRACKNUM, TITLE,
         #                           DURATION, BITRATE, path, filename
-        self.flatstore = gtk.ListStore(int, int, str, str, int, str, int, int, str, str)
+        self.flatstore = gtk.ListStore(
+                            int, int, str, str, int, str, int, int, str, str)
         self.flatview.set_model(self.flatstore)
         self.flatcols = makecolumns(self.flatview, (
                 ("(%d)" % 0, 0, self.cell_ralign, -1),
