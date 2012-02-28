@@ -72,8 +72,8 @@ static void session_callback(jack_session_event_t *event, void *arg)
     /* Store the address of the event so the data can be retrieved later by
      * user interface polling. This is done in mixer.c.
      */
-    if (jack_ringbuffer_write(g.session_event_rb, (char *)&event, sizeof &event) < 
-                                                                sizeof &event)
+    if (jack_ringbuffer_write(g.session_event_rb,
+                                (char *)&event, sizeof event) < sizeof event)
         {
         /* The ringbuffer is good for 512 writes in 1/20th second. (32 bit) */
         fprintf(stderr,

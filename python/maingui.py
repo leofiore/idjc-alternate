@@ -279,6 +279,8 @@ class JackMenu(MenuMixin):
 
 
     def _save(self, data, where=None):
+        if where is not None:
+            where = os.path.join(where, os.path.split(self.pathname)[1])
         try:
             with open(where or self.pathname, "w") as f:
                 json.dump(data, f)
@@ -2147,8 +2149,14 @@ class MainWindow:
         self.send_new_mixer_stats()
 
 
-    def save_session(self, trigger):
+    def save_session(self, trigger, where=None):
         print "save_session called"
+
+        if where is None:
+            session_filename = self.session_filename
+        else:
+            session_filename = PathStr(where) / os.path.split(
+                                                    self.session_filename)[1]
 
         if trigger in ("atexit", "periodic") and pm.profile is None \
                                                 and pm.session_type != "L0":
@@ -2165,7 +2173,7 @@ class MainWindow:
             return True
 
         try:
-            fh = open(self.session_filename, "w")
+            fh = open(session_filename, "w")
             fh.write("deckvol=" + str(self.deckadj.get_value()) + "\n")
             fh.write("deck2vol=" + str(self.deck2adj.get_value()) + "\n")
             fh.write("crossfade=" + str(self.crossadj.get_value()) + "\n")
@@ -2214,7 +2222,7 @@ class MainWindow:
             fh.close()
             
             # Save a list of files played and timestamps.
-            fh = open(self.session_filename + "_files_played", "w")
+            fh = open(session_filename + "_files_played", "w")
             cutoff = time.time() - 2592000 # 2592000 = 30 days.
             recent = {}
             for key, value in self.files_played.iteritems():
@@ -2227,7 +2235,7 @@ class MainWindow:
             print "Error writing out main session data", e
 
         try:
-            fh = open(self.session_filename + "_tracks", "w")
+            fh = open(session_filename + "_tracks", "w")
             start, end = self.history_buffer.get_bounds()
             text = self.history_buffer.get_text(start, end)
             fh.write(text)
@@ -2235,11 +2243,11 @@ class MainWindow:
         except Exception as e:
             print "Error writing out tracks played data", e
 
-        self.prefs_window.save_player_prefs()
-        self.controls.save_prefs()
-        self.server_window.save_session_settings()
-        self.player_left.save_session()
-        self.player_right.save_session()
+        self.prefs_window.save_player_prefs(where)
+        self.controls.save_prefs(where)
+        self.server_window.save_session_settings(where)
+        self.player_left.save_session(where)
+        self.player_right.save_session(where)
         # JACK ports are saved at the moment of change, not here.
         
         return True  # This is also a timeout routine
@@ -2466,6 +2474,8 @@ class MainWindow:
         if locking:
             gtk.gdk.threads_enter()
         try:
+            session_ns = {}
+            
             try:
                 self.mixer_write("ACTN=requestlevels\nend\n")
             except ValueError, IOError:
@@ -2492,8 +2502,8 @@ class MainWindow:
                     midis= value
                     continue
                     
-                if key == "session_command":
-                    session_cmd = value
+                if key.startswith("session_"):
+                    session_ns[key[8:]] = value
                     continue
                  
                 if key == "ports_connections_changed":
@@ -2537,9 +2547,12 @@ class MainWindow:
                     input, _, value = midi.partition(':')
                     self.controls.input(input, int(value, 16))
 
-            if session_cmd == "save_L1" and pm.session_type == "L1":
+            if session_ns["command"] == "save_L1" and pm.session_type == "L1":
                 self.jack.session_save()
-                self.save_session("trigger")
+                self.save_session("L1")
+            if session_ns["command"].endswith("_JACK") and \
+                                                    pm.session_type == "JACK":
+                self.handle_jack_session(**session_ns)
 
             if cons_changed:
                 self.jack.standard_save()
@@ -2551,6 +2564,36 @@ class MainWindow:
         if locking:
             gtk.gdk.threads_leave()
         return True
+
+
+    def handle_jack_session(self, command, event, directory, uuid):
+
+        subdir = PathStr(directory) / ("idjc-%s-%s" % (pm.session_type,
+                                                            pm.session_name))
+        try:
+            os.mkdir(subdir)
+        except EnvironmentError as e:
+            if e.errno != 17:
+                print e
+
+        command = command.rstrip("_JACK")
+        if command in ("save", "saveandexit"):
+            self.jack.session_save(subdir)
+            self.save_session("JACK", subdir)
+        if command == "savetemplate":
+            self.save_session("template", subdir)
+            
+        commandline = " ".join((sys.argv[0], 
+                        "--session=JACK:%s:${SESSION_DIR}" % pm.session_name,
+                        "--jackserver=%s" % uuid))
+
+        # Reply to backend confirms save has took place.
+        # The quitflag will be relayed back to this user interface after the
+        # session event has been properly disposed of.
+        self.mixer_write("ACTN=session_reply\nsession_event=%s\n"
+                        "session_commandline=%s\n"
+                        "session_quitflag=%d" % (
+                        event, commandline, command == "saveandexit"))
 
 
     @threadslock 

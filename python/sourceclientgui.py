@@ -3149,7 +3149,7 @@ class SourceClientGui:
         self.window.hide()
         return True
 
-    def save_session_settings(self):
+    def save_session_settings(self, where):
         try:               
             # Check the following are initilised before proceeding.
             tabframes = (self, self.streamtabframe, self.recordtabframe)
@@ -3157,7 +3157,7 @@ class SourceClientGui:
             return  # Cancelled save.
 
         try:
-            with open(pm.basedir / "s_data", "w") as f:
+            with open((where or pm.basedir) / "s_data", "w") as f:
                 for tabframe in tabframes:
                     for tab in tabframe.tabs:
                         f.write("".join(("[", tab.tab_type, " ", 

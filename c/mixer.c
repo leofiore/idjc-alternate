@@ -28,6 +28,7 @@
 #include <jack/ringbuffer.h>
 #include <jack/statistics.h>
 #include <jack/midiport.h>
+#include <jack/session.h>
 #include <getopt.h>
 #include <string.h>
 #include <fcntl.h>
@@ -1397,7 +1398,8 @@ void mixer_init(void)
 int mixer_main()
     {
     unsigned int lead, ports_diff;
-
+    jack_session_event_t *session_event;
+    
     if (!(kvp_parse(kvpdict, stdin)))
         return FALSE;
 
@@ -1624,7 +1626,31 @@ int mixer_main()
         if (sig_recent_usr1())
             s.session_command = "save_L1";
         else
-            s.session_command = "";
+            {
+            if (g.session_event_rb && jack_ringbuffer_read_space(g.session_event_rb) >= sizeof session_event)
+                {
+                jack_ringbuffer_read(g.session_event_rb, (char *)&session_event, sizeof session_event);
+                switch (session_event->type) {
+                    case JackSessionSave:
+                        s.session_command = "save_JACK";
+                        break;
+                    case JackSessionSaveAndQuit:
+                        s.session_command = "saveandquit_JACK";
+                        break;
+                    case JackSessionSaveTemplate:
+                        s.session_command = "savetemplate_JACK";
+                    }
+
+                fprintf(stdout, "session_event=%p\n"
+                                "session_directory=%s\n"
+                                "session_uuid=%s\n",
+                                 session_event,
+                                 session_event->session_dir,
+                                 session_event->client_uuid);
+                }
+            else
+                s.session_command = "";
+            }
 
         lead = port_connection_count;
         if (lead - port_reports > UINT_MAX << 1)

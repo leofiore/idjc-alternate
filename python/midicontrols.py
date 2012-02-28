@@ -586,10 +586,10 @@ class Controls(object):
         ]
         self.update_lookup()
 
-    def save_prefs(self):
+    def save_prefs(self, where=None):
         """Store bindings list to prefs file
         """
-        fp= open(pm.basedir / 'controls', 'w')
+        fp= open((where or pm.basedir) / 'controls', 'w')
         for binding in self.bindings:
             fp.write(str(binding)+'\n')
         fp.close()

@@ -699,7 +699,11 @@ class ProfileManager(object):
                 uuid.UUID(args.jackserver[0])
             except TypeError:
                 ap.error(
-                _("session mode is JACK but no UUID specified to -j option"))
+                _("session type is JACK but no UUID specified to -j option"))
+                
+            if session_dir is None:
+                ap.error(_('session type is JACK but no directory specified'
+                                                        'to --session option'))
 
         return session_type, PathStr(session_dir), session_name
 

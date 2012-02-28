@@ -614,9 +614,9 @@ class mixprefs:
             print "Error while writing out player defaults"
 
 
-    def save_player_prefs(self):
+    def save_player_prefs(self, where=None):
         try:
-            with open(pm.basedir / "playerdefaults", "w") as f:
+            with open((where or pm.basedir) / "playerdefaults", "w") as f:
                 for name, widget in self.activedict.iteritems():
                     f.write(name + "=" + str(int(widget.get_active())) + "\n")
                 for name, widget in self.valuesdict.iteritems():

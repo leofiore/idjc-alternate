@@ -1155,8 +1155,8 @@ class IDJC_Media_Player:
             self.stop.clicked()
 
 
-    def save_session(self):
-        fh = open(self.session_filename, "w")
+    def save_session(self, where=None):
+        fh = open((where or self.session_filename), "w")
         extlist = self.external_pl.filechooser.get_filename()
         if extlist is not None:
             fh.write("extlist=" + extlist + "\n")
