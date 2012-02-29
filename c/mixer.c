@@ -183,6 +183,7 @@ static char *flag;
 static char *channel_mode_string;
 static char *use_jingles_vol_2;
 static char *jackport, *jackport2, *jackfilter;
+static char *session_event_string, *session_commandline;
 
 /* dictionary look-up type thing used by the parse routine */
 static struct kvpdict kvpdict[] = {
@@ -225,6 +226,8 @@ static struct kvpdict kvpdict[] = {
             { "JPRT", &jackport, NULL },
             { "JPT2", &jackport2, NULL },
             { "ACTN", &action, NULL },                   /* Action to take */
+            { "session_event", &session_event_string, NULL },
+            { "session_command", &session_commandline, NULL },
             { "", NULL, NULL }};
 
 /* handle_mute_button: soft on/off for the mute buttons */
@@ -1437,6 +1440,19 @@ int mixer_main()
         }
     dis_connect("jackconnect", jack_connect);
     dis_connect("jackdisconnect", jack_disconnect);
+
+    if (!strcmp(action, "session_reply"))
+        {
+        sscanf(session_event_string, "%p", &session_event);
+        session_event->command_line = session_commandline;
+        /* Transfer of ownership of heap allocated string. */
+        session_commandline = NULL;
+        jack_session_reply(g.client, session_event);
+        jack_session_event_free(session_event);
+        /* Unblock the user interface which is waiting on a reply. */
+        fprintf(stdout, "session event handled\n");
+        fflush(stdout);
+        }
 
     if (!strcmp(action, "mp3status"))
         {

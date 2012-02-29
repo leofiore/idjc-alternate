@@ -2567,6 +2567,7 @@ class MainWindow:
 
 
     def handle_jack_session(self, command, event, directory, uuid):
+        """A JACK session event occurred and the reply data is crafted here."""
 
         subdir = PathStr(directory) / ("idjc-%s-%s" % (pm.session_type,
                                                             pm.session_name))
@@ -2583,17 +2584,36 @@ class MainWindow:
         if command == "savetemplate":
             self.save_session("template", subdir)
             
-        commandline = " ".join((sys.argv[0], 
+        commandline = " ".join((sys.argv[0], "run"
                         "--session=JACK:%s:${SESSION_DIR}" % pm.session_name,
                         "--jackserver=%s" % uuid))
+                        
+        if args.channels is not None:
+            commandline += " -c " + " ".join(args.channels)
+            
+        if args.voip is not None:
+            commandline += " -V " + args.voip[0]
+            
+        if args.servers is not None:
+            commandline += " -s " + " ".join(args.servers)
+            
+        if args.crossfader is not None:
+            commandline += " -x " + args.crossfader[0]
+            
+        if args.players is not None:
+            commandline += " -P " + " ".join(args.players)
+
+        print "## Restored session commandline will be:", commandline
 
         # Reply to backend confirms save has took place.
-        # The quitflag will be relayed back to this user interface after the
-        # session event has been properly disposed of.
         self.mixer_write("ACTN=session_reply\nsession_event=%s\n"
-                        "session_commandline=%s\n"
-                        "session_quitflag=%d" % (
-                        event, commandline, command == "saveandexit"))
+                        "session_commandline=%s\n" % (
+                        event, commandline))
+        self.mixer_read()
+        # At this point the session event has been disposed of.
+
+        if command == "saveandquit":
+            self.destroy()
 
 
     @threadslock 
