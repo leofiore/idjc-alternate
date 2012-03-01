@@ -441,8 +441,8 @@ class ProfileManager(object):
         except EnvironmentError as e:
             ap.error(_("ls failed: %s") % e)
 
-        self._session_type, self._session_dir, self._session_name = \
-                                                self._parse_session(ap, args)
+        self._session_type, self._session_dir, self._session_name, \
+                            self._session_uuid = self._parse_session(ap, args)
 
         if self._session_dir is None:
             # Not in session mode so do the profile init stuff.
@@ -549,6 +549,13 @@ class ProfileManager(object):
         """The name of the session."""
         
         return self._session_name
+        
+        
+    @property
+    def session_uuid(self):
+        """When session is JACK this will be set to something."""
+        
+        return self._session_uuid
 
 
     @property
@@ -618,7 +625,7 @@ class ProfileManager(object):
             # The final return value is the save location of the JACK port
             # connections file.
             # Since it's not a pathname it goes in the standard save directory.
-            return "L0", None, "default"
+            return "L0", None, "default", None
 
         if ":" in args.session[0]:
             session_type, rest = args.session[0].split(":", 1)
@@ -696,16 +703,17 @@ class ProfileManager(object):
 
         if session_type == "JACK":
             try:
-                uuid.UUID(args.jackserver[0])
+                session_uuid = uuid.UUID(args.jackserver[0])
             except TypeError:
-                ap.error(
-                _("session type is JACK but no UUID specified to -j option"))
-                
-            if session_dir is None:
-                ap.error(_('session type is JACK but no directory specified'
-                                                        'to --session option'))
+                if args.jackserver is not None:
+                    ap.error("supplied parameter to -j is not a UUID")
+                session_uuid = uuid.uuid4()
+                print "creating random UUID for JACK session = {%s}" % session_uuid
+        else:
+            session_uuid = None
 
-        return session_type, PathStr(session_dir), session_name
+        return session_type, PathStr(session_dir), session_name, \
+                                                            str(session_uuid)
 
 
     def _autoloadprofilename(self):

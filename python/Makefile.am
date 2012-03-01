@@ -1,12 +1,14 @@
 SUBDIRS = prelims
 
+am__py_compile = $(top_srcdir)/py-compile
+
 pkgpython_PYTHON = dialogs.py gtkstuff.py irc.py jingles.py licence_window.py \
 		maingui.py midicontrols.py mutagentagger.py p3db.py playergui.py \
 		popupwindow.py preferences.py sourceclientgui.py tooltips.py utils.py
 
-nodist_pkgpython_PYTHON=__init__.py
+nodist_pkgpython_PYTHON = __init__.py
 
-dist_noinst_PYTHON=__init__.py.in.in
+dist_noinst_PYTHON = __init__.py.in.in
 
 __init__.py: __init__.py.in
 	@sed -e 's|$${pkgdatadir}|${pkgdatadir}|g'	\

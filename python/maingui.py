@@ -2718,10 +2718,13 @@ class MainWindow:
         except ConfigParser.Error:
             pass
         
-        if args.jackserver is not None:
-            os.environ["jack_parameter"] = args.jackserver[0]
+        if pm.session_uuid is None:
+            if args.jackserver is None:
+                os.environ["jack_parameter"] = "default"
+            else:
+                os.environ["jack_parameter"] = args.jackserver[0]
         else:
-            os.environ["jack_parameter"] = "default"
+            os.environ["jack_parameter"] = pm.session_uuid
 
         if pm.profile is not None:
             client_id = "idjc_" + pm.profile
