@@ -226,7 +226,8 @@ class Jingles(object):
     
     def load_jingles(self):
         if not os.path.isdir(pm.jinglesdir):
-            os.mkdir(pm.jinglesdir)
+            self.liststore.clear()
+            return
         files = os.listdir(pm.jinglesdir)
         count = 0
         self.liststore.clear()

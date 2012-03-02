@@ -616,6 +616,16 @@ class ProfileManager(object):
     def _parse_session(ap, args):
         """User supplied session details are parsed and checked for validity."""
 
+
+        def profile_check():
+            if not profile_name_valid(args.profile[0]):
+                ap.error(
+                _('specified profile is not valid %s') % args.profile[0])
+
+            if not os.path.isdir(PGlobs.profile_dir / args.profile[0]):
+                ap.error(_('specified profile does not exist: %s') % \
+                                                            args.profile[0])
+
         if args.session is None:
             # The None parameter below indicates profile mode is on and the
             # profile will determine the save directory, otherwise we return
@@ -657,42 +667,31 @@ class ProfileManager(object):
             session_dir = os.path.realpath(os.path.expanduser(session_dir))
             
             if not os.path.isdir(session_dir):
-                ap.error(_('save directory does not exist: %s') % session_dir)
+                ap.error(_('directory does not exist: %s') % session_dir)
             
-            # Make subdir for the actual save path based on the mode and name.
+            # Use a subdir for the actual save path based on the mode and name.
             session_dir = os.path.join(session_dir, "idjc-%s-%s" % (
                                                 session_type, session_name))
 
-            # Copy settings from a specified profile.
             if args.profile is not None:
-                # Checks for profile validity.
-                if not profile_name_valid(args.profile[0]):
-                    ap.error(
-                    _('specified profile is not valid %s') % args.profile[0])
-
-                if not os.path.isdir(PGlobs.profile_dir / args.profile[0]):
-                    ap.error(_('specified profile does not exist: %s') % \
-                                                                args.profile[0])
-
-                # Perform copy of profile data.
-                try:
-                    shutil.copytree(PGlobs.profile_dir / args.profile[0],
-                                                                    session_dir)
-                except EnvironmentError as e:
-                    if e.errno != 17:
-                        ap.error(
-                        "failed to copy data from the profile directory: %s" % \
-                                                                            e)
-
-                # Delete files relating to JACK ports.
-                try:
-                    for each in glob.iglob(
-                                        os.path.join(session_dir, "ports_*")):
-                        os.unlink(each)
-                except EnvironmentError as e:
-                    print str(e)
-
-            else:
+                profile_check()
+                if os.path.isdir(session_dir):
+                    # Session directory was created earlier so use that.
+                    pass
+                else:
+                    if session_type == "JACK":
+                        ap.error("session directory has no data")
+                    else:
+                        # Perform copy of profile data.
+                        try:
+                            shutil.copytree(PGlobs.profile_dir / 
+                                                args.profile[0], session_dir)
+                        except EnvironmentError as e:
+                            if e.errno != 17:
+                                ap.error("failed to copy data from the"
+                                                " profile directory: %s" % e)
+                    
+            elif session_type != "JACK":
                 # Just make the empty session directory.
                 try:
                     os.makedirs(session_dir)
@@ -702,18 +701,22 @@ class ProfileManager(object):
                         _('problem with specified session directory: %s') % e)
 
         if session_type == "JACK":
+            if session_dir is None and args.profile is not None:
+                profile_check()
+                session_dir = PGlobs.profile_dir / args.profile[0] 
             try:
                 session_uuid = uuid.UUID(args.jackserver[0])
             except TypeError:
                 if args.jackserver is not None:
                     ap.error("supplied parameter to -j is not a UUID")
                 session_uuid = uuid.uuid4()
-                print "creating random UUID for JACK session = {%s}" % session_uuid
+                print "creating random UUID for JACK session = {%s}" % \
+                                                                session_uuid
         else:
             session_uuid = None
 
         return session_type, PathStr(session_dir), session_name, \
-                                                            str(session_uuid)
+                            None if session_uuid is None else str(session_uuid)
 
 
     def _autoloadprofilename(self):
