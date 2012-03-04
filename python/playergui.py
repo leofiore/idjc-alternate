@@ -28,6 +28,7 @@ import re
 import xml.dom.minidom as mdom
 import warnings
 import gettext
+import uuid
 from stat import *
 from collections import deque, namedtuple, defaultdict
 from functools import partial
@@ -48,6 +49,8 @@ from idjc import FGlobs, PGlobs
 from . import popupwindow
 from .mutagentagger import *
 from .utils import SlotObject
+from .utils import LinkUUIDRegistry
+from .utils import PathStr
 from .gtkstuff import threadslock
 from .prelims import *
 from .tooltips import set_tip
@@ -62,6 +65,8 @@ def N_(text):
 
 PM = ProfileManager()
 
+link_uuid_reg = LinkUUIDRegistry()
+
 
 # Suppress the warning that occurs when None is placed in a ListStore element
 # where some kind of GObject is expected.
@@ -74,12 +79,12 @@ warnings.filterwarnings("ignore", "IA__gtk_tree_view_scroll_to_cell: assertion"
 
 # Named tuple for a playlist row.
 class PlayerRow(namedtuple("PlayerRow",
-"rsmeta filename length meta encoding title artist replaygain cuesheet album")):
+"rsmeta filename length meta encoding title artist replaygain cuesheet album uuid")):
     def __nonzero__(self):
         return self.rsmeta != "<s>valid</s>"
 
 # Playlist value indicating a file isn't valid.
-NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None, "")
+NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None, "", "")
 
 # Replay Gain value to indicate default.
 RGDEF = 100.0
@@ -1120,13 +1125,16 @@ class IDJC_Media_Player:
         if length == 0:
             length = 1
 
+        uuid_ = str(uuid.uuid4())
+
         if artist and title:
             meta_name = artist + u" - " + title
             return PlayerRow(glib.markup_escape_text(meta_name), filename,
-                length, meta_name, encoding, title, artist, rg, cuesheet, album)
+                length, meta_name, encoding, title, artist, rg, cuesheet,
+                album, uuid_)
         else:
             return PlayerRow(rsmeta_name, filename, length, meta_name, encoding,
-                                    title_retval, artist, rg, cuesheet, album)
+                title_retval, artist, rg, cuesheet, album, uuid_)
 
     # Update playlist entries for a given filename e.g. when tag has been edited
     def update_playlist(self, newdata):
@@ -1173,9 +1181,19 @@ class IDJC_Media_Player:
         if self.plsave_folder is not None:
             fh.write("plsave_folder=" + self.plsave_folder + "\n")
 
-        for entry in self.liststore:
+        linkdir = PathStr(where or PM.basedir) / "links"
+
+        for row in self.liststore:
+            # Allow modification without affecting the playlist.
+            entry = list(row)  
+            link = link_uuid_reg.get_link_filename(row[10], linkdir)
+            if link is not None:
+                # Replace orig file abspath with alternate path to a hard link
+                # except when link is None as happens when a hard link fails.
+                entry[1] = PathStr("links") / link
+            
             fh.write("pe=")
-            if entry[0].startswith("<b>"):  # clean off any accidental bold tags
+            if entry[0].startswith("<b>"):  # Clean off bold tags.
                 entry[0] = entry[0][3:-4]
             for item in entry:
                 if isinstance(item, int):
@@ -1239,6 +1257,12 @@ class IDJC_Media_Player:
                     self.pl_delay.set_active(int(line[10]))
                 if line.startswith("pe="):
                     playlist_entry = self.pl_unpack(line[3:])
+                    # Links directory entries conversion to absolute path.
+                    if playlist_entry[1] and playlist_entry[1][0] != \
+                                                                os.path.sep:
+                        playlist_entry = playlist_entry._replace(
+                                    filename=PM.basedir / playlist_entry[1])
+                        
                     if not playlist_entry or self.playlist_todo:
                         self.playlist_todo.append(playlist_entry.filename)
                     else:
@@ -3634,9 +3658,9 @@ class IDJC_Media_Player:
         self.scrolllist.set_shadow_type(gtk.SHADOW_IN)
         # A liststore object for our playlist
         self.liststore = gtk.ListStore(str, str, int, str, str, str,
-                                            str, float, CueSheetListStore, str)
+                                str, float, CueSheetListStore, str, str)
         self.templist = gtk.ListStore(str, str, int, str, str, str,
-                                            str, float, CueSheetListStore, str)
+                                str, float, CueSheetListStore, str, str)
         self.treeview = gtk.TreeView(self.liststore)
         self.rgcellrender = gtk.CellRendererText()
         self.playtimecellrender = gtk.CellRendererText()

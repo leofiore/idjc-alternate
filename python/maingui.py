@@ -45,6 +45,8 @@ from .sourceclientgui import *
 from .preferences import *
 from .jingles import *
 from .utils import SlotObject
+from .utils import LinkUUIDRegistry
+from .utils import PathStr
 from .gtkstuff import threadslock, WindowSizeTracker
 from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog
 from . import midicontrols
@@ -58,7 +60,7 @@ _ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
 
 args = ArgumentParserImplementation().parse_args()
 pm = ProfileManager()
-
+link_uuid_reg = LinkUUIDRegistry()
 
 METER_TEXT_SIZE = 8000
 
@@ -2246,6 +2248,20 @@ class MainWindow:
         self.prefs_window.save_player_prefs(where)
         self.controls.save_prefs(where)
         self.server_window.save_session_settings(where)
+
+        # Build links directory.
+        link_uuid_reg.clear()
+        for row in itertools.chain(
+                    self.player_left.liststore, self.player_right.liststore):
+            uuid_ = row[10]
+            try:
+                uuid.UUID(uuid_)
+            except:
+                pass
+            else:
+                link_uuid_reg.add(uuid_, row[1])
+        link_uuid_reg.update(PathStr(where or pm.basedir) / "links")
+
         self.player_left.save_session(where)
         self.player_right.save_session(where)
         # JACK ports are saved at the moment of change, not here.

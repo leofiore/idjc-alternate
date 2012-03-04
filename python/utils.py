@@ -25,6 +25,9 @@ __all__ = ["Singleton", "PolicedAttributes", "FixedAttributes",
 
 
 import os
+import uuid
+import re
+import glob
 import threading
 from functools import wraps
 
@@ -236,3 +239,90 @@ def string_multireplace(part, table):
         parts[i] = string_multireplace(each, t_next)
 
     return table[0][1].join(parts)
+
+
+
+class LinkUUIDRegistry(dict):
+    """Manage substitute hard links for data files."""
+
+
+    __metaclass__ = Singleton
+
+    
+    link_re = re.compile(
+                    "\{[a-fA-F0-9]{8}-([a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}\}")
+
+
+    def add(self, uuid_, pathname):
+        if os.path.exists(pathname):
+            self[uuid_] = pathname
+        else:
+            print "LinkUUIDRegistry: pathname does not exist", pathname
+
+
+    def remove(self, uuid_):
+        try:
+            del self[uuid_]
+        except KeyError:
+            print "LinkUUIDRegisty: remove -- UUID does not exist: {%s}" % uuid_
+
+
+    def _purge(self, where):
+        """Clean orphaned hard links from the links directory."""
+
+        basedir, dirs, files = os.walk(where).next()
+        for filename in files:
+            match = self.link_re.match(filename)
+            try:
+                if match is None or str(uuid.UUID(match.group(0))) not in self:
+                    os.unlink(os.path.join(basedir, filename))
+            except EnvironmentError as e:
+                print "LinkUUIDRegistry: link purge failed: %s" % e
+
+
+    def _save(self, where):
+        """Write new hard links to the links directory.
+        
+        Existing links are kept as they are. To unlink them could delete the
+        only copy of the link source.
+        """
+        
+        # Create the links directory as needed.
+        if not os.path.isdir(where):
+            try:
+                os.mkdir(where)
+            except EnvironmentError as e:
+                print "LinkUUIDRegistry: link directory creation failed:", e
+                return
+
+        for uuid_, source in self.iteritems():
+            ext = os.path.splitext(source)[1]
+            try:
+                os.link(source, os.path.join(where, "{%s}%s" % (uuid_, ext)))
+            except EnvironmentError as e:
+                if e.errno != 17:
+                    print "LinkUUIDRegistry: link failed:", e
+
+
+    def update(self, where):
+        """Update the hard links in the links directory."""
+        
+        self._save(where)
+        # Purge after save because the link source may just be in the 
+        # links directory itself.
+        self._purge(where)
+
+
+    def get_link_filename(self, uuid_, where):
+        """Check in the directory 'where' for a specific UUID filename.
+        
+        The globbing rules apply."""
+        
+        matches = glob.glob(os.path.join(where, "{%s}.*" % uuid_))
+        if len(matches) == 1:
+            return os.path.basename(matches[0])
+        else:
+            # Link does not exist or UUID collision occurred.
+            return None
+
+
