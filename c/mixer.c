@@ -150,11 +150,6 @@ static sample_t lp_lc_aud = 1.0, lp_rc_aud = 1.0, rp_lc_aud = 1.0, rp_rc_aud = 1
 static sample_t lp_lc_str = 1.0, lp_rc_str = 1.0, rp_lc_str = 0.0, rp_rc_str = 0.0;
 static sample_t jp_lc_str = 0.0, jp_rc_str = 0.0, jp_lc_aud = 0.0, jp_rc_aud = 0.0;
 static sample_t ip_lc_str = 0.0, ip_rc_str = 0.0, ip_lc_aud = 0.0, ip_rc_aud = 0.0;
-                                          /* like above but for fade */
-static sample_t lp_lc_audf = 1.0, lp_rc_audf = 1.0, rp_lc_audf = 1.0, rp_rc_audf = 1.0;
-static sample_t lp_lc_strf = 1.0, lp_rc_strf = 1.0, rp_lc_strf = 1.0, rp_rc_strf = 1.0;
-static sample_t jp_lc_strf = 1.0, jp_rc_strf = 1.0, jp_lc_audf = 1.0, jp_rc_audf = 1.0;
-static sample_t ip_lc_strf = 1.0, ip_rc_strf = 1.0, ip_lc_audf = 0.0, ip_rc_audf = 0.0;
             
 /* media player mixback level for when in RedPhone mode */
 static sample_t mb_lc_aud = 1.0, mb_rc_aud = 1.0;
@@ -473,9 +468,9 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
     sample_t *lplcp, *lprcp, *rplcp, *rprcp, *jplcp, *jprcp, *iplcp, *iprcp;
     /* pointers to buffers for fading */
     sample_t *lplcpf, *lprcpf, *rplcpf, *rprcpf, *jplcpf, *jprcpf, *iplcpf, *iprcpf;
-    /* temporary storage for processed fade values */
-    sample_t lp_lc_fade, lp_rc_fade, rp_lc_fade, rp_rc_fade;
-    sample_t jp_lc_fade, jp_rc_fade, ip_lc_fade, ip_rc_fade;
+    /* storage for player audio after mix of previous and current track */
+    sample_t lplcm, lprcm, rplcm, rprcm;
+    sample_t jplcm, jprcm, iplcm, iprcm;
     /* midi_control */
     void *midi_buffer;
     jack_midi_event_t midi_event;
@@ -593,46 +588,18 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
         read_from_player_sv(plr_l, lp_lc, lp_rc, lp_lcf, lp_rcf, nframes);
     else
         read_from_player(plr_l, lp_lc, lp_rc, lp_lcf, lp_rcf, nframes);
-    if (plr_l->have_swapped_buffers_f)
-        {
-        lp_lc_audf = lp_lc_aud * df;      /* volume levels of player at stoppage time */
-        lp_lc_strf = lp_lc_str * df;      /* these are used to modify the fade volume level */
-        lp_rc_audf = lp_rc_aud * df;
-        lp_rc_strf = lp_rc_str * df; 
-        }
     left_audio_runout = (plr_l->avail < player_samples_cutoff);
 
     if (speed_variance)
         read_from_player_sv(plr_r, rp_lc, rp_rc, rp_lcf, rp_rcf, nframes);
     else
         read_from_player(plr_r, rp_lc, rp_rc, rp_lcf, rp_rcf, nframes);
-    if (plr_r->have_swapped_buffers_f)
-        {
-        rp_lc_audf = rp_lc_aud * df;
-        rp_lc_strf = rp_lc_str * df;
-        rp_rc_audf = rp_rc_aud * df;
-        rp_rc_strf = rp_rc_str * df;
-        }
     right_audio_runout = (plr_r->avail < player_samples_cutoff);
         
     read_from_player(plr_j, jp_lc, jp_rc, jp_lcf, jp_rcf, nframes);
-    if (plr_j->have_swapped_buffers_f)
-        {
-        jp_lc_audf = jp_lc_aud * df;
-        jp_lc_strf = jp_lc_str * df;
-        jp_rc_audf = jp_rc_aud * df;
-        jp_rc_strf = jp_rc_str * df;
-        } 
     jingles_audio_f = (plr_j->avail > jingles_samples_cutoff);
 
     read_from_player(plr_i, ip_lc, ip_rc, ip_lcf, ip_rcf, nframes);
-    if (plr_i->have_swapped_buffers_f)
-        {
-        ip_lc_audf = ip_lc_aud * df;
-        ip_lc_strf = ip_lc_str * df;
-        ip_rc_audf = ip_rc_aud * df;
-        ip_rc_strf = ip_rc_str * df;
-        } 
         
     /* resets the running totals for the vu meter stats */      
     if (reset_vu_stats_f)
@@ -672,17 +639,19 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                  df = (df < hr) ? df : hr;
             }
 
-            #define FM(fl, fr, plr, sl, sr) \
+            /* combines the the previous fade buffer with current play buffer */
+            #define PLAYER_MIX(cl, cr, plr, l, r, fl, fr) \
                 do { \
-                    float l = fade_get(plr->fadeout); \
-                    fl = l * *sl++; \
-                    fr = l * *sr++; \
+                    float fade_level = fade_get(plr->fadeout); \
+                    \
+                    cl = *l + fade_level * *fl++; \
+                    cr = *r + fade_level * *fr++; \
                 }while(0)
 
-            FM(lp_lc_fade, lp_rc_fade, plr_l, lplcpf, lprcpf);
-            FM(rp_lc_fade, rp_rc_fade, plr_r, rplcpf, rprcpf);
-            FM(jp_lc_fade, jp_rc_fade, plr_j, jplcpf, jprcpf);
-            FM(ip_lc_fade, ip_rc_fade, plr_i, iplcpf, iprcpf);
+            PLAYER_MIX(lplcm, lprcm, plr_l, lplcp, lprcp, lplcpf, lprcpf);
+            PLAYER_MIX(rplcm, rprcm, plr_r, rplcp, rprcp, rplcpf, rprcpf);
+            PLAYER_MIX(jplcm, jprcm, plr_j, jplcp, jprcp, jplcpf, jprcpf);
+            PLAYER_MIX(iplcm, iprcm, plr_i, iplcp, iprcp, iplcpf, iprcpf);
 
             if (fabs(*lplcp) > left_peak)          /* peak levels used for song cut-off */
                 left_peak = fabs(*lplcp);
@@ -694,10 +663,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 right_peak = fabs(*rprcp);
             
             /* This is it folks, the main mix */
-            *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str) + (*jplcp * jp_lc_str)) * df + lc_s_micmix + lc_s_auxmix + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf) + 
-            (lp_lc_fade * lp_lc_strf) + (rp_lc_fade * rp_lc_strf) + (jp_lc_fade * jp_lc_strf);
-            *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + (*jprcp * jp_rc_str)) * df + rc_s_micmix + rc_s_auxmix + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf) +
-            (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (jp_rc_fade * jp_rc_strf);
+            *dolp = ((lplcm * lp_lc_str) + (rplcm * rp_lc_str) + (jplcm * jp_lc_str)) * df + lc_s_micmix + lc_s_auxmix + (iplcm * ip_lc_str);
+            *dorp = ((lprcm * lp_rc_str) + (rprcm * rp_rc_str) + (jprcm * jp_rc_str)) * df + rc_s_micmix + rc_s_auxmix + (iprcm * ip_rc_str);
             
             /* hard limit the levels if they go outside permitted limits */
             /* note this is not the same as clipping */
@@ -725,10 +692,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
             if (stream_monitor == FALSE)
                 {
-                *lap = ((*lplcp * lp_lc_aud) + (*rplcp * rp_lc_aud) + (*jplcp * jp_lc_aud)) * df + d_micmix + lc_s_auxmix + (*iplcp * ip_lc_aud) + (ip_lc_fade * ip_lc_aud) +
-                (lp_lc_fade * lp_lc_audf) + (rp_lc_fade * rp_lc_audf) + (jp_lc_fade * jp_lc_audf);
-                *rap = ((*lprcp * lp_rc_aud) + (*rprcp * rp_rc_aud) + (*jprcp * jp_rc_aud)) * df + d_micmix + rc_s_auxmix + (*iprcp * ip_rc_aud) + (ip_rc_fade * ip_rc_aud) +
-                (lp_rc_fade * lp_rc_audf) + (rp_rc_fade * rp_rc_audf) + (jp_rc_fade * jp_rc_audf);
+                *lap = ((lplcm * lp_lc_aud) + (rplcm * rp_lc_aud) + (jplcm * jp_lc_aud)) * df + d_micmix + lc_s_auxmix + (iplcm * ip_lc_aud);
+                *rap = ((lprcm * lp_rc_aud) + (rprcm * rp_rc_aud) + (jprcm * jp_rc_aud)) * df + d_micmix + rc_s_auxmix + (iprcm * ip_rc_aud);
                 compressor_gain = db2level(limiter(&audio_limiter, *lap, *rap));
                 *lap *= compressor_gain;
                 *rap *= compressor_gain;
@@ -797,14 +762,14 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 /* No ducking but headroom still must apply */
                 df = db2level(current_headroom);
 
-                FM(lp_lc_fade, lp_rc_fade, plr_l, lplcpf, lprcpf);
-                FM(rp_lc_fade, rp_rc_fade, plr_r, rplcpf, rprcpf);
-                FM(jp_lc_fade, jp_rc_fade, plr_j, jplcpf, jprcpf);
-                FM(ip_lc_fade, ip_rc_fade, plr_i, iplcpf, iprcpf);
+                PLAYER_MIX(lplcm, lprcm, plr_l, lplcp, lprcp, lplcpf, lprcpf);
+                PLAYER_MIX(rplcm, rprcm, plr_r, rplcp, rprcp, rplcpf, rprcpf);
+                PLAYER_MIX(jplcm, jprcm, plr_j, jplcp, jprcp, jplcpf, jprcpf);
+                PLAYER_MIX(iplcm, iprcm, plr_i, iplcp, iprcp, iplcpf, iprcpf);
                 
                 /* do the phone send mix */
-                *lpsp = lc_s_micmix + (*jplcp * jp_lc_str) + (jp_lc_fade * jp_lc_strf);
-                *rpsp = rc_s_micmix + (*jprcp * jp_rc_str) + (jp_rc_fade * jp_rc_strf);
+                *lpsp = lc_s_micmix + (jplcm * jp_lc_str);
+                *rpsp = rc_s_micmix + (jprcm * jp_rc_str);
                 
                 if (fabs(*lplcp) > left_peak)               /* peak levels used for song cut-off */
                     left_peak = fabs(*lplcp);
@@ -816,10 +781,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                     right_peak = fabs(*rprcp);
 
                 /* The main mix */
-                *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str)) * df + *lprp + *lpsp + lc_s_auxmix +
-                (lp_lc_fade * lp_rc_strf) + (rp_lc_fade * rp_lc_strf) + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf);
-                *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str)) * df + *rprp + *rpsp + rc_s_auxmix +
-                (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf);
+                *dolp = ((lplcm * lp_lc_str) + (rplcm * rp_lc_str)) * df + *lprp + *lpsp + lc_s_auxmix + (iplcm * ip_lc_str);
+                *dorp = ((lprcm * lp_rc_str) + (rprcm * rp_rc_str)) * df + *rprp + *rpsp + rc_s_auxmix + (iprcm * ip_rc_str);
                 
                 compressor_gain = db2level(limiter(&phone_limiter, *lpsp, *rpsp));
                 *lpsp *= compressor_gain;
@@ -851,10 +814,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
                 if (stream_monitor == FALSE)
                     {
-                    *lap = ((*lplcp * lp_lc_aud) + (*rplcp * rp_lc_aud)) * df + *lprp + lc_s_auxmix +
-                    (lp_lc_fade * lp_rc_audf) + (rp_lc_fade * rp_lc_audf) + (*iplcp * ip_lc_aud) + (ip_lc_fade * ip_lc_audf) + d_micmix + (*jplcp * jp_lc_str) + (jp_lc_fade * jp_lc_strf);
-                    *rap = ((*lprcp * lp_rc_aud) + (*rprcp * rp_rc_aud)) * df + *rprp + rc_s_auxmix +
-                    (lp_rc_fade * lp_rc_audf) + (rp_rc_fade * rp_rc_audf) + (*iprcp * ip_rc_aud) + (ip_rc_fade * ip_rc_audf) + d_micmix + (*jprcp * jp_rc_str) + (jp_rc_fade * jp_rc_strf);
+                    *lap = ((lplcm * lp_lc_aud) + (rplcm * rp_lc_aud)) * df + *lprp + lc_s_auxmix + (iplcm * ip_lc_aud) + d_micmix + (jplcm * jp_lc_str);
+                    *rap = ((lprcm * lp_rc_aud) + (rprcm * rp_rc_aud)) * df + *rprp + rc_s_auxmix + (iprcm * ip_rc_aud) + d_micmix + (jprcm * jp_rc_str);
                     compressor_gain = db2level(limiter(&audio_limiter, *lap, *rap));
                     *lap *= compressor_gain;
                     *rap *= compressor_gain;
@@ -920,10 +881,10 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                     /* No ducking */
                     df = 1.0;
 
-                    FM(lp_lc_fade, lp_rc_fade, plr_l, lplcpf, lprcpf);
-                    FM(rp_lc_fade, rp_rc_fade, plr_r, rplcpf, rprcpf);
-                    FM(jp_lc_fade, jp_rc_fade, plr_j, jplcpf, jprcpf);
-                    FM(ip_lc_fade, ip_rc_fade, plr_i, iplcpf, iprcpf);
+                    PLAYER_MIX(lplcm, lprcm, plr_l, lplcp, lprcp, lplcpf, lprcpf);
+                    PLAYER_MIX(rplcm, rprcm, plr_r, rplcp, rprcp, rplcpf, rprcpf);
+                    PLAYER_MIX(jplcm, jprcm, plr_j, jplcp, jprcp, jplcpf, jprcpf);
+                    PLAYER_MIX(iplcm, iprcm, plr_i, iplcp, iprcp, iplcpf, iprcpf);
 
                     if (fabs(*lplcp) > left_peak)            /* peak levels used for song cut-off */
                         left_peak = fabs(*lplcp);
@@ -935,10 +896,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                         right_peak = fabs(*rprcp);
                     
                     /* This is it folks, the main mix */
-                    *dolp = (*lplcp * lp_lc_str) + (*rplcp * rp_lc_str) + lc_s_auxmix + 
-                    (lp_lc_fade * lp_rc_strf) + (rp_lc_fade * rp_lc_strf) + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf);
-                    *dorp = (*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + rc_s_auxmix +
-                    (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf);
+                    *dolp = (lplcm * lp_lc_str) + (rplcm * rp_lc_str) + lc_s_auxmix + (iplcm * ip_lc_str);
+                    *dorp = (lprcm * lp_rc_str) + (rprcm * rp_rc_str) + rc_s_auxmix + (iprcm * ip_rc_str);
                     
                     /* hard limit the levels if they go outside permitted limits */
                     /* note this is not the same as clipping */
@@ -948,10 +907,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                     *dorp *= compressor_gain;
                     
                     /* The mix the voip listeners receive */
-                    *lpsp = (*dolp * mb_lc_aud) + (*jplcp * jp_lc_aud) + lc_s_micmix + 
-                    (jp_lc_fade * jp_lc_strf);
-                    *rpsp = (*dorp * mb_lc_aud) + (*jprcp * jp_rc_aud) + rc_s_micmix +
-                    (jp_rc_fade * jp_rc_strf);
+                    *lpsp = (*dolp * mb_lc_aud) + (jplcm * jp_lc_aud) + lc_s_micmix;
+                    *rpsp = (*dorp * mb_lc_aud) + (jprcm * jp_rc_aud) + rc_s_micmix;
                     compressor_gain = db2level(limiter(&phone_limiter, *lpsp, *rpsp));
                     *lpsp *= compressor_gain;
                     *rpsp *= compressor_gain;
@@ -975,8 +932,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
                     if (stream_monitor == FALSE) /* the DJ can hear the VOIP phone call */
                         {
-                        *lap = (*lsp * mb_lc_aud) + (*jplcp * jp_lc_aud) + d_micmix + (lc_s_auxmix *mb_lc_aud) + (jp_lc_fade * jp_lc_strf) + *lprp;
-                        *rap = (*rsp * mb_lc_aud) + (*jprcp * jp_rc_aud) + d_micmix + (rc_s_auxmix *mb_rc_aud) + (jp_rc_fade * jp_rc_strf) + *rprp;
+                        *lap = (*lsp * mb_lc_aud) + (jplcm * jp_lc_aud) + d_micmix + (lc_s_auxmix *mb_lc_aud) + *lprp;
+                        *rap = (*rsp * mb_lc_aud) + (jprcm * jp_rc_aud) + d_micmix + (rc_s_auxmix *mb_rc_aud) + *rprp;
                         compressor_gain = db2level(limiter(&audio_limiter, *lap, *rap));
                         *lap *= compressor_gain;
                         *rap *= compressor_gain;
@@ -1045,10 +1002,10 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                              df = (df < hr) ? df : hr;
                         }
 
-                        FM(lp_lc_fade, lp_rc_fade, plr_l, lplcpf, lprcpf);
-                        FM(rp_lc_fade, rp_rc_fade, plr_r, rplcpf, rprcpf);
-                        FM(jp_lc_fade, jp_rc_fade, plr_j, jplcpf, jprcpf);
-                        FM(ip_lc_fade, ip_rc_fade, plr_i, iplcpf, iprcpf);
+                        PLAYER_MIX(lplcm, lprcm, plr_l, lplcp, lprcp, lplcpf, lprcpf);
+                        PLAYER_MIX(rplcm, rprcm, plr_r, rplcp, rprcp, rplcpf, rprcpf);
+                        PLAYER_MIX(jplcm, jprcm, plr_j, jplcp, jprcp, jplcpf, jprcpf);
+                        PLAYER_MIX(iplcm, iprcm, plr_i, iplcp, iprcp, iplcpf, iprcpf);
 
                         if (fabs(*lplcp) > left_peak)         /* peak levels used for song cut-off */
                             left_peak = fabs(*lplcp);
@@ -1060,10 +1017,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                             right_peak = fabs(*rprcp);
 
                         /* This is it folks, the main mix */
-                        *dolp = ((*lplcp * lp_lc_str) + (*rplcp * rp_lc_str) + (*jplcp * jp_lc_str)) * df + lc_s_micmix + lc_s_auxmix + (*iplcp * ip_lc_str) + (ip_lc_fade * ip_lc_strf) +
-                        (lp_lc_fade * lp_lc_strf) + (rp_lc_fade * rp_lc_strf) + (jp_lc_fade * jp_lc_strf);
-                        *dorp = ((*lprcp * lp_rc_str) + (*rprcp * rp_rc_str) + (*jprcp * jp_rc_str)) * df + rc_s_micmix + rc_s_auxmix + (*iprcp * ip_rc_str) + (ip_rc_fade * ip_rc_strf) +
-                        (lp_rc_fade * lp_rc_strf) + (rp_rc_fade * rp_rc_strf) + (jp_rc_fade * jp_rc_strf);
+                        *dolp = ((lplcm * lp_lc_str) + (rplcm * rp_lc_str) + (jplcm * jp_lc_str)) * df + lc_s_micmix + lc_s_auxmix + (iplcm * ip_lc_str);
+                        *dorp = ((lprcm * lp_rc_str) + (rprcm * rp_rc_str) + (jprcm * jp_rc_str)) * df + rc_s_micmix + rc_s_auxmix + (iprcm * ip_rc_str);
                         
                         /* hard limit the levels if they go outside permitted limits */
                         /* note this is not the same as clipping */
@@ -1094,10 +1049,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
                         if (stream_monitor == FALSE)
                             {
-                            *lap = ((*lplcp * lp_lc_aud) + (*rplcp * rp_lc_aud) + (*jplcp * jp_lc_aud)) * df + d_micmix + lc_s_auxmix + (*iplcp * ip_lc_aud) + (ip_lc_fade * ip_lc_audf) +
-                            (lp_lc_fade * lp_lc_audf) + (rp_lc_fade * rp_lc_audf) + (jp_lc_fade * jp_lc_audf);
-                            *rap = ((*lprcp * lp_rc_aud) + (*rprcp * rp_rc_aud) + (*jprcp * jp_rc_aud)) * df + d_micmix + rc_s_auxmix + (*iprcp * ip_rc_aud) + (ip_rc_fade * ip_rc_audf) +
-                            (lp_rc_fade * lp_rc_audf) + (rp_rc_fade * rp_rc_audf) + (jp_rc_fade * jp_rc_audf);
+                            *lap = ((lplcm * lp_lc_aud) + (rplcm * rp_lc_aud) + (jplcm * jp_lc_aud)) * df + d_micmix + lc_s_auxmix + (iplcm * ip_lc_aud);
+                            *rap = ((lprcm * lp_rc_aud) + (rprcm * rp_rc_aud) + (jprcm * jp_rc_aud)) * df + d_micmix + rc_s_auxmix + (iprcm * ip_rc_aud);
                             compressor_gain = db2level(limiter(&audio_limiter, *lap, *rap));
                             *lap *= compressor_gain;
                             *rap *= compressor_gain;
