@@ -464,6 +464,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
     sample_t *lap, *rap, *lsp, *rsp, *lpsp, *rpsp, *lprp, *rprp;
     sample_t *la_buffer, *ra_buffer, *ls_buffer, *rs_buffer, *lps_buffer, *rps_buffer;
     sample_t *dolp, *dorp, *dilp, *dirp;
+    sample_t *plolp, *plorp, *prolp, *prorp, *piolp, *piorp, *pjolp, *pjorp;
+    sample_t *plilp, *plirp, *prilp, *prirp, *piilp, *piirp, *pjilp, *pjirp;
     /* ponters to buffers for reading the media players */
     sample_t *lplcp, *lprcp, *rplcp, *rprcp, *jplcp, *jprcp, *iplcp, *iprcp;
     /* pointers to buffers for fading */
@@ -537,18 +539,34 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
     {
         struct jack_ports *p = &g.port;
         
-        la_buffer = lap = (sample_t *) jack_port_get_buffer (p->dj_out_l, nframes);
-        ra_buffer = rap = (sample_t *) jack_port_get_buffer (p->dj_out_r, nframes);
-        ls_buffer = lsp = (sample_t *) jack_port_get_buffer (p->str_out_l, nframes);
-        rs_buffer = rsp = (sample_t *) jack_port_get_buffer (p->str_out_r, nframes);
-        lps_buffer = lpsp = (sample_t *) jack_port_get_buffer (p->voip_out_l, nframes);
-        rps_buffer = rpsp = (sample_t *) jack_port_get_buffer (p->voip_out_r, nframes);
-        lprp = (sample_t *) jack_port_get_buffer (p->voip_in_l, nframes);
-        rprp = (sample_t *) jack_port_get_buffer (p->voip_in_r, nframes);
-        dolp = (sample_t *) jack_port_get_buffer (p->dsp_out_l, nframes);
-        dorp = (sample_t *) jack_port_get_buffer (p->dsp_out_r, nframes);
-        dilp = (sample_t *) jack_port_get_buffer (p->dsp_in_l, nframes);
-        dirp = (sample_t *) jack_port_get_buffer (p->dsp_in_r, nframes);
+        la_buffer = lap = (sample_t *) jack_port_get_buffer(p->dj_out_l, nframes);
+        ra_buffer = rap = (sample_t *) jack_port_get_buffer(p->dj_out_r, nframes);
+        ls_buffer = lsp = (sample_t *) jack_port_get_buffer(p->str_out_l, nframes);
+        rs_buffer = rsp = (sample_t *) jack_port_get_buffer(p->str_out_r, nframes);
+        lps_buffer = lpsp = (sample_t *) jack_port_get_buffer(p->voip_out_l, nframes);
+        rps_buffer = rpsp = (sample_t *) jack_port_get_buffer(p->voip_out_r, nframes);
+        lprp = (sample_t *) jack_port_get_buffer(p->voip_in_l, nframes);
+        rprp = (sample_t *) jack_port_get_buffer(p->voip_in_r, nframes);
+        dolp = (sample_t *) jack_port_get_buffer(p->dsp_out_l, nframes);
+        dorp = (sample_t *) jack_port_get_buffer(p->dsp_out_r, nframes);
+        dilp = (sample_t *) jack_port_get_buffer(p->dsp_in_l, nframes);
+        dirp = (sample_t *) jack_port_get_buffer(p->dsp_in_r, nframes);
+        plolp = (sample_t *) jack_port_get_buffer(p->pl_out_l, nframes);
+        plorp = (sample_t *) jack_port_get_buffer(p->pl_out_r, nframes);
+        prolp = (sample_t *) jack_port_get_buffer(p->pr_out_l, nframes);
+        prorp = (sample_t *) jack_port_get_buffer(p->pr_out_r, nframes);
+        piolp = (sample_t *) jack_port_get_buffer(p->pi_out_l, nframes);
+        piorp = (sample_t *) jack_port_get_buffer(p->pi_out_r, nframes);
+        pjolp = (sample_t *) jack_port_get_buffer(p->pj_out_l, nframes);
+        pjorp = (sample_t *) jack_port_get_buffer(p->pj_out_r, nframes);
+        plilp = (sample_t *) jack_port_get_buffer(p->pl_in_l, nframes);
+        plirp = (sample_t *) jack_port_get_buffer(p->pl_in_r, nframes);
+        prilp = (sample_t *) jack_port_get_buffer(p->pr_in_l, nframes);
+        prirp = (sample_t *) jack_port_get_buffer(p->pr_in_r, nframes);
+        piilp = (sample_t *) jack_port_get_buffer(p->pi_in_l, nframes);
+        piirp = (sample_t *) jack_port_get_buffer(p->pi_in_r, nframes);
+        pjilp = (sample_t *) jack_port_get_buffer(p->pj_in_l, nframes);
+        pjirp = (sample_t *) jack_port_get_buffer(p->pj_in_r, nframes);
     }
     
     /* recreate buffers for data read from the pipes via the jack ringbuffer */
@@ -618,7 +636,9 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
         memset(lps_buffer, 0, nframes * sizeof (sample_t)); /* send silence to VOIP */
         memset(rps_buffer, 0, nframes * sizeof (sample_t));
         for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++,
-                     lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
+                    lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++,
+                    plolp++, plorp++, prolp++, prorp++, piolp++, piorp++, pjolp++, pjorp++,
+                    plilp++, plirp++, prilp++, prirp++, piilp++, piirp++, pjilp++, pjirp++)
             {       
             if (vol_smooth_count++ % 100 == 0) /* Can change volume level every so many samples */
                 update_smoothed_volumes();
@@ -652,6 +672,24 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
             PLAYER_MIX(rplcm, rprcm, plr_r, rplcp, rprcp, rplcpf, rprcpf);
             PLAYER_MIX(jplcm, jprcm, plr_j, jplcp, jprcp, jplcpf, jprcpf);
             PLAYER_MIX(iplcm, iprcm, plr_i, iplcp, iprcp, iplcpf, iprcpf);
+            
+            /* player audio routing through jack ports */
+            *plolp = lplcm;
+            *plorp = lprcm;
+            *prolp = rplcm;
+            *prorp = rprcm;
+            *piolp = iplcm;
+            *piorp = iprcm;
+            *pjolp = jplcm;
+            *pjorp = jprcm;
+            lplcm = *plilp;
+            lprcm = *plirp;
+            rplcm = *prilp;
+            rprcm = *prirp;
+            iplcm = *piilp;
+            iprcm = *piirp;
+            jplcm = *pjilp;
+            jprcm = *pjirp;
 
             if (fabs(*lplcp) > left_peak)          /* peak levels used for song cut-off */
                 left_peak = fabs(*lplcp);
@@ -743,8 +781,12 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
         if (simple_mixer == FALSE && mixermode == PHONE_PUBLIC)
             {
             for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++,
-                     lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++,
-                     lpsp++, rpsp++, lprp++, rprp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
+                    lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++,
+                    lpsp++, rpsp++, lprp++, rprp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++,
+                    plolp++, plorp++, prolp++, prorp++, piolp++, piorp++, pjolp++, pjorp++,
+                    plilp++, plirp++, prilp++, prirp++, piilp++, piirp++, pjilp++, pjirp++)
+
+
                 {    
                 if (vol_smooth_count++ % 100 == 0) /* Can change volume level every so many samples */
                     update_smoothed_volumes();
@@ -766,6 +808,24 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 PLAYER_MIX(rplcm, rprcm, plr_r, rplcp, rprcp, rplcpf, rprcpf);
                 PLAYER_MIX(jplcm, jprcm, plr_j, jplcp, jprcp, jplcpf, jprcpf);
                 PLAYER_MIX(iplcm, iprcm, plr_i, iplcp, iprcp, iplcpf, iprcpf);
+
+                /* player audio routing through jack ports */
+                *plolp = lplcm;
+                *plorp = lprcm;
+                *prolp = rplcm;
+                *prorp = rprcm;
+                *piolp = iplcm;
+                *piorp = iprcm;
+                *pjolp = jplcm;
+                *pjorp = jprcm;
+                lplcm = *plilp;
+                lprcm = *plirp;
+                rplcm = *prilp;
+                rprcm = *prirp;
+                iplcm = *piilp;
+                iprcm = *piirp;
+                jplcm = *pjilp;
+                jprcm = *pjirp;
                 
                 /* do the phone send mix */
                 *lpsp = lc_s_micmix + (jplcm * jp_lc_str);
@@ -862,8 +922,10 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
             if (simple_mixer == FALSE && mixermode == PHONE_PRIVATE && mic_on == 0)
                 {
                 for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++,
-                lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, lpsp++, rpsp++, 
-                lprp++, rprp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
+                    lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, lpsp++, rpsp++, 
+                    lprp++, rprp++, iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++,
+                    plolp++, plorp++, prolp++, prorp++, piolp++, piorp++, pjolp++, pjorp++,
+                    plilp++, plirp++, prilp++, prirp++, piilp++, piirp++, pjilp++, pjirp++)
                     {         
                     if (vol_smooth_count++ % 100 == 0) /* Can change volume level every so many samples */
                         update_smoothed_volumes();
@@ -885,6 +947,24 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                     PLAYER_MIX(rplcm, rprcm, plr_r, rplcp, rprcp, rplcpf, rprcpf);
                     PLAYER_MIX(jplcm, jprcm, plr_j, jplcp, jprcp, jplcpf, jprcpf);
                     PLAYER_MIX(iplcm, iprcm, plr_i, iplcp, iprcp, iplcpf, iprcpf);
+
+                    /* player audio routing through jack ports */
+                    *plolp = lplcm;
+                    *plorp = lprcm;
+                    *prolp = rplcm;
+                    *prorp = rprcm;
+                    *piolp = iplcm;
+                    *piorp = iprcm;
+                    *pjolp = jplcm;
+                    *pjorp = jprcm;
+                    lplcm = *plilp;
+                    lprcm = *plirp;
+                    rplcm = *prilp;
+                    rprcm = *prirp;
+                    iplcm = *piilp;
+                    iprcm = *piirp;
+                    jplcm = *pjilp;
+                    jprcm = *pjirp;
 
                     if (fabs(*lplcp) > left_peak)            /* peak levels used for song cut-off */
                         left_peak = fabs(*lplcp);
@@ -981,7 +1061,9 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                     {
                     for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, 
                             lplcp++, lprcp++, rplcp++, rprcp++, jplcp++, jprcp++, lpsp++, rpsp++,
-                                iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++)
+                            iplcp++, iprcp++, dilp++, dirp++, dolp++, dorp++,
+                            plolp++, plorp++, prolp++, prorp++, piolp++, piorp++, pjolp++, pjorp++,
+                            plilp++, plirp++, prilp++, prirp++, piilp++, piirp++, pjilp++, pjirp++)
                         {
                         if (vol_smooth_count++ % 100 == 0) /* Can change volume level every so many samples */
                             update_smoothed_volumes();
@@ -1006,6 +1088,24 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                         PLAYER_MIX(rplcm, rprcm, plr_r, rplcp, rprcp, rplcpf, rprcpf);
                         PLAYER_MIX(jplcm, jprcm, plr_j, jplcp, jprcp, jplcpf, jprcpf);
                         PLAYER_MIX(iplcm, iprcm, plr_i, iplcp, iprcp, iplcpf, iprcpf);
+
+                        /* player audio routing through jack ports */
+                        *plolp = lplcm;
+                        *plorp = lprcm;
+                        *prolp = rplcm;
+                        *prorp = rprcm;
+                        *piolp = iplcm;
+                        *piorp = iprcm;
+                        *pjolp = jplcm;
+                        *pjorp = jprcm;
+                        lplcm = *plilp;
+                        lprcm = *plirp;
+                        rplcm = *prilp;
+                        rprcm = *prirp;
+                        iplcm = *piilp;
+                        iprcm = *piirp;
+                        jplcm = *pjilp;
+                        jprcm = *pjirp;
 
                         if (fabs(*lplcp) > left_peak)         /* peak levels used for song cut-off */
                             left_peak = fabs(*lplcp);

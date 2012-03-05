@@ -36,6 +36,24 @@ struct jack_ports
     jack_port_t *voip_in_l;
     jack_port_t *voip_in_r;
 
+    /* player breakout ports */
+    jack_port_t *pl_out_l;
+    jack_port_t *pl_out_r;
+    jack_port_t *pr_out_l;
+    jack_port_t *pr_out_r;
+    jack_port_t *pi_out_l;
+    jack_port_t *pi_out_r;
+    jack_port_t *pj_out_l;
+    jack_port_t *pj_out_r;
+    jack_port_t *pl_in_l;
+    jack_port_t *pl_in_r;
+    jack_port_t *pr_in_l;
+    jack_port_t *pr_in_r;
+    jack_port_t *pi_in_l;
+    jack_port_t *pi_in_r;
+    jack_port_t *pj_in_l;
+    jack_port_t *pj_in_r;
+    
     jack_port_t *midi_port;
         
     jack_port_t *output_in_l;

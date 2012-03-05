@@ -149,9 +149,11 @@ class JackMenu(MenuMixin):
         # member really exists, was created by setattr
 
         self.build(menu.jackmenu)(zip(
-                    "channels voip dsp mix midi output".split(), (_('Channels'),
+                    "channels players voip dsp mix midi output".split(), (
+                    _('Channels'), _('Players'),
                     _('VoIP'), _('DSP'), _('Mix'), _('MIDI'), _('Output'))))
         self.submenu(self.channelsmenu_i, "channels")
+        self.submenu(self.playersmenu_i, "players")
         self.submenu(self.voipmenu_i, "voip")
         self.submenu(self.dspmenu_i, "dsp")
         self.submenu(self.mixmenu_i, "mix")
@@ -162,6 +164,10 @@ class JackMenu(MenuMixin):
         lr = itertools.cycle("lr")
         dj2_str2 = itertools.cycle(("dj",)*2 + ("str",)*2)
     
+        for prefix in "pl pr pi pj".split():
+            for each in zip((prefix,) * 4, out2_in2, lr):
+                self.add_port(self.playersmenu, "".join(each))
+
         for each in zip(("voip",) * 4, out2_in2, lr):
             self.add_port(self.voipmenu, "".join(each))
 
@@ -302,6 +308,14 @@ class JackMenu(MenuMixin):
                 cons = []
             else:
                 cons = """[
+                    ["{client_id}:pl_out_l", ["{client_id}:pl_in_l"]],
+                    ["{client_id}:pl_out_r", ["{client_id}:pl_in_r"]],
+                    ["{client_id}:pr_out_l", ["{client_id}:pr_in_l"]],
+                    ["{client_id}:pr_out_r", ["{client_id}:pr_in_r"]],
+                    ["{client_id}:pi_out_l", ["{client_id}:pi_in_l"]],
+                    ["{client_id}:pi_out_r", ["{client_id}:pi_in_r"]],
+                    ["{client_id}:pj_out_l", ["{client_id}:pj_in_l"]],
+                    ["{client_id}:pj_out_r", ["{client_id}:pj_in_r"]],
                     ["{client_id}:ch_in_1", ["system:capture_1"]],
                     ["{client_id}:ch_in_2", ["system:capture_2"]],
                     ["{client_id}:dj_out_l", ["system:playback_1"]],

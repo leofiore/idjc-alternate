@@ -180,6 +180,24 @@ int main(void)
         MK_AUDIO_OUTPUT(p->voip_out_r, "voip_out_r");
         MK_AUDIO_OUTPUT(p->voip_in_l, "voip_in_l");
         MK_AUDIO_OUTPUT(p->voip_in_r, "voip_in_r");
+        /* Player related ports. */
+        MK_AUDIO_OUTPUT(p->pl_out_l, "pl_out_l");
+        MK_AUDIO_OUTPUT(p->pl_out_r, "pl_out_r");
+        MK_AUDIO_OUTPUT(p->pr_out_l, "pr_out_l");
+        MK_AUDIO_OUTPUT(p->pr_out_r, "pr_out_r");
+        MK_AUDIO_OUTPUT(p->pi_out_l, "pi_out_l");
+        MK_AUDIO_OUTPUT(p->pi_out_r, "pi_out_r");
+        MK_AUDIO_OUTPUT(p->pj_out_l, "pj_out_l");
+        MK_AUDIO_OUTPUT(p->pj_out_r, "pj_out_r");
+        MK_AUDIO_INPUT(p->pl_in_l, "pl_in_l");
+        MK_AUDIO_INPUT(p->pl_in_r, "pl_in_r");
+        MK_AUDIO_INPUT(p->pr_in_l, "pr_in_l");
+        MK_AUDIO_INPUT(p->pr_in_r, "pr_in_r");
+        MK_AUDIO_INPUT(p->pi_in_l, "pi_in_l");
+        MK_AUDIO_INPUT(p->pi_in_r, "pi_in_r");
+        MK_AUDIO_INPUT(p->pj_in_l, "pj_in_l");
+        MK_AUDIO_INPUT(p->pj_in_r, "pj_in_r");
+
         /* Not really a mixer port but handled in the mixer code. */
         p->midi_port = jack_port_register(g.client, "midi_control", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
 
