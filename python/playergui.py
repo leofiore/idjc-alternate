@@ -1181,12 +1181,10 @@ class IDJC_Media_Player:
         if self.plsave_folder is not None:
             fh.write("plsave_folder=" + self.plsave_folder + "\n")
 
-        linkdir = PathStr(where or PM.basedir) / "links"
-
         for row in self.liststore:
             # Allow modification without affecting the playlist.
             entry = list(row)  
-            link = link_uuid_reg.get_link_filename(row[10], linkdir)
+            link = link_uuid_reg.get_link_filename(row[10])
             if link is not None:
                 # Replace orig file abspath with alternate path to a hard link
                 # except when link is None as happens when a hard link fails.

@@ -28,6 +28,7 @@ import os
 import uuid
 import re
 import glob
+import shutil
 import threading
 from functools import wraps
 
@@ -251,6 +252,7 @@ class LinkUUIDRegistry(dict):
     
     link_re = re.compile(
                     "\{[a-fA-F0-9]{8}-([a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}\}")
+    link_dir = None
 
 
     def add(self, uuid_, pathname):
@@ -280,7 +282,7 @@ class LinkUUIDRegistry(dict):
                 print "LinkUUIDRegistry: link purge failed: %s" % e
 
 
-    def _save(self, where):
+    def _save(self, where, copy):
         """Write new hard links to the links directory.
         
         Existing links are kept as they are. To unlink them could delete the
@@ -297,28 +299,34 @@ class LinkUUIDRegistry(dict):
 
         for uuid_, source in self.iteritems():
             ext = os.path.splitext(source)[1]
+            if copy:
+                cmd = shutil.copyfile
+            else:
+                cmd = os.link
+
             try:
-                os.link(source, os.path.join(where, "{%s}%s" % (uuid_, ext)))
+                cmd(source, os.path.join(where, "{%s}%s" % (uuid_, ext)))
             except EnvironmentError as e:
                 if e.errno != 17:
                     print "LinkUUIDRegistry: link failed:", e
+            except shutil.Error:
+                pass
 
 
-    def update(self, where):
+    def update(self, where, copy=False):
         """Update the hard links in the links directory."""
         
-        self._save(where)
+        self._save(where, copy)
         # Purge after save because the link source may just be in the 
         # links directory itself.
         self._purge(where)
+        self.link_dir = where
 
 
-    def get_link_filename(self, uuid_, where):
-        """Check in the directory 'where' for a specific UUID filename.
+    def get_link_filename(self, uuid_):
+        """Check in the links directory for a specific UUID filename."""
         
-        The globbing rules apply."""
-        
-        matches = glob.glob(os.path.join(where, "{%s}.*" % uuid_))
+        matches = glob.glob(os.path.join(self.link_dir, "{%s}.*" % uuid_))
         if len(matches) == 1:
             return os.path.basename(matches[0])
         else:
