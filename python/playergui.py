@@ -425,7 +425,8 @@ class AnnouncementDialog(gtk.Dialog):
             gtk.gdk.threads_leave()
         return True
     def cb_keypress(self, widget, event):
-        self.player.parent.cb_key_capture(widget, event)
+        if self.mode == "active":
+            self.player.parent.cb_key_capture(widget, event)
         if event.keyval == 65307:
             return True
         if event.keyval == 65288 and self.mode == "active":
@@ -895,7 +896,7 @@ class IDJC_Media_Player:
             '<span foreground="dark green">%s</span>' % _("(Cue sheet)") + 
             glib.markup_escape_text(metadata), cue_pathname, totalframes //
             75 + 1, metadata, "utf-8", global_cue_title, global_cue_performer,
-            RGDEF, cuesheet_liststore, "")
+            RGDEF, cuesheet_liststore, "", "")
 
         return element
 
