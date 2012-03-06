@@ -1018,7 +1018,7 @@ class mixprefs:
         frame.show()
         vbox.set_border_width(10)
         vbox.set_spacing(1)
-        
+
         self.silence_killer = gtk.CheckButton(
                             _('Trim quiet song endings and trailing silence'))
         self.silence_killer.set_active(True)
@@ -1469,6 +1469,7 @@ class mixprefs:
             "str_meters"    : self.show_stream_meters,
             "mic_meters"    : self.show_microphones,
             "mic_meters_no_void" : self.no_mic_void_space,
+            "players_visible"    : self.parent.menu.playersmenu_i,
             }
             
         for each in itertools.chain(mic_controls,

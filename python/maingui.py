@@ -123,9 +123,9 @@ class MainMenu(gtk.MenuBar, MenuMixin):
         mkitems(zip("output prefs jingles profiles".split(" "),
                 (_('Output'), _('Preferences'), _('Jingles'), _('Profiles'))))
         self.sep(self.viewmenu)
-        mkitems(zip("songdb chmeters strmeters".split(" "),
-                (_('Music Database'), _('Channel Meters'), _('Output Meters'))),
-                                                            gtk.CheckMenuItem)
+        mkitems(zip("songdb chmeters strmeters players".split(" "),
+                (_('Music Database'), _('Channel Meters'), _('Output Meters'),
+                 _('Main Players'))), gtk.CheckMenuItem)
 
         self.submenu(self.jackmenu_i, "jack")
 
@@ -2807,9 +2807,17 @@ class MainWindow:
         self.rightpane = gtk.HBox(False, 0)
         self.paned.pack2(self.rightpane, True, False)
         self.vbox8 = gtk.VBox(False, 0)
+        
+        menuhbox = gtk.HBox()
+        self.vbox8.pack_start(menuhbox, False)
+        menuhbox.show()
+        dummymenu = gtk.MenuBar()
+        menuhbox.pack_start(dummymenu)
+        dummymenu.show()
+        dummymenu.set_visible(False)
         self.menu = MainMenu()
         self.menu.set_border_width(6)
-        self.vbox8.pack_start(self.menu, False)
+        menuhbox.pack_start(self.menu)
         self.menu.show()
         self.rightpane.pack_start(self.vbox8, True, True ,0)
         self.window.add(self.paned)
@@ -3532,11 +3540,9 @@ class MainWindow:
         media_sg.add_widget(self.vbox3L)
         media_sg.add_widget(self.vbox3R)
         
-        self.server_window = SourceClientGui(self)
-        self.prefs_window = mixprefs(self)
-        self.prefs_window.load_player_prefs()
-        self.prefs_window.apply_player_prefs()
-
+        self.menu.playersmenu_i.set_active(True)
+        self.menu.playersmenu_i.connect("activate",
+                            lambda w: self.vbox6.set_visible(w.get_active()))
         self.menu.quitmenu_i.connect_object(
                     "activate", self.delete_event, self.window, None)
         self.menu.outputmenu_i.connect(
@@ -3556,6 +3562,11 @@ class MainWindow:
         self.jack = JackMenu(self.menu, lambda s, r: self.mixer_write(
                     "ACTN=jack%s\n%s" % (s, r)), lambda: self.mixer_read())
         self.jack.load(startup=True)
+        
+        self.server_window = SourceClientGui(self)
+        self.prefs_window = mixprefs(self)
+        self.prefs_window.load_player_prefs()
+        self.prefs_window.apply_player_prefs()
 
         self.vutimeout = gobject.timeout_add(50, self.vu_update)
         self.statstimeout = gobject.timeout_add(100, self.stats_update)
