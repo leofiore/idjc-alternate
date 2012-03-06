@@ -2263,18 +2263,19 @@ class MainWindow:
         self.controls.save_prefs(where)
         self.server_window.save_session_settings(where)
 
-        # Build links directory.
-        link_uuid_reg.clear()
-        for row in itertools.chain(
+        # Build links directory when in session mode.
+        if pm.profile is None:
+            link_uuid_reg.clear()
+            for row in itertools.chain(
                     self.player_left.liststore, self.player_right.liststore):
-            uuid_ = row[10]
-            try:
-                uuid.UUID(uuid_)
-            except:
-                pass
-            else:
-                link_uuid_reg.add(uuid_, row[1])
-        link_uuid_reg.update(PathStr(where or pm.basedir) / "links")
+                uuid_ = row[10]
+                try:
+                    uuid.UUID(uuid_)
+                except:
+                    pass
+                else:
+                    link_uuid_reg.add(uuid_, row[1])
+            link_uuid_reg.update(PathStr(where or pm.basedir) / "links")
 
         self.player_left.save_session(where)
         self.player_right.save_session(where)

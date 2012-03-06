@@ -326,11 +326,13 @@ class LinkUUIDRegistry(dict):
     def get_link_filename(self, uuid_):
         """Check in the links directory for a specific UUID filename."""
         
-        matches = glob.glob(os.path.join(self.link_dir, "{%s}.*" % uuid_))
-        if len(matches) == 1:
-            return os.path.basename(matches[0])
-        else:
-            # Link does not exist or UUID collision occurred.
-            return None
+        if self.link_dir is not None:
+            matches = glob.glob(os.path.join(self.link_dir, "{%s}.*" % uuid_))
+            if len(matches) == 1:
+                return os.path.basename(matches[0])
 
-
+        # Link does not exist e.g. can't hard-link across filesystems
+        # or was not made due to policy.
+        # For a return value of None the caller must substitute the
+        # pre-existing pathname to preserve functionality.
+        return None
