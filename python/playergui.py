@@ -425,8 +425,6 @@ class AnnouncementDialog(gtk.Dialog):
             gtk.gdk.threads_leave()
         return True
     def cb_keypress(self, widget, event):
-        if self.mode == "active":
-            self.player.parent.cb_key_capture(widget, event)
         if event.keyval == 65307:
             return True
         if event.keyval == 65288 and self.mode == "active":
