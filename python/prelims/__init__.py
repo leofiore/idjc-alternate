@@ -900,7 +900,11 @@ class ProfileManager(object):
                                         except EnvironmentError as e:
                                             print e
 
-                        shutil.copytree(tdir / "jingles", tmp / "jingles")
+                        try:
+                            shutil.copytree(tdir / "jingles", tmp / "jingles")
+                        except EnvironmentError:
+                            # Jingles directory might not exist.
+                            pass
                     else:
                         raise ProfileError(
                             _("the template profile '%s' does not exist") %

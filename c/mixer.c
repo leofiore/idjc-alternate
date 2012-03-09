@@ -1273,9 +1273,9 @@ static void jackportread(const char *portname, const char *filter)
     {
     unsigned long flags = 0;
     const char *type = JACK_DEFAULT_AUDIO_TYPE;
-    const char **ports;
+    const char **ports, **cons;
     const jack_port_t *port = jack_port_by_name(g.client, portname);
-    int i;
+    int i, j;
 
     if (!strcmp(filter, "inputs"))
         flags = JackPortIsInput;
@@ -1291,18 +1291,33 @@ static void jackportread(const char *portname, const char *filter)
                 }
         }
 
+    cons = jack_port_get_connections(port);
     ports = jack_get_ports(g.client, NULL, type, flags);
     fputs("jackports=", stdout);
-    for (i = 0; ports && ports[i]; ++i)
-        {
-        if (i)
-            fputs(" ", stdout);
-        if (jack_port_connected_to(port, ports[i]))
-            fputs("@", stdout);
-        fputs(ports[i], stdout);
-        }
-    fputs("\n", stdout);
+    if (ports)
+        for (i = 0; ports[i]; ++i)
+            {
+            if (i)
+                fputs(" ", stdout);
+                
+            /* connected ports are prefaced with an @ character */
+            if (cons)
+                for (j = 0; cons[j]; ++j)
+                    if (!(strcmp(cons[j], ports[i])))
+                        {
+                        putchar('@');
+                        break;
+                        }
+            
+            fputs(ports[i], stdout);
+            }
+
+    putchar('\n');
     fflush(stdout);
+
+    if (cons)
+        jack_free(cons);
+
     if (ports)
         jack_free(ports);
     }
