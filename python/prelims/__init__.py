@@ -737,6 +737,10 @@ class ProfileManager(object):
             raise ProfileError(_('profile %s does not exist') % profile, None)
 
         try:
+            if not os.path.exists(PGlobs.autoload_profile_pathname):
+                with open(PGlobs.autoload_profile_pathname, "w"):
+                    pass
+            
             with open(PGlobs.autoload_profile_pathname, "r+") as f:
                 fcntl.flock(f, fcntl.LOCK_EX)
                 al_profile = f.readline().strip()

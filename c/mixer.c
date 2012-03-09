@@ -1291,7 +1291,7 @@ static void jackportread(const char *portname, const char *filter)
                 }
         }
 
-    cons = jack_port_get_connections(port);
+    cons = jack_port_get_all_connections(g.client, port);
     ports = jack_get_ports(g.client, NULL, type, flags);
     fputs("jackports=", stdout);
     if (ports)
