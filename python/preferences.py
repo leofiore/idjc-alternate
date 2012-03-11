@@ -1477,11 +1477,13 @@ class mixprefs:
             self.activedict.update(each.activedict)
 
         self.valuesdict = {  # These widgets all have the get_value method.
-            "interval_vol": self.parent.jingles.interadj,
-            "passspeed"   : self.parent.passspeed_adj,
-            "djvolume"    : self.dj_aud_adj,
-            "rg_default"  : self.rg_defaultgain,
-            "rg_boost"    : self.rg_boost,
+            "jingle_vol"    : self.parent.jingles.jvol_adj,
+            "jingle_muting" : self.parent.jingles.jmute_adj,
+            "interlude_vol" : self.parent.jingles.ivol_adj,
+            "passspeed"     : self.parent.passspeed_adj,
+            "djvolume"      : self.dj_aud_adj,
+            "rg_default"    : self.rg_defaultgain,
+            "rg_boost"      : self.rg_boost,
             }
 
         for each in itertools.chain(mic_controls, (opener_settings,)):

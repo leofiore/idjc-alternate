@@ -43,7 +43,7 @@ from idjc import FGlobs, PGlobs
 from .playergui import *
 from .sourceclientgui import *
 from .preferences import *
-from .jingles import *
+from .jingles import JinglesWindow
 from .utils import SlotObject
 from .utils import LinkUUIDRegistry
 from .utils import PathStr
@@ -1799,9 +1799,9 @@ class MainWindow:
                         deckadj,
                         deck2adj,
                         self.crossadj.get_value(),
-                        self.jingles.l1_adj.get_value() * -1.0 + 100.0,
-                        self.jingles.l2_adj.get_value() * -1.0 + 100.0,
-                        self.jingles.interadj.get_value() * -1.0 + 100.0,
+                        self.jingles.jvol_adj.get_value() * -1.0 + 100.0,
+                        self.jingles.jmute_adj.get_value() * -1.0 + 100.0,
+                        self.jingles.ivol_adj.get_value() * -1.0 + 100.0,
                         self.mixbackadj.get_value() * -1.0 + 100.0,
                         self.jingles.playing,
                         self.player_left.stream.get_active(),
@@ -2034,7 +2034,7 @@ class MainWindow:
                 self.simplemixer = True
                 self.full_wst.set_tracking(False)
                 self.player_right.stop.clicked()
-                self.jingles.window.hide()
+                self.jingles.hide()
                 self.crossadj.set_value(0)
                 self.crossadj.value_changed()
                 self.window.forall(self.ui_detail_leveller(0))
@@ -2193,16 +2193,6 @@ class MainWindow:
             fh.write("deckvol=" + str(self.deckadj.get_value()) + "\n")
             fh.write("deck2vol=" + str(self.deck2adj.get_value()) + "\n")
             fh.write("crossfade=" + str(self.crossadj.get_value()) + "\n")
-            fh.write("jingles_deckvol1=" +
-                                    str(self.jingles.l1_adj.get_value()) + "\n")
-            fh.write("jingles_deckvol2=" +
-                                    str(self.jingles.l2_adj.get_value()) + "\n")
-            fh.write("jingles_muting1=" +
-                                    str(self.jingles.m1_adj.get_value()) + "\n")
-            fh.write("jingles_muting2=" +
-                                    str(self.jingles.m2_adj.get_value()) + "\n")
-            fh.write("jingles_intervol=" +
-                            str(self.jingles.interadj.get_value()) + "\n")
             fh.write("stream_mon=" +
                             str(int(self.listen_stream.get_active())) + "\n")
             fh.write("tracks_played=" +
@@ -2215,7 +2205,7 @@ class MainWindow:
             fh.write("server=" +
                         str(int((self.server_window.window.flags() &
                         gtk.VISIBLE) != 0)) + "\n")
-            fh.write("jingles=" + str(int((self.jingles.window.flags() &
+            fh.write("jingles=" + str(int((self.jingles.flags() &
                                                     gtk.VISIBLE) != 0)) + "\n")
             fh.write("prefspage=" +
                     str(self.prefs_window.notebook.get_current_page()) + "\n")
@@ -2233,8 +2223,6 @@ class MainWindow:
                 self.topleftpane.getcolwidths(self.topleftpane.flatcols) + "\n")
             fh.write("dbpage=" +
                 str(self.topleftpane.notebook.get_current_page()) + "\n")
-            fh.write("interlude=" +
-                self.jingles.interlude_player_track + "\n")
             fh.close()
             
             # Save a list of files played and timestamps.
@@ -2303,16 +2291,6 @@ class MainWindow:
                 self.deck2adj.set_value(float(v))
             elif k=="crossfade":
                 self.crossadj.set_value(float(v))
-            elif k=="jingles_deckvol1":
-                self.jingles.l1_adj.set_value(float(v))
-            elif k=="jingles_deckvol2":
-                self.jingles.l2_adj.set_value(float(v))
-            elif k=="jingles_muting1":
-                self.jingles.m1_adj.set_value(float(v))
-            elif k=="jingles_muting2":
-                self.jingles.m2_adj.set_value(float(v))
-            elif k=="jingles_intervol":
-                self.jingles.interadj.set_value(float(v))
             elif k=="stream_mon":
                 self.listen_stream.set_active(int(v))
             elif k=="tracks_played":
@@ -2328,7 +2306,7 @@ class MainWindow:
                     self.server_window.window.show()
             elif k=="jingles":
                 if v=="1":
-                    self.jingles.window.show()
+                    self.jingles.show()
             elif k=="prefspage":
                 self.prefs_window.notebook.set_current_page(int(v))
             elif k=="metadata_src":
@@ -2345,11 +2323,6 @@ class MainWindow:
                 self.topleftpane.setcolwidths(self.topleftpane.flatcols, v)
             elif k=="dbpage":
                 self.topleftpane.notebook.set_current_page(int(v))
-            elif k=="interlude":
-                if v!="":
-                     self.jingles.start_interlude_player(v)
-                     self.jingles.interlude.emit("toggled")
-
         try:
             fh = open(self.session_filename + "_files_played", "r")
         except:
@@ -2467,14 +2440,8 @@ class MainWindow:
                     # Restore previous settings.
                     self.send_new_mixer_stats()
                     self.player_left.next.clicked()
-                    self.player_right.next.clicked()
-                    self.jingles.stop.clicked()
-                    if self.jingles.interlude_player_track != "":
-                        self.jingles.start_interlude_player(
-                                            self.jingles.interlude_player_track)
-                    
+                    self.player_right.next.clicked()                  
                     self.server_window.source_client_open()
-                    #self.server_window.receive()
                     self.comms_reply_pending = False
                     self.server_window.restart_streams_and_recorders()
                     self.jack.restore()
@@ -2556,7 +2523,7 @@ class MainWindow:
                     pass
                     #print "key value", key, "missing from vumap"
             if self.jingles.playing == True and int(self.jingles_playing) == 0:
-                self.jingles.stop_player(False)
+                self.jingles.clear_indicators()
             
             if self.metadata_left_ctrl.get_value():  # handle dynamic metadata
                 while 1:
@@ -3437,8 +3404,8 @@ class MainWindow:
         'attenuation from the noise gate, yellow from the de-esser, red from '
         'the limiter.'))
         
-        # Create the jingles player
-        self.jingles = Jingles(self)
+        # Jingles window initialisation.
+        self.jingles = JinglesWindow(self)
 
         # Variable initialisation
         self.songname = u""
@@ -3513,7 +3480,7 @@ class MainWindow:
             "right_elapsed"             : self.player_right.playtime_elapsed,
             "left_playing"               : self.player_left.mixer_playing,
             "right_playing"             : self.player_right.mixer_playing,
-            "interlude_playing"       : self.interlude_playing,
+            "interlude_playing"        : self.interlude_playing,
             "left_signal"                 : self.player_left.mixer_signal_f,
             "right_signal"               : self.player_right.mixer_signal_f,
             "left_cid"                    : self.player_left.mixer_cid,
@@ -3550,7 +3517,7 @@ class MainWindow:
         self.menu.prefsmenu_i.connect(
                     "activate", lambda w: self.prefs_window.window.present())
         self.menu.jinglesmenu_i.connect(
-                    "activate", lambda w: self.jingles.window.present())
+                    "activate", lambda w: self.jingles.present())
         if pm.profile is not None:
             self.menu.profilesmenu_i.connect(
                     "activate", lambda w: pm.profile_dialog.present())
