@@ -182,8 +182,10 @@ class JinglesWindow(gtk.Window):
         interlude_box.set_border_width(8)
         interlude_frame.add(interlude_box)
         self.interlude = IDJC_Media_Player(interlude_box, "interlude", parent)
-        
+        interlude_box.set_no_show_all(True)
+
         hbox.show_all()
+        interlude_box.show()
 
 
     def clear_indicators(self):
