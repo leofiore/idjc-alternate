@@ -2465,6 +2465,12 @@ class IDJC_Media_Player:
         else:
             self.cb_progress(self.progressadj)
 
+    def show_replaygain_markers(self, show):
+        if show:
+            self.treeview.insert_column(self.rgtvcolumn, 0)
+        else:
+            self.treeview.remove_column(self.rgtvcolumn)
+
     def cb_event(self, widget, event, callback_data):
         # Handle click to the play progress indicator
         if callback_data == "DigitalProgressPress":

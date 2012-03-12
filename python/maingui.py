@@ -1795,13 +1795,14 @@ class MainWindow:
              deck2adj = self.deck2adj.get_value() * -1.0 + 100.0
 
         string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:" \
-                        "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" % (
+                        "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" \
+                        "%d:%d:%d:" % (
                         deckadj,
                         deck2adj,
                         self.crossadj.get_value(),
-                        self.jingles.jvol_adj.get_value() * -1.0 + 100.0,
-                        self.jingles.jmute_adj.get_value() * -1.0 + 100.0,
-                        self.jingles.ivol_adj.get_value() * -1.0 + 100.0,
+                        self.jingles.jvol_adj.get_value(),
+                        self.jingles.jmute_adj.get_value(),
+                        self.jingles.ivol_adj.get_value(),
                         self.mixbackadj.get_value() * -1.0 + 100.0,
                         self.jingles.playing,
                         self.player_left.stream.get_active(),
@@ -1828,6 +1829,9 @@ class MainWindow:
                         self.crosspattern.get_active(),
                         self.dsp_button.get_active(), 
                         self.prefs_window.twodblimit.get_active(),
+                        self.jingles.interlude.pause.get_active(),
+                        self.jingles.interlude.stream.get_active(),
+                        self.jingles.interlude.listen.get_active()
                         )
         self.mixer_write("MIXR=%s\nACTN=mixstats\nend\n" % string_to_send)
 
@@ -2267,6 +2271,7 @@ class MainWindow:
 
         self.player_left.save_session(where)
         self.player_right.save_session(where)
+        self.jingles.interlude.save_session(where)
         # JACK ports are saved at the moment of change, not here.
         
         return True  # This is also a timeout routine
@@ -2538,6 +2543,13 @@ class MainWindow:
                     if line.startswith("new_metadata="):
                         self.update_songname(self.player_right, line,
                                         self.metadata_right_ctrl.get_value())
+                        break
+            if self.metadata_interlude_ctrl.get_value():
+                while 1:
+                    line = self.mixer_read()
+                    if line.startswith("new_metadata="):
+                        self.update_songname(self.player_interlude, line,
+                                        self.metadata_interlude_ctrl.get_value())
                         break
 
             if midis:
@@ -3434,12 +3446,16 @@ class MainWindow:
         self.interlude_playing = SlotObject(0)
         self.player_left.playtime_elapsed = SlotObject(0)
         self.player_right.playtime_elapsed = SlotObject(0)
+        self.jingles.interlude.playtime_elapsed = SlotObject(0)
         self.player_left.mixer_playing = SlotObject(0)
         self.player_right.mixer_playing = SlotObject(0)
+        self.jingles.interlude.mixer_playing = SlotObject(0)
         self.player_left.mixer_signal_f = SlotObject(0)
         self.player_right.mixer_signal_f = SlotObject(0)
+        self.jingles.interlude.mixer_signal_f = SlotObject(0)
         self.player_left.mixer_cid = SlotObject(0)
         self.player_right.mixer_cid = SlotObject(0)
+        self.jingles.interlude.mixer_cid = SlotObject(0)
         self.left_compression_level = SlotObject(0)
         self.right_compression_level = SlotObject(0)
         self.left_deess_level = SlotObject(0)
@@ -3450,10 +3466,13 @@ class MainWindow:
         self.jingles.mixer_interlude_cid = SlotObject(0)
         self.player_left.runout = SlotObject(0)
         self.player_right.runout = SlotObject(0)
+        self.jingles.interlude.runout = SlotObject(0)
         self.metadata_left_ctrl = SlotObject(0)
         self.metadata_right_ctrl = SlotObject(0)
+        self.metadata_interlude_ctrl = SlotObject(0)
         self.player_left.silence = SlotObject(0.0)
         self.player_right.silence = SlotObject(0.0)
+        self.jingles.interlude.silence = SlotObject(0.0)
         self.sample_rate = SlotObject(0)
         
         self.feature_set = gtk.ToggleButton()
@@ -3471,29 +3490,34 @@ class MainWindow:
         
         # Variable map for stuff read from the mixer
         self.vumap = {
-            "str_l_peak"    : self.str_l_peak,
-            "str_r_peak"    : self.str_r_peak,
-            "str_l_rms"  : self.str_l_rms_vu,
-            "str_r_rms"  : self.str_r_rms_vu,
-            "jingles_playing"            : self.jingles_playing,
-            "left_elapsed"               : self.player_left.playtime_elapsed,
-            "right_elapsed"             : self.player_right.playtime_elapsed,
-            "left_playing"               : self.player_left.mixer_playing,
-            "right_playing"             : self.player_right.mixer_playing,
-            "interlude_playing"        : self.interlude_playing,
-            "left_signal"                 : self.player_left.mixer_signal_f,
-            "right_signal"               : self.player_right.mixer_signal_f,
-            "left_cid"                    : self.player_left.mixer_cid,
-            "right_cid"                  : self.player_right.mixer_cid,
-            "jingles_cid"                 : self.jingles.mixer_jingles_cid,
-            "interlude_cid"             : self.jingles.mixer_interlude_cid,
+            "str_l_peak"              : self.str_l_peak,
+            "str_r_peak"              : self.str_r_peak,
+            "str_l_rms"               : self.str_l_rms_vu,
+            "str_r_rms"               : self.str_r_rms_vu,
+            "left_elapsed"            : self.player_left.playtime_elapsed,
+            "right_elapsed"           : self.player_right.playtime_elapsed,
+            "interlude_elapsed"       : self.jingles.interlude.playtime_elapsed,
+            "left_playing"            : self.player_left.mixer_playing,
+            "right_playing"           : self.player_right.mixer_playing,
+            "jingles_playing"         : self.jingles_playing,
+            "interlude_playing"       : self.jingles.interlude.mixer_playing,
+            "left_signal"             : self.player_left.mixer_signal_f,
+            "right_signal"            : self.player_right.mixer_signal_f,
+            "interlude_signal"        : self.jingles.interlude.mixer_signal_f,
+            "left_cid"                : self.player_left.mixer_cid,
+            "right_cid"               : self.player_right.mixer_cid,
+            "jingles_cid"             : self.jingles.mixer_jingles_cid,
+            "interlude_cid"           : self.jingles.interlude.mixer_cid,
             "left_audio_runout"       : self.player_left.runout,
-            "right_audio_runout"         : self.player_right.runout,
-            "left_additional_metadata" : self.metadata_left_ctrl,
-            "right_additional_metadata": self.metadata_right_ctrl,
-            "silence_l"                  : self.player_left.silence,
-            "silence_r"                  : self.player_right.silence,
-            "sample_rate"                 : self.sample_rate,
+            "right_audio_runout"      : self.player_right.runout,
+            "interlude_audio_runout"  : self.jingles.interlude.runout,
+            "left_additional_metadata"  : self.metadata_left_ctrl,
+            "right_additional_metadata" : self.metadata_right_ctrl,
+            "interlude_additional_metadata" : self.metadata_interlude_ctrl,
+            "silence_l"               : self.player_left.silence,
+            "silence_r"               : self.player_right.silence,
+            "silence_i"               : self.jingles.interlude.silence,
+            "sample_rate"             : self.sample_rate,
             }
             
         for i, mic in enumerate(self.mic_meters):
@@ -3548,11 +3572,13 @@ class MainWindow:
         (self.full_wst, self.min_wst)[bool(self.simplemixer)].apply()
         self.window.connect("configure_event", self.configure_event)
         self.jingles.wst.apply()
+        self.jingles.interlude.listen.set_active(False)
 
         if self.prefs_window.restore_session_option.get_active():
             print "Restoring previous session"
             self.player_left.restore_session()
             self.player_right.restore_session()
+            self.jingles.interlude.restore_session()
             self.restore_session()
         self.session_loaded = True
          

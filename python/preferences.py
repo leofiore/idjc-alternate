@@ -762,16 +762,11 @@ class mixprefs:
         self.parent.send_new_mixer_stats()
         
     def cb_rg_indicate(self, widget):
-        left = self.parent.player_left
-        right = self.parent.player_right
-        
-        if widget.get_active():
-            left.treeview.insert_column(left.rgtvcolumn, 0)
-            right.treeview.insert_column(right.rgtvcolumn, 0)
-        else:           
-            left.treeview.remove_column(left.rgtvcolumn)
-            right.treeview.remove_column(right.rgtvcolumn)
-                    
+        show = widget.get_active()
+        for each in (self.parent.player_left, self.parent.player_right,
+                                                self.parent.jingles.interlude):
+            each.show_replaygain_markers(show)
+
     def cb_realize(self, window):
         self.wst.apply()
             

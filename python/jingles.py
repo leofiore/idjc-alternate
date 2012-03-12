@@ -147,6 +147,10 @@ class JinglesWindow(gtk.Window):
         self.jvol_adj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 10.0)
         self.jmute_adj = gtk.Adjustment(80.0, 0.0, 100.0, 1.0, 10.0)
         self.ivol_adj = gtk.Adjustment(50.0, 0.0, 100.0, 1.0, 10.0)
+
+        for each in (self.jvol_adj, self.jmute_adj, self.ivol_adj):
+            each.connect("value-changed",
+                                lambda w: parent.send_new_mixer_stats())
         
         volpb = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "volume2.png")
 
