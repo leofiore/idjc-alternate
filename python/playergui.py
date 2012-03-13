@@ -2967,7 +2967,7 @@ class IDJC_Media_Player:
                  "Fade none"                      : ">fadenone",
                  "Jump To Top Control"       : ">jumptotop",
         }
-        if dict.has_key(text):
+        if dict.has_key(text) and self.pl_mode.get_active() == 0:
             if iter is not None:
                 iter = model.insert_after(iter)
             else:

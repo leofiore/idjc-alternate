@@ -2258,8 +2258,9 @@ class MainWindow:
         # Build links directory when in session mode.
         if pm.profile is None:
             link_uuid_reg.clear()
-            for row in itertools.chain(
-                    self.player_left.liststore, self.player_right.liststore):
+            for row in itertools.chain(self.player_left.liststore,
+                                        self.player_right.liststore,
+                                        self.jingles.interlude.liststore):
                 uuid_ = row[10]
                 try:
                     uuid.UUID(uuid_)

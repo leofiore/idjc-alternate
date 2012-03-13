@@ -128,6 +128,8 @@ class JinglesWindow(gtk.Window):
         self.set_title(_('Jingles') + PM.title_extra)
         self.wst = WindowSizeTracker(self)
         self.connect("delete-event", lambda w, e: w.hide() or True)
+        self.connect("key-press-event", parent.cb_key_capture)
+        self.connect("key-release-event", parent.cb_key_capture)
         hbox = gtk.HBox()
         hbox.set_spacing(12)
         self.add(hbox)
