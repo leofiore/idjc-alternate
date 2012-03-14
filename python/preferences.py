@@ -1493,7 +1493,6 @@ class mixprefs:
             "rtfilerqdir"   : self.parent.player_right.file_requester_start_dir,
             "main_full_wst" : self.parent.full_wst,
             "main_min_wst"  : self.parent.min_wst,
-            "jingles_wst"   : self.parent.jingles.wst,
             "prefs_wst"   : self.wst,
             }
 

@@ -1126,11 +1126,15 @@ class IDJC_Media_Player:
 
         uuid_ = str(uuid.uuid4())
 
-        if artist and title:
-            meta_name = artist + u" - " + title
+        def player_row(meta_name):
             return PlayerRow(glib.markup_escape_text(meta_name), filename,
                 length, meta_name, encoding, title, artist, rg, cuesheet,
                 album, uuid_)
+
+        if artist and title and album:
+            return player_row(artist + u" - " + title + u" - (%s)" % album)
+        elif artist and title:
+            return player_row(artist + u" - " + title)
         else:
             return PlayerRow(rsmeta_name, filename, length, meta_name, encoding,
                 title_retval, artist, rg, cuesheet, album, uuid_)

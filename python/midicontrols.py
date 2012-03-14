@@ -679,7 +679,7 @@ class Controls(object):
         main = self.owner
 
         if n==3:
-            if main.jingles.has_toplevel_focus():
+            if main.player_nb.get_current_page() == 1:
                 if main.jingles.interlude.treeview.is_focus():
                     n = 2
                 else:

@@ -43,7 +43,7 @@ from idjc import FGlobs, PGlobs
 from .playergui import *
 from .sourceclientgui import *
 from .preferences import *
-from .jingles import JinglesWindow
+from .jingles import ExtraPlayers
 from .utils import SlotObject
 from .utils import LinkUUIDRegistry
 from .utils import PathStr
@@ -120,12 +120,12 @@ class MainMenu(gtk.MenuBar, MenuMixin):
             
         self.submenu(self.viewmenu_i, "view")
         mkitems = self.build(self.viewmenu)
-        mkitems(zip("output prefs jingles profiles".split(" "),
-                (_('Output'), _('Preferences'), _('Jingles'), _('Profiles'))))
+        mkitems(zip("output prefs profiles".split(" "),
+                (_('Output'), _('Preferences'), _('Profiles'))))
         self.sep(self.viewmenu)
         mkitems(zip("songdb chmeters strmeters players".split(" "),
                 (_('Music Database'), _('Channel Meters'), _('Output Meters'),
-                 _('Main Players'))), gtk.CheckMenuItem)
+                 _('Media Players'))), gtk.CheckMenuItem)
 
         self.submenu(self.jackmenu_i, "jack")
 
@@ -1895,7 +1895,7 @@ class MainWindow:
                                                 self.songname, pm.title_extra))
                 tm = time.localtime()
                 ts = "%02d:%02d :: " % (tm[3], tm[4])  # hours and minutes
-                tstext = self.songname.encode("utf-8") + " - %s" % self.album
+                tstext = self.songname.encode("utf-8")
                 self.history_buffer.place_cursor(
                                             self.history_buffer.get_end_iter())
                 self.history_buffer.insert_at_cursor(ts + tstext + "\n")
@@ -2227,6 +2227,8 @@ class MainWindow:
                 self.topleftpane.getcolwidths(self.topleftpane.flatcols) + "\n")
             fh.write("dbpage=" +
                 str(self.topleftpane.notebook.get_current_page()) + "\n")
+            fh.write("playerpage=" +
+                str(self.player_nb.get_current_page()) + "\n")
             fh.close()
             
             # Save a list of files played and timestamps.
@@ -2329,6 +2331,8 @@ class MainWindow:
                 self.topleftpane.setcolwidths(self.topleftpane.flatcols, v)
             elif k=="dbpage":
                 self.topleftpane.notebook.set_current_page(int(v))
+            elif k=="playerpage":
+                self.player_nb.set_current_page(int(v))
         try:
             fh = open(self.session_filename + "_files_played", "r")
         except:
@@ -2804,9 +2808,14 @@ class MainWindow:
         self.rightpane.show()
         self.paned.show()
         
-        # add box 6 to box 8
+        self.player_nb = gtk.Notebook()
+        self.player_nb.set_border_width(6)
+        main_label = gtk.Label(_('Main Players'))
         self.vbox6 = gtk.VBox(False, 0)
-        self.vbox8.pack_start(self.vbox6, True, True, 0)
+        self.player_nb.append_page(self.vbox6, main_label)
+        main_label.show()
+        self.vbox8.pack_start(self.player_nb, True, True, 0)
+        self.player_nb.show()
         # add box 7 to box 8
         self.hbox7 = gtk.HBox(True)
         self.hbox7.set_spacing(5)
@@ -3417,8 +3426,12 @@ class MainWindow:
         'attenuation from the noise gate, yellow from the de-esser, red from '
         'the limiter.'))
         
-        # Jingles window initialisation.
-        self.jingles = JinglesWindow(self)
+        # Aux players initialisation.
+        self.jingles = ExtraPlayers(self)
+        extra_label = gtk.Label(_('Jingles'))
+        self.player_nb.append_page(self.jingles, extra_label)
+        extra_label.show()
+        self.player_nb.set_page(0)
 
         # Variable initialisation
         self.songname = u""
@@ -3534,15 +3547,13 @@ class MainWindow:
         
         self.menu.playersmenu_i.set_active(True)
         self.menu.playersmenu_i.connect("activate",
-                            lambda w: self.vbox6.set_visible(w.get_active()))
+                            lambda w: self.player_nb.set_visible(w.get_active()))
         self.menu.quitmenu_i.connect_object(
                     "activate", self.delete_event, self.window, None)
         self.menu.outputmenu_i.connect(
                     "activate", lambda w: self.server_window.window.present())
         self.menu.prefsmenu_i.connect(
                     "activate", lambda w: self.prefs_window.window.present())
-        self.menu.jinglesmenu_i.connect(
-                    "activate", lambda w: self.jingles.present())
         if pm.profile is not None:
             self.menu.profilesmenu_i.connect(
                     "activate", lambda w: pm.profile_dialog.present())
@@ -3572,7 +3583,6 @@ class MainWindow:
         
         (self.full_wst, self.min_wst)[bool(self.simplemixer)].apply()
         self.window.connect("configure_event", self.configure_event)
-        self.jingles.wst.apply()
         self.jingles.interlude.listen.set_active(False)
 
         if self.prefs_window.restore_session_option.get_active():
@@ -3584,7 +3594,8 @@ class MainWindow:
         self.session_loaded = True
          
         self.window.set_focus_chain((self.player_left.scrolllist,
-                                                self.player_right.scrolllist))
+                                        self.player_right.scrolllist,
+                                        self.jingles.interlude.scrolllist))
          
         self.server_window.update_metadata()
         
@@ -3593,6 +3604,7 @@ class MainWindow:
         self.topleftpane.whereentry.set_flags(gtk.CAN_FOCUS)
         self.player_left.treeview.set_flags(gtk.CAN_FOCUS)
         self.player_right.treeview.set_flags(gtk.CAN_FOCUS)
+        self.jingles.interlude.treeview.set_flags(gtk.CAN_FOCUS)
         self.player_left.treeview.grab_focus()
       
         self.window.add_events(gtk.gdk.KEY_PRESS_MASK)

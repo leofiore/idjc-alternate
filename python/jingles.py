@@ -62,6 +62,12 @@ class JingleUnit(gtk.HBox):
         self.led.set_from_pixbuf(LED["clear"].copy())
         self.pack_start(self.led, False)
         
+        image = gtk.image_new_from_file(FGlobs.pkgdatadir / "stop.png")
+        self.stop = gtk.Button()
+        self.stop.set_sensitive(False)
+        self.stop.set_image(image)
+        self.pack_start(self.stop)
+        
         self.trigger = gtk.Button()
         self.trigger.set_size_request(80, -1)
         self.trigger.set_sensitive(False)
@@ -116,26 +122,19 @@ class JingleCluster(gtk.Frame):
 
 
 
-class JinglesWindow(gtk.Window):
-    """Main window for effects, sequences of same, and the interlude player."""
+class ExtraPlayers(gtk.HBox):
+    """For effects, sequences of same, and background tracks."""
     
     
     def __init__(self, parent):
         self.approot = parent
 
-        gtk.Window.__init__(self)
-        self.set_border_width(8)
-        self.set_title(_('Jingles') + PM.title_extra)
-        self.wst = WindowSizeTracker(self)
-        self.connect("delete-event", lambda w, e: w.hide() or True)
-        self.connect("key-press-event", parent.cb_key_capture)
-        self.connect("key-release-event", parent.cb_key_capture)
-        hbox = gtk.HBox()
-        hbox.set_spacing(12)
-        self.add(hbox)
+        gtk.HBox.__init__(self)
+        self.set_border_width(6)
+        self.set_spacing(12)
 
         esbox = gtk.VBox()
-        hbox.pack_start(esbox)
+        self.pack_start(esbox)
         estable = gtk.Table(columns=3, homogeneous=True)
         estable.set_col_spacing(1, 8)
         esbox.pack_start(estable)
@@ -157,7 +156,7 @@ class JinglesWindow(gtk.Window):
         volpb = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "volume2.png")
 
         jlevel_vbox = gtk.VBox()
-        hbox.pack_start(jlevel_vbox, False)
+        self.pack_start(jlevel_vbox, False)
         
         jvol_image = gtk.image_new_from_pixbuf(volpb.copy())
         jvol = gtk.VScale(self.jvol_adj)
@@ -171,10 +170,10 @@ class JinglesWindow(gtk.Window):
                                                 itertools.cycle((False, True))):
             jlevel_vbox.pack_start(widget, expand)
 
-        hbox.pack_start(gtk.VSeparator(), False)
+        self.pack_start(gtk.VSeparator(), False)
         
         ilevel_vbox = gtk.VBox()
-        hbox.pack_start(ilevel_vbox, False)
+        self.pack_start(ilevel_vbox, False)
         
         ivol_image = gtk.image_new_from_pixbuf(volpb.copy())
         ilevel_vbox.pack_start(ivol_image, False)
@@ -183,14 +182,14 @@ class JinglesWindow(gtk.Window):
         ilevel_vbox.pack_start(ivol)
 
         interlude_frame = gtk.Frame(" %s " % _('Background Tracks'))
-        hbox.pack_start(interlude_frame)
+        self.pack_start(interlude_frame)
         interlude_box = gtk.VBox()
         interlude_box.set_border_width(8)
         interlude_frame.add(interlude_box)
         self.interlude = IDJC_Media_Player(interlude_box, "interlude", parent)
         interlude_box.set_no_show_all(True)
 
-        hbox.show_all()
+        self.show_all()
         interlude_box.show()
 
 
