@@ -92,7 +92,6 @@ struct xlplayer
     char *playername;                    /* the name of this player e.g. "left", "right" etc. */
     enum playmode_t playmode;            /* indicates the player mode or state */
     enum command_t command;              /* the command mode */
-    int have_swapped_buffers_f;          /* controls buffer swapping for fadeout */
     size_t avail;                        /* the number of samples available in the ringbuffer */
     int have_data_f;                     /* indicates the presence of audio data */
     int current_audio_context;           /* bumps when started, bumps when stopped. Odd=playing */
@@ -128,6 +127,19 @@ struct xlplayer
     struct xlp_dynamic_metadata dynamic_metadata;
     int usedelay;                        /* client to delay dynamic metadata display */
     float silence;                       /* the number of seconds of silence */
+    
+    int use_sv;                          /* speed variance version of read function will be used */
+    
+    float *lcb;                       /* left channel buffer */
+    float *rcb;                       /* right channel buffer */
+    float *lcfb;                      /* left channel fade buffer */
+    float *rcfb;                          /* right channel fade buffer */
+    
+    float *lcp, *rcp, *lcfp, *rcfp;   /* pointers into the above buffers */
+    
+    float ls, rs;                     /* the current audio sample stereo pair */
+    
+    float peak;                       /* peak level of player */
     };
 
 /* xlplayer_create: create an instance of the player */
@@ -191,5 +203,14 @@ int xlplayer_calc_rbdelay(struct xlplayer *xlplayer);
 
 /* this sets the speed of fading for a particular mode */
 void xlplayer_set_fadesteps(struct xlplayer *self, int fade_step);
+
+/* pull player audio from the ringbuffer into the readout buffers */
+size_t xlplayer_read_start(struct xlplayer *self, jack_nframes_t nframes);
+
+/* compute the next sample */
+void xlplayer_read_next(struct xlplayer *self);
+
+void xlplayer_read_start_all(struct xlplayer **list, jack_nframes_t nframes);
+void xlplayer_read_next_all(struct xlplayer **list);
 
 #endif /* XLPLAYER_H */

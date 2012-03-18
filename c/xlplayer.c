@@ -24,9 +24,8 @@
 #include <math.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <jack/jack.h>
-#include <jack/ringbuffer.h>
 #include <samplerate.h>
+#include <ialloc.h>
 
 #include "xlplayer.h"
 #include "mp3dec.h"
@@ -531,7 +530,7 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
         }
     self->playername = playername;
     self->leftbuffer = self->rightbuffer = NULL;
-    self->have_data_f = self->have_swapped_buffers_f = 0;
+    self->have_data_f = 0;
     self->pause = 0;
     self->jack_flush = self->jack_is_flushed = 0;
     self->fade_mode = 0;
@@ -559,6 +558,10 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
     self->dynamic_metadata.album = NULL;
     self->dynamic_metadata.current_audio_context = 0;
     self->dynamic_metadata.rbdelay = 0;
+    self->lcb = ialloc(32);
+    self->rcb = ialloc(32);
+    self->lcfb = ialloc(32);
+    self->rcfb = ialloc(32);
     pthread_create(&self->thread, NULL, (void *(*)(void *)) xlplayer_main, self);
     while (self->up == FALSE)
         usleep(10000);
@@ -572,6 +575,10 @@ void xlplayer_destroy(struct xlplayer *self)
         self->command = CMD_CLEANUP;
         pthread_join(self->thread, NULL);
         pthread_mutex_destroy(&(self->dynamic_metadata.meta_mutex));
+        ifree(self->lcb);
+        ifree(self->rcb);
+        ifree(self->lcfb);
+        ifree(self->rcfb);
         free(self->pbsrb_l);
         free(self->pbsrb_r);
         free(self->pbsrb_lf);
@@ -709,7 +716,6 @@ size_t read_from_player_sv(struct xlplayer *self, sample_t *left_buf, sample_t *
     float *pbsrb_swap;
     size_t todo = 0, ftodo = 0;
 
-    self->have_swapped_buffers_f = FALSE;
     if (self->jack_flush)
         {
         if (self->noflush == FALSE)
@@ -741,7 +747,6 @@ size_t read_from_player_sv(struct xlplayer *self, sample_t *left_buf, sample_t *
                 self->right_fade = swap;
                 /* initialisations for fade */
                 fade_set(self->fadeout, FADE_SET_HIGH, -1.0f, FADE_OUT);
-                self->have_swapped_buffers_f = TRUE;
                 }
             /* buffer flushing */
             src_reset(self->pbspeed_conv_l);
@@ -802,7 +807,6 @@ size_t read_from_player(struct xlplayer *self, sample_t *left_buf, sample_t *rig
     jack_ringbuffer_t *swap;
     size_t todo, favail, ftodo;
     
-    self->have_swapped_buffers_f = FALSE;
     if (self->jack_flush)
         {
         if (self->noflush == FALSE)
@@ -816,7 +820,6 @@ size_t read_from_player(struct xlplayer *self, sample_t *left_buf, sample_t *rig
                 self->right_ch = self->right_fade;
                 self->right_fade = swap;
                 fade_set(self->fadeout, FADE_SET_HIGH, -1.0f, FADE_OUT);
-                self->have_swapped_buffers_f = TRUE;
                 }
             jack_ringbuffer_reset(self->left_ch);
             jack_ringbuffer_reset(self->right_ch);
@@ -886,3 +889,45 @@ void xlplayer_set_dynamic_metadata(struct xlplayer *xlplayer, enum metadata_t ty
     pthread_mutex_unlock(&(dm->meta_mutex));
     }
 
+size_t xlplayer_read_start(struct xlplayer *self, jack_nframes_t nframes)
+    {
+    size_t samples_read;
+        
+    self->lcp = self->lcb = irealloc(self->lcb, nframes);
+    self->rcp = self->rcb = irealloc(self->rcb, nframes);
+    self->lcfp = self->lcfb = irealloc(self->lcfb, nframes);
+    self->rcfp = self->rcfb = irealloc(self->rcfb, nframes);
+
+    if (self->use_sv)
+        samples_read = read_from_player_sv(self, self->lcb, self->rcb, self->lcfb, self->rcfb, nframes);
+    else
+        samples_read = read_from_player(self, self->lcb, self->rcb, self->lcfb, self->rcfb, nframes);
+    
+    return samples_read;
+    }
+
+void xlplayer_read_start_all(struct xlplayer **list, jack_nframes_t nframes)
+    {
+    while (*list)
+        xlplayer_read_start(*list++, nframes);
+    }
+
+void xlplayer_read_next(struct xlplayer *self)
+    {
+    float fade_level = fade_get(self->fadeout);
+    float abs;
+
+    if ((abs = fabsf(*self->lcp)) > self->peak)
+        self->peak = abs;
+    if ((abs = fabsf(*self->rcp)) > self->peak)
+        self->peak = abs;
+        
+    self->ls = *self->lcp++ + *self->lcfp++ * fade_level;
+    self->rs = *self->rcp++ + *self->rcfp++ * fade_level;
+    }
+
+void xlplayer_read_next_all(struct xlplayer **list)
+    {
+    while (*list)
+        xlplayer_read_next(*list++);
+    }

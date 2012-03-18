@@ -1,6 +1,6 @@
 /*
 #   ialloc.c: Heap memory allocation routines for IDJC.
-#   Copyright (C) 2005-2006 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2005-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -26,26 +26,25 @@ typedef jack_default_audio_sample_t sample_t;
 
 sample_t *ialloc(jack_nframes_t size)
     {
-    jack_nframes_t *memblock;
+    sample_t *memblock;
     
-    memblock = malloc(size * sizeof (sample_t) + sizeof (jack_nframes_t));
-    *memblock++ = size;
-    return (sample_t *)memblock;
+    memblock = malloc(sizeof (jack_nframes_t) + sizeof (sample_t) * size);
+    *(jack_nframes_t *)memblock++ = size;
+    return memblock;
     }
   
 void ifree(sample_t *memblock)
     {
-    free(((jack_nframes_t *)memblock)-1);
+    free(((jack_nframes_t *)memblock) - 1);
     }
 
 sample_t *irealloc(sample_t *orig, jack_nframes_t newsize)
     {
     jack_nframes_t *oldbuf;
     
-    oldbuf = ((jack_nframes_t *)orig)-1;
+    oldbuf = ((jack_nframes_t *)orig) - 1;
     if (newsize > *oldbuf)
         {
-        fprintf(stderr, "Reallocating in irealloc\n");
         free(oldbuf);
         return ialloc(newsize);
         }
