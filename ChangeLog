@@ -2,6 +2,10 @@
 
 New jingles player.
 
+Player level smoothing and muting code moved from mixer.c into xlplayer.c.
+
+Intra player mixing code moved into xlplayer.c.
+
 Added a new interlude player which is nearly the equal of the main players.
 
 Added the ability to remove the main players' visibility. Useful for when using external players.

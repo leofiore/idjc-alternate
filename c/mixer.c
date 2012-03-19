@@ -69,6 +69,9 @@
 
 typedef jack_default_audio_sample_t sample_t;
 
+/* the sample rate reported by JACK -- initial value to prevent divide by 0 */
+unsigned long sr = 44100;
+
 /* values of the volume sliders in the GUI */
 static int volume, volume2, crossfade, jinglesvolume, jinglesvolume2, interludevol, mixbackvol, crosspattern;
 /* back and forth status indicators re. jingles */
@@ -156,8 +159,6 @@ static sample_t *eot_alarm_table;      /* the wave table for the DJ alarm */
 static char midi_queue[MIDI_QUEUE_SIZE];
 static size_t midi_nqueued= 0;
 static pthread_mutex_t midi_mutex;
-
-static unsigned long sr;               /* the sample rate reported by JACK */
 
 static struct xlplayer *plr_l, *plr_r, *plr_j, *plr_i; /* player instance stuctures */
 static struct xlplayer *players[5];
@@ -274,6 +275,8 @@ static void update_smoothed_volumes()
     float xprop, yprop;
     const float bias = 0.35386f;
     const float pat3 = 0.9504953575f;
+
+    xlplayer_smoothing_process_all(players);
 
     if (dj_audio_level != current_dj_audio_level)
         {
@@ -424,7 +427,10 @@ static void update_smoothed_volumes()
     handle_mute_button(&ip_stream_mute, inter_stream);
     
     /* the factors that will be applied in the mix on the media players */
-    lp_lc_aud = lp_rc_aud = vol_rescale * lp_listen_mute;
+    //lp_lc_aud = lp_rc_aud = vol_rescale * lp_listen_mute;
+    
+    lp_lc_aud = lp_rc_aud = plr_l->volume.level * plr_l->mute_aud.level;
+    
     rp_lc_aud = rp_rc_aud = vol2_rescale * rp_listen_mute;
     lp_lc_str = lp_rc_str = vol_rescale * cross_left * lp_stream_mute;
     rp_lc_str = rp_rc_str = vol2_rescale * cross_right * rp_stream_mute;
@@ -924,11 +930,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 else
                     if (simple_mixer == TRUE)
                         {
-                        /* some oddness here */
                         int la = left_audio;
-                        int ra = la;
                         int ls = left_stream;
-                        int rs = ls;
 
                         if (dj_audio_level != current_dj_audio_level)
                             {
@@ -936,31 +939,35 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                             dj_audio_gain = db2level(dj_audio_level);
                             }
                         
-                        if (la || ls || ra || rs)
+                        if (la || ls)
                             {
                             samples_todo = nframes;
                             while (samples_todo--)
                                 {
                                 xlplayer_read_next(plr_l);                                    
                                 if (la)
+                                    {
                                     *lap++ = plr_l->ls * dj_audio_gain;
-                                if (ra)
                                     *rap++ = plr_l->rs * dj_audio_gain;
+                                    }
                                 if (ls)
+                                    {
                                     *lsp++ = plr_l->ls;
-                                if (rs)
                                     *rsp++ = plr_l->rs;
+                                    }
                                 }
                             }
                             
                         if (!la)
+                            {
                             memset(la_buffer, 0, nframes * sizeof (sample_t));
-                        if (!ra)
                             memset(ra_buffer, 0, nframes * sizeof (sample_t));
+                            }
                         if (!ls)
+                            {
                             memset(ls_buffer, 0, nframes * sizeof (sample_t));
-                        if (!rs)
                             memset(rs_buffer, 0, nframes * sizeof (sample_t));
+                            }
                         }
                     else
                         fprintf(stderr,"Error: no mixer mode was chosen\n");
@@ -1102,20 +1109,20 @@ void mixer_init(void)
     player_samples_cutoff = sr * 0.25;           /* for gapless playback */
     int n = 0;
 
-    if(! ((players[n++] = plr_l = xlplayer_create(sr, RB_SIZE, "leftplayer", &g.app_shutdown)) &&
-            (players[n++] = plr_r = xlplayer_create(sr, RB_SIZE, "rightplayer", &g.app_shutdown))))
+    if(! ((players[n++] = plr_l = xlplayer_create(sr, RB_SIZE, "leftplayer", &g.app_shutdown, &volume, 0, &left_stream, &left_audio)) &&
+            (players[n++] = plr_r = xlplayer_create(sr, RB_SIZE, "rightplayer", &g.app_shutdown, &volume2, 0, &right_stream, &right_audio))))
         {
         fprintf(stderr, "failed to create main player modules\n");
         exit(5);
         }
     
-    if (!(players[n++] = plr_j = xlplayer_create(sr, RB_SIZE, "jinglesplayer", &g.app_shutdown)))
+    if (!(players[n++] = plr_j = xlplayer_create(sr, RB_SIZE, "jinglesplayer", &g.app_shutdown, NULL, 0, NULL, NULL)))
         {
         fprintf(stderr, "failed to create jingles player module\n");
         exit(5);
         }
 
-    if (!(players[n++] = plr_i = xlplayer_create(sr, RB_SIZE, "interludeplayer", &g.app_shutdown)))
+    if (!(players[n++] = plr_i = xlplayer_create(sr, RB_SIZE, "interludeplayer", &g.app_shutdown, &interludevol, 0, &inter_stream, &inter_audio)))
         {
         fprintf(stderr, "failed to create interlude player module\n");
         exit(5);
@@ -1149,7 +1156,7 @@ void mixer_init(void)
     else
         {
         alarm_size = (sr / 900) * 900;    /* builds the alarm tone wave table */
-        for (unsigned i = 0; i < alarm_size ; i++) /* note it has a nice 2nd harmonic added */
+        for (unsigned i = 0; i < alarm_size ; i++)
             {
             eot_alarm_table[i] = 0.83F * sinf((i % (sr/900)) * 6.283185307F / (sr/900));
             eot_alarm_table[i] += 0.024F * sinf((i % (sr/900)) * 12.56637061F / (sr/900) + 3.141592654F / 4.0F);

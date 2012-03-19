@@ -459,7 +459,7 @@ static long conv_rf_read(void *cb_data, float **audiodata)
         }
     }
 
-struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, sig_atomic_t *shutdown_f)
+struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, sig_atomic_t *shutdown_f, int *vol_c, float vol_scale, int *strmute_c, int *audmute_c)
     {
     struct xlplayer *self;
     int error;
@@ -562,6 +562,9 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
     self->rcb = ialloc(32);
     self->lcfb = ialloc(32);
     self->rcfb = ialloc(32);
+    smoothing_volume_init(&self->volume, vol_c, vol_scale);
+    smoothing_mute_init(&self->mute_str, strmute_c);
+    smoothing_mute_init(&self->mute_aud, audmute_c);
     pthread_create(&self->thread, NULL, (void *(*)(void *)) xlplayer_main, self);
     while (self->up == FALSE)
         usleep(10000);
@@ -930,4 +933,17 @@ void xlplayer_read_next_all(struct xlplayer **list)
     {
     while (*list)
         xlplayer_read_next(*list++);
+    }
+
+void xlplayer_smoothing_process(struct xlplayer *self)
+    {
+    smoothing_volume_process(&self->volume);
+    smoothing_mute_process(&self->mute_str);
+    smoothing_mute_process(&self->mute_aud);
+    }
+    
+void xlplayer_smoothing_process_all(struct xlplayer **list)
+    {
+    while (*list)
+        xlplayer_smoothing_process(*list++);
     }
