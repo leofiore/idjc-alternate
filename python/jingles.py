@@ -132,6 +132,7 @@ class ExtraPlayers(gtk.HBox):
         gtk.HBox.__init__(self)
         self.set_border_width(6)
         self.set_spacing(12)
+        self.viewlevels = (5,)
 
         esbox = gtk.VBox()
         self.pack_start(esbox)

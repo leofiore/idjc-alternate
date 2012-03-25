@@ -2038,7 +2038,6 @@ class MainWindow:
                 self.simplemixer = True
                 self.full_wst.set_tracking(False)
                 self.player_right.stop.clicked()
-                self.jingles.hide()
                 self.crossadj.set_value(0)
                 self.crossadj.value_changed()
                 self.window.forall(self.ui_detail_leveller(0))

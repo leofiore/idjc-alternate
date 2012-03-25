@@ -86,8 +86,7 @@ static int mic_on, mixermode = NO_PHONE;
 /* simple mixer mode: uses less space on the screen and less cpu as well */
 static int simple_mixer;
 /* currentvolumes are used to implement volume smoothing */
-static int current_volume, current_volume2, current_jingles_volume, current_jingles_volume2, 
-     current_interlude_volume, current_crossfade, currentmixbackvol, current_crosspattern;
+static int current_crossfade, currentmixbackvol, current_crosspattern;
 /* value of the stream mon. button */
 static int stream_monitor = 0;
 /* when this is set the end of track alarm is started */
@@ -140,16 +139,6 @@ static struct compressor stream_limiter =
     {
     0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0, 0.0
     };
-
-/* the different player's gain factors */
-/* lp=left player, rp=right player, jp=jingles player, ip=interlude player */ 
-/* lc=left channel, rc=right channel */
-/* aud = the DJs audio, str = the listeners (stream) audio */
-/* the initial settings are 'very' temporary */
-static sample_t lp_lc_aud = 1.0, lp_rc_aud = 1.0, rp_lc_aud = 1.0, rp_rc_aud = 1.0;
-static sample_t lp_lc_str = 1.0, lp_rc_str = 1.0, rp_lc_str = 0.0, rp_rc_str = 0.0;
-static sample_t jp_lc_str = 0.0, jp_rc_str = 0.0, jp_lc_aud = 0.0, jp_rc_aud = 0.0;
-static sample_t ip_lc_str = 0.0, ip_rc_str = 0.0, ip_lc_aud = 0.0, ip_rc_aud = 0.0;
             
 /* media player mixback level for when in RedPhone mode */
 static sample_t mb_lc_aud = 1.0, mb_rc_aud = 1.0;
@@ -224,29 +213,6 @@ static struct kvpdict kvpdict[] = {
             { "session_command", &session_commandline, NULL },
             { "", NULL, NULL }};
 
-/* handle_mute_button: soft on/off for the mute buttons */
-static void handle_mute_button(sample_t *gainlevel, int switchlevel)
-    {
-    if (switchlevel)
-        {
-        if (*gainlevel < 0.99F)           /* switching on */
-            {
-            *gainlevel += (1.0F - *gainlevel) * 0.09F * 44100.0F / sr;
-            if (*gainlevel >= 0.99F)
-                *gainlevel = 1.0F;
-            }
-        }
-    else 
-        {
-        if (*gainlevel > 0.0F)            /* switching off */
-            {
-            *gainlevel -= *gainlevel * 0.075F * (2.0F - *gainlevel) * (2.0F - *gainlevel) * 44100.0F / sr;
-            if (*gainlevel < 0.00002)
-                *gainlevel = 0.0F;
-            }
-        }
-    }
-
 static void custom_jack_port_connect_callback(jack_port_id_t a, jack_port_id_t b, int connect, void *arg)
     {
     ++port_connection_count;
@@ -263,12 +229,7 @@ void mixer_stop_players()
 /* update_smoothed_volumes: stuff that gets run once every 32 samples */
 static void update_smoothed_volumes()
     {
-    static sample_t vol_rescale = 1.0F, vol2_rescale = 1.0F, jingles_vol_rescale = 1.0F;
-    static sample_t jingles_vol_rescale2 = 1.0F, interlude_vol_rescale = 1.0F;
-    static sample_t cross_left = 1.0F, cross_right = 0.0F, mixback_rescale = 1.0F;
-    static sample_t lp_listen_mute = 1.0F, lp_stream_mute = 1.0F;
-    static sample_t rp_listen_mute = 1.0F, rp_stream_mute = 1.0F;
-    static sample_t ip_listen_mute = 0.0F, ip_stream_mute = 1.0F;
+    static sample_t cross_left = 1.0F, cross_right = 0.0F;
     sample_t mic_target, diff;
     static float interlude_autovol = -128.0F, old_autovol = -128.0F;
     float vol;
@@ -345,43 +306,14 @@ static void update_smoothed_volumes()
             else
                 cross_right = powf(pat3, 100 - current_crossfade);
             }
+
         }
 
-    if (volume != current_volume)
-        {
-        if (volume > current_volume)
-            current_volume++;
-        else
-            current_volume--;
-        vol_rescale = 1.0F/powf(10.0F,current_volume/55.0F);      /* a nice logarithmic volume scale */
-        }
-    if (volume2 != current_volume2)
-        {
-        if (volume2 > current_volume2)
-            current_volume2++;
-        else
-            current_volume2--;
-        vol2_rescale = 1.0F/powf(10.0F,current_volume2/55.0F);
-        }
-        
-    if (jinglesvolume != current_jingles_volume)
-        {
-        if (jinglesvolume > current_jingles_volume)
-            current_jingles_volume++;
-        else
-            current_jingles_volume--;
-        jingles_vol_rescale = 1.0F/powf(10.0F,current_jingles_volume/55.0F);
-        }
+    plr_l->cf_l_gain = cross_left;
+    plr_l->cf_r_gain = cross_left;
+    plr_r->cf_l_gain = cross_right;
+    plr_r->cf_r_gain = cross_right;
 
-    if (jinglesvolume2 != current_jingles_volume2)
-        {
-        if (jinglesvolume2 > current_jingles_volume2)
-            current_jingles_volume2++;
-        else
-            current_jingles_volume2--;
-        jingles_vol_rescale2 = 1.0F/powf(10.0F,current_jingles_volume2/55.0F);
-        }
-        
     /* interlude_autovol rises and falls as and when no media players are playing */
     /* it indicates the playback volume in dB in addition to the one specified by the user */
     
@@ -401,44 +333,16 @@ static void update_smoothed_volumes()
             interlude_autovol += 0.3F;
         }   
     
-    if (interludevol != current_interlude_volume || interlude_autovol != old_autovol )
-        {
-        if (interludevol > current_interlude_volume)
-            current_interlude_volume++;
-        else
-            current_interlude_volume--;
-        interlude_vol_rescale = powf(10.0F, -(current_interlude_volume * 0.025 + interlude_autovol * -0.05F));
-        }
-        
     if (mixbackvol != currentmixbackvol)
         {
         if (mixbackvol > currentmixbackvol)
             currentmixbackvol++;
         else
             currentmixbackvol--;
-        mixback_rescale = powf(10.0F, -(currentmixbackvol * 0.018181818F));
+        mb_lc_aud = mb_rc_aud = powf(10.0F, -(currentmixbackvol * 0.018181818F));
         }
-    
-    handle_mute_button(&lp_listen_mute, left_audio);
-    handle_mute_button(&lp_stream_mute, left_stream);
-    handle_mute_button(&rp_listen_mute, right_audio);
-    handle_mute_button(&rp_stream_mute, right_stream);
-    handle_mute_button(&ip_listen_mute, inter_audio);
-    handle_mute_button(&ip_stream_mute, inter_stream);
-    
-    /* the factors that will be applied in the mix on the media players */
-    //lp_lc_aud = lp_rc_aud = vol_rescale * lp_listen_mute;
-    
-    lp_lc_aud = lp_rc_aud = plr_l->volume.level * plr_l->mute_aud.level;
-    
-    rp_lc_aud = rp_rc_aud = vol2_rescale * rp_listen_mute;
-    lp_lc_str = lp_rc_str = vol_rescale * cross_left * lp_stream_mute;
-    rp_lc_str = rp_rc_str = vol2_rescale * cross_right * rp_stream_mute;
-    jp_lc_str = jp_rc_str = jp_lc_aud = jp_rc_aud = (use_jingles_vol_2 && use_jingles_vol_2[0] == '1') ? jingles_vol_rescale2 : jingles_vol_rescale;
-    mb_lc_aud = mb_rc_aud = mixback_rescale;
-    ip_lc_aud = ip_rc_aud = interlude_vol_rescale * ip_listen_mute;
-    ip_lc_str = ip_rc_str = interlude_vol_rescale * ip_stream_mute;
-     
+
+    /* mic headroom application */
     mic_target = -headroom_db;
     if ((diff = mic_target - current_headroom))
         {
@@ -447,11 +351,12 @@ static void update_smoothed_volumes()
             current_headroom = mic_target;
         }
 
+    /* ducking effect reduces as the player volume is backed off */
     if (jingles_playing)
-        vol = current_jingles_volume * 0.06666666F;
+        vol = plr_j->volume.level * 0.06666666F;
     else
-        vol = (current_volume - (current_volume - current_volume2) / 2.0F) * 0.06666666F;
-    dfmod = vol * vol + 1.0F;
+        vol = (plr_l->volume.level - (plr_l->volume.level - plr_r->volume.level) / 2.0f) * 0.06666666f;
+    dfmod = vol * vol + 1.0f;
     }
 
 /* process_audio: the JACK callback routine */
@@ -650,8 +555,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
             COMMON_MIX();
             
             /* the stream mix */
-            *dolp = ((plr_l->ls * lp_lc_str) + (plr_r->ls * rp_lc_str) + (plr_j->ls * jp_lc_str)) * df + lc_s_micmix + lc_s_auxmix + (plr_i->ls * ip_lc_str);
-            *dorp = ((plr_l->rs * lp_rc_str) + (plr_r->rs * rp_rc_str) + (plr_j->rs * jp_rc_str)) * df + rc_s_micmix + rc_s_auxmix + (plr_i->rs * ip_rc_str);
+            *dolp = (plr_l->ls_str + plr_r->ls_str + plr_j->ls_str) * df + lc_s_micmix + lc_s_auxmix + plr_i->ls_str;
+            *dorp = (plr_l->rs_str + plr_r->rs_str + plr_j->rs_str) * df + rc_s_micmix + rc_s_auxmix + plr_i->rs_str;
             
             /* hard limit the levels if they go outside permitted limits */
             /* note this is not the same as clipping */
@@ -683,8 +588,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
             if (stream_monitor == FALSE)
                 {
-                *lap = ((plr_l->ls * lp_lc_aud) + (plr_r->ls * rp_lc_aud) + (plr_j->ls * jp_lc_aud)) * df + d_micmix + lc_s_auxmix + (plr_i->ls * ip_lc_aud);
-                *rap = ((plr_l->rs * lp_rc_aud) + (plr_r->rs * rp_rc_aud) + (plr_j->rs * jp_rc_aud)) * df + d_micmix + rc_s_auxmix + (plr_i->rs * ip_rc_aud);
+                *lap = (plr_l->ls_aud + plr_r->ls_aud + plr_j->ls_aud) * df + d_micmix + lc_s_auxmix + plr_i->ls_aud;
+                *rap = (plr_l->rs_aud + plr_r->rs_aud + plr_j->rs_aud) * df + d_micmix + rc_s_auxmix + plr_i->rs_aud;
                 compressor_gain = db2level(limiter(&audio_limiter, *lap, *rap));
                 *lap *= compressor_gain;
                 *rap *= compressor_gain;
@@ -762,12 +667,12 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 COMMON_MIX();
 
                 /* do the phone send mix */
-                *lpsp = lc_s_micmix + (plr_j->ls * jp_lc_str);
-                *rpsp = rc_s_micmix + (plr_j->rs * jp_rc_str);
+                *lpsp = lc_s_micmix + plr_j->ls_str;
+                *rpsp = rc_s_micmix + plr_j->rs_str;
 
                 /* The main mix */
-                *dolp = ((plr_l->ls * lp_lc_str) + (plr_r->ls * rp_lc_str)) * df + *lprp + *lpsp + lc_s_auxmix + (plr_i->ls * ip_lc_str);
-                *dorp = ((plr_l->rs * lp_rc_str) + (plr_r->rs * rp_rc_str)) * df + *rprp + *rpsp + rc_s_auxmix + (plr_i->rs * ip_rc_str);
+                *dolp = (plr_l->ls_str + plr_r->ls_str) * df + *lprp + *lpsp + lc_s_auxmix + plr_i->ls_str;
+                *dorp = (plr_l->rs_str + plr_r->rs_str) * df + *rprp + *rpsp + rc_s_auxmix + plr_i->rs_str;
                 
                 compressor_gain = db2level(limiter(&phone_limiter, *lpsp, *rpsp));
                 *lpsp *= compressor_gain;
@@ -783,8 +688,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
                 if (stream_monitor == FALSE)
                     {
-                    *lap = ((plr_l->ls * lp_lc_aud) + (plr_r->ls * rp_lc_aud)) * df + *lprp + lc_s_auxmix + (plr_i->ls * ip_lc_aud) + d_micmix + (plr_j->ls * jp_lc_str);
-                    *rap = ((plr_l->rs * lp_rc_aud) + (plr_r->rs * rp_rc_aud)) * df + *rprp + rc_s_auxmix + (plr_i->rs * ip_rc_aud) + d_micmix + (plr_j->rs * jp_rc_str);
+                    *lap = (plr_l->ls_aud + plr_r->ls_aud) * df + *lprp + lc_s_auxmix + plr_i->ls_aud + d_micmix + plr_j->ls_str;
+                    *rap = (plr_l->rs_aud + plr_r->rs_aud) * df + *rprp + rc_s_auxmix + plr_i->rs_aud + d_micmix + plr_j->rs_str;
                     compressor_gain = db2level(limiter(&audio_limiter, *lap, *rap));
                     *lap *= compressor_gain;
                     *rap *= compressor_gain;
@@ -826,9 +731,9 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
                     COMMON_MIX();
                     
-                    /* This is it folks, the main mix */
-                    *dolp = (plr_l->ls * lp_lc_str) + (plr_r->ls * rp_lc_str) + lc_s_auxmix + (plr_i->ls * ip_lc_str);
-                    *dorp = (plr_l->rs * lp_rc_str) + (plr_r->rs * rp_rc_str) + rc_s_auxmix + (plr_i->rs * ip_rc_str);
+                    /* the main mix */
+                    *dolp = plr_l->ls_str + plr_r->ls_str + lc_s_auxmix + plr_i->ls_str;
+                    *dorp = plr_l->rs_str + plr_r->rs_str + rc_s_auxmix + plr_i->rs_str;
                     
                     /* hard limit the levels if they go outside permitted limits */
                     /* note this is not the same as clipping */
@@ -836,9 +741,9 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                     *dolp *= compressor_gain;
                     *dorp *= compressor_gain;
                     
-                    /* The mix the voip listeners receive */
-                    *lpsp = (*dolp * mb_lc_aud) + (plr_j->ls * jp_lc_aud) + lc_s_micmix;
-                    *rpsp = (*dorp * mb_lc_aud) + (plr_j->rs * jp_rc_aud) + rc_s_micmix;
+                    /* the mix the voip listeners receive */
+                    *lpsp = (*dolp * mb_lc_aud) + plr_j->ls_aud + lc_s_micmix;
+                    *rpsp = (*dorp * mb_lc_aud) + plr_j->rs_aud + rc_s_micmix;
                     compressor_gain = db2level(limiter(&phone_limiter, *lpsp, *rpsp));
                     *lpsp *= compressor_gain;
                     *rpsp *= compressor_gain;
@@ -847,8 +752,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
                     if (stream_monitor == FALSE) /* the DJ can hear the VOIP phone call */
                         {
-                        *lap = (*lsp * mb_lc_aud) + (plr_j->ls * jp_lc_aud) + d_micmix + (lc_s_auxmix *mb_lc_aud) + *lprp;
-                        *rap = (*rsp * mb_lc_aud) + (plr_j->rs * jp_rc_aud) + d_micmix + (rc_s_auxmix *mb_rc_aud) + *rprp;
+                        *lap = (*lsp * mb_lc_aud) + plr_j->ls_aud + d_micmix + (lc_s_auxmix *mb_lc_aud) + *lprp;
+                        *rap = (*rsp * mb_lc_aud) + plr_j->rs_aud + d_micmix + (rc_s_auxmix *mb_rc_aud) + *rprp;
                         compressor_gain = db2level(limiter(&audio_limiter, *lap, *rap));
                         *lap *= compressor_gain;
                         *rap *= compressor_gain;
@@ -893,9 +798,9 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
                         COMMON_MIX();
 
-                        /* This is it folks, the main mix */
-                        *dolp = ((plr_l->ls * lp_lc_str) + (plr_r->ls * rp_lc_str) + (plr_j->ls * jp_lc_str)) * df + lc_s_micmix + lc_s_auxmix + (plr_i->ls * ip_lc_str);
-                        *dorp = ((plr_l->rs * lp_rc_str) + (plr_r->rs * rp_rc_str) + (plr_j->rs * jp_rc_str)) * df + rc_s_micmix + rc_s_auxmix + (plr_i->rs * ip_rc_str);
+                        /* the main mix */
+                        *dolp = (plr_l->ls_str + plr_r->ls_str + plr_j->ls_str) * df + lc_s_micmix + lc_s_auxmix + plr_i->ls_str;
+                        *dorp = (plr_l->rs_str + plr_r->rs_str + plr_j->rs_str) * df + rc_s_micmix + rc_s_auxmix + plr_i->rs_str;
                         
                         /* hard limit the levels if they go outside permitted limits */
                         /* note this is not the same as clipping */
@@ -910,8 +815,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
                         if (stream_monitor == FALSE)
                             {
-                            *lap = ((plr_l->ls * lp_lc_aud) + (plr_r->ls * rp_lc_aud) + (plr_j->ls * jp_lc_aud)) * df + d_micmix + lc_s_auxmix + (plr_i->ls * ip_lc_aud);
-                            *rap = ((plr_l->rs * lp_rc_aud) + (plr_r->rs * rp_rc_aud) + (plr_j->rs * jp_rc_aud)) * df + d_micmix + rc_s_auxmix + (plr_i->rs * ip_rc_aud);
+                            *lap = (plr_l->ls_aud + plr_r->ls_aud + plr_j->ls_aud) * df + d_micmix + lc_s_auxmix + plr_i->ls_aud;
+                            *rap = (plr_l->rs_aud + plr_r->rs_aud + plr_j->rs_aud) * df + d_micmix + rc_s_auxmix + plr_i->rs_aud;
                             compressor_gain = db2level(limiter(&audio_limiter, *lap, *rap));
                             *lap *= compressor_gain;
                             *rap *= compressor_gain;
@@ -1383,6 +1288,7 @@ int mixer_main()
         eot_alarm_f |= eot_alarm_set;
 
         plr_l->fadeout_f = plr_r->fadeout_f = plr_j->fadeout_f = plr_i->fadeout_f = s.fadeout_f;
+        plr_l->use_sv = plr_r->use_sv = speed_variance;
 
         if (s.use_dsp != using_dsp)
             using_dsp = s.use_dsp;

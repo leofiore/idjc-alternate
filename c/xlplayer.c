@@ -562,6 +562,7 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
     self->rcb = ialloc(32);
     self->lcfb = ialloc(32);
     self->rcfb = ialloc(32);
+    self->cf_l_gain = self->cf_r_gain = 1.0f;
     smoothing_volume_init(&self->volume, vol_c, vol_scale);
     smoothing_mute_init(&self->mute_str, strmute_c);
     smoothing_mute_init(&self->mute_aud, audmute_c);
@@ -927,6 +928,11 @@ void xlplayer_read_next(struct xlplayer *self)
         
     self->ls = *self->lcp++ + *self->lcfp++ * fade_level;
     self->rs = *self->rcp++ + *self->rcfp++ * fade_level;
+    
+    self->ls_aud = self->ls * self->volume.level * self->mute_aud.level;
+    self->rs_aud = self->rs * self->volume.level * self->mute_aud.level;
+    self->ls_str = self->ls * self->volume.level * self->mute_str.level * self->cf_l_gain;
+    self->rs_str = self->rs * self->volume.level * self->mute_str.level * self->cf_r_gain;
     }
 
 void xlplayer_read_next_all(struct xlplayer **list)

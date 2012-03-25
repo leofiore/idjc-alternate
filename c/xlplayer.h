@@ -144,6 +144,10 @@ struct xlplayer
     struct smoothing_mute mute_aud;
     struct smoothing_mute mute_str;
     struct smoothing_volume volume;
+
+    float cf_l_gain, cf_r_gain;         /* per channel gain adjustment -- e.g. for apply crossfade */
+    float ls_aud, ls_str;               /* the gain adjusted audio samples */
+    float rs_aud, rs_str;
     };
 
 /* xlplayer_create: create an instance of the player */
