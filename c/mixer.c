@@ -75,9 +75,7 @@ unsigned long sr = 44100;
 /* values of the volume sliders in the GUI */
 static int volume, volume2, crossfade, jinglesvolume, jinglesvolume2, interludevol, mixbackvol, crosspattern;
 /* back and forth status indicators re. jingles */
-static int jingles_playing, jingles_audio_f;
-/* used for gapless playback to indicate an almost empty buffer */
-static int left_audio_runout = 0, right_audio_runout = 0, inter_audio_runout;
+static int jingles_playing;
 /* the player audio feed buttons */
 static int left_stream = 1, left_audio = 1, right_stream = 1, right_audio = 1;
 static int inter_stream = 1, inter_audio = 0;
@@ -100,10 +98,6 @@ static unsigned player_samples_cutoff;
 static int main_play;
 /* flag to indicate whether to use the player reading function which supports speed variance */
 static int speed_variance;
-/* used for signal level silence threshold tracking */
-static sample_t left_peak = -1.0F, right_peak = -1.0F, inter_peak = -1.0F;
-/* handle for beat processing */
-/*struct beatproc *beat_lp, *beat_rp;*/
 /* flag to indicate if audio is routed via dsp interface */
 static int using_dsp;
 /* flag to indicate that stream audio be reduced for improved encode quality */
@@ -474,15 +468,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
         pjilp = (sample_t *) jack_port_get_buffer(p->pj_in_l, nframes);
         pjirp = (sample_t *) jack_port_get_buffer(p->pj_in_r, nframes);
     }
-    
-    left_audio_runout = (plr_l->avail < player_samples_cutoff);
-
-    right_audio_runout = (plr_r->avail < player_samples_cutoff);
-        
-    jingles_audio_f = (plr_j->avail > jingles_samples_cutoff);
-
-    inter_audio_runout = (plr_i->avail < player_samples_cutoff);
-        
+            
     /* resets the running totals for the vu meter stats */      
     if (reset_vu_stats_f)
         {
@@ -545,11 +531,6 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 plr_i->rs = *piirp; \
                 plr_j->ls = *pjilp; \
                 plr_j->rs = *pjirp; \
-                \
-                /* peak levels used for song cut off */ \
-                left_peak = plr_l->peak; \
-                right_peak = plr_r->peak; \
-                inter_peak = plr_i->peak; \
                 } while(0)
                 
             COMMON_MIX();
@@ -899,24 +880,7 @@ int mixer_keepalive()
     return !(TEST(plr_l) || TEST(plr_r) || TEST(plr_i) || TEST(plr_j));
     #undef TEST
     }
-
-static void send_metadata_update(struct xlp_dynamic_metadata *dm)
-    {
-    pthread_mutex_lock(&(dm->meta_mutex));
-    fprintf(stderr, "new dynamic metadata\n");
-    if (dm->data_type != DM_JOINED_UC)
-        {
-        fprintf(stdout, "new_metadata=d%d:%sd%d:%sd%d:%sd9:%09dd9:%09dx\n", (int)strlen(dm->artist), dm->artist, (int)strlen(dm->title), dm->title, (int)strlen(dm->album), dm->album, dm->current_audio_context, dm->rbdelay);
-        fprintf(stderr, "new_metadata=d%d:%sd%d:%sd%d:%sd9:%09dd9:%09dx\n", (int)strlen(dm->artist), dm->artist, (int)strlen(dm->title), dm->title, (int)strlen(dm->album), dm->album, dm->current_audio_context, dm->rbdelay);
-        }
-    else
-        {
-        fprintf(stderr, "send_metadata_update: utf16 chapter info not supported\n");
-        }
-    dm->data_type = DM_NONE_NEW;
-    pthread_mutex_unlock(&(dm->meta_mutex));
-    }
-    
+   
 static void jackportread(const char *portname, const char *filter)
     {
     unsigned long flags = 0;
@@ -1014,20 +978,20 @@ void mixer_init(void)
     player_samples_cutoff = sr * 0.25;           /* for gapless playback */
     int n = 0;
 
-    if(! ((players[n++] = plr_l = xlplayer_create(sr, RB_SIZE, "leftplayer", &g.app_shutdown, &volume, 0, &left_stream, &left_audio)) &&
-            (players[n++] = plr_r = xlplayer_create(sr, RB_SIZE, "rightplayer", &g.app_shutdown, &volume2, 0, &right_stream, &right_audio))))
+    if(! ((players[n++] = plr_l = xlplayer_create(sr, RB_SIZE, "left", &g.app_shutdown, &volume, 0, &left_stream, &left_audio, 0.25f)) &&
+            (players[n++] = plr_r = xlplayer_create(sr, RB_SIZE, "right", &g.app_shutdown, &volume2, 0, &right_stream, &right_audio, 0.25f))))
         {
         fprintf(stderr, "failed to create main player modules\n");
         exit(5);
         }
     
-    if (!(players[n++] = plr_j = xlplayer_create(sr, RB_SIZE, "jinglesplayer", &g.app_shutdown, NULL, 0, NULL, NULL)))
+    if (!(players[n++] = plr_j = xlplayer_create(sr, RB_SIZE, "jingles", &g.app_shutdown, NULL, 0, NULL, NULL, 1.0f / 12.0f)))
         {
         fprintf(stderr, "failed to create jingles player module\n");
         exit(5);
         }
 
-    if (!(players[n++] = plr_i = xlplayer_create(sr, RB_SIZE, "interludeplayer", &g.app_shutdown, &interludevol, 0, &inter_stream, &inter_audio)))
+    if (!(players[n++] = plr_i = xlplayer_create(sr, RB_SIZE, "interlude", &g.app_shutdown, &interludevol, 0, &inter_stream, &inter_audio, 0.25f)))
         {
         fprintf(stderr, "failed to create interlude player module\n");
         exit(5);
@@ -1378,65 +1342,20 @@ int mixer_main()
         else
             ports_diff = lead - port_reports;
 
+        xlplayer_stats_all(players);
+
         fprintf(stdout, 
                     "str_l_peak=%d\nstr_r_peak=%d\n"
                     "str_l_rms=%d\nstr_r_rms=%d\n"
-                    "left_elapsed=%d\n"
-                    "right_elapsed=%d\n"
-                    "interlude_elapsed=%d\n"
-                    "left_playing=%d\n"
-                    "right_playing=%d\n"
-                    "interlude_playing=%d\n"
-                    "jingles_playing=%d\n"
-                    "left_signal=%d\n"
-                    "right_signal=%d\n"
-                    "interlude_signal=%d\n"
-                    "left_cid=%d\n"
-                    "right_cid=%d\n"
-                    "jingles_cid=%d\n"
-                    "interlude_cid=%d\n"
-                    "left_audio_runout=%d\n"
-                    "right_audio_runout=%d\n"
-                    "interlude_audio_runout=%d\n"
-                    "left_additional_metadata=%d\n"
-                    "right_additional_metadata=%d\n"
-                    "interlude_additional_metadata=%d\n"
                     "midi=%s\n"
-                    "silence_l=%f\n"
-                    "silence_r=%f\n"
-                    "silence_i=%f\n"
                     "session_command=%s\n"
                     "ports_connections_changed=%d\n"
                     "end\n",
                     s.str_l_peak_db, s.str_r_peak_db,
                     s.str_l_rms_db, s.str_r_rms_db,
-                    plr_l->play_progress_ms / 1000,
-                    plr_r->play_progress_ms / 1000,
-                    plr_i->play_progress_ms / 1000,
-                    plr_l->have_data_f | (plr_l->current_audio_context & 0x1),
-                    plr_r->have_data_f | (plr_r->current_audio_context & 0x1),
-                    plr_i->have_data_f | (plr_i->current_audio_context & 0x1),
-                    jingles_audio_f | (plr_j->current_audio_context & 0x1),
-                    left_peak > 0.001F || left_peak < 0.0F || plr_l->pause,
-                    right_peak > 0.001F || right_peak < 0.0F || plr_r->pause,
-                    inter_peak > 0.001F || inter_peak < 0.0F || plr_i->pause,
-                    plr_l->current_audio_context,
-                    plr_r->current_audio_context,
-                    plr_j->current_audio_context,
-                    plr_i->current_audio_context,
-                    left_audio_runout && (!(plr_l->current_audio_context & 0x1)),
-                    right_audio_runout && (!(plr_r->current_audio_context & 0x1)),
-                    inter_audio_runout && (!(plr_i->current_audio_context & 0x1)),
-                    plr_l->dynamic_metadata.data_type,
-                    plr_r->dynamic_metadata.data_type,
-                    plr_i->dynamic_metadata.data_type,
                     s.midi_output,
-                    plr_l->silence,
-                    plr_r->silence,
-                    plr_i->silence,
                     s.session_command,
-                    ports_diff
-                    );
+                    ports_diff);
 
         if (ports_diff)
             {
@@ -1446,13 +1365,6 @@ int mixer_main()
             
         /* tell the jack mixer it can reset its vu stats now */
         reset_vu_stats_f = TRUE;
-        left_peak = right_peak = inter_peak = -1.0F;
-        if (plr_l->dynamic_metadata.data_type)
-            send_metadata_update(&(plr_l->dynamic_metadata));
-        if (plr_r->dynamic_metadata.data_type)
-            send_metadata_update(&(plr_r->dynamic_metadata));
-        if (plr_i->dynamic_metadata.data_type)
-            send_metadata_update(&(plr_i->dynamic_metadata));
         fflush(stdout);
         }
         

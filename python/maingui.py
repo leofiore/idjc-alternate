@@ -1919,7 +1919,6 @@ class MainWindow:
 
 
     def songname_decode(self, data):
-        data = data[13:]
         i = 1
         while 1:
             if data[i - 1] != "d":
@@ -1933,8 +1932,9 @@ class MainWindow:
             i = colon_index + text_length + 2
 
 
-    def update_songname(self, player, data, infotype):
+    def update_songname(self, player, data):
         gen = self.songname_decode(data)
+        infotype = int(gen.next())
         artist = gen.next()
         title = gen.next()
         album = gen.next()
@@ -2482,6 +2482,7 @@ class MainWindow:
             gtk.gdk.threads_enter()
         try:
             session_ns = {}
+            player_metadata = []
             
             try:
                 self.mixer_write("ACTN=requestlevels\nend\n")
@@ -2516,7 +2517,7 @@ class MainWindow:
                 if key == "ports_connections_changed":
                     cons_changed = value != "0"
                     
-                if key.startswith("silence_"):
+                if "_silence=" in line:
                     try:
                         value = float(value)
                     except ValueError:
@@ -2526,35 +2527,23 @@ class MainWindow:
                         value = int(value)
                     except ValueError:
                         pass
+                        
+                if "_new_metadata=" in line:
+                    player_metadata.append((getattr(self, "player_" +
+                                                key.split("_", 1)[0]), value))
+                    continue
+
                 try:
                     self.vumap[key].set_meter_value(value)
                 except KeyError:
                     pass
                     #print "key value", key, "missing from vumap"
+
             if self.jingles.playing == True and int(self.jingles_playing) == 0:
                 self.jingles.clear_indicators()
             
-            if self.metadata_left_ctrl.get_value():  # handle dynamic metadata
-                while 1:
-                    line = self.mixer_read()
-                    if line.startswith("new_metadata="):
-                        self.update_songname(self.player_left, line,
-                                        self.metadata_left_ctrl.get_value())
-                        break
-            if self.metadata_right_ctrl.get_value():
-                while 1:
-                    line = self.mixer_read()
-                    if line.startswith("new_metadata="):
-                        self.update_songname(self.player_right, line,
-                                        self.metadata_right_ctrl.get_value())
-                        break
-            if self.metadata_interlude_ctrl.get_value():
-                while 1:
-                    line = self.mixer_read()
-                    if line.startswith("new_metadata="):
-                        self.update_songname(self.player_interlude, line,
-                                        self.metadata_interlude_ctrl.get_value())
-                        break
+            for player, data in player_metadata:
+                self.update_songname(player, data)
 
             if midis:
                 for midi in midis.split(','):
@@ -3527,9 +3516,9 @@ class MainWindow:
             "left_additional_metadata"  : self.metadata_left_ctrl,
             "right_additional_metadata" : self.metadata_right_ctrl,
             "interlude_additional_metadata" : self.metadata_interlude_ctrl,
-            "silence_l"               : self.player_left.silence,
-            "silence_r"               : self.player_right.silence,
-            "silence_i"               : self.jingles.interlude.silence,
+            "left_silence"            : self.player_left.silence,
+            "right_silence"           : self.player_right.silence,
+            "interlude_silence"       : self.jingles.interlude.silence,
             "sample_rate"             : self.sample_rate,
             }
             

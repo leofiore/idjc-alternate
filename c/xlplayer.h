@@ -128,6 +128,7 @@ struct xlplayer
     struct xlp_dynamic_metadata dynamic_metadata;
     int usedelay;                       /* client to delay dynamic metadata display */
     float silence;                      /* the number of seconds of silence */
+    int samples_cutoff;                 /* audio cutoff imminent when fewer than this value samples remain */
     
     int use_sv;                         /* speed variance version of read function will be used */
     
@@ -151,7 +152,7 @@ struct xlplayer
     };
 
 /* xlplayer_create: create an instance of the player */
-struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, sig_atomic_t *shutdown_f, int *vol_c, float vol_scale, int *strmute_c, int *audmute_c);
+struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, sig_atomic_t *shutdown_f, int *vol_c, float vol_scale, int *strmute_c, int *audmute_c, float cutoff_s);
 /* xlplayer_destroy: the opposite of xlplayer_create */
 void xlplayer_destroy(struct xlplayer *);
 
@@ -221,9 +222,12 @@ void xlplayer_read_next(struct xlplayer *self);
 /* volume control and mute toggle smoothing single iteration */
 void xlplayer_smoothing_process(struct xlplayer *self);
 
+void xlplayer_stats(struct xlplayer *self);
+
 /* group process all players from the list */
 void xlplayer_read_start_all(struct xlplayer **list, jack_nframes_t nframes);
 void xlplayer_read_next_all(struct xlplayer **list);
 void xlplayer_smoothing_process_all(struct xlplayer **list);
+void xlplayer_stats_all(struct xlplayer **list);
 
 #endif /* XLPLAYER_H */

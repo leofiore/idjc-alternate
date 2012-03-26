@@ -459,7 +459,7 @@ static long conv_rf_read(void *cb_data, float **audiodata)
         }
     }
 
-struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, sig_atomic_t *shutdown_f, int *vol_c, float vol_scale, int *strmute_c, int *audmute_c)
+struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, sig_atomic_t *shutdown_f, int *vol_c, float vol_scale, int *strmute_c, int *audmute_c, float cutoff_s)
     {
     struct xlplayer *self;
     int error;
@@ -472,6 +472,7 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
         }
     self->rbsize = (int)(duration * samplerate) << 2;
     self->rbdelay = (int)(duration * 1000);
+    self->samples_cutoff = samplerate * cutoff_s;
     if (!(self->left_ch = jack_ringbuffer_create(self->rbsize)))
         {
         fprintf(stderr, "xlplayer: ringbuffer creation failure");
@@ -952,4 +953,51 @@ void xlplayer_smoothing_process_all(struct xlplayer **list)
     {
     while (*list)
         xlplayer_smoothing_process(*list++);
+    }
+
+void xlplayer_stats(struct xlplayer *self)
+    {
+    char prefix[20];
+    struct xlp_dynamic_metadata *dm = &self->dynamic_metadata;
+    
+    snprintf(prefix, 20, "%s_", self->playername);
+    #define PREFIX() fputs(prefix, stdout)
+
+    PREFIX();
+    fprintf(stdout, "elapsed=%d\n", self->play_progress_ms / 1000);
+    PREFIX();
+    fprintf(stdout, "playing=%d\n", self->have_data_f | (self->current_audio_context & 0x1));
+    PREFIX();
+    fprintf(stdout, "signal=%d\n", self->peak > 0.001F || self->peak < 0.0F || self->pause);
+    PREFIX();
+    fprintf(stdout, "cid=%d\n", self->current_audio_context);
+    PREFIX();
+    fprintf(stdout, "audio_runout=%d\n", self->avail < self->samples_cutoff && (!(self->current_audio_context & 0x1)));
+    PREFIX();
+    fprintf(stdout, "silence=%f\n", self->silence);
+
+    if (dm->data_type)
+        {
+        pthread_mutex_lock(&(dm->meta_mutex));
+        fprintf(stderr, "new dynamic metadata\n");
+        if (dm->data_type != DM_JOINED_UC)
+            {
+            PREFIX();
+            fprintf(stdout, "new_metadata=d%d:%dd%d:%sd%d:%sd%d:%sd9:%09dd9:%09dx\n", (int)log10(dm->data_type) + 1, dm->data_type, (int)strlen(dm->artist), dm->artist, (int)strlen(dm->title), dm->title, (int)strlen(dm->album), dm->album, dm->current_audio_context, dm->rbdelay);
+            }
+        else
+            {
+            fprintf(stderr, "send_metadata_update: utf16 chapter info not supported\n");
+            }
+        dm->data_type = DM_NONE_NEW;
+        pthread_mutex_unlock(&(dm->meta_mutex));
+        }
+    
+    #undef PREFIX
+    }
+
+void xlplayer_stats_all(struct xlplayer **list)
+    {
+    while (*list)
+        xlplayer_stats(*list++);
     }
