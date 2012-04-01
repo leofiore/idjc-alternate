@@ -147,6 +147,7 @@ struct xlplayer
     struct smoothing_volume volume;
 
     float cf_l_gain, cf_r_gain;         /* per channel gain adjustment -- e.g. for apply crossfade */
+    int cf_aud;                         /* apply crossfade on dj audio */
     float ls_aud, ls_str;               /* the gain adjusted audio samples */
     float rs_aud, rs_str;
     };

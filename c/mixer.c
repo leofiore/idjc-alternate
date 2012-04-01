@@ -325,8 +325,12 @@ static void update_smoothed_volumes()
             interlude_autovol += 0.5F;
         if (interlude_autovol < 0.0F)
             interlude_autovol += 0.3F;
+        if (interlude_autovol > 0.0f)
+            interlude_autovol = 0.0f;
         }   
-    
+
+    plr_i->cf_l_gain = plr_i->cf_r_gain = powf(10.0f, interlude_autovol * 0.05f);
+
     if (mixbackvol != currentmixbackvol)
         {
         if (mixbackvol > currentmixbackvol)
@@ -996,6 +1000,7 @@ void mixer_init(void)
         fprintf(stderr, "failed to create interlude player module\n");
         exit(5);
         }
+    plr_i->cf_aud = 1;  /* crossfader values to apply in dj audio -- the crossfader interface is used to implement the soft fade in/out */
 
     players[n++] = NULL;
     if (n != sizeof players / sizeof players[0])
