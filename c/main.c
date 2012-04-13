@@ -178,8 +178,8 @@ int main(void)
         MK_AUDIO_OUTPUT(p->str_out_r, "str_out_r");
         MK_AUDIO_OUTPUT(p->voip_out_l, "voip_out_l");
         MK_AUDIO_OUTPUT(p->voip_out_r, "voip_out_r");
-        MK_AUDIO_OUTPUT(p->voip_in_l, "voip_in_l");
-        MK_AUDIO_OUTPUT(p->voip_in_r, "voip_in_r");
+        MK_AUDIO_INPUT(p->voip_in_l, "voip_in_l");
+        MK_AUDIO_INPUT(p->voip_in_r, "voip_in_r");
         /* Player related ports. */
         MK_AUDIO_OUTPUT(p->pl_out_l, "pl_out_l");
         MK_AUDIO_OUTPUT(p->pl_out_r, "pl_out_r");
