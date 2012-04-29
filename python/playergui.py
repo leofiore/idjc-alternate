@@ -2696,26 +2696,27 @@ class IDJC_Media_Player:
                             if meta:
                                 yield meta
                                 raise GotLocation
-                    # Support namespaced pld tag for literal playlist data.
-                    # This is only used for data such as playlist controls.
-                    extensions = track.getElementsByTagName('extension')
-                    for extension in extensions:
-                        if extension.getAttribute("application") == \
-                                            "http://idjc.sourceforge.net/ns/":
-                            customtags = extension.getElementsByTagNameNS(
-                                    "http://idjc.sourceforge.net/ns/", "pld")
-                            for tag in customtags:
-                                try:
-                                    literal_entry = NOTVALID._replace(**dict((
-                                            k, type(getattr(NOTVALID, k))(
-                                            tag.attributes.get(k).nodeValue))
-                                            for k in tag.attributes.keys()))
-                                except Exception, e:
-                                    print e
-                                    pass
-                                else:
-                                    yield literal_entry
-                                    raise GotLocation
+                    if self.playername in ("left", "right"):
+                        # Support namespaced pld tag for literal playlist data.
+                        # This is only used for data such as playlist controls.
+                        extensions = track.getElementsByTagName('extension')
+                        for extension in extensions:
+                            if extension.getAttribute("application") == \
+                                                "http://idjc.sourceforge.net/ns/":
+                                customtags = extension.getElementsByTagNameNS(
+                                        "http://idjc.sourceforge.net/ns/", "pld")
+                                for tag in customtags:
+                                    try:
+                                        literal_entry = NOTVALID._replace(**dict((
+                                                k, type(getattr(NOTVALID, k))(
+                                                tag.attributes.get(k).nodeValue))
+                                                for k in tag.attributes.keys()))
+                                    except Exception, e:
+                                        print e
+                                        pass
+                                    else:
+                                        yield literal_entry
+                                        raise GotLocation
                 except GotLocation:
                     pass
             return
