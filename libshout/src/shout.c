@@ -803,7 +803,7 @@ int shout_set_format(shout_t *self, unsigned int format)
 	if (self->state != SHOUT_STATE_UNCONNECTED)
 		return self->error = SHOUTERR_CONNECTED;
 
-	if (format != SHOUT_FORMAT_OGG && format != SHOUT_FORMAT_MP3)
+	if (format != SHOUT_FORMAT_OGG && format != SHOUT_FORMAT_MP3 && format != SHOUT_FORMAT_ADTS)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	self->format = format;
@@ -1074,6 +1074,9 @@ static int try_connect (shout_t *self)
                                 goto failure;
 		} else if (self->format == SHOUT_FORMAT_MP3) {
 			if ((rc = self->error = shout_open_mp3(self)) != SHOUTERR_SUCCESS)
+                                goto failure;
+        } else if (self->format == SHOUT_FORMAT_ADTS) {
+            if ((rc = self->error = shout_open_adts(self)) != SHOUTERR_SUCCESS)
                                 goto failure;
 		} else {
                         rc = SHOUTERR_INSANE;
