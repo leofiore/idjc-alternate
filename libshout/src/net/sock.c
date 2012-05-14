@@ -131,7 +131,7 @@ int sock_error(void)
 #endif
 }
 
-static void sock_set_error(int val)
+void sock_set_error(int val)
 {
 #ifdef _WIN32
      WSASetLastError (val);
@@ -217,7 +217,7 @@ int sock_active (sock_t sock)
     l = recv (sock, &c, 1, MSG_PEEK);
     if (l == 0)
         return 0;
-    if (l < 0 && sock_recoverable (sock_error()))
+    if (l == SOCK_ERROR && sock_recoverable (sock_error()))
         return 1;
     return 0;
 }
@@ -240,13 +240,20 @@ int inet_aton(const char *s, struct in_addr *a)
     return (a->s_addr != INADDR_NONE);
 }
 #endif /* _WIN32 */
-int sock_set_blocking(sock_t sock, const int block)
+
+/* sock_set_blocking
+ *
+ * set the sock blocking or nonblocking
+ * 1 for blocking
+ * 0 for nonblocking
+ */
+int sock_set_blocking(sock_t sock, int block)
 {
 #ifdef _WIN32
 #ifdef __MINGW32__
-    u_long varblock = block;
+    u_long varblock = 1;
 #else
-    int varblock = block;
+    int varblock = 1;
 #endif
 #endif
 
@@ -254,6 +261,7 @@ int sock_set_blocking(sock_t sock, const int block)
         return SOCK_ERROR;
 
 #ifdef _WIN32
+    if (block) varblock = 0;
     return ioctlsocket(sock, FIONBIO, &varblock);
 #else
     return fcntl(sock, F_SETFL, (block) ? 0 : O_NONBLOCK);
@@ -508,17 +516,27 @@ int sock_read_line(sock_t sock, char *buff, const int len)
 int sock_connected (sock_t sock, int timeout)
 {
     struct pollfd check;
+    int val = SOCK_ERROR;
+    socklen_t size = sizeof val;
 
     check.fd = sock;
     check.events = POLLOUT;
     switch (poll (&check, 1, timeout*1000))
     {
         case 0: return SOCK_TIMEOUT;
+        default:
+            /* on windows getsockopt.val is defined as char* */
+            if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*) &val, &size) == 0)
+            {
+                if (val == 0)
+                    return 1;
+                sock_set_error (val);
+            }
+            /* fall through */
         case -1:
             if (sock_recoverable (sock_error()))
                 return 0;
             return SOCK_ERROR;
-        default: return 1;
     }                                           
 }
 
@@ -562,6 +580,11 @@ int sock_connected (sock_t sock, int timeout)
     }
 }
 #endif
+
+sock_t sock_connect_wto (const char *hostname, int port, int timeout)
+{
+    return sock_connect_wto_bind(hostname, port, NULL, timeout);
+}
 
 #ifdef HAVE_GETADDRINFO
 
@@ -607,10 +630,10 @@ sock_t sock_connect_non_blocking (const char *hostname, unsigned port)
  * timeout is 0 or less then we will wait until the OS gives up on the connect
  * The socket is returned
  */
-sock_t sock_connect_wto(const char *hostname, int port, int timeout)
+sock_t sock_connect_wto_bind (const char *hostname, int port, const char *bnd, int timeout)
 {
     sock_t sock = SOCK_ERROR;
-    struct addrinfo *ai, *head, hints;
+    struct addrinfo *ai, *head, *b_head=NULL, hints;
     char service[8];
 
     memset (&hints, 0, sizeof (hints));
@@ -628,6 +651,22 @@ sock_t sock_connect_wto(const char *hostname, int port, int timeout)
         {
             if (timeout > 0)
                 sock_set_blocking (sock, 0);
+
+            if (bnd)
+            {
+                struct addrinfo b_hints;
+                memset (&b_hints, 0, sizeof(b_hints));
+                b_hints.ai_family = ai->ai_family;
+                b_hints.ai_socktype = ai->ai_socktype;
+                b_hints.ai_protocol = ai->ai_protocol;
+                if (getaddrinfo (bnd, NULL, &b_hints, &b_head) ||
+                        bind (sock, b_head->ai_addr, b_head->ai_addrlen) < 0)
+                {
+                    sock_close (sock);
+                    sock = SOCK_ERROR;
+                    break;
+                }
+            }
 
             if (connect (sock, ai->ai_addr, ai->ai_addrlen) == 0)
                 break;
@@ -655,8 +694,9 @@ sock_t sock_connect_wto(const char *hostname, int port, int timeout)
         }
         ai = ai->ai_next;
     }
-    if (head)
-        freeaddrinfo (head);
+    if (b_head)
+        freeaddrinfo (b_head);
+    freeaddrinfo (head);
 
     return sock;
 }
@@ -740,7 +780,7 @@ int sock_try_connection (sock_t sock, const char *hostname, unsigned int port)
     memcpy(&server.sin_addr, &sin.sin_addr, sizeof(struct sockaddr_in));
 
     server.sin_family = AF_INET;
-    server.sin_port = htons(port);
+    server.sin_port = htons((short)port);
 
     return connect(sock, (struct sockaddr *)&server, sizeof(server));
 }
@@ -759,13 +799,28 @@ sock_t sock_connect_non_blocking (const char *hostname, unsigned port)
     return sock;
 }
 
-sock_t sock_connect_wto(const char *hostname, int port, int timeout)
+sock_t sock_connect_wto_bind (const char *hostname, int port, const char *bnd, int timeout)
 {
     sock_t sock;
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == SOCK_ERROR)
         return SOCK_ERROR;
+
+    if (bnd)
+    {
+        struct sockaddr_in sa;
+
+        memset(&sa, 0, sizeof(sa));
+        sa.sin_family = AF_INET;
+
+        if (inet_aton (bnd, &sa.sin_addr) == 0 ||
+            bind (sock, (struct sockaddr *)&sa, sizeof(sa)) < 0)
+        {
+            sock_close (sock);
+            return SOCK_ERROR;
+        }
+    }
 
     if (timeout)
     {
@@ -821,12 +876,12 @@ sock_t sock_get_server_socket(int port, const char *sinterface)
             return SOCK_ERROR;
         } else {
             sa.sin_family = AF_INET;
-            sa.sin_port = htons(port);
+            sa.sin_port = htons((short)port);
         }
     } else {
         sa.sin_addr.s_addr = INADDR_ANY;
         sa.sin_family = AF_INET;
-        sa.sin_port = htons(port);
+        sa.sin_port = htons((short)port);
     }
 
     /* get a socket */
@@ -847,6 +902,11 @@ sock_t sock_get_server_socket(int port, const char *sinterface)
 }
 
 #endif
+
+void sock_set_send_buffer (sock_t sock, int win_size)
+{
+    setsockopt (sock, SOL_SOCKET, SO_SNDBUF, (char *) &win_size, sizeof(win_size));
+}
 
 int sock_listen(sock_t serversock, int backlog)
 {

@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8; -*- */
 /* shout.h: Private libshout data structures and declarations
  *
- * $Id: shout_private.h 8144 2004-10-30 01:24:47Z brendan $
+ * $Id: shout_private.h 18174 2012-02-02 00:16:36Z giles $
  */
 
 #ifndef __LIBSHOUT_SHOUT_PRIVATE_H__
@@ -80,12 +80,12 @@ struct shout {
 	char *genre;
 	/* description of the stream */
 	char *description;
-	/* internet relay chat contact details */
-	char *irc;
-	/* aol instant messenger contact details */
-	char *aim;
-	/* icq messaging service contact details */
-	char *icq;
+    /* internet relay chat contact details */
+    char *irc;
+    /* aol instant messenger contact details */
+    char *aim;
+    /* icq messaging service contact details */
+    char *icq;
 	/* icecast 1.x dumpfile */
 	char *dumpfile;
 	/* username to use for HTTP auth. */
@@ -115,6 +115,7 @@ struct shout {
 
 int shout_open_ogg(shout_t *self);
 int shout_open_mp3(shout_t *self);
+int shout_open_webm(shout_t *self);
 int shout_open_adts(shout_t *self);
 
 #endif /* __LIBSHOUT_SHOUT_PRIVATE_H__ */

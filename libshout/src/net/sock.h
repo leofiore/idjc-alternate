@@ -73,6 +73,7 @@ struct iovec
 # define sock_shutdown _mangle(sock_shutdown)
 # define sock_get_localip _mangle(sock_get_localip)
 # define sock_error _mangle(sock_error)
+# define sock_set_error _mangle(sock_set_error)
 # define sock_recoverable _mangle(sock_recoverable)
 # define sock_stalled _mangle(sock_stalled)
 # define sock_valid_socket _mangle(sock_valid_socket)
@@ -82,6 +83,7 @@ struct iovec
 # define sock_set_keepalive _mangle(sock_set_keepalive)
 # define sock_close _mangle(sock_close)
 # define sock_connect_wto _mangle(sock_connect_wto)
+# define sock_connect_wto_bind _mangle(sock_connect_wto_bind)
 # define sock_connect_non_blocking _mangle(sock_connect_non_blocking)
 # define sock_connected _mangle(sock_connected)
 # define sock_write_bytes _mangle(sock_write_bytes)
@@ -93,6 +95,7 @@ struct iovec
 # define sock_read_line _mangle(sock_read_line)
 # define sock_get_server_socket _mangle(sock_get_server_socket)
 # define sock_listen _mangle(sock_listen)
+# define sock_set_send_buffer _mangle(sock_set_send_buffer)
 # define sock_accept _mangle(sock_accept)
 #endif
 
@@ -105,14 +108,17 @@ int sock_recoverable(int error);
 int sock_stalled(int error);
 int sock_valid_socket(sock_t sock);
 int sock_active (sock_t sock);
-int sock_set_blocking(sock_t sock, const int block);
+int sock_set_blocking(sock_t sock, int block);
 int sock_set_nolinger(sock_t sock);
 int sock_set_keepalive(sock_t sock);
 int sock_set_nodelay(sock_t sock);
+void sock_set_send_buffer (sock_t sock, int win_size);
+void sock_set_error(int val);
 int sock_close(sock_t  sock);
 
 /* Connection related socket functions */
 sock_t sock_connect_wto(const char *hostname, int port, int timeout);
+sock_t sock_connect_wto_bind(const char *hostname, int port, const char *bnd, int timeout);
 sock_t sock_connect_non_blocking(const char *host, unsigned port);
 int sock_connected(sock_t sock, int timeout);
 

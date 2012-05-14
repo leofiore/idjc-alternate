@@ -53,6 +53,8 @@ libshout/src/httpp/libicehttpp_la-httpp.o
 libshout/src/libshout.la
 libshout/src/mpeg.lo
 libshout/src/mpeg.o
+libshout/src/webm.lo
+libshout/src/webm.o
 libshout/src/net/.deps/*
 libshout/src/net/.libs/*
 libshout/src/net/libicenet.la

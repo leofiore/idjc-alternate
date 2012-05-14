@@ -17,7 +17,7 @@
  *  License along with this library; if not, write to the Free
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: shout.c 12662 2007-03-06 13:25:19Z moritz $
+ * $Id: shout.c 18174 2012-02-02 00:16:36Z giles $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -38,7 +38,7 @@
 #include "shout_private.h"
 #include "util.h"
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 # ifndef va_copy
 #  define va_copy(ap1, ap2) memcpy(&ap1, &ap2, sizeof(va_list))
 # endif
@@ -143,9 +143,9 @@ void shout_free(shout_t *self)
 	if (self->user) free(self->user);
 	if (self->useragent) free(self->useragent);
 	if (self->audio_info) _shout_util_dict_free (self->audio_info);
-        if (self->irc) free(self->irc);
-        if (self->icq) free(self->icq);
-        if (self->aim) free(self->aim);
+	if (self->irc) free(self->irc);
+	if (self->icq) free(self->icq);
+	if (self->aim) free(self->aim);
 
 	free(self);
 }
@@ -324,10 +324,10 @@ int shout_set_metadata(shout_t *self, shout_metadata_t *metadata)
 
 		rv = sock_write(socket, "GET /admin/metadata?mode=updinfo&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n%s\r\n",
 		  self->mount, encvalue, shout_get_agent(self), auth ? auth : "");
-		free(auth);
+				free(auth);
 	} else
 		rv = sock_write(socket, "GET /admin.cgi?mode=updinfo&pass=%s&mount=%s&%s HTTP/1.0\r\nUser-Agent: %s\r\n\r\n",
-		self->password, self->mount, encvalue, shout_get_agent(self));
+		  self->password, self->mount, encvalue, shout_get_agent(self));
 	free(encvalue);
 	if (!rv) {
 		sock_close(socket);
@@ -379,8 +379,8 @@ const char *shout_get_error(shout_t *self)
 		return "Cannot set parameter while connected";
 	case SHOUTERR_UNCONNECTED:
 		return "Not connected";
-	case SHOUTERR_BUSY:
-		return "Socket is busy";
+		case SHOUTERR_BUSY:
+				return "Socket is busy";
 	case SHOUTERR_UNSUPPORTED:
 		return "This libshout doesn't support the requested option";
 	default:
@@ -395,15 +395,17 @@ const char *shout_get_error(shout_t *self)
  */
 int shout_get_connected(shout_t *self)
 {
+	int rc;
+
 	if (!self)
 		return SHOUTERR_INSANE;
 
 	if (self->state == SHOUT_STATE_CONNECTED)
 		return SHOUTERR_CONNECTED;
 	if (self->state != SHOUT_STATE_UNCONNECTED) {
-		if ((self->error = try_connect(self)) == SHOUTERR_SUCCESS)
+		if ((rc = try_connect(self)) == SHOUTERR_SUCCESS)
 			return SHOUTERR_CONNECTED;
-		return self->error;
+		return rc;
 	}
 
 	return SHOUTERR_UNCONNECTED;
@@ -666,77 +668,77 @@ const char *shout_get_description(shout_t *self)
 
 int shout_set_irc(shout_t *self, const char *irc)
 {
-	if (!self)
-		return SHOUTERR_INSANE;
+	   if (!self)
+			   return SHOUTERR_INSANE;
 
-	if (self->state != SHOUT_STATE_UNCONNECTED)
-		return self->error = SHOUTERR_CONNECTED;
+	   if (self->state != SHOUT_STATE_UNCONNECTED)
+			   return self->error = SHOUTERR_CONNECTED;
 
-	if (self->irc)
-		free(self->irc);
+	   if (self->irc)
+			   free(self->irc);
 
-	if (! (self->irc = _shout_util_strdup (irc)))
-		return self->error = SHOUTERR_MALLOC;
+	   if (! (self->irc = _shout_util_strdup (irc)))
+			   return self->error = SHOUTERR_MALLOC;
 
-	return self->error = SHOUTERR_SUCCESS;
+	   return self->error = SHOUTERR_SUCCESS;
 }
 
 const char *shout_get_irc(shout_t *self)
 {
-	if (!self)
-		return NULL;
+	   if (!self)
+			   return NULL;
 
-	return self->irc;
+	   return self->irc;
 }
 
 int shout_set_aim(shout_t *self, const char *aim)
 {
-	if (!self)
-		return SHOUTERR_INSANE;
+	   if (!self)
+			   return SHOUTERR_INSANE;
 
-	if (self->state != SHOUT_STATE_UNCONNECTED)
-		return self->error = SHOUTERR_CONNECTED;
+	   if (self->state != SHOUT_STATE_UNCONNECTED)
+			   return self->error = SHOUTERR_CONNECTED;
 
-	if (self->aim)
-		free(self->aim);
+	   if (self->aim)
+			   free(self->aim);
 
-	if (! (self->aim = _shout_util_strdup (aim)))
-		return self->error = SHOUTERR_MALLOC;
+	   if (! (self->aim = _shout_util_strdup (aim)))
+			   return self->error = SHOUTERR_MALLOC;
 
-	return self->error = SHOUTERR_SUCCESS;
+	   return self->error = SHOUTERR_SUCCESS;
 }
 
 const char *shout_get_aim(shout_t *self)
 {
-	if (!self)
-		return NULL;
+	   if (!self)
+			   return NULL;
 
-	return self->aim;
+	   return self->aim;
 }
 
 int shout_set_icq(shout_t *self, const char *icq)
 {
-	if (!self)
-		return SHOUTERR_INSANE;
+	   if (!self)
+			   return SHOUTERR_INSANE;
 
-	if (self->state != SHOUT_STATE_UNCONNECTED)
-		return self->error = SHOUTERR_CONNECTED;
+	   if (self->state != SHOUT_STATE_UNCONNECTED)
+			   return self->error = SHOUTERR_CONNECTED;
 
-	if (self->icq)
-		free(self->icq);
+	   if (self->icq)
+			   free(self->icq);
 
-	if (! (self->icq = _shout_util_strdup (icq)))
-		return self->error = SHOUTERR_MALLOC;
+	   if (! (self->icq = _shout_util_strdup (icq)))
+			   return self->error = SHOUTERR_MALLOC;
 
-	return self->error = SHOUTERR_SUCCESS;
+	   return self->error = SHOUTERR_SUCCESS;
 }
 
 const char *shout_get_icq(shout_t *self)
 {
-	if (!self)
-		return NULL;
+	   if (!self)
+			   return NULL;
 
-	return self->icq;
+	   return self->icq;
 }
 
 int shout_set_dumpfile(shout_t *self, const char *dumpfile)
@@ -803,7 +805,11 @@ int shout_set_format(shout_t *self, unsigned int format)
 	if (self->state != SHOUT_STATE_UNCONNECTED)
 		return self->error = SHOUTERR_CONNECTED;
 
-	if (format != SHOUT_FORMAT_OGG && format != SHOUT_FORMAT_MP3 && format != SHOUT_FORMAT_ADTS)
+	if (format != SHOUT_FORMAT_OGG
+		&& format != SHOUT_FORMAT_MP3
+		&& format != SHOUT_FORMAT_WEBM
+		&& format != SHOUT_FORMAT_AAC
+		&& format != SHOUT_FORMAT_AACPLUS)
 		return self->error = SHOUTERR_UNSUPPORTED;
 
 	self->format = format;
@@ -1036,13 +1042,13 @@ static int try_connect (shout_t *self)
 		if (shout_get_nonblocking(self)) {
 			if ((rc = sock_connected(self->socket, 0)) < 1) {
 				if (rc == SOCK_ERROR) {
-					rc = SHOUTERR_SOCKET;
-					goto failure;
+										rc = SHOUTERR_SOCKET;
+										goto failure;
 				} else
 					return SHOUTERR_BUSY;
 			}
 			if ((rc = create_request(self)) != SHOUTERR_SUCCESS)
-				goto failure;
+								goto failure;
 		}
 		self->state = SHOUT_STATE_REQ_PENDING;
 
@@ -1050,37 +1056,46 @@ static int try_connect (shout_t *self)
 		do
 			rc = send_queue(self);
 		while (!shout_get_nonblocking(self) && rc == SHOUTERR_BUSY);
-		if (rc == SHOUTERR_BUSY)
-                        return rc;
+				if (rc == SHOUTERR_BUSY)
+						return rc;
 		if (rc != SHOUTERR_SUCCESS)
-                        goto failure;
+						goto failure;
 		self->state = SHOUT_STATE_RESP_PENDING;
 
 	case SHOUT_STATE_RESP_PENDING:
 		do
 			rc = get_response(self);
 		while (!shout_get_nonblocking(self) && rc == SHOUTERR_BUSY);
-                if (rc == SHOUTERR_BUSY)
-                        return rc;
+				if (rc == SHOUTERR_BUSY)
+						return rc;
 
 		if (rc != SHOUTERR_SUCCESS)
-                        goto failure;
+						goto failure;
 
 		if ((rc = parse_response(self)) != SHOUTERR_SUCCESS)
-                        goto failure;
+						goto failure;
 
-		if (self->format == SHOUT_FORMAT_OGG) {
+		switch (self->format) {
+		case SHOUT_FORMAT_OGG:
 			if ((rc = self->error = shout_open_ogg(self)) != SHOUTERR_SUCCESS)
-                                goto failure;
-		} else if (self->format == SHOUT_FORMAT_MP3) {
+				goto failure;
+			break;
+		case SHOUT_FORMAT_MP3:
 			if ((rc = self->error = shout_open_mp3(self)) != SHOUTERR_SUCCESS)
-                                goto failure;
-        } else if (self->format == SHOUT_FORMAT_ADTS) {
-            if ((rc = self->error = shout_open_adts(self)) != SHOUTERR_SUCCESS)
-                                goto failure;
-		} else {
-                        rc = SHOUTERR_INSANE;
-                        goto failure;
+				goto failure;
+			break;
+		case SHOUT_FORMAT_WEBM:
+			if ((rc = self->error = shout_open_webm(self)) != SHOUTERR_SUCCESS)
+				goto failure;
+			break;
+		case SHOUT_FORMAT_AAC:
+		case SHOUT_FORMAT_AACPLUS:
+			if ((rc = self->error = shout_open_adts(self)) != SHOUTERR_SUCCESS)
+				goto failure;
+			break;
+		default:
+			rc = SHOUTERR_INSANE;
+			goto failure;
 		}
 
 	case SHOUT_STATE_CONNECTED:
@@ -1090,35 +1105,35 @@ static int try_connect (shout_t *self)
 	return SHOUTERR_SUCCESS;
 
 failure:
-        shout_close(self);
+		shout_close(self);
 	return rc;
 }
 
 static int try_write (shout_t *self, const void *data_p, size_t len)
 {
-    int ret;
-    size_t pos = 0;
-    unsigned char *data = (unsigned char *)data_p;
+	int ret;
+	size_t pos = 0;
+	unsigned char *data = (unsigned char *)data_p;
 
-    /* loop until whole buffer is written (unless it would block) */
-    do {
-        ret = sock_write_bytes (self->socket, data + pos, len - pos);
-        if (ret > 0)
-            pos += ret;
-    } while (pos < len && ret >= 0);
+	/* loop until whole buffer is written (unless it would block) */
+	do {
+		ret = sock_write_bytes (self->socket, data + pos, len - pos);
+		if (ret > 0)
+			pos += ret;
+	} while (pos < len && ret >= 0);
 
-    if (ret < 0)
-    {
-        if (sock_recoverable (sock_error()))
-        {
-            self->error = SHOUTERR_BUSY;
-            return pos;
-        }
-        self->error = SHOUTERR_SOCKET;
-        return ret;
-    }
+	if (ret < 0)
+	{
+		if (sock_recoverable (sock_error()))
+		{
+			self->error = SHOUTERR_BUSY;
+			return pos;
+		}
+		self->error = SHOUTERR_SOCKET;
+		return ret;
+	}
 
-    return pos;
+	return pos;
 }
 
 /* collect nodes of a queue into a single buffer */
@@ -1208,6 +1223,12 @@ static int create_http_request(shout_t *self)
 		if (self->format == SHOUT_FORMAT_OGG && queue_printf(self, "Content-Type: application/ogg\r\n"))
 			break;
 		if (self->format == SHOUT_FORMAT_MP3 && queue_printf(self, "Content-Type: audio/mpeg\r\n"))
+			break;
+		if (self->format == SHOUT_FORMAT_WEBM && queue_printf(self, "Content-Type: video/webm\r\n"))
+			break;
+		if (self->format == SHOUT_FORMAT_AAC && queue_printf(self, "Content-Type: audio/aac\r\n"))
+			break;
+		if (self->format == SHOUT_FORMAT_AACPLUS && queue_printf(self, "Content-Type: audio/aacp\r\n"))
 			break;
 		if (queue_printf(self, "ice-name: %s\r\n", self->name ? self->name : "no name"))
 			break;

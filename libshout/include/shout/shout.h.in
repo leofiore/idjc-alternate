@@ -3,7 +3,6 @@
  *  API for libshout, the streaming library for icecast
  *
  *  Copyright (C) 2002-2003 the Icecast team <team@icecast.org>
- *  Copyright (C) 2012 Stephen Fairchild <s-fairchild@users.sourceforge.net>
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -40,9 +39,11 @@
 
 #define SHOUTERR_BUSY		(-10)
 
-#define SHOUT_FORMAT_OGG	(0)
-#define SHOUT_FORMAT_MP3	(1)
-#define SHOUT_FORMAT_ADTS   (2)
+#define SHOUT_FORMAT_OGG		(0)
+#define SHOUT_FORMAT_MP3		(1)
+#define SHOUT_FORMAT_WEBM		(2)
+#define SHOUT_FORMAT_AAC		(3)
+#define SHOUT_FORMAT_AACPLUS	(4)
 /* backward-compatibility alias */
 #define SHOUT_FORMAT_VORBIS	SHOUT_FORMAT_OGG
 

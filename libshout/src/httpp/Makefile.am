@@ -19,3 +19,4 @@ debug:
 
 profile:
 	$(MAKE) all CFLAGS="@PROFILE@"
+

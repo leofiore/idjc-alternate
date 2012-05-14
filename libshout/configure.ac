@@ -1,12 +1,10 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.ac 14522 2008-02-17 18:41:44Z ivo $
+# $Id: configure.ac 18170 2012-02-01 23:59:25Z giles $
 
 m4_define(libshout_major, 2)
-m4_define(libshout_minor, 2)
-m4_define(libshout_micro, 2)
-m4_define(libshout_version,
-  m4_if(libshout_micro, 0, libshout_major.libshout_minor,
-   libshout_major.libshout_minor.libshout_micro))
+m4_define(libshout_minor, 3)
+m4_define(libshout_micro, 0)
+m4_define(libshout_version, libshout_major.libshout_minor.libshout_micro)
 
 AC_INIT([libshout], libshout_version, [icecast-dev@xiph.org])
 AC_PREREQ([2.54])
@@ -26,8 +24,6 @@ VERSION=libshout_version
 AM_INIT_AUTOMAKE([libshout], libshout_version)
 AM_MAINTAINER_MODE
 
-AC_DEFUN([AC_DATAROOTDIR_CHECKED])
-
 dnl create our name mangling macro
 dnl the prefix must be hardwired because of AH limitations
 AH_VERBATIM([_mangle], [
@@ -35,10 +31,8 @@ AH_VERBATIM([_mangle], [
 #define _mangle(proc) _shout_ ## proc
 ])
 
-AC_CONFIG_MACRO_DIR([m4])
-
 AC_PROG_CC
-AC_DISABLE_SHARED
+AM_DISABLE_SHARED
 AM_PROG_LIBTOOL
 
 dnl Set some options based on environment
@@ -80,7 +74,7 @@ dnl Checks for programs.
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([strings.h])
+AC_CHECK_HEADERS([strings.h sys/timeb.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -88,6 +82,7 @@ AC_C_INLINE
 XIPH_C99_INTTYPES
 
 dnl Checks for library functions.
+AC_CHECK_FUNCS([gettimeofday ftime])
 AC_SEARCH_LIBS([nanosleep], [rt],
   [AC_DEFINE([HAVE_NANOSLEEP], [1],
     [Define if you have the nanosleep function])])
@@ -127,27 +122,6 @@ PKG_CHECK_MODULES(VORBIS, vorbis, [
 VORBIS_LIBS="$VORBIS_LDFLAGS $VORBIS_LIBS"
 XIPH_CFLAGS="$XIPH_CFLAGS $VORBIS_CFLAGS"
 
-#AC_ARG_ENABLE([theora],
-#  AC_HELP_STRING([--disable-theora],[do not build with Theora support]))
-
-enable_theora="no"
-
-if test "x$enable_theora" != "xno"; then
-PKG_CHECK_MODULES(THEORA, theora, [
-    HAVE_THEORA="yes"
-    SHOUT_REQUIRES="$SHOUT_REQUIRES, theora"
-  ], [
-    XIPH_PATH_THEORA(, [AC_MSG_WARN([Theora library not found, disabling])])
-  ])
-fi
-XIPH_VAR_APPEND([XIPH_CPPFLAGS],[$THEORA_CFLAGS])
-XIPH_VAR_PREPEND([XIPH_LIBS],[$THEORA LDFLAGS $THEORA_LIBS])
-AM_CONDITIONAL([HAVE_THEORA], [test -n "$THEORA_LIBS"])
-if test -n "$THEORA_LIBS"
-then
-  AC_DEFINE([HAVE_THEORA], 1, [Define if you want theora streams supported])
-fi
-
 AC_ARG_ENABLE([speex],
   AC_HELP_STRING([--disable-speex],[do not build with Speex support]))
 
@@ -167,25 +141,6 @@ then
   AC_DEFINE([HAVE_SPEEX], 1, [Define if you want speex streams supported])
 fi
 
-dnl pkgconfig/shout-config.
-dnl If pkgconfig is found, use it and disable shout-config, otherwise do the
-dnl opposite, unless the user overrides.
-
-AC_ARG_ENABLE([pkgconfig],
-  AC_HELP_STRING([--disable-pkgconfig],[disable pkgconfig data files (auto)]),
-  [dopkgconfig="$enableval"], [dopkgconfig="maybe"])
-if test "$dopkgconfig" = "maybe"
-then
-  AC_CHECK_PROG([PKGCONFIG], [pkg-config], [yes], [no])
-else
-  AC_MSG_CHECKING([whether pkgconfig should be used])
-  PKGCONFIG="$dopkgconfig"
-  AC_MSG_RESULT([$PKGCONFIG])
-fi
-AM_CONDITIONAL([HAVE_PKGCONFIG], [test "$PKGCONFIG" != "no"])
-
-# Build shout-config, shout.pc
-
 # I hate myself for doing this.
 save_prefix="$prefix"
 if test "$prefix" = "NONE"
@@ -202,14 +157,12 @@ SHOUT_LIBS="-lshout"
 
 XIPH_CLEAN_CCFLAGS([$SHOUT_CPPFLAGS], [SHOUT_CPPFLAGS])
 XIPH_CLEAN_CCFLAGS([$SHOUT_CFLAGS], [SHOUT_CFLAGS])
-XIPH_CLEAN_CCFLAGS([$VORBIS_LIBS $THEORA_LIBS $SPEEX_LIBS $PTHREAD_LIBS $LIBS], [SHOUT_LIBDEPS])
+XIPH_CLEAN_CCFLAGS([$VORBIS_LIBS $SPEEX_LIBS $PTHREAD_LIBS $LIBS], [SHOUT_LIBDEPS])
 AC_SUBST(PTHREAD_CPPFLAGS)
 AC_SUBST(SHOUT_LIBDEPS)
 AC_SUBST(SHOUT_REQUIRES)
 AC_SUBST(SHOUT_CPPFLAGS)
 AC_SUBST(SHOUT_CFLAGS)
-AC_CONFIG_LIBCONFIG_IN_STATIC
-AC_CONFIG_LIBCONFIG_IN([shout])
 
 dnl Make substitutions
 
@@ -224,5 +177,5 @@ AC_SUBST(XIPH_CPPFLAGS)
 
 AC_OUTPUT([Makefile include/Makefile include/shout/Makefile
   include/shout/shout.h src/Makefile src/net/Makefile src/timing/Makefile
-  src/thread/Makefile src/avl/Makefile src/httpp/Makefile 
+  src/thread/Makefile src/avl/Makefile src/httpp/Makefile
   ])

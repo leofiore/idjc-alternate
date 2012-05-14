@@ -1,6 +1,6 @@
 /* -*- c-basic-offset: 8; -*- */
 /* shout_ogg.h: Internal shout interface to Ogg codec handlers
- * $Id: shout_ogg.h 10533 2005-12-04 02:49:34Z brendan $
+ * $Id: shout_ogg.h 18174 2012-02-02 00:16:36Z giles $
  *
  *  Copyright (C) 2004 the Icecast team <team@icecast.org>
  *

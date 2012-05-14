@@ -195,6 +195,7 @@ void thread_shutdown(void)
         avl_tree_free(_mutextree, _free_mutex);
 #endif
         avl_tree_free(_threadtree, _free_thread);
+        _threadtree = NULL;
     }
 
 #ifdef THREAD_DEBUG
@@ -222,6 +223,7 @@ static void _block_signals(void)
         sigdelset(&ss, SIGKILL);
         sigdelset(&ss, SIGSTOP);
         sigdelset(&ss, SIGSEGV);
+        sigdelset(&ss, SIGCHLD);
         sigdelset(&ss, SIGBUS);
         if (pthread_sigmask(SIG_BLOCK, &ss, NULL) != 0) {
 #ifdef THREAD_DEBUG
@@ -262,6 +264,7 @@ static void _catch_signals(void)
 thread_type *thread_create_c(char *name, void *(*start_routine)(void *), 
         void *arg, int detached, int line, char *file)
 {
+    int ok = 1;
     thread_type *thread = NULL;
     thread_start_t *start = NULL;
     pthread_attr_t attr;
@@ -593,7 +596,7 @@ void thread_exit_c(long val, int line, char *file)
         avl_delete(_threadtree, th, _free_thread);
         _mutex_unlock(&_threadtree_mutex);
     }
-    
+
     pthread_exit ((void*)val);
 }
 
@@ -735,8 +738,9 @@ void thread_library_unlock(void)
 void thread_join(thread_type *thread)
 {
     void *ret;
+    int i;
 
-    pthread_join(thread->sys_thread, &ret);
+    i = pthread_join(thread->sys_thread, &ret);
     _mutex_lock(&_threadtree_mutex);
     avl_delete(_threadtree, thread, _free_thread);
     _mutex_unlock(&_threadtree_mutex);
@@ -808,4 +812,30 @@ static int _free_thread(void *key)
     return 1;
 }
 
+
+#ifdef HAVE_PTHREAD_SPIN_LOCK
+void thread_spin_create (spin_t *spin)
+{
+    int x = pthread_spin_init (&spin->lock, PTHREAD_PROCESS_PRIVATE);
+    if (x)
+        abort();
+}
+
+void thread_spin_destroy (spin_t *spin)
+{
+    pthread_spin_destroy (&spin->lock);
+}
+
+void thread_spin_lock (spin_t *spin)
+{
+    int x = pthread_spin_lock (&spin->lock);
+    if (x != 0)
+        abort();
+}
+
+void thread_spin_unlock (spin_t *spin)
+{
+    pthread_spin_unlock (&spin->lock);
+}
+#endif
 

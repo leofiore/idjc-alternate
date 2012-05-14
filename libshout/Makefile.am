@@ -5,19 +5,15 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = include src
 
-EXTRA_DIST = m4/shout.m4 m4/ac_config_libconfig_in.m4 m4/acx_pthread.m4 \
+EXTRA_DIST = INSTALL m4/shout.m4 m4/acx_pthread.m4 \
 	m4/ogg.m4 m4/vorbis.m4 m4/xiph_compiler.m4 m4/xiph_net.m4 \
 	m4/xiph_types.m4
-
-DISTCLEANFILES = shout-config.in
 
 docdir = $(datadir)/doc/$(PACKAGE)
 doc_DATA = COPYING NEWS README
 
 m4datadir = $(datadir)/aclocal
 m4data_DATA = m4/shout.m4
-
-#bin_SCRIPTS = shout-config
 
 debug:
 	$(MAKE) all CFLAGS="@DEBUG@"
@@ -28,4 +24,3 @@ profile:
 install:
 
 uninstall:
-
