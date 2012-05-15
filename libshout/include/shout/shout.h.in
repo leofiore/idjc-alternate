@@ -39,11 +39,13 @@
 
 #define SHOUTERR_BUSY		(-10)
 
-#define SHOUT_FORMAT_OGG		(0)
-#define SHOUT_FORMAT_MP3		(1)
-#define SHOUT_FORMAT_WEBM		(2)
-#define SHOUT_FORMAT_AAC		(3)
-#define SHOUT_FORMAT_AACPLUS	(4)
+#define SHOUT_FORMAT_OGG		(0) /* application/ogg */
+#define SHOUT_FORMAT_MP3		(1) /* audio/mpeg */
+#define SHOUT_FORMAT_WEBM		(2) /* video/webm */
+#define SHOUT_FORMAT_WEBMAUDIO  (3) /* audio/webm audio only */
+#define SHOUT_FORMAT_AAC		(4) /* audio/aac ADTS header */
+#define SHOUT_FORMAT_AACPLUS	(5) /* audio/aacp ADTS header v1 and v2 */
+
 /* backward-compatibility alias */
 #define SHOUT_FORMAT_VORBIS	SHOUT_FORMAT_OGG
 
@@ -124,6 +126,9 @@ const char *shout_get_aim(shout_t *self);
 
 int shout_set_icq(shout_t *self, const char *icq);
 const char *shout_get_icq(shout_t *self);
+
+int shout_set_mimetype(shout_t *self, const char *mime_type);
+const char *shout_get_mimetype(shout_t *self);
 
 int shout_set_user(shout_t *self, const char *username);
 const char *shout_get_user(shout_t *self);

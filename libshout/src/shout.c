@@ -65,6 +65,7 @@ static int parse_http_response(shout_t *self);
 static int parse_xaudiocast_response(shout_t *self);
 
 static char *http_basic_authorization(shout_t *self);
+static const char *default_mime_type(const shout_t *self);
 
 /* -- static data -- */
 static int _initialized = 0;
@@ -668,77 +669,102 @@ const char *shout_get_description(shout_t *self)
 
 int shout_set_irc(shout_t *self, const char *irc)
 {
-	   if (!self)
-			   return SHOUTERR_INSANE;
+	if (!self)
+		return SHOUTERR_INSANE;
 
-	   if (self->state != SHOUT_STATE_UNCONNECTED)
-			   return self->error = SHOUTERR_CONNECTED;
+	if (self->state != SHOUT_STATE_UNCONNECTED)
+		return self->error = SHOUTERR_CONNECTED;
 
-	   if (self->irc)
-			   free(self->irc);
+	if (self->irc)
+		free(self->irc);
 
-	   if (! (self->irc = _shout_util_strdup (irc)))
-			   return self->error = SHOUTERR_MALLOC;
+	if (! (self->irc = _shout_util_strdup (irc)))
+		return self->error = SHOUTERR_MALLOC;
 
-	   return self->error = SHOUTERR_SUCCESS;
+	return self->error = SHOUTERR_SUCCESS;
 }
 
 const char *shout_get_irc(shout_t *self)
 {
-	   if (!self)
-			   return NULL;
+	if (!self)
+		return NULL;
 
-	   return self->irc;
+	return self->irc;
 }
 
 int shout_set_aim(shout_t *self, const char *aim)
 {
-	   if (!self)
-			   return SHOUTERR_INSANE;
+	if (!self)
+		return SHOUTERR_INSANE;
 
-	   if (self->state != SHOUT_STATE_UNCONNECTED)
-			   return self->error = SHOUTERR_CONNECTED;
+	if (self->state != SHOUT_STATE_UNCONNECTED)
+		return self->error = SHOUTERR_CONNECTED;
 
-	   if (self->aim)
-			   free(self->aim);
+	if (self->aim)
+		free(self->aim);
 
-	   if (! (self->aim = _shout_util_strdup (aim)))
-			   return self->error = SHOUTERR_MALLOC;
+	if (! (self->aim = _shout_util_strdup (aim)))
+		return self->error = SHOUTERR_MALLOC;
 
-	   return self->error = SHOUTERR_SUCCESS;
+	return self->error = SHOUTERR_SUCCESS;
 }
 
 const char *shout_get_aim(shout_t *self)
 {
-	   if (!self)
-			   return NULL;
+	if (!self)
+		return NULL;
 
-	   return self->aim;
+	return self->aim;
 }
 
 int shout_set_icq(shout_t *self, const char *icq)
 {
-	   if (!self)
-			   return SHOUTERR_INSANE;
+	if (!self)
+		return SHOUTERR_INSANE;
 
-	   if (self->state != SHOUT_STATE_UNCONNECTED)
-			   return self->error = SHOUTERR_CONNECTED;
+	if (self->state != SHOUT_STATE_UNCONNECTED)
+		return self->error = SHOUTERR_CONNECTED;
 
-	   if (self->icq)
-			   free(self->icq);
+	if (self->icq)
+		free(self->icq);
 
-	   if (! (self->icq = _shout_util_strdup (icq)))
-			   return self->error = SHOUTERR_MALLOC;
+	if (! (self->icq = _shout_util_strdup (icq)))
+		return self->error = SHOUTERR_MALLOC;
 
-	   return self->error = SHOUTERR_SUCCESS;
+	return self->error = SHOUTERR_SUCCESS;
 }
 
 const char *shout_get_icq(shout_t *self)
 {
-	   if (!self)
-			   return NULL;
+	if (!self)
+		return NULL;
 
-	   return self->icq;
+	return self->icq;
+}
+
+int shout_set_mimetype(shout_t *self, const char *mime_type)
+{
+	if (!self)
+		return SHOUTERR_INSANE;
+
+	if (self->state != SHOUT_STATE_UNCONNECTED)
+		return self->error = SHOUTERR_CONNECTED;
+
+	if (self->mime_type)
+		free(self->mime_type);
+
+	if (! (self->mime_type = _shout_util_strdup (mime_type)))
+		return self->error = SHOUTERR_MALLOC;
+
+	return self->error = SHOUTERR_SUCCESS;
+}
+
+const char *shout_get_mimetype(shout_t *self)
+{
+	if (!self)
+		return NULL;
+
+	return self->mime_type ? self->mime_type : default_mime_type(self);
 }
 
 int shout_set_dumpfile(shout_t *self, const char *dumpfile)
@@ -808,6 +834,7 @@ int shout_set_format(shout_t *self, unsigned int format)
 	if (format != SHOUT_FORMAT_OGG
 		&& format != SHOUT_FORMAT_MP3
 		&& format != SHOUT_FORMAT_WEBM
+		&& format != SHOUT_FORMAT_WEBMAUDIO
 		&& format != SHOUT_FORMAT_AAC
 		&& format != SHOUT_FORMAT_AACPLUS)
 		return self->error = SHOUTERR_UNSUPPORTED;
@@ -873,6 +900,24 @@ unsigned int shout_get_nonblocking(shout_t *self)
 }
 
 /* -- static function definitions -- */
+
+static const char *default_mime_type(const shout_t *self)
+{
+	if (self->format == SHOUT_FORMAT_OGG)
+		return "application/ogg";
+	if (self->format == SHOUT_FORMAT_MP3)
+		return "audio/mpeg";
+	if (self->format == SHOUT_FORMAT_WEBM)
+		return "video/webm";
+	if (self->format == SHOUT_FORMAT_WEBMAUDIO)
+		return "audio/webm";
+	if (self->format == SHOUT_FORMAT_AAC)
+		return "audio/aac";
+	if (self->format == SHOUT_FORMAT_AACPLUS)
+		return "audio/aacp";
+
+	return "application/octet-stream";
+}
 
 /* queue data in pages of SHOUT_BUFSIZE bytes */
 static int queue_data(shout_queue_t *queue, const unsigned char *data, size_t len)
@@ -1085,6 +1130,7 @@ static int try_connect (shout_t *self)
 				goto failure;
 			break;
 		case SHOUT_FORMAT_WEBM:
+		case SHOUT_FORMAT_WEBMAUDIO:
 			if ((rc = self->error = shout_open_webm(self)) != SHOUTERR_SUCCESS)
 				goto failure;
 			break;
@@ -1220,16 +1266,7 @@ static int create_http_request(shout_t *self)
 		}
 		if (self->useragent && queue_printf(self, "User-Agent: %s\r\n", self->useragent))
 			break;
-		if (self->format == SHOUT_FORMAT_OGG && queue_printf(self, "Content-Type: application/ogg\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_MP3 && queue_printf(self, "Content-Type: audio/mpeg\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_WEBM && queue_printf(self, "Content-Type: video/webm\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_AAC && queue_printf(self, "Content-Type: audio/aac\r\n"))
-			break;
-		if (self->format == SHOUT_FORMAT_AACPLUS && queue_printf(self, "Content-Type: audio/aacp\r\n"))
-			break;
+		queue_printf(self, "Content-Type: %s\r\n", self->mime_type ? self->mime_type : default_mime_type(self));
 		if (queue_printf(self, "ice-name: %s\r\n", self->name ? self->name : "no name"))
 			break;
 		if (queue_printf(self, "ice-public: %d\r\n", self->public))
@@ -1394,6 +1431,7 @@ static int create_icy_request(shout_t *self)
 	do {
 		if (queue_printf(self, "%s\n", self->password))
 			break;
+		queue_printf(self, "content-type:%s\n", self->mime_type ? self->mime_type : default_mime_type(self));
 		if (queue_printf(self, "icy-name:%s\n", self->name ? self->name : "unnamed"))
 			break;
 		if (queue_printf(self, "icy-url:%s\n", self->url ? self->url : "http://www.icecast.org/"))

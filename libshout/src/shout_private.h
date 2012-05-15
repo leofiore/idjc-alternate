@@ -92,6 +92,8 @@ struct shout {
 	char *user;
 	/* is this stream private? */
 	int public;
+    /* mime type */
+    char *mime_type;
 
 	/* socket the connection is on */
 	sock_t socket;
