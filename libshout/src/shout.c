@@ -147,6 +147,7 @@ void shout_free(shout_t *self)
 	if (self->irc) free(self->irc);
 	if (self->icq) free(self->icq);
 	if (self->aim) free(self->aim);
+    if (self->mime_type) free(self->mime_type);
 
 	free(self);
 }
