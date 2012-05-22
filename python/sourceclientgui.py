@@ -1,6 +1,6 @@
 #   sourceclientgui.py: new for version 0.7 this provides the graphical
 #   user interface for the new improved streaming module
-#   Copyright (C) 2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2007-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ import gettext
 import traceback
 import xml.dom.minidom as mdom
 import xml.etree.ElementTree
+from ctypes import *
 from collections import namedtuple
 from threading import Thread
 
@@ -62,6 +63,650 @@ LISTFORMAT = (("check_stats", bool), ("server_type", int), ("host", str),
 ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
 
 BLANK_LISTLINE = ListLine(1, 0, "", 8000, "", -1, "", "")
+
+
+
+class OggVorbisRange(object):
+    """Test out the limits of the vorbis encoder's settings."""
+
+
+    class VORBIS_INFO(Structure):
+        _fields_ = [("version", c_int), 
+                    ("channels", c_int),
+                    ("rate", c_long),
+                    ("bitrate_upper", c_long),
+                    ("bitrate_nominal", c_long),
+                    ("bitrate_lower", c_long),
+                    ("bitrate_window", c_long),
+                    ("codec_setup", c_void_p)]
+
+
+    def __init__(self):
+        try:
+            self._lv = CDLL("libvorbis.so.0")
+            self._lve = CDLL("libvorbisenc.so.2")
+        except OSError as e:
+            # Library API version mismatch assumed to be a show stopper.
+            print e
+            self._broken = True
+        else:
+            self._broken = False
+
+
+    def samplerate_bounds(self, channels):
+        """Calculate the lowest and highest samplerate that the encoder can use.
+        
+        From a known good universal setting reduce the samplerate and the
+        bitrate alternately until neither can be reduced further. This defines
+        the lowest possible samplerate and in similar fashion determine the
+        upper limit.
+        
+        Limitation: fragmented blocks, if they exist, are not supported.
+        """
+        
+        if self._broken:
+            # Some sort of reply is better than nothing.
+            return 4000, 200000
+        
+        # Values that are known to work fine for 1 or 2 channels.
+        initial = (channels, 44100, 128000)
+
+        return (self._samplerate_limit(*initial, offset=-1),
+                self._samplerate_limit(*initial, offset=1))
+
+
+    def bitrate_bounds(self, channels, samplerate):
+        """Calculate the lowest and highest bitrate."""
+
+        if self._broken:
+            # Some sort of reply is better than nothing.
+            return 2000, 1000000
+            
+
+        class BitrateException(Exception):
+            def __init__(self, value):
+                self.bitrate = value
+
+
+        def bisect(low, high):
+            mid = (high - low) // 2 + low
+
+            if self._vorbis_test(channels, samplerate, mid):
+                raise BitrateException(mid)
+
+            if low != mid:
+                bisect(low, mid)
+            if mid + 1 != high:
+                bisect(mid, high)
+            
+            
+        try:
+            bisect(1, 1000000)
+        except BitrateException as e:
+            return (self._parameter_delta(
+                                    channels, samplerate, e.bitrate, -1, "br"),
+                    self._parameter_delta(
+                                    channels, samplerate, e.bitrate, 1, "br"))
+        else:
+            return None
+
+
+    def _samplerate_limit(self, channels, samplerate, bitrate, offset):
+        """Compute the samplerate limit in the direction of offset."""
+        
+        brd = 1  # Bitrate delta
+
+        while 1:
+            # Adjust the samplerate.
+            srd = self._parameter_delta(channels,
+                                            samplerate, bitrate, offset, "sr")
+            samplerate += srd
+            
+            # Quit when neither can be adjusted further.
+            if srd == brd == 0:
+                break
+                
+            # Adjust the bitrate.
+            brd = self._parameter_delta(channels,
+                                            samplerate, bitrate, offset, "br")
+            bitrate += brd
+            
+            # Quit when neither can be adjusted further.
+            if srd == brd == 0:
+                break
+
+        return samplerate
+
+
+    def _parameter_delta(self, channels, samplerate, bitrate, offset, mode):
+        """Return the value by how much a parameter can be moved."""
+
+        delta = 0
+        
+        if mode == "sr":
+            while self._vorbis_test(
+                                channels, samplerate + delta + offset, bitrate):
+                delta += offset
+
+        elif mode == "br":
+            while self._vorbis_test(
+                                channels, samplerate, bitrate + delta + offset):
+                delta += offset
+
+        else:
+            raise ValueError("mode must be 'sr' or 'br'.")
+            
+        return delta
+
+
+    def _vorbis_test(self, channels, samplerate, bitrate):
+        """Run these values past a vorbis encoder.
+        
+        A return value of True indicates that encoding would work for the
+        provided settings.
+        """
+
+        vi = self.VORBIS_INFO()
+
+        self._lv.vorbis_info_init(byref(vi))
+        error_code = self._lve.vorbis_encode_init(byref(vi),
+                                    c_long(channels), c_long(samplerate),
+                                    c_long(-1), c_long(bitrate), c_long(-1))
+        self._lv.vorbis_info_clear(byref(vi))
+
+        return error_code == 0
+
+
+
+def format_collate(specifier):
+    """Takes a FormatDropdown or FormatSpin object, obtains the settings."""
+    
+    d = {}
+    if specifier.prev_object is not None:
+        d.update(format_collate(specifier.prev_object))
+    
+    d[specifier.ident] = specifier.value
+    return d
+
+
+
+class FormatDropdown(gtk.VBox):
+    def __init__(self, prev_object, title, ident, elements):
+        """Parameter 'elements' is a tuple of dictionaries.
+        
+        @title: appears above the widget
+        @name: is the official name of the control element
+        @elements: is tuple of dictionary objects mandatory keys of which are
+            'display_text' and 'value'.
+        """
+        
+        self.prev_object = prev_object
+        self._ident = ident
+        gtk.VBox.__init__(self)
+        frame = gtk.Frame(" %s " % title)
+        frame.set_label_align(0.5, 0.5)
+        self.pack_start(frame, fill=False)
+        size_group = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
+        vbox = gtk.VBox()
+        vbox.set_border_width(3)
+        frame.add(vbox)
+        
+        model = gtk.ListStore(gobject.TYPE_PYOBJECT)
+        default = 0
+        for index, each in enumerate(elements):
+            if "default" in each and each["default"]:
+                default = index
+            model.append(((each),))
+        cell_text = gtk.CellRendererText()
+        self._combo_box = gtk.ComboBox(model)
+        size_group.add_widget(self._combo_box)
+        self._combo_box.pack_start(cell_text)
+        self._combo_box.set_cell_data_func(cell_text, self._cell_data_func)
+        vbox.pack_start(self._combo_box, False)
+        self._fixed = gtk.Label()
+        size_group.add_widget(self._fixed)
+        vbox.pack_start(self._fixed, False)
+        self._fixed.set_no_show_all(True)
+
+        self._combo_box.connect("changed", self._on_changed)
+        self._combo_box.set_active(default)
+        
+        self.show_all()
+
+
+    def _cell_data_func(self, cell_layout, cell, model, iter):
+        cell.props.text = model.get_value(iter, 0)["display_text"]
+
+
+    def _on_changed(self, combo_box):
+        text = combo_box.props.model[combo_box.props.active][0]["display_text"]
+        self._fixed.set_text(text)
+
+
+    @property
+    def next_element_name(self):
+        cbp = self._combo_box.props
+        try:
+            return cbp.model[cbp.active][0]["chain"]
+        except KeyError:
+            return None
+
+
+    @property
+    def applied(self):
+        return self._fixed.props.visible
+
+
+    @property
+    def ident(self):
+        return self._ident
+
+
+    def apply(self):
+        self._combo_box.hide()
+        self._fixed.show()
+        
+        
+    def unapply(self):
+        self._combo_box.show()
+        self._fixed.hide()
+
+
+    @property
+    def value(self):
+        cbp = self._combo_box.props
+        return cbp.model[cbp.active][0]["value"]
+
+
+
+class FormatSpin(gtk.VBox):
+    def __init__(self, prev_object, title, ident, elements, unit, next_element_name):
+        """Parameter 'elements' is a tuple of dictionaries.
+        
+        @title: appears above the widget
+        @name: is the official name of the control element
+        @elements: the values of the gtk.Adjustment as integers
+        @unit: e.g. " Hz"
+        """
+        
+        self.prev_object = prev_object
+        self._ident = ident
+        self._unit = unit
+        self._next_element_name = next_element_name
+        gtk.VBox.__init__(self)
+        frame = gtk.Frame(" %s " % title)
+        frame.set_label_align(0.5, 0.5)
+        self.pack_start(frame, fill=False)
+        vbox = gtk.VBox()
+        vbox.set_border_width(3)
+        frame.add(vbox)
+        
+        adjustment = gtk.Adjustment(*(float(x) for x in elements))
+        self._spin_button = gtk.SpinButton(adjustment)
+        vbox.pack_start(self._spin_button, False)
+        self._fixed = gtk.Label()
+        self._fixed.set_alignment(0.5, 0.5)
+        vbox.pack_start(self._fixed)
+        self._fixed.set_no_show_all(True)
+
+        self._spin_button.connect("value-changed", self._on_changed)
+        self._spin_button.emit("value-changed")
+        
+        self.show_all()
+        size_group = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
+        size_group.add_widget(prev_object.get_children()[0])
+        size_group.add_widget(frame)
+
+
+    def _on_changed(self, spin_button):
+        self._fixed.set_text(str(int(spin_button.props.value)) + self._unit)
+
+
+    @property
+    def next_element_name(self):
+        return self._next_element_name
+
+
+    @property
+    def applied(self):
+        return self._fixed.props.visible
+
+
+    @property
+    def ident(self):
+        return self._ident
+
+
+    def apply(self):
+        self._spin_button.hide()
+        self._fixed.show()
+        
+        
+    def unapply(self):
+        self._spin_button.show()
+        self._fixed.hide()
+        
+        
+    @property
+    def value(self):
+        return str(int(self._spin_button.props.value))
+
+
+
+class FormatCodecMPEGMP3Quality(FormatDropdown):
+    """MP3 quality."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Qual.'), "quality", (
+            dict(display_text=_('0 most'), value="0"),
+            dict(display_text="1", value="1"),
+            # TC: * means is the recommended setting.
+            dict(display_text=_("2 *"), value="2", default=True)) + tuple(
+            dict(display_text=str(x), value=str(x)) for x in range(3, 10)))
+
+
+
+class FormatCodecMPEGMP3Mode(FormatDropdown):
+    """MP3 modes."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
+            dict(display_text=_("Mono"), value="mono", chain="FormatCodecMPEGMP3Quality"),
+            dict(display_text=_("Stereo"), value="stereo", chain="FormatCodecMPEGMP3Quality"),
+            dict(display_text=_("Joint Stereo"), value="jointstereo", default=True, chain="FormatCodecMPEGMP3Quality")))
+
+
+
+class FormatCodecMPEGMP3V1BitRates(FormatDropdown):
+    """MP3 MPEG1 bit rates."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Bitrate'), "bitrate", (
+            dict(display_text="320 kHz", value="320", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="256 kHz", value="256", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="224 kHz", value="224", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="192 kHz", value="192", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="160 kHz", value="160", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="128 kHz", value="128", chain="FormatCodecMPEGMP3Mode", default=True),
+            dict(display_text="112 kHz", value="112", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="96 kHz", value="96", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="80 kHz", value="80", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="64 kHz", value="64", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="56 kHz", value="56", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="48 kHz", value="48", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="40 kHz", value="40", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="32 kHz", value="32", chain="FormatCodecMPEGMP3Mode")))
+
+
+
+class FormatCodecMPEGMP3V2BitRates(FormatDropdown):
+    """MP3 MPEG2 and 2.5 bit rates."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Bitrate'), "bitrate", (
+            dict(display_text="160 kHz", value="160", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="144 kHz", value="144", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="128 kHz", value="128", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="112 kHz", value="112", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="96 kHz", value="96", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="80 kHz", value="80", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="64 kHz", value="64", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="56 kHz", value="56", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="48 kHz", value="48", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="40 kHz", value="40", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="32 kHz", value="32", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="24 kHz", value="24", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="16 kHz", value="16", chain="FormatCodecMPEGMP3Mode"),
+            dict(display_text="8 kHz", value="8", chain="FormatCodecMPEGMP3Mode")))
+
+
+
+class FormatCodecMPEGMP3V1SampleRates(FormatDropdown):
+    """MP3 MPEG1 sample rates."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Samplerate'), "samplerate", (
+            dict(display_text="48000 Hz", value="48000", chain="FormatCodecMPEGMP3V1BitRates"),
+            dict(display_text="44100 Hz", value="44100", chain="FormatCodecMPEGMP3V1BitRates", default=True),
+            dict(display_text="32000 Hz", value="32000", chain="FormatCodecMPEGMP3V1BitRates")))
+
+
+
+class FormatCodecMPEGMP3V2SampleRates(FormatDropdown):
+    """MP3 MPEG2 sample rates."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Samplerate'), "samplerate", (
+            dict(display_text="24000 Hz", value="24000", chain="FormatCodecMPEGMP3V2BitRates"),
+            dict(display_text="22050 Hz", value="22050", chain="FormatCodecMPEGMP3V2BitRates", default=True),
+            dict(display_text="16000 Hz", value="16000", chain="FormatCodecMPEGMP3V2BitRates")))
+
+
+
+class FormatCodecMPEGMP3V2_5SampleRates(FormatDropdown):
+    """MP3 MPEG2.5 non standard sample rates."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Samplerate'), "samplerate", (
+            dict(display_text="12000 Hz", value="12000", chain="FormatCodecMPEGMP3V2BitRates"),
+            dict(display_text="11025 Hz", value="11025", chain="FormatCodecMPEGMP3V2BitRates", default=True),
+            dict(display_text="8000 Hz", value="8000", chain="FormatCodecMPEGMP3V2BitRates")))
+
+
+
+class FormatCodecMPEGMP3(FormatDropdown):
+    """MP3 standard selection."""
+    
+    def __init__(self, prev_object):
+        # TC: Abbreviation of the word, standard.
+        FormatDropdown.__init__(self, prev_object, _('Std.'), "mp3std", (
+            # TC: v stands for version.
+            dict(display_text=_("V 1"), value="1", chain="FormatCodecMPEGMP3V1SampleRates"),
+            # TC: v stands for version.
+            dict(display_text=_("V 2"), value="2", chain="FormatCodecMPEGMP3V2SampleRates"),
+            # TC: v stands for version.
+            dict(display_text=_("V 2.5"), value="2.5", chain="FormatCodecMPEGMP3V2_5SampleRates")))
+
+
+
+class FormatCodecSpeexCPU(FormatDropdown):
+    """Speex cpu usage selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('CPU'), "cpu", 
+            tuple(dict(display_text=str(x), value=str(x), default=(x==5))
+                                                            for x in range(9, -1, -1)))
+
+
+
+class FormatCodecSpeexQuality(FormatDropdown):
+    """Speex quality selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Quality'), "quality", 
+            tuple(dict(display_text=str(x), value=str(x), default=(x==8), chain="FormatCodecSpeexCPU")
+                                                            for x in range(9, -1, -1)))
+
+
+
+class FormatCodecSpeexBandwidth(FormatDropdown):
+    """Speex bandwidth selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Bandwidth'), "spxbw", (
+            dict(display_text=_("Ultrawide"), value="ultrawide", chain="FormatCodecSpeexQuality"),
+            dict(display_text=_("Wide"), value="wide", chain="FormatCodecSpeexQuality"),
+            dict(display_text=_("Narrow"), value="narrow", chain="FormatCodecSpeexQuality")))
+
+
+
+class FormatCodecSpeexMode(FormatDropdown):
+    """Speex mode selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
+            dict(display_text=_("Mono"), value="mono", chain="FormatCodecSpeexBandwidth"),
+            dict(display_text=_("Stereo"), value="stereo", chain="FormatCodecSpeexBandwidth")))
+
+
+
+class FormatCodecFLACBits(FormatDropdown):
+    """FLAC bit width selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Width'), "bitwidth", (
+            dict(display_text=_("24 bit"), value="24"),
+            dict(display_text=_("20 bit"), value="20"),
+            dict(display_text=_("16 bit"), value="16")))
+
+
+
+class FormatCodecVorbisBitRate(FormatSpin):
+    """Vorbis bit rate selection."""
+    
+    
+    def __init__(self, prev_object):
+        dict_ = format_collate(prev_object)
+        channels = 1 if dict_["mode"] == "mono" else 2
+        bounds = OggVorbisRange().bitrate_bounds(channels,
+                                                    int(dict_["samplerate"]))
+        FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
+            (128000,) + bounds + (1, 10), " Hz", None)
+
+
+
+class FormatCodecVorbisSampleRate(FormatSpin):
+    """Vorbis sample rate selection."""
+    
+    
+    def __init__(self, prev_object):
+        channels = 1 if format_collate(prev_object)["mode"] == "mono" else 2
+        bounds = OggVorbisRange().samplerate_bounds(channels)
+        FormatSpin.__init__(self, prev_object, _('Samplerate'), "samplerate",
+            (44100,) + bounds + (1, 10), " Hz", "FormatCodecVorbisBitRate")
+
+
+
+class FormatCodecFLACSampleRate(FormatSpin):
+    """FLAC sample rate selection."""
+    
+    
+    def __init__(self, prev_object):
+        FormatSpin.__init__(self, prev_object, _('Samplerate'), "samplerate",
+            (44100, 1, 655350, 1, 10), " Hz", "FormatCodecFLACBits")
+
+
+
+class FormatCodecFLACMode(FormatDropdown):
+    """Speex mode selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
+            dict(display_text=_("Mono"), value="mono", chain="FormatCodecFLACSampleRate"),
+            dict(display_text=_("Stereo"), value="stereo", default=True, chain="FormatCodecFLACSampleRate")))
+
+
+
+class FormatCodecVorbisMode(FormatDropdown):
+    """Vorbis mode selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
+            dict(display_text=_("Mono"), value="mono", chain="FormatCodecVorbisSampleRate"),
+            dict(display_text=_("Stereo"), value="stereo", default=True, chain="FormatCodecVorbisSampleRate")))
+
+
+
+class FormatCodecXiphOgg(FormatDropdown):
+    """Ogg codec selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Codec'), "codec", (
+            dict(display_text=_('Vorbis'), value="vorbis", chain="FormatCodecVorbisMode"),
+            dict(display_text=_('FLAC'), value="flac", chain="FormatCodecFLACMode"),
+            dict(display_text=_('Speex'), value="speex", chain="FormatCodecSpeexMode")))
+
+
+
+class FormatCodecMPEG(FormatDropdown):
+    """MPEG codec selection."""
+
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Codec'), "codec", (
+            dict(display_text=_('MP2'), value="mp2"),
+            dict(display_text=_('MP3'), value="mp3", chain="FormatCodecMPEGMP3", default=True),
+            dict(display_text=_('AAC'), value="aac"),
+            dict(display_text=_('AAC+'), value="aacp"),
+            dict(display_text=_('AAC+ v2'), value="aacpv2")))
+
+
+
+class FormatFamily(FormatDropdown):
+    """Gives choice of codec family/container format e.g. Xiph/Ogg or MPEG.
+    
+    The format is modified by means of a dropdown box.
+    """
+
+    def __init__(self, prev_object):
+        # TC: Codec family e.g. Xiph/Ogg, MPEG etc.
+        FormatDropdown.__init__(self, prev_object, _('Family'), "family", (
+            # TC: Xiph.org Ogg container format.
+            dict(display_text=_('Xiph/Ogg'), value="ogg", chain="FormatCodecXiphOgg", shoutcast=False),
+            dict(display_text=_('MPEG'), value="mpeg", chain="FormatCodecMPEG", default=True)))
+
+
+
+class FormatBox(gtk.VBox):
+    def __init__(self):
+        gtk.VBox.__init__(self)
+        self.set_border_width(6)
+        self.set_spacing(4)
+        elem_box = gtk.HBox()
+        self.pack_start(elem_box)
+        button_box = gtk.HButtonBox()
+        button_box.set_layout(gtk.BUTTONBOX_EDGE)
+        image = gtk.image_new_from_stock(gtk.STOCK_GO_BACK, gtk.ICON_SIZE_MENU)
+        back_button = gtk.Button()
+        back_button.set_sensitive(False)
+        back_button.add(image)
+        button_box.add(back_button)
+        image = gtk.image_new_from_stock(gtk.STOCK_APPLY, gtk.ICON_SIZE_MENU)
+        apply_button = gtk.Button()
+        apply_button.add(image)
+        button_box.add(apply_button)
+        self.pack_start(button_box, False)
+        self.show_all()
+
+        self._current = self._first = FormatFamily(prev_object=None)
+        elem_box.pack_start(self._first, False)
+        
+        apply_button.connect("clicked", self._on_apply, back_button, elem_box)
+        back_button.connect("clicked", self._on_back, apply_button)
+        
+        self.__ref = (back_button, apply_button, elem_box)
+
+
+    def _on_apply(self, apply_button, back_button, elem_box):
+        self._current.apply()
+        next_element_name = self._current.next_element_name
+        if next_element_name is None:
+            apply_button.set_sensitive(False)
+        else:
+            self._current = globals()[next_element_name](self._current)
+            elem_box.pack_start(self._current, False)
+        back_button.set_sensitive(True)
+        
+        
+    def _on_back(self, back_button, apply_button):
+        apply_button.set_sensitive(True)
+        if self._current.applied:
+            self._current.unapply()
+        else:
+            current = self._current
+            self._current = current.prev_object
+            current.destroy()
+            self._current.unapply()
+        back_button.set_sensitive(self._current.prev_object is not None)
 
 
 
@@ -1088,89 +1733,6 @@ class Troubleshooting(gtk.VBox):
 
 
 class StreamTab(Tab):
-    class ResampleFrame(SubcategoryFrame):
-        def cb_eval(self, widget, data = None):
-            if data is not None:
-                if widget.get_active():
-                    self.extraction_method = data
-                else:
-                    return
-            if self.extraction_method == "no_resample":
-                self.resample_rate = self.jack_sample_rate
-            elif self.extraction_method == "standard":
-                self.resample_rate = int(
-                                self.resample_rate_combo_box.get_active_text())
-            else:
-                self.resample_rate = int(
-                                self.resample_rate_spin_adj.get_value())
-            self.resample_quality = ("highest", "high", "fast", "fastest")[
-                                self.resample_quality_combo.get_active()]
-            self.mp3_compatible = self.resample_rate in self.mp3_samplerates
-            self.parentobject.mp3_dummy_object.clicked()  # update mp3 pane
-            self.parentobject.vorbis_dummy_object.clicked()
-
-
-        def __init__(self, parent, sizegroup):
-            self.parentobject = parent
-            self.jack_sample_rate = parent.source_client_gui.jack_sample_rate
-            self.resample_rate = self.jack_sample_rate
-            self.extraction_method = "no_resample"
-            self.mp3_compatible = True
-            SubcategoryFrame.__init__(self, " %s " % _('Sample rate'))
-            (self.resample_no_resample, self.resample_standard,
-                        self.resample_custom) = self.parentobject.make_radio(3)
-            self.resample_no_resample.connect("clicked", self.cb_eval,
-                                                                "no_resample")
-            self.resample_standard.connect("clicked", self.cb_eval,
-                                                                "standard")
-            self.resample_custom.connect("clicked", self.cb_eval, "custom")
-            no_resample_label = gtk.Label(_('Use JACK sample rate'))
-            self.mp3_samplerates = (48000, 44100, 32000, 24000, 22050, 16000,
-                                                            12000, 11025, 8000)
-            self.resample_rate_combo_box = self.parentobject.make_combo_box(
-                                                map(str, self.mp3_samplerates))
-            self.resample_rate_combo_box.set_active(1)
-            self.resample_rate_combo_box.connect("changed", self.cb_eval)
-            self.resample_rate_spin_adj = gtk.Adjustment(
-                                            44100, 4000, 190000, 10, 100, 0)
-            self.resample_rate_spin_control = gtk.SpinButton(
-                                            self.resample_rate_spin_adj, 0, 0)
-            self.resample_rate_spin_control.connect(
-                                            "value-changed", self.cb_eval)
-            resample_quality_label = gtk.Label(_('Quality'))
-            self.resample_quality_combo = self.parentobject.make_combo_box(
-                            (_('Highest'), _('Good'), _('Fast'), _('Fastest')))
-            self.resample_quality_combo.set_active(2)
-            self.resample_quality_combo.connect("changed", self.cb_eval)
-            self.resample_dummy_object = gtk.Button()
-            self.resample_dummy_object.connect("clicked", self.cb_eval)
-            sample_rate_pane = self.parentobject.item_item_layout(((
-                self.resample_no_resample, no_resample_label),
-                (self.resample_standard, self.resample_rate_combo_box),
-                (self.resample_custom, self.resample_rate_spin_control),
-                (resample_quality_label, self.resample_quality_combo)),
-                sizegroup)
-            sample_rate_pane.set_border_width(10)
-            self.add(sample_rate_pane)
-            sample_rate_pane.show()
-            set_tip(self.resample_no_resample.get_parent(),
-                _('No additional resampling will occur. The stream sample rate'
-                ' will be that of the JACK sound server.'))
-            set_tip(self.resample_standard.get_parent(),
-                _('Use one of the standard mp3 sample rates for the stream.'))
-            set_tip(self.resample_custom.get_parent(),
-                _('Complete sample rate freedom. Note that only sample rates '
-                'that appear in the drop down box can be used with an mp3 '
-                'stream.'))
-            set_tip(self.resample_quality_combo.get_parent(),
-                _('This selects the audio resampling method to be used, '
-                'efficiency versus quality. Highest mode offers the best sound'
-                ' quality but also uses the most CPU (not recommended for '
-                'systems built before 2006). Fastest mode while it uses by far'
-                ' the least amount of CPU should be avoided if at all '
-                'possible.'))
-
-
     def make_combo_box(self, items):
         combobox = gtk.combo_box_new_text()
         for each in items:
@@ -1338,75 +1900,7 @@ class StreamTab(Tab):
 
 
     def update_sensitives(self, *params):
-        if self.encoder == "off":
-            self.update_button.set_sensitive(False)
-        mode = self.connection_pane.get_master_server_type()
-        self.recorder_valid_override = False
-        
-        if self.encoder == "ogg":
-            self.server_connect.set_sensitive(mode == 1 or 
-                                            self.server_connect.get_active())
-            if self.format_page == 0:
-                self.update_button.set_sensitive(False)
-            elif self.format_page == 1:
-              self.update_button.set_sensitive(self.vorbis_settings_valid)
-            elif self.format_page == 2:
-                try:
-                    self.update_button.set_sensitive(
-                    self.file_dialog.get_filename().lower().endswith(".ogg"))
-                except AttributeError:
-                    self.update_button.set_sensitive(False)
-            else:
-                print "update_sensitives: unhandled format page"
-        elif self.encoder == "mp3":
-            self.server_connect.set_sensitive(mode != 0 or 
-                                            self.server_connect.get_active())
-            if self.format_page == 0:
-                self.update_button.set_sensitive(
-                                            self.mp3_compatibility != "s-rate!")
-            elif self.format_page == 1:
-                self.update_button.set_sensitive(False)
-            elif self.format_page == 2:
-                try:
-                    self.update_button.set_sensitive(
-                    self.file_dialog.get_filename().lower().endswith(".mp3"))
-                except AttributeError:
-                    self.update_button.set_sensitive(False)
-            else:
-                print "update_sensitives: unhandled format page"
-        elif self.encoder == "off":
-            self.test_monitor.set_sensitive(True)
-            if self.format_page == 0:
-                self.recorder_valid_override = sens = bool(
-                            self.mp3_compatibility != "s-rate!" and lameenabled)
-                sens = sens and mode
-                self.server_connect.set_sensitive(sens)
-                self.test_monitor.set_sensitive(sens)
-            elif self.format_page == 1:
-                if self.subformat_page == 0:
-                    sens = self.vorbis_settings_valid
-                    self.recorder_valid_override = sens
-                elif self.subformat_page == 1:  # OggFLAC
-                    sr = self.stream_resample_frame.resample_rate
-                    self.recorder_valid_override = sens = sr <= 65535 or \
-                                                                    sr % 10 == 0
-                elif self.subformat_page == 2:  # Speex
-                    self.recorder_valid_override = sens = True
-                self.server_connect.set_sensitive(sens and mode == 1)
-                self.test_monitor.set_sensitive(sens)
-            try:
-                record_tabs = self.source_client_gui.recordtabframe.tabs
-            except:
-                pass
-            else:
-                for rectab in record_tabs:
-                    rectab.source_dest.source_combo.emit("changed")
-        if self.encoder != "off":
-            if self.format_page == 0:
-                if self.encoder == "ogg" or self.mp3_compatibility == "s-rate!":
-                    self.update_button.set_sensitive(False)
-            if self.format_page == 1 and self.encoder == "mp3":
-                    self.update_button.set_sensitive(False)
+        pass
 
     
     def cb_file_dialog_response(self, widget, response_id):
@@ -1995,332 +2489,11 @@ class StreamTab(Tab):
         label.show()
         self.connection_pane.show()
          
-        vbox = gtk.VBox()            # format box
-        vbox.set_border_width(10)
-        vbox.set_spacing(14)
-        label = gtk.Label(_('Format'))
-        self.details_nb.append_page(vbox, label)
+        label = gtk.Label(_('Format'))  # Format box
+        format_box = FormatBox()
+        self.details_nb.append_page(format_box, label)
         label.show()
-        vbox.show()
-        hbox = gtk.HBox(True)
-        hbox.set_spacing(16)
-        vbox.pack_start(hbox, False)
-        hbox.show()
-        sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
-        self.stream_resample_frame = self.ResampleFrame(self, sizegroup)
-        hbox.add(self.stream_resample_frame)
-        self.stream_resample_frame.show()
-        self.format_notebook = gtk.Notebook()  # [mp3 / ogg / file] chooser
-        hbox.add(self.format_notebook)
-        self.format_notebook.show()
         
-        # mp3 tab
-        self.mp3tab = self.make_notebook_tab(self.format_notebook, "MP3",
-            _('Clicking this tab selects the mp3 file format for streaming and'
-            ' contains settings for configuring the mp3 encoder.'))
-        self.standard_mp3_bitrate, self.custom_mp3_bitrate = self.make_radio(2)
-        set_tip(self.standard_mp3_bitrate,
-                                    _('Use one of the standard mp3 bit rates.'))
-        set_tip(self.custom_mp3_bitrate,
-            _("Freedom to choose a non standard bitrate. Note however that the"
-            " use of a non-standard bit rate will result in a 'free-format' "
-            "stream that cannot be handled by a great many media players."))
-        self.standard_mp3_bitrate.connect("clicked", self.cb_mp3tab, "standard")
-        self.custom_mp3_bitrate.connect("clicked", self.cb_mp3tab, "custom")
-        self.mp3_standard_bitrates = (320, 256, 224, 192, 160, 144, 128, 112,
-                                        96, 80, 64, 56, 48, 40, 32, 24, 16, 8)
-        self.mp3_mpeg1_bitrates_samplerates = ((320, 256, 224, 192, 160, 128,
-                        112, 96, 80, 64, 56, 48, 40, 32), (48000, 44100, 32000))
-        self.mp3_mpeg2_bitrates_samplerates = ((160, 144, 128, 112, 96, 80, 64,
-                        56, 48, 40, 32, 24, 16, 8), (24000, 22050, 16000))
-        self.mp3_mpeg2_5_bitrates_samplerates = ((160, 144, 128, 112, 96, 80,
-                        64, 56, 48, 40, 32, 24, 16, 8), (12000, 11025, 8000))
-        self.mp3_bitrate_combo_box = self.make_combo_box(map(str,
-                                                    self.mp3_standard_bitrates))
-        set_tip(self.mp3_bitrate_combo_box,
-                                    _('The bit-rate in kilobits per second.'))
-        self.mp3_bitrate_combo_box.set_active(6)
-        self.mp3_bitrate_combo_box.connect("changed", self.cb_mp3tab)
-        self.mp3_bitrate_spin_adj = gtk.Adjustment(128, 8, 640, 10, 100, 0)
-        self.mp3_bitrate_spin_control = gtk.SpinButton(
-                                                    self.mp3_bitrate_spin_adj)
-        set_tip(self.mp3_bitrate_spin_control,
-                                    _('The bit-rate in kilobits per second.'))
-        self.mp3_bitrate_spin_control.connect("value-changed", self.cb_mp3tab)
-        encoding_quality_label = gtk.Label(_('Quality (0=best)'))
-        self.mp3_encoding_quality_combo_box = self.make_combo_box(
-                            ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"))
-        set_tip(self.mp3_encoding_quality_combo_box, _('This trades off sound'
-        ' quality against CPU efficiency. The more streams you want to run '
-        'concurrently the more you might want to consider using a lower quality'
-        ' setting.'))
-        self.mp3_encoding_quality_combo_box.set_active(2)
-        self.mp3_encoding_quality_combo_box.connect("changed", self.cb_mp3tab)
-        self.mp3_stereo_combo_box = self.make_combo_box(
-                                            ("Stereo", "Mono", "Joint Stereo"))
-        set_tip(self.mp3_stereo_combo_box, _('Mono is self explanatory. '
-        'Joint Stereo is recommended below 160kb/s where regular Stereo might '
-        'result in metallic sounding distortion. At higher bitrates regular '
-        'stereo sounds better due to superior channel separation.'))
-        self.mp3_stereo_combo_box.set_active(2)
-        self.mp3_stereo_combo_box.connect("changed", self.cb_mp3tab)
-        self.mp3_compatibility_status = gtk.Statusbar()
-        set_tip(self.mp3_compatibility_status, _("The type of mpeg header used"
-        " in the mp3 stream or either s-rate or freeformat. Freeformat "
-        "indicates that the bitrate is not specified in the header since it is"
-        " non-standard, rather the listener client has to figure out what the "
-        "bitrate is by itself and not all of them are capable of doing that. "
-        "In short you'll be streaming something many listeners may not be able"
-        " to listen to. S-rate indicates the sample rate you have selected is "
-        "not compatible with mp3 and you'll need to change it if you want to"
-        " stream."))
-        self.mp3_compatibility_status.set_has_resize_grip(False)
-        self.mp3_dummy_object = gtk.Button()
-        self.mp3_dummy_object.connect("clicked", self.cb_mp3tab)
-        self.mp3_bitrate = 128
-        self.mp3_bitrate_widget = "standard"
-        
-        if lameenabled:
-            mp3_pane = self.item_item_layout(((self.standard_mp3_bitrate,
-                self.mp3_bitrate_combo_box),
-                (self.custom_mp3_bitrate, self.mp3_bitrate_spin_control),
-                (encoding_quality_label, self.mp3_encoding_quality_combo_box),
-                (self.mp3_stereo_combo_box, self.mp3_compatibility_status)),
-                sizegroup)
-            mp3_pane.set_border_width(10)
-        else:
-            mp3_pane = gtk.VBox(True)
-            for line in _("To enable MP3 streaming\ninstall the package named"
-                            "\n'libmp3lame'\n and restart IDJC.").splitlines():
-                label = gtk.Label(line)
-                mp3_pane.add(label)
-                label.show()
-            set_tip(mp3_pane, _('Installing libmp3lame will allow you to '
-                'stream the MP3 format to Shoutcast servers. Currently only'
-                ' Ogg streaming to Icecast servers is possible.'))
-        
-        self.mp3tab.add(mp3_pane)
-        mp3_pane.show()
-
-        # Ogg tab
-        self.oggtab = self.make_notebook_tab(self.format_notebook, "Ogg",
-                _('Clicking this tab selects the Ogg family of file formats.'))
-        self.subformat_notebook = gtk.Notebook()
-        self.oggtab.add(self.subformat_notebook)
-        self.subformat_notebook.show()
-        self.oggvorbistab = self.make_notebook_tab(self.subformat_notebook, 
-            "Vorbis",
-            _('This chooses the Ogg/vorbis format for streaming and '
-            'recording.'))
-        self.oggflactab = self.make_notebook_tab(self.subformat_notebook,
-            "FLAC",
-             _('This chooses the OggFLAC format for streaming and recording.'))
-        self.oggspeextab = self.make_notebook_tab(self.subformat_notebook,
-            "Speex",
-            _('This chooses the Speex format for streaming and recording.'))
-        
-        # Vorbis subtab contents
-        self.vorbis_encoding_nominal_adj = gtk.Adjustment(128, 8, 500, 1, 10, 0)
-        self.vorbis_encoding_nominal = SimpleFramedSpin(_('Bitrate'),
-                                            self.vorbis_encoding_nominal_adj)
-        self.vorbis_encoding_nominal.spin.connect("value-changed",
-                                                self.cb_vorbistab)
-        
-        self.vorbis_stereo_rb, self.vorbis_mono_rb = self.make_radio(2)
-        self.vorbis_stereo_rb.connect("toggled", self.cb_vorbistab)
-        radiovbox = gtk.VBox()
-        radiovbox.set_border_width(5)
-        stereohbox = gtk.HBox()
-        monohbox = gtk.HBox()
-        radiovbox.add(stereohbox)
-        radiovbox.add(monohbox)
-        stereohbox.pack_start(self.vorbis_stereo_rb, False, False, 0)
-        monohbox.pack_start(self.vorbis_mono_rb, False, False, 0)
-        label = gtk.Label(_('Stereo'))
-        stereohbox.pack_start(label)
-        label = gtk.Label(_('Mono'))
-        monohbox.pack_start(label)
-        radiovbox.show_all()
-        
-        upper_spin_adj = gtk.Adjustment(150, 100, 400, 1, 10, 0)
-        lower_spin_adj = gtk.Adjustment(50, 0, 100, 1, 10, 0)
-        # TC: The upper bitrate limit as a percentage.
-        self.vorbis_encoding_upper = FramedSpin(_('Upper %'), upper_spin_adj,
-                                                self.vorbis_encoding_nominal)
-        # TC: The lower bitrate limit as a percentage.
-        self.vorbis_encoding_lower = FramedSpin(_('Lower %'), lower_spin_adj,
-                                                self.vorbis_encoding_nominal)
-        
-        sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
-
-        vorbis_pane = self.item_item_layout2(((self.vorbis_encoding_nominal,
-            self.vorbis_encoding_upper),
-            (radiovbox, self.vorbis_encoding_lower)), sizegroup)
-        vorbis_pane.set_border_width(3)
-        self.oggvorbistab.add(vorbis_pane)
-        vorbis_pane.show()
-
-        set_tip(self.vorbis_encoding_nominal, _('The nominal Ogg/Vorbis bitrate'
-                                                ' in kilobits per second.'))
-        set_tip(self.vorbis_encoding_upper, _('The upper bitrate limit relative'
-        ' to the nominal bitrate. This is an advisory limit and it may be '
-        'exceeded. Normally it is safe to leave the upper limit uncapped since'
-        ' the bitrate will be averaged and the listeners have buffers that'
-        ' extend for many seconds. The checkbox enables/disables this '
-        'feature.'))
-        set_tip(self.vorbis_encoding_lower, _('The minimum bitrate in relative'
-        ' percentage terms. For streaming it is recommended that you set a '
-        'minimum bitrate to ensure correct listener client behaviour however'
-        ' setting any upper or lower limit will result in a significantly '
-        'higher CPU usage by a factor of at least three, and slightly degraded'
-        ' sound quality. The checkbox enables/disables this feature.'))
-
-        self.vorbis_settings_valid = False
-        self.vorbis_dummy_object = gtk.Button()
-        self.vorbis_dummy_object.connect("clicked", self.cb_vorbistab)
-
-        # FLAC subtab contents
-        self.flacstereo = gtk.CheckButton(_('Stereo'))
-        self.flacmetadata = gtk.CheckButton(_('Metadata'))
-        self.flacstereo.set_active(True)
-        self.flacmetadata.set_active(True)
-        set_tip(self.flacmetadata, _('You can prevent the sending of metadata'
-        ' by turning this feature off. This will prevent certain players from'
-        ' dropping the stream or inserting an audible gap every time the song'
-        ' title changes.'))
-        
-        flac_bitrates = (_('%d Bit') % x for x in (16, 20, 24))
-        self.flac16bit, self.flac20bit, self.flac24bit = \
-                                    self.make_radio_with_text(flac_bitrates)
-        set_tip(self.flac16bit, _('Useful for streaming but for recording '
-                                'choose a higher bitrate option.'))
-        set_tip(self.flac20bit, _('Ideal for very high quality streaming or '
-                            'recording although not as compatible as 16 bit.'))
-        set_tip(self.flac24bit, _('The highest quality audio format available'
-                            ' within IDJC. Recommended for pre-recording.'))
-        if FGlobs.oggflacenabled:
-            flac_pane = self.item_item_layout3((self.flacstereo,
-            self.flacmetadata),(self.flac16bit, self.flac20bit, self.flac24bit))
-        else:
-            flac_pane = gtk.Label(_('Feature Disabled'))
-        self.oggflactab.add(flac_pane)
-        flac_pane.show_all()
-        
-        # Speex subtab contents
-        self.speex_mode = gtk.combo_box_new_text()
-        # The Speex audio codec has specific modes that are user selectable.
-        speex_modes = (
-            # TC: One of the modes supported by the Speex codec.
-            _('Ultra Wide Band'), 
-            # TC: One of the modes supported by the Speex codec.
-            _('Wide Band'), 
-            # TC: One of the modes supported by the Speex codec.
-            _('Narrow Band'))
-        for each in speex_modes:
-            self.speex_mode.append_text(each)
-        self.speex_mode.set_active(0)
-        self.speex_stereo = gtk.CheckButton(_('Stereo'))
-        set_tip(self.speex_stereo, _('Apply intensity stereo to the audio '
-                    'stream. This is a very efficient implementation of stereo'
-                    ' but is only suited to voice.'))
-        self.speex_metadata = gtk.CheckButton(_('Metadata'))
-        set_tip(self.speex_metadata, _('Sending metadata may cause listener '
-                    'clients to misbehave when the metadata changes. '
-                    'By keeping this feature turned off you can avoid that.'))
-        self.speex_quality = gtk.combo_box_new_text()
-        for i in range(11):
-            self.speex_quality.append_text("%d" % i)
-        self.speex_quality.set_active(8)
-        self.speex_complexity = gtk.combo_box_new_text()
-        for i in range(1, 11):
-            self.speex_complexity.append_text("%d" % i)
-        self.speex_complexity.set_active(2)
-        
-        if FGlobs.speexenabled:
-            svbox = gtk.VBox()
-            svbox.set_border_width(5)
-            
-            # TC: The mode uesd by the Speex codec.
-            label = gtk.Label(_('Mode'))
-            shbox0 = gtk.HBox()
-            shbox0.set_spacing(5)
-            shbox0.pack_start(label, False, False, 0)
-            shbox0.pack_start(self.speex_mode, True, True, 0)
-            set_tip(shbox0, _('This is the audio bandwidth selector. Ultra '
-                'Wide Band has a bandwidth of 16kHz; Wide Band, 8kHz; Narrow '
-                'Band, 4kHz. The samplerate is twice the value of the selected'
-                ' bandwidth consequently all settings in the samplerate pane '
-                'to the left will be disregarded apart from the resample '
-                'quality setting.'))
-            svbox.pack_start(shbox0, True, False, 0)
-            shbox1 = gtk.HBox()
-            shbox1.pack_start(self.speex_stereo, True, False, 0)
-            shbox1.pack_end(self.speex_metadata, True, False, 0)
-            svbox.pack_start(shbox1, True, False, 0)
-            shbox2 = gtk.HBox()
-            shbox3 = gtk.HBox()
-            shbox3.set_spacing(5)
-            shbox4 = gtk.HBox()
-            shbox4.set_spacing(5)
-            shbox2.pack_start(shbox3, False, False, 0)
-            shbox2.pack_end(shbox4, False, False, 0)
-            
-            label = gtk.Label(_('Quality'))
-            shbox3.pack_start(label, False, False, 0)
-            shbox3.pack_start(self.speex_quality, False, False, 0)
-            set_tip(shbox3, _('This picks an appropriate bitrate for the '
-                'selected bandwidth on a quality metric. Q8 is a good choice'
-                ' for artifact-free speech and Q10 would be the ideal choice'
-                ' for music.'))
-            
-            label = gtk.Label(_('CPU'))
-            shbox4.pack_start(label, False, False, 0)
-            shbox4.pack_start(self.speex_complexity, False, False, 0)
-            set_tip(shbox4, _('This sets the level of complexity in the '
-                    'encoder. Higher values use more CPU but result in better '
-                    'sounding audio though not as great an improvement as you '
-                    'would get by increasing the quality setting to the left.'))
-            
-            svbox.pack_start(shbox2, True, False, 0)
-            self.oggspeextab.add(svbox)
-            svbox.show_all()
-        else:
-            label = gtk.Label(_('Feature Disabled'))
-            self.oggspeextab.add(label)
-            label.show()
-        
-        format_control_bar = gtk.HBox()  # Button box in Format frame
-        format_control_sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
-        format_control_bar.set_spacing(10)
-        vbox.pack_start(format_control_bar, False)
-        format_control_bar.show()
-        self.test_monitor = gtk.ToggleButton(_(' Test / Monitor '))
-        self.test_monitor.connect("toggled", self.cb_test_monitor)
-        format_control_sizegroup.add_widget(self.test_monitor)
-        format_control_bar.pack_start(self.test_monitor, False, False, 0)
-        #self.test_monitor.show()
-        self.update_button = gtk.Button(stock=gtk.STOCK_APPLY)
-        set_tip(self.update_button, _('Use this to change the encoder settings'
-            ' while streaming or recording.\n \nIf this button is greyed out it'
-            ' means that the encoder is not running, or the bitrate/samplerate '
-            'combination is not supported by the encoder, or you are trying to '
-            'switch between Ogg and mp3, which is not permitted.'))
-        self.update_button.connect("clicked", self.cb_update_button)
-        format_control_sizegroup.add_widget(self.update_button)
-        self.update_button.set_sensitive(False)
-        format_control_bar.pack_start(self.update_button, False, False, 0)
-        self.update_button.show()
-        self.format_info_bar = gtk.Statusbar()
-        self.format_info_bar.set_has_resize_grip(False)
-        format_control_bar.pack_start(self.format_info_bar, True, True, 0)
-        self.format_info_bar.show()
-        set_tip(self.format_info_bar, _('Information about how the encoder is'
-                                    'currently configured is displayed here.'))
-        self.format_notebook.connect("switch-page", self.cb_format_notebook)
-        self.subformat_notebook.connect("switch-page",
-                                                    self.cb_subformat_notebook)
-        self.format_notebook.set_current_page(0)
-
         vbox = gtk.VBox()
         # TC: Tab heading. User can enter information about the stream here.
         label = gtk.Label(_('Stream Info'))
@@ -2424,7 +2597,6 @@ class StreamTab(Tab):
 
         self.details_nb.set_current_page(0)
         
-        self.stream_resample_frame.resample_no_resample.emit("clicked")
         self.objects = {
             "metadata"    : (self.metadata, "history"),
             "metadata_fb" : (self.metadata_fallback, "text"),
@@ -2432,41 +2604,6 @@ class StreamTab(Tab):
             "connections" : (self.connection_pane, ("loader", "saver")),
             "stats_never" : (self.connection_pane.stats_never, "active"),
             "stats_always": (self.connection_pane.stats_always, "active"),
-            "rs_use_jack" :
-                (self.stream_resample_frame.resample_no_resample, "active"),
-            "rs_use_std" :
-                (self.stream_resample_frame.resample_standard, "active"),
-            "rs_use_custom_rate" :
-                (self.stream_resample_frame.resample_custom, "active"),
-            "rs_std_rate" :
-                (self.stream_resample_frame.resample_rate_combo_box, "active"),
-            "rs_custom_rate" :
-                (self.stream_resample_frame.resample_rate_spin_adj, "value"),
-            "rs_quality" :
-                (self.stream_resample_frame.resample_quality_combo, "active"),
-            "source_type" : (self.format_notebook, "notebookpage"),
-            "ogg_type": (self.subformat_notebook, "notebookpage"),
-            "std_mp3bitrate" : (self.standard_mp3_bitrate, "active"),
-            "custom_mp3_bitrate" : (self.custom_mp3_bitrate, "active"),
-            "mp3_bitrate_combo" : (self.mp3_bitrate_combo_box, "active"),
-            "mp3_bitrate_spin" : (self.mp3_bitrate_spin_adj, "value"),
-            "mp3_quality" : (self.mp3_encoding_quality_combo_box, "active"),
-            "mp3_stereo" : (self.mp3_stereo_combo_box, "active"),
-            "vorbis_bitrate" : (self.vorbis_encoding_nominal, "value"),
-            "vorbis_upper_pc": (self.vorbis_encoding_upper.spin, "value"),
-            "vorbis_lower_pc":  (self.vorbis_encoding_lower.spin, "value"),
-            "vorbis_upper_enable": (self.vorbis_encoding_upper.check, "active"),
-            "vorbis_lower_enable": (self.vorbis_encoding_lower.check, "active"),
-            "vorbis_mono": (self.vorbis_mono_rb, "active"),
-            "flac_stereo": (self.flacstereo, "active"),
-            "flac_metadata": (self.flacmetadata, "active"),
-            "flac_20_bit": (self.flac20bit, "active"),
-            "flac_24_bit": (self.flac24bit, "active"),
-            "speex_mode": (self.speex_mode, "active"),
-            "speex_stereo": (self.speex_stereo, "active"), 
-            "speex_metadata": (self.speex_metadata, "active"), 
-            "speex_quality": (self.speex_quality, "active"),
-            "speex_complexity": (self.speex_complexity, "active"),
             "dj_name" : (self.dj_name_entry, "text"),
             "listen_url" : (self.listen_url_entry, "text"),
             "description" : (self.description_entry, "text"),
@@ -3009,14 +3146,10 @@ class SourceClientGui:
     def stop_recording_all(self):
         for rectab in self.recordtabframe.tabs:
             rectab.record_buttons.stop_button.clicked()
-    def stop_test_monitor_all(self):
-        for streamtab in self.streamtabframe.tabs:
-            streamtab.test_monitor.set_active(False)
     def cleanup(self):
         self.stop_recording_all()
         self.stop_streaming_all()
         self.stop_irc_all()
-        self.stop_test_monitor_all()
         gobject.source_remove(self.monitor_source_id)
     def app_exit(self):
         if self.parent.session_loaded:
