@@ -115,40 +115,59 @@ class OggVorbisRange(object):
                 self._samplerate_limit(*initial, offset=1))
 
 
-    def bitrate_bounds(self, channels, samplerate):
-        """Calculate the lowest and highest bitrate."""
+    def _bitrate_bound(self, channels, samplerate, initial_span, mid_calc):
+        """Working bitrate boundary calculation."""
 
+        span_1 = initial_span
+        
         if self._broken:
             # Some sort of reply is better than nothing.
-            return 2000, 1000000
+            return span_1[0]
             
+        while 1:
+            val1 = None
+            span_2 = []
+            for val2 in span_1:
+                if val1 is None:
+                    val1 = val2
+                    continue
 
-        class BitrateException(Exception):
-            def __init__(self, value):
-                self.bitrate = value
+                span_2.append(val1)
+                mid = mid_calc(val1, val2)
+                span_2.append(mid)
+
+                if mid == val1:
+                    return span_1[-1]
+                
+                if self._vorbis_test(channels, samplerate, mid):
+                    span_1 = [val1, mid]
+                    val1 = None
+                    break
+                
+                val1 = val2
+            else:
+                span_1 = span_2 + [val2]
 
 
-        def bisect(low, high):
-            mid = (high - low) // 2 + low
+    def lowest_bitrate(self, channels, samplerate):
+        """Calculate the lowest working bitrate."""
 
-            if self._vorbis_test(channels, samplerate, mid):
-                raise BitrateException(mid)
+        return self._bitrate_bound(channels, samplerate, [2000, 1000000],
+                                lambda val1, val2: (val2 - val1) // 2 + val1)
 
-            if low != mid:
-                bisect(low, mid)
-            if mid + 1 != high:
-                bisect(mid, high)
-            
-            
-        try:
-            bisect(1, 1000000)
-        except BitrateException as e:
-            return (self._parameter_delta(
-                                    channels, samplerate, e.bitrate, -1, "br"),
-                    self._parameter_delta(
-                                    channels, samplerate, e.bitrate, 1, "br"))
-        else:
-            return None
+
+    def highest_bitrate(self, channels, samplerate):
+        """Calculate the highest working bitrate."""
+
+        return self._bitrate_bound(channels, samplerate, [1000000, 2000],
+                                lambda val1, val2: val1 - (val1 - val2) // 2)
+
+
+    def bitrate_bounds(self, channels, samplerate):
+        """Lowest and highest working bitrate as a 2 tuple."""
+
+        return self.lowest_bitrate(channels, samplerate), \
+                                self.highest_bitrate(channels, samplerate)
 
 
     def _samplerate_limit(self, channels, samplerate, bitrate, offset):
