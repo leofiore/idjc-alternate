@@ -30,7 +30,7 @@ import gettext
 import traceback
 import xml.dom.minidom as mdom
 import xml.etree.ElementTree
-from ctypes import *
+import ctypes
 from collections import namedtuple
 from threading import Thread
 
@@ -66,101 +66,134 @@ BLANK_LISTLINE = ListLine(1, 0, "", 8000, "", -1, "", "")
 
 
 
-class OggVorbisRange(object):
-    """Test out the limits of the vorbis encoder's settings."""
+class EncoderRange(object):
+    """Test out the limits of an encoder's settings."""
 
 
-    class VORBIS_INFO(Structure):
-        _fields_ = [("version", c_int), 
-                    ("channels", c_int),
-                    ("rate", c_long),
-                    ("bitrate_upper", c_long),
-                    ("bitrate_nominal", c_long),
-                    ("bitrate_lower", c_long),
-                    ("bitrate_window", c_long),
-                    ("codec_setup", c_void_p)]
+    class _VORBIS_INFO(ctypes.Structure):
+        _fields_ = [("version", ctypes.c_int), 
+                    ("channels", ctypes.c_int),
+                    ("rate", ctypes.c_long),
+                    ("bitrate_upper", ctypes.c_long),
+                    ("bitrate_nominal", ctypes.c_long),
+                    ("bitrate_lower", ctypes.c_long),
+                    ("bitrate_window", ctypes.c_long),
+                    ("codec_setup", ctypes.c_void_p)]
 
 
-    def __init__(self):
-        try:
-            self._lv = CDLL("libvorbis.so.0")
-            self._lve = CDLL("libvorbisenc.so.2")
-        except OSError as e:
-            # Library API version mismatch assumed to be a show stopper.
-            print e
-            self._broken = True
-        else:
-            self._broken = False
+    try:
+        _lv = ctypes.CDLL("libvorbis.so.0")
+        _lve = ctypes.CDLL("libvorbisenc.so.2")
+    except OSError as e:
+        # Library API version mismatch assumed to be a show stopper.
+        print e
+        _lv = _lve = None
 
 
-    def samplerate_bounds(self, channels):
-        """Calculate the lowest and highest samplerate that the encoder can use.
+    @classmethod
+    def vorbis_test(cls, channels, samplerate, bitrate):
+        """Test run these encoder settings with a vorbis encoder.
         
-        From a known good universal setting reduce the samplerate and the
-        bitrate alternately until neither can be reduced further. This defines
-        the lowest possible samplerate and in similar fashion determine the
-        upper limit.
+        A return value of True indicates that encoding would work for the
+        provided settings.
+        """
+
+        if not all((cls._lv, cls._lve)):
+            raise OSError(
+                "libvorbis/libvorbisenc library missing or version mismatch")
+
+        vi = cls._VORBIS_INFO()
+
+        cls._lv.vorbis_info_init(ctypes.byref(vi))
+        error_code = cls._lve.vorbis_encode_init(ctypes.byref(vi),
+                ctypes.c_long(channels), ctypes.c_long(samplerate),
+                ctypes.c_long(-1), ctypes.c_long(bitrate), ctypes.c_long(-1))
+        cls._lv.vorbis_info_clear(ctypes.byref(vi))
+
+        return error_code == 0
+
+
+    _encoders = {"vorbis": ("vorbis_test", 128000)}
+
+
+    def __init__(self, encoder_name):
+        """An instance of EncoderRange can probe one type of encoder.
         
-        Limitation: fragmented blocks, if they exist, are not supported.
+        @encoder_name: e.g. vorbis
         """
         
-        if self._broken:
-            # Some sort of reply is better than nothing.
-            return 4000, 200000
-        
-        # Values that are known to work fine for 1 or 2 channels.
-        initial = (channels, 44100, 128000)
-
-        return (self._samplerate_limit(*initial, offset=-1),
-                self._samplerate_limit(*initial, offset=1))
-
-
-    def _bitrate_bound(self, channels, samplerate, initial_span, mid_calc):
-        """Working bitrate boundary calculation."""
-
-        span_1 = initial_span
-        
-        if self._broken:
-            # Some sort of reply is better than nothing.
-            return span_1[0]
+        try:
+            test_name, self._mid_bitrate = self._encoders[encoder_name]
+        except KeyError:
+            print "encoder '%s' not supported" % encoder_name
+            raise
             
+        self._test = getattr(self, test_name)
+
+
+    def _boundary_search(self, variable_span, test):
+        """Encoder working boundary value finder.
+        
+        @variable_span is a list of two integers that form the search range.
+        The algorithm will find the lowest limit value if the first value is
+        smaller and the highest limit value if the first value is bigger.
+        
+        @test is a function that takes one value, the variable under test and
+        returns boolean true indicating success.
+        """
+
+        span_1 = variable_span
+
         while 1:
             val1 = None
             span_2 = []
             for val2 in span_1:
                 if val1 is None:
+                    if abs(span_1[0] - span_1[-1]) + 1 == len(span_1):
+                        return span_1[-1] if test(span_1[-1]) else None
                     val1 = val2
                     continue
 
                 span_2.append(val1)
-                mid = mid_calc(val1, val2)
-                span_2.append(mid)
-
-                if mid == val1:
-                    return span_1[-1]
-                
-                if self._vorbis_test(channels, samplerate, mid):
-                    span_1 = [val1, mid]
-                    val1 = None
-                    break
+                mid = abs(val1 - val2) // 2 + min(val1, val2)
+                if min(val1, val2) < mid < max(val1, val2):
+                    span_2.append(mid)
+                    if test(mid):
+                        span_1 = [val1, mid]
+                        val1 = None
+                        break
                 
                 val1 = val2
             else:
-                span_1 = span_2 + [val2]
+                span_1 = span_2 + [val1]
 
 
     def lowest_bitrate(self, channels, samplerate):
         """Calculate the lowest working bitrate."""
 
-        return self._bitrate_bound(channels, samplerate, [2000, 1000000],
-                                lambda val1, val2: (val2 - val1) // 2 + val1)
+        return self._boundary_search([8000, 1000000],
+            lambda bitrate: self._test(channels, samplerate, bitrate))
 
 
     def highest_bitrate(self, channels, samplerate):
         """Calculate the highest working bitrate."""
 
-        return self._bitrate_bound(channels, samplerate, [1000000, 2000],
-                                lambda val1, val2: val1 - (val1 - val2) // 2)
+        return self._boundary_search([1000000, 8000],
+            lambda bitrate: self._test(channels, samplerate, bitrate))
+
+
+    def lowest_samplerate(self, channels, bitrate):
+        """Calculate the lowest working samplerate."""
+
+        return self._boundary_search([4000, 200000],
+            lambda samplerate: self._test(channels, samplerate, bitrate))
+
+
+    def highest_samplerate(self, channels, bitrate):
+        """Calculate the highest working samplerate."""
+
+        return self._boundary_search([200000, 4000],
+            lambda samplerate: self._test(channels, samplerate, bitrate))
 
 
     def bitrate_bounds(self, channels, samplerate):
@@ -170,70 +203,34 @@ class OggVorbisRange(object):
                                 self.highest_bitrate(channels, samplerate)
 
 
-    def _samplerate_limit(self, channels, samplerate, bitrate, offset):
-        """Compute the samplerate limit in the direction of offset."""
+    def samplerate_bounds(self, channels, bitrate):
+        """Lowest and highest working samplerate as a 2 tuple."""
         
-        brd = 1  # Bitrate delta
-
-        while 1:
-            # Adjust the samplerate.
-            srd = self._parameter_delta(channels,
-                                            samplerate, bitrate, offset, "sr")
-            samplerate += srd
-            
-            # Quit when neither can be adjusted further.
-            if srd == brd == 0:
-                break
-                
-            # Adjust the bitrate.
-            brd = self._parameter_delta(channels,
-                                            samplerate, bitrate, offset, "br")
-            bitrate += brd
-            
-            # Quit when neither can be adjusted further.
-            if srd == brd == 0:
-                break
-
-        return samplerate
+        return self.lowest_samplerate(channels, bitrate), \
+                                self.highest_samplerate(channels, bitrate)
 
 
-    def _parameter_delta(self, channels, samplerate, bitrate, offset, mode):
-        """Return the value by how much a parameter can be moved."""
-
-        delta = 0
+    def bounds(self, channels):
+        """Find the absolute lowest and highest encoder supported settings.
         
-        if mode == "sr":
-            while self._vorbis_test(
-                                channels, samplerate + delta + offset, bitrate):
-                delta += offset
-
-        elif mode == "br":
-            while self._vorbis_test(
-                                channels, samplerate, bitrate + delta + offset):
-                delta += offset
-
-        else:
-            raise ValueError("mode must be 'sr' or 'br'.")
-            
-        return delta
-
-
-    def _vorbis_test(self, channels, samplerate, bitrate):
-        """Run these values past a vorbis encoder.
-        
-        A return value of True indicates that encoding would work for the
-        provided settings.
+        Return value: dictionary containing 2 tuples for samplerate and bitrate
+        Inputs:
+        @channels: 1 for mono, 2 for stereo.
         """
-
-        vi = self.VORBIS_INFO()
-
-        self._lv.vorbis_info_init(byref(vi))
-        error_code = self._lve.vorbis_encode_init(byref(vi),
-                                    c_long(channels), c_long(samplerate),
-                                    c_long(-1), c_long(bitrate), c_long(-1))
-        self._lv.vorbis_info_clear(byref(vi))
-
-        return error_code == 0
+        
+        srb = self.samplerate_bounds(channels, self._mid_bitrate)
+        oldbrb = brb = oldsrb = None, None
+        
+        while brb != oldbrb or oldsrb != srb:
+            oldbrb = brb
+            oldsrb = srb
+     
+            brb = (self.bitrate_bounds(channels, srb[0])[0],
+                                self.bitrate_bounds(channels, srb[1])[1])
+            srb = (self.samplerate_bounds(channels, brb[0])[0],
+                                self.samplerate_bounds(channels, brb[1])[1])
+        
+        return {"samplerate_bounds": srb, "bitrate_bounds": brb}
 
 
 
@@ -587,7 +584,7 @@ class FormatCodecVorbisBitRate(FormatSpin):
     def __init__(self, prev_object):
         dict_ = format_collate(prev_object)
         channels = 1 if dict_["mode"] == "mono" else 2
-        bounds = OggVorbisRange().bitrate_bounds(channels,
+        bounds = EncoderRange("vorbis").bitrate_bounds(channels,
                                                     int(dict_["samplerate"]))
         FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
             (128000,) + bounds + (1, 10), " Hz", None)
@@ -600,7 +597,7 @@ class FormatCodecVorbisSampleRate(FormatSpin):
     
     def __init__(self, prev_object):
         channels = 1 if format_collate(prev_object)["mode"] == "mono" else 2
-        bounds = OggVorbisRange().samplerate_bounds(channels)
+        bounds = EncoderRange("vorbis").bounds(channels)["samplerate_bounds"]
         FormatSpin.__init__(self, prev_object, _('Samplerate'), "samplerate",
             (44100,) + bounds + (1, 10), " Hz", "FormatCodecVorbisBitRate")
 
