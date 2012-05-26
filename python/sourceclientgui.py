@@ -32,6 +32,7 @@ import xml.dom.minidom as mdom
 import xml.etree.ElementTree
 import ctypes
 from collections import namedtuple
+from abc import ABCMeta, abstractmethod, abstractproperty
 from threading import Thread
 
 import pango
@@ -66,10 +67,60 @@ BLANK_LISTLINE = ListLine(1, 0, "", 8000, "", -1, "", "")
 
 
 
-class EncoderRange(object):
-    """Test out the limits of an encoder's settings."""
+class TestEncoder(object):
+    __metaclass__ = ABCMeta
 
 
+    @abstractproperty
+    def default_bitrate_stereo(self):
+        """A guaranteed good bitrate when encoding 2 channels."""
+
+        return int()
+        
+
+    @abstractproperty
+    def default_bitrate_mono(self):
+        """A guaranteed good bitrate when encoding 1 channel.
+        
+        Ideally the same value as for stereo if possible."""
+
+        return int()
+
+        
+    @abstractproperty
+    def default_samplerate(self):
+        """Typically 44100Hz unless the encoder won't support this."""
+        
+        return int()
+
+
+    @abstractproperty
+    def suggested_samplerates(self):
+        """Useful samplerates for user interface dropdown selection.
+        
+        These values are for EncoderRange to verify.
+        """
+        
+        return tuple()
+
+
+    @abstractproperty
+    def suggested_bitrates(self):
+        """Useful bitrates for user interface dropdown selection.
+        
+        These values are for EncoderRange to verify.
+        """
+        
+        return tuple()
+
+
+    @abstractmethod
+    def test(self, channels, samplerate, bitrate):
+        return bool()
+
+
+
+class VorbisTestEncoder(TestEncoder):
     class _VORBIS_INFO(ctypes.Structure):
         _fields_ = [("version", ctypes.c_int), 
                     ("channels", ctypes.c_int),
@@ -81,54 +132,72 @@ class EncoderRange(object):
                     ("codec_setup", ctypes.c_void_p)]
 
 
-    try:
-        _lv = ctypes.CDLL("libvorbis.so.0")
-        _lve = ctypes.CDLL("libvorbisenc.so.2")
-    except OSError as e:
-        # Library API version mismatch assumed to be a show stopper.
-        print e
-        _lv = _lve = None
+    _lv = ctypes.CDLL("libvorbis.so.0")
+    _lve = ctypes.CDLL("libvorbisenc.so.2")
 
 
-    @classmethod
-    def vorbis_test(cls, channels, samplerate, bitrate):
+    def __init__(self):
+        self._vi = self._VORBIS_INFO()
+
+
+    @property
+    def default_bitrate_stereo(self):
+        return 128000
+
+
+    @property
+    def default_bitrate_mono(self):
+        return 128000
+
+
+    @property
+    def default_samplerate(self):
+        return 44100
+
+
+    @property
+    def suggested_samplerates(self):
+        return (48000, 44100, 32000, 22050, 11025)
+
+
+    @property
+    def suggested_bitrates(self):
+        return (192000, 160000, 128000, 112000, 96000, 80000, 64000, 48000, 45000, 32000)
+
+
+    def test(self, channels, samplerate, bitrate):
         """Test run these encoder settings with a vorbis encoder.
         
         A return value of True indicates that encoding would work for the
         provided settings.
         """
 
-        if not all((cls._lv, cls._lve)):
-            raise OSError(
-                "libvorbis/libvorbisenc library missing or version mismatch")
+        vi = self._vi
 
-        vi = cls._VORBIS_INFO()
-
-        cls._lv.vorbis_info_init(ctypes.byref(vi))
-        error_code = cls._lve.vorbis_encode_init(ctypes.byref(vi),
+        self._lv.vorbis_info_init(ctypes.byref(vi))
+        error_code = self._lve.vorbis_encode_init(ctypes.byref(vi),
                 ctypes.c_long(channels), ctypes.c_long(samplerate),
                 ctypes.c_long(-1), ctypes.c_long(bitrate), ctypes.c_long(-1))
-        cls._lv.vorbis_info_clear(ctypes.byref(vi))
+        self._lv.vorbis_info_clear(ctypes.byref(vi))
 
         return error_code == 0
 
 
-    _encoders = {"vorbis": ("vorbis_test", 128000)}
+
+class EncoderRange(object):
+    """Test out the limits of an encoder's settings."""
 
 
-    def __init__(self, encoder_name):
+    def __init__(self, encoder):
         """An instance of EncoderRange can probe one type of encoder.
         
-        @encoder_name: e.g. vorbis
+        @encoder: an instance of TestEncoder
         """
         
-        try:
-            test_name, self._mid_bitrate = self._encoders[encoder_name]
-        except KeyError:
-            print "encoder '%s' not supported" % encoder_name
-            raise
-            
-        self._test = getattr(self, test_name)
+        self._encoder = encoder
+        self._test = encoder.test
+        self._working_bitrate = {1: encoder.default_bitrate_mono,
+                                 2: encoder.default_bitrate_stereo}
 
 
     def _boundary_search(self, variable_span, test):
@@ -143,6 +212,7 @@ class EncoderRange(object):
         """
 
         span_1 = variable_span
+        found = None
 
         while 1:
             val1 = None
@@ -150,7 +220,7 @@ class EncoderRange(object):
             for val2 in span_1:
                 if val1 is None:
                     if abs(span_1[0] - span_1[-1]) + 1 == len(span_1):
-                        return span_1[-1] if test(span_1[-1]) else None
+                        return found
                     val1 = val2
                     continue
 
@@ -159,13 +229,15 @@ class EncoderRange(object):
                 if min(val1, val2) < mid < max(val1, val2):
                     span_2.append(mid)
                     if test(mid):
+                        found = mid
                         span_1 = [val1, mid]
                         val1 = None
                         break
                 
                 val1 = val2
             else:
-                span_1 = span_2 + [val1]
+                span_1 = [span_2[-1], val1] if found is not None \
+                                                        else span_2 + [val1]
 
 
     def lowest_bitrate(self, channels, samplerate):
@@ -218,7 +290,7 @@ class EncoderRange(object):
         @channels: 1 for mono, 2 for stereo.
         """
         
-        srb = self.samplerate_bounds(channels, self._mid_bitrate)
+        srb = self.samplerate_bounds(channels, self._working_bitrate[channels])
         oldbrb = brb = oldsrb = None, None
         
         while brb != oldbrb or oldsrb != srb:
@@ -231,6 +303,26 @@ class EncoderRange(object):
                                 self.samplerate_bounds(channels, brb[1])[1])
         
         return {"samplerate_bounds": srb, "bitrate_bounds": brb}
+
+
+    def good_samplerates(self, channels, bitrate=None):
+        if bitrate is None:
+            lower, upper = self.bounds(channels)["samplerate_bounds"]
+        else:
+            lower, upper = self.samplerate_bounds(channels, bitrate)
+        
+        return tuple(x for x in self._encoder.suggested_samplerates if
+                                                        lower <= x <= upper)
+
+
+    def good_bitrates(self, channels, samplerate=None):
+        if samplerate is None:
+            lower, upper = self.bounds(channels)["bitrate_bounds"]
+        else:
+            lower, upper = self.bitrate_bounds(channels, samplerate)
+
+        return tuple(x for x in self._encoder.suggested_bitrates if
+                                                        lower <= x <= upper)
 
 
 
@@ -336,13 +428,14 @@ class FormatDropdown(gtk.VBox):
 
 
 class FormatSpin(gtk.VBox):
-    def __init__(self, prev_object, title, ident, elements, unit, next_element_name):
+    def __init__(self, prev_object, title, ident, elements, unit, next_element_name, suggested_values):
         """Parameter 'elements' is a tuple of dictionaries.
         
         @title: appears above the widget
         @name: is the official name of the control element
         @elements: the values of the gtk.Adjustment as integers
         @unit: e.g. " Hz"
+        @suggested_values: sequence of standard values
         """
         
         self.prev_object = prev_object
@@ -359,6 +452,8 @@ class FormatSpin(gtk.VBox):
         
         adjustment = gtk.Adjustment(*(float(x) for x in elements))
         self._spin_button = gtk.SpinButton(adjustment)
+        if suggested_values is not None:
+            self._spin_button.connect("populate_popup", self._on_populate_popup, suggested_values)
         vbox.pack_start(self._spin_button, False)
         self._fixed = gtk.Label()
         self._fixed.set_alignment(0.5, 0.5)
@@ -376,6 +471,24 @@ class FormatSpin(gtk.VBox):
 
     def _on_changed(self, spin_button):
         self._fixed.set_text(str(int(spin_button.props.value)) + self._unit)
+
+
+    def _on_populate_popup(self, spin, menu, values):
+        mi = gtk.MenuItem(_('Suggested Values'))
+        menu.append(mi)
+        mi.show()
+        submenu = gtk.Menu()
+        mi.set_submenu(submenu)
+        submenu.show()
+        for each in values:
+            mi = gtk.MenuItem(str(each))
+            mi.connect("activate", self._on_popup_activate, spin, each)
+            submenu.append(mi)
+            mi.show()
+
+
+    def _on_popup_activate(self, menuitem, spin, value):
+        spin.set_value(value)
 
 
     @property
@@ -584,10 +697,12 @@ class FormatCodecVorbisBitRate(FormatSpin):
     def __init__(self, prev_object):
         dict_ = format_collate(prev_object)
         channels = 1 if dict_["mode"] == "mono" else 2
-        bounds = EncoderRange("vorbis").bitrate_bounds(channels,
-                                                    int(dict_["samplerate"]))
+        er = EncoderRange(VorbisTestEncoder())
+        sr = int(dict_["samplerate"])
+        bounds = er.bitrate_bounds(channels, sr)
         FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
-            (128000,) + bounds + (1, 10), " Hz", None)
+            (128000,) + bounds + (1, 10), " Hz", None,
+            er.good_bitrates(channels, sr))
 
 
 
@@ -597,9 +712,11 @@ class FormatCodecVorbisSampleRate(FormatSpin):
     
     def __init__(self, prev_object):
         channels = 1 if format_collate(prev_object)["mode"] == "mono" else 2
-        bounds = EncoderRange("vorbis").bounds(channels)["samplerate_bounds"]
+        er = EncoderRange(VorbisTestEncoder())
+        bounds = er.bounds(channels)["samplerate_bounds"]
         FormatSpin.__init__(self, prev_object, _('Samplerate'), "samplerate",
-            (44100,) + bounds + (1, 10), " Hz", "FormatCodecVorbisBitRate")
+            (44100,) + bounds + (1, 10), " Hz", "FormatCodecVorbisBitRate",
+            er.good_samplerates(channels))
 
 
 
