@@ -43,7 +43,7 @@ from .utils import string_multireplace
 from .gtkstuff import DefaultEntry, threadslock, HistoryEntry, WindowSizeTracker
 from .dialogs import *
 from .irc import IRCPane
-from .format import FormatBox
+from .format import FormatControl
 from .tooltips import set_tip
 from .prelims import ProfileManager
 
@@ -1342,19 +1342,6 @@ class StreamTab(Tab):
         self.update_sensitives()
 
 
-    def cb_vorbistab(self, widget, data = None):
-        vorbis_bitrate = self.vorbis_encoding_nominal.get_value()
-        vorbis_min = self.vorbis_encoding_lower.get_cooked_value()
-        vorbis_max = self.vorbis_encoding_upper.get_cooked_value()
-        self.send("sample_rate=%d\nbit_rate=%d\nbit_rate_min=%d\n"
-                    "bit_rate_max=%d\nstereo=%s\ncommand=test_ogg_values\n" % (
-                    self.stream_resample_frame.resample_rate, 
-                    vorbis_bitrate, vorbis_min, vorbis_max,
-                    ("mono","stereo")[self.vorbis_stereo_rb.get_active()]))
-        self.vorbis_settings_valid = self.receive() == "succeeded"
-        self.update_sensitives()
-
-
     def mpeg_std_search(self, bitrate, samplerate, brsr):
         return bitrate in brsr[0] and samplerate in brsr[1]
 
@@ -1426,25 +1413,13 @@ class StreamTab(Tab):
             self.start_stop_encoder(ENCODER_STOP)
 
 
-    def cb_update_button(self, widget):
-        self.start_encoder("encoder_update")
-        if self.server_connect.get_active() and self.is_shoutcast:
-            self.server_reconnect()
-
-
     def start_stop_encoder(self, command):
         """Reference counting starter and stopper for the encoder."""
-        
-        
+                
         if command == ENCODER_START:
-            self.encoder_on_count += 1
-            if self.encoder_on_count == 1:
-                self.start_encoder()
-        else:
-            self.encoder_on_count -= 1
-            if self.encoder_on_count == 0:
-                self.stop_encoder()
-        self.update_sensitives()
+            self.format_control.start_encoder_rc()
+        elif command == ENCODER_STOP:
+            self.format_control.stop_encoder_rc()
 
 
     def start_encoder(self, command = "encoder_start"):
@@ -1546,12 +1521,7 @@ class StreamTab(Tab):
                 self.format_info_bar.push(1, self.file_dialog.get_filename())
             else:
                 self.format_info_bar.push(1, "")
-    def stop_encoder(self):
-        self.encoder = "off"
-        self.send("command=encoder_stop\n")
-        if self.receive() == "failed":
-            print "stop_encoder: encoder was already stopped"
-        self.format_info_bar.push(1, "")
+
     
     def server_type_cell_data_func(self, celllayout, cell, model, iter):
         text = model.get_value(iter, 0)
@@ -1561,6 +1531,10 @@ class StreamTab(Tab):
             cell.set_property("sensitive", True)
     
     def cb_metadata(self, widget):
+        
+        return
+        
+        
         fallback = self.metadata_fallback.get_text()
         songname = self.scg.parent.songname.encode("utf-8") or fallback
         table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((
@@ -1664,10 +1638,6 @@ class StreamTab(Tab):
         self.scg = scg
         self.show_indicator("clear")
         self.tab_type = "streamer"
-        self.encoder = "off"                
-        self.encoder_on_count = 0           
-        self.format_page = 0                
-        self.subformat_page = 0             
         self.set_spacing(10)
               
         self.ic_expander = gtk.Expander(_('Individual Controls'))
@@ -1849,8 +1819,8 @@ class StreamTab(Tab):
         self.connection_pane.show()
          
         label = gtk.Label(_('Format'))  # Format box
-        self.format_box = FormatBox()
-        self.details_nb.append_page(self.format_box, label)
+        self.format_control = FormatControl(self.send, self.receive)
+        self.details_nb.append_page(self.format_control, label)
         label.show()
         
         vbox = gtk.VBox()
@@ -1983,7 +1953,7 @@ class StreamTab(Tab):
             "action_record_active" : (self.start_recorder_action, "active"),
             "action_record_which" : (self.start_recorder_action, "radioindex"),
             "irc_data" : (self.ircpane, "marshall"),
-            "format_data" : (self.format_box, "marshall"),
+            "format_data" : (self.format_control, "marshall"),
             "details_nb" : (self.details_nb, "current_page"),
         }
                                 

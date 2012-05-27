@@ -25,6 +25,7 @@ import gtk
 import gobject
 
 from idjc import FGlobs
+from .gtkstuff import LEDDict
 
 
 _ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
@@ -270,6 +271,8 @@ class EncoderRange(object):
 
 
     def good_samplerates(self, channels, bitrate=None):
+        """Returns a tuple of standard suggestion values."""
+        
         if bitrate is None:
             lower, upper = self.bounds(channels)["samplerate_bounds"]
         else:
@@ -280,6 +283,8 @@ class EncoderRange(object):
 
 
     def good_bitrates(self, channels, samplerate=None):
+        """Returns a tuple of standard suggestion values."""
+
         if samplerate is None:
             lower, upper = self.bounds(channels)["bitrate_bounds"]
         else:
@@ -394,8 +399,6 @@ class FormatDropdown(gtk.VBox):
 
     @value.setter
     def value(self, data):
-        print data
-        
         if not self.applied:
             cbp = self._combo_box.props
             for i, each in enumerate(cbp.model):
@@ -497,6 +500,12 @@ class FormatSpin(gtk.VBox):
     @property
     def value(self):
         return str(int(self._spin_button.props.value))
+
+
+    @value.setter
+    def value(self, value):
+        if not self.applied:
+            self._spin_button.props.value = int(value)
 
 
 
@@ -606,7 +615,7 @@ class FormatCodecMPEGMP3(FormatDropdown):
     
     def __init__(self, prev_object):
         # TC: Abbreviation of the word, standard.
-        FormatDropdown.__init__(self, prev_object, _('Std.'), "mp3std", (
+        FormatDropdown.__init__(self, prev_object, _('Std.'), "standard", (
             # TC: v stands for version.
             dict(display_text=_("V 1"), value="1", chain="FormatCodecMPEGMP3V1SampleRates"),
             # TC: v stands for version.
@@ -640,7 +649,7 @@ class FormatCodecSpeexBandwidth(FormatDropdown):
     """Speex bandwidth selection."""
     
     def __init__(self, prev_object):
-        FormatDropdown.__init__(self, prev_object, _('Bandwidth'), "spxbw", (
+        FormatDropdown.__init__(self, prev_object, _('Bandwidth'), "bandwidth", (
             dict(display_text=_("Ultrawide"), value="ultrawide", chain="FormatCodecSpeexQuality"),
             dict(display_text=_("Wide"), value="wide", chain="FormatCodecSpeexQuality"),
             dict(display_text=_("Narrow"), value="narrow", chain="FormatCodecSpeexQuality")))
@@ -783,13 +792,53 @@ class FormatFamily(FormatDropdown):
 
 
 
-class FormatBox(gtk.VBox):
-    def __init__(self):
+class FormatControl(gtk.VBox):
+    def __init__(self, send, receive):
         gtk.VBox.__init__(self)
         self.set_border_width(6)
         self.set_spacing(4)
         elem_box = gtk.HBox()
         self.pack_start(elem_box)
+        
+        self.caps_frame = gtk.Frame(" %s " % _('Capabilities'))
+        self.caps_frame.set_sensitive(False)
+        caps_box = gtk.HBox()
+        caps_box.set_border_width(6)
+        self.caps_frame.add(caps_box)
+        self.pack_start(self.caps_frame, fill=False)
+        
+        led = LEDDict(8)
+        self.green = led["green"]
+        self.clear = led["clear"]
+        
+        for name, label_text in zip("icecast shoutcast recordable".split(),
+                            (_('Icecast'), _('Shoutcast'), _('Recordable'))):
+            hbox = gtk.HBox()
+            hbox.set_spacing(3)
+            label = gtk.Label(label_text)
+            hbox.pack_start(label, False)
+            
+            image = gtk.Image()
+            image.set_from_pixbuf(self.clear)
+            hbox.pack_start(image, False)
+            
+            caps_box.pack_start(hbox, fill=False)
+            setattr(self, "_" + name + "_indicator", image)
+
+        
+        label = gtk.Label(_('Metadata'))
+        metacombo = gtk.combo_box_new_text()
+        for each in (_('Suppressed'), _('UTF-8'), _('Latin 1'), _('Codec Default')):
+            metacombo.append_text(each)
+        metacombo.set_active(3)
+        hbox = gtk.HBox()
+        hbox.set_spacing(4)
+        hbox.pack_start(label, False)
+        hbox.pack_start(metacombo, False)
+        
+        self.pack_start(hbox, fill=False)
+        
+        
         button_box = gtk.HButtonBox()
         button_box.set_layout(gtk.BUTTONBOX_EDGE)
         image = gtk.image_new_from_stock(gtk.STOCK_GO_BACK, gtk.ICON_SIZE_MENU)
@@ -810,6 +859,9 @@ class FormatBox(gtk.VBox):
         apply_button.connect("clicked", self._on_apply, back_button, elem_box)
         back_button.connect("clicked", self._on_back, apply_button)
         
+        self.send = send
+        self.receive = receive
+        self._reference_counter = 0
         self.__ref = (back_button, elem_box)
 
 
@@ -818,6 +870,7 @@ class FormatBox(gtk.VBox):
         next_element_name = self._current.next_element_name
         if next_element_name is None:
             apply_button.set_sensitive(False)
+            self._update_capabilities()
         else:
             self._current = globals()[next_element_name](self._current)
             elem_box.pack_start(self._current, False)
@@ -828,18 +881,43 @@ class FormatBox(gtk.VBox):
         apply_button.set_sensitive(True)
         if self._current.applied:
             self._current.unapply()
+            self._update_capabilities()
         else:
             current = self._current
             self._current = current.prev_object
             current.destroy()
             self._current.unapply()
         back_button.set_sensitive(self._current.prev_object is not None)
+
+
+    _cap_shoutcast = _cap_icecast = _cap_recordable = False
+    _caps = {"ogg": {
+                "vorbis":
+                    {"shoutcast": False, "icecast": True, "recordable": True},
+                "flac":
+                    {"shoutcast": False, "icecast": True, "recordable": True},
+                "speex":
+                    {"shoutcast": False, "icecast": True, "recordable": True}},
+            "mpeg": {
+                "mp3": {"shoutcast": True, "icecast": True, "recordable": True}}
+    }
+
+
+    def _update_capabilities(self):
+        settings = format_collate(self._current)
+        dict_ = self._caps[settings["family"]][settings["codec"]]
+            
+        for each in "shoutcast icecast recordable".split():
+            can = dict_[each] and self._current.applied
+            indicator = getattr(self, "_" + each + "_indicator")
+            indicator.set_from_pixbuf(self.green if can else self.clear)
+            setattr(self, "_cap_" + each, can)
+        
+        self.caps_frame.set_sensitive(self._current.applied)
         
         
     def marshall(self):
-        data = json.dumps(format_collate(self._current))
-        print data
-        return data
+        return json.dumps(format_collate(self._current))
 
 
     def unmarshall(self, data):
@@ -850,7 +928,7 @@ class FormatBox(gtk.VBox):
             try:
                 self._current.value = dict_[self._current.ident]
             except KeyError:
-                print "key error", self._current_ident
+                print "key error", self._current.ident
                 break
             else:
                 if self._current.applied or self._current.ident == unapplied:
@@ -859,3 +937,75 @@ class FormatBox(gtk.VBox):
                 self.apply_button.clicked()
                 if oldcurr.next_element_name is None:
                     break
+
+
+    def start_encoder_rc(self):
+        """Start the encoder (with reference counter)."""
+        
+        if self._reference_counter:
+            self._reference_counter += 1
+        else:
+            self._reference_counter = int(self._start_encoder())
+        return self._reference_counter > 0
+
+     
+    def stop_encoder_rc(self):
+        """Stop the encoder (with reference counter)."""
+
+        if self._reference_counter:
+            if self._reference_counter == 1:
+                self._stop_encoder()
+            self._reference_counter -= 1
+
+
+    @property
+    def running(self):
+        """True if the encoder is currently running."""
+
+        return self._reference_counter > 0
+        
+        
+    @property
+    def finalised(self):
+        """Return whether the encoder settings list is complete."""
+
+        return self._current.applied
+
+
+    @property
+    def cap_icecast(self):
+        """Return the capability property based on encoder configuration."""
+
+        return self._cap_icecast
+        
+        
+    @property
+    def cap_shoutcast(self):
+        """Return the capability property based on encoder configuration."""
+
+        return self._cap_shoutcast
+        
+        
+    @property
+    def cap_recordable(self):
+        """Return the capability property based on encoder configuration."""
+        
+        return self._cap_recordable
+
+
+    def _start_encoder(self):
+        kvps = [] 
+        for pairs in format_collate(self._current).iteritems():
+            kvps.append("=".join(pairs))
+        kvps.append("encode_source=jack")
+        kvps = "\n".join(kvps)
+        
+        print kvps
+        
+        return False
+
+
+    def _stop_encoder(self):
+        self.send("command=encoder_stop\n")
+        return self.receive() != "failed"
+        
