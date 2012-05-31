@@ -310,7 +310,7 @@ def format_collate(specifier):
 
 
 class FormatDropdown(gtk.VBox):
-    def __init__(self, prev_object, title, ident, elements):
+    def __init__(self, prev_object, title, ident, elements, row):
         """Parameter 'elements' is a tuple of dictionaries.
         
         @title: appears above the widget
@@ -321,6 +321,7 @@ class FormatDropdown(gtk.VBox):
         
         self.prev_object = prev_object
         self._ident = ident
+        self._row = row
         gtk.VBox.__init__(self)
         frame = gtk.Frame(" %s " % title)
         frame.set_label_align(0.5, 0.5)
@@ -374,6 +375,11 @@ class FormatDropdown(gtk.VBox):
     @property
     def applied(self):
         return self._fixed.props.visible
+        
+        
+    @property
+    def row(self):
+        return self._row
 
 
     @property
@@ -409,7 +415,7 @@ class FormatDropdown(gtk.VBox):
 
 
 class FormatSpin(gtk.VBox):
-    def __init__(self, prev_object, title, ident, elements, unit, next_element_name, suggested_values):
+    def __init__(self, prev_object, title, ident, elements, row, unit, next_element_name, suggested_values):
         """Parameter 'elements' is a tuple of dictionaries.
         
         @title: appears above the widget
@@ -421,6 +427,7 @@ class FormatSpin(gtk.VBox):
         
         self.prev_object = prev_object
         self._ident = ident
+        self._row = row
         self._unit = unit
         self._next_element_name = next_element_name
         gtk.VBox.__init__(self)
@@ -483,6 +490,11 @@ class FormatSpin(gtk.VBox):
 
 
     @property
+    def row(self):
+        return self._row
+
+
+    @property
     def ident(self):
         return self._ident
 
@@ -509,16 +521,59 @@ class FormatSpin(gtk.VBox):
 
 
 
+class FormatResampleQuality(FormatDropdown):
+    """Resample quality."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Resample Qual.'), "resample_quality", (
+            dict(display_text=_('Highest'), value="highest"),
+            dict(display_text=_('Medium'), value="medium", default=True),
+            dict(display_text=_('Lowest'), value="lowest")), 1)
+
+
+
+class FormatMetadataChoice(FormatDropdown):
+    """User can select the metadata encoding format."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata", (
+            dict(display_text=_('Suppressed'), value="suppressed", chain="FormatResampleQuality"),
+            dict(display_text=_('UTF-8'), value="utf-8", chain="FormatResampleQuality"),
+            dict(display_text=_('Latin1'), value="latin1", chain="FormatResampleQuality"),
+            dict(display_text=_('Default'), value="default-encoding", chain="FormatResampleQuality", default=True)), 1)
+
+
+
+class FormatMetadataUTF8(FormatDropdown):
+    """User can select whether to have metadata."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata", (
+            dict(display_text=_('Suppressed'), value="suppressed", chain="FormatResampleQuality"),
+            dict(display_text=_('UTF-8'), value="utf-8", chain="FormatResampleQuality", default=True)), 1)
+
+
+
+class FormatMetadataLatin1(FormatDropdown):
+    """User can select whether to have metadata."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata", (
+            dict(display_text=_('Suppressed'), value="suppressed", chain="FormatResampleQuality"),
+            dict(display_text=_('Latin1'), value="latin1", chain="FormatResampleQuality", default=True)), 1)
+
+
+
 class FormatCodecMPEGMP3Quality(FormatDropdown):
     """MP3 quality."""
     
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Qual.'), "quality", (
-            dict(display_text=_('0 most'), value="0"),
-            dict(display_text="1", value="1"),
+            dict(display_text=_('0 most'), value="0", chain="FormatMetadataChoice"),
+            dict(display_text="1", value="1", chain="FormatMetadataChoice"),
             # TC: * means is the recommended setting.
-            dict(display_text=_("2 *"), value="2", default=True)) + tuple(
-            dict(display_text=str(x), value=str(x)) for x in range(3, 10)))
+            dict(display_text=_("2 *"), value="2", chain="FormatMetadataChoice", default=True)) + tuple(
+            dict(display_text=str(x), value=str(x), chain="FormatMetadataChoice") for x in range(3, 10)), 0)
 
 
 
@@ -529,7 +584,7 @@ class FormatCodecMPEGMP3Mode(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
             dict(display_text=_("Mono"), value="mono", chain="FormatCodecMPEGMP3Quality"),
             dict(display_text=_("Stereo"), value="stereo", chain="FormatCodecMPEGMP3Quality"),
-            dict(display_text=_("Joint Stereo"), value="jointstereo", default=True, chain="FormatCodecMPEGMP3Quality")))
+            dict(display_text=_("Joint Stereo"), value="jointstereo", default=True, chain="FormatCodecMPEGMP3Quality")), 0)
 
 
 
@@ -551,7 +606,7 @@ class FormatCodecMPEGMP3V1BitRates(FormatDropdown):
             dict(display_text="56 kHz", value="56", chain="FormatCodecMPEGMP3Mode"),
             dict(display_text="48 kHz", value="48", chain="FormatCodecMPEGMP3Mode"),
             dict(display_text="40 kHz", value="40", chain="FormatCodecMPEGMP3Mode"),
-            dict(display_text="32 kHz", value="32", chain="FormatCodecMPEGMP3Mode")))
+            dict(display_text="32 kHz", value="32", chain="FormatCodecMPEGMP3Mode")), 0)
 
 
 
@@ -573,7 +628,7 @@ class FormatCodecMPEGMP3V2BitRates(FormatDropdown):
             dict(display_text="32 kHz", value="32", chain="FormatCodecMPEGMP3Mode"),
             dict(display_text="24 kHz", value="24", chain="FormatCodecMPEGMP3Mode"),
             dict(display_text="16 kHz", value="16", chain="FormatCodecMPEGMP3Mode"),
-            dict(display_text="8 kHz", value="8", chain="FormatCodecMPEGMP3Mode")))
+            dict(display_text="8 kHz", value="8", chain="FormatCodecMPEGMP3Mode")), 0)
 
 
 
@@ -584,7 +639,7 @@ class FormatCodecMPEGMP3V1SampleRates(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Samplerate'), "samplerate", (
             dict(display_text="48000 Hz", value="48000", chain="FormatCodecMPEGMP3V1BitRates"),
             dict(display_text="44100 Hz", value="44100", chain="FormatCodecMPEGMP3V1BitRates", default=True),
-            dict(display_text="32000 Hz", value="32000", chain="FormatCodecMPEGMP3V1BitRates")))
+            dict(display_text="32000 Hz", value="32000", chain="FormatCodecMPEGMP3V1BitRates")), 0)
 
 
 
@@ -595,7 +650,7 @@ class FormatCodecMPEGMP3V2SampleRates(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Samplerate'), "samplerate", (
             dict(display_text="24000 Hz", value="24000", chain="FormatCodecMPEGMP3V2BitRates"),
             dict(display_text="22050 Hz", value="22050", chain="FormatCodecMPEGMP3V2BitRates", default=True),
-            dict(display_text="16000 Hz", value="16000", chain="FormatCodecMPEGMP3V2BitRates")))
+            dict(display_text="16000 Hz", value="16000", chain="FormatCodecMPEGMP3V2BitRates")), 0)
 
 
 
@@ -606,7 +661,7 @@ class FormatCodecMPEGMP3V2_5SampleRates(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Samplerate'), "samplerate", (
             dict(display_text="12000 Hz", value="12000", chain="FormatCodecMPEGMP3V2BitRates"),
             dict(display_text="11025 Hz", value="11025", chain="FormatCodecMPEGMP3V2BitRates", default=True),
-            dict(display_text="8000 Hz", value="8000", chain="FormatCodecMPEGMP3V2BitRates")))
+            dict(display_text="8000 Hz", value="8000", chain="FormatCodecMPEGMP3V2BitRates")), 0)
 
 
 
@@ -621,7 +676,7 @@ class FormatCodecMPEGMP3(FormatDropdown):
             # TC: v stands for version.
             dict(display_text=_("V 2"), value="2", chain="FormatCodecMPEGMP3V2SampleRates"),
             # TC: v stands for version.
-            dict(display_text=_("V 2.5"), value="2.5", chain="FormatCodecMPEGMP3V2_5SampleRates")))
+            dict(display_text=_("V 2.5"), value="2.5", chain="FormatCodecMPEGMP3V2_5SampleRates")), 0)
 
 
 
@@ -630,8 +685,8 @@ class FormatCodecSpeexCPU(FormatDropdown):
     
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('CPU'), "cpu", 
-            tuple(dict(display_text=str(x), value=str(x), default=(x==5))
-                                                            for x in range(9, -1, -1)))
+            tuple(dict(display_text=str(x), value=str(x), chain="FormatMetadataUTF8", default=(x==5))
+                                                            for x in range(9, -1, -1)), 0)
 
 
 
@@ -641,7 +696,7 @@ class FormatCodecSpeexQuality(FormatDropdown):
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Quality'), "quality", 
             tuple(dict(display_text=str(x), value=str(x), default=(x==8), chain="FormatCodecSpeexCPU")
-                                                            for x in range(9, -1, -1)))
+                                                            for x in range(9, -1, -1)), 0)
 
 
 
@@ -652,7 +707,7 @@ class FormatCodecSpeexBandwidth(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Bandwidth'), "bandwidth", (
             dict(display_text=_("Ultrawide"), value="ultrawide", chain="FormatCodecSpeexQuality"),
             dict(display_text=_("Wide"), value="wide", chain="FormatCodecSpeexQuality"),
-            dict(display_text=_("Narrow"), value="narrow", chain="FormatCodecSpeexQuality")))
+            dict(display_text=_("Narrow"), value="narrow", chain="FormatCodecSpeexQuality")), 0)
 
 
 
@@ -662,7 +717,7 @@ class FormatCodecSpeexMode(FormatDropdown):
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
             dict(display_text=_("Mono"), value="mono", chain="FormatCodecSpeexBandwidth"),
-            dict(display_text=_("Stereo"), value="stereo", chain="FormatCodecSpeexBandwidth")))
+            dict(display_text=_("Stereo"), value="stereo", chain="FormatCodecSpeexBandwidth")), 0)
 
 
 
@@ -671,9 +726,9 @@ class FormatCodecFLACBits(FormatDropdown):
     
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Width'), "bitwidth", (
-            dict(display_text=_("24 bit"), value="24"),
-            dict(display_text=_("20 bit"), value="20"),
-            dict(display_text=_("16 bit"), value="16")))
+            dict(display_text=_("24 bit"), value="24", chain="FormatMetadataUTF8"),
+            dict(display_text=_("20 bit"), value="20", chain="FormatMetadataUTF8"),
+            dict(display_text=_("16 bit"), value="16", chain="FormatMetadataUTF8")), 0)
 
 
 
@@ -683,12 +738,12 @@ class FormatCodecVorbisVariability(FormatDropdown):
     
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Variability'), "variability", (
-            dict(display_text=_("Constant"), value="0"),
-            dict(display_text=_(u"\u00B110%"), value="10"),
-            dict(display_text=_(u"\u00B120%"), value="20"),
-            dict(display_text=_(u"\u00B130%"), value="30"),
-            dict(display_text=_(u"\u00B140%"), value="40"),
-            dict(display_text=_(u"\u00B150%"), value="50")))
+            dict(display_text=_("Constant"), value="0", chain="FormatMetadataUTF8"),
+            dict(display_text=_(u"\u00B110%"), value="10", chain="FormatMetadataUTF8"),
+            dict(display_text=_(u"\u00B120%"), value="20", chain="FormatMetadataUTF8"),
+            dict(display_text=_(u"\u00B130%"), value="30", chain="FormatMetadataUTF8"),
+            dict(display_text=_(u"\u00B140%"), value="40", chain="FormatMetadataUTF8"),
+            dict(display_text=_(u"\u00B150%"), value="50", chain="FormatMetadataUTF8")), 0)
 
 
 
@@ -703,7 +758,7 @@ class FormatCodecVorbisBitRate(FormatSpin):
         sr = int(dict_["samplerate"])
         bounds = er.bitrate_bounds(channels, sr)
         FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
-            (128000,) + bounds + (1, 10), " Hz", "FormatCodecVorbisVariability",
+            (128000,) + bounds + (1, 10), 0, " Hz", "FormatCodecVorbisVariability",
             er.good_bitrates(channels, sr))
 
 
@@ -717,7 +772,7 @@ class FormatCodecVorbisSampleRate(FormatSpin):
         er = EncoderRange(VorbisTestEncoder())
         bounds = er.bounds(channels)["samplerate_bounds"]
         FormatSpin.__init__(self, prev_object, _('Samplerate'), "samplerate",
-            (44100,) + bounds + (1, 10), " Hz", "FormatCodecVorbisBitRate",
+            (44100,) + bounds + (1, 10), 0, " Hz", "FormatCodecVorbisBitRate",
             er.good_samplerates(channels))
 
 
@@ -728,7 +783,7 @@ class FormatCodecFLACSampleRate(FormatSpin):
     
     def __init__(self, prev_object):
         FormatSpin.__init__(self, prev_object, _('Samplerate'), "samplerate",
-            (44100, 1, 655350, 1, 10), " Hz", "FormatCodecFLACBits",
+            (44100, 1, 655350, 1, 10), 0, " Hz", "FormatCodecFLACBits",
             (96000, 88200, 48000, 44100))
 
 
@@ -739,7 +794,7 @@ class FormatCodecFLACMode(FormatDropdown):
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
             dict(display_text=_("Mono"), value="mono", chain="FormatCodecFLACSampleRate"),
-            dict(display_text=_("Stereo"), value="stereo", default=True, chain="FormatCodecFLACSampleRate")))
+            dict(display_text=_("Stereo"), value="stereo", default=True, chain="FormatCodecFLACSampleRate")), 0)
 
 
 
@@ -749,7 +804,7 @@ class FormatCodecVorbisMode(FormatDropdown):
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
             dict(display_text=_("Mono"), value="mono", chain="FormatCodecVorbisSampleRate"),
-            dict(display_text=_("Stereo"), value="stereo", default=True, chain="FormatCodecVorbisSampleRate")))
+            dict(display_text=_("Stereo"), value="stereo", default=True, chain="FormatCodecVorbisSampleRate")), 0)
 
 
 
@@ -760,7 +815,7 @@ class FormatCodecXiphOgg(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Codec'), "codec", (
             dict(display_text=_('Vorbis'), value="vorbis", chain="FormatCodecVorbisMode"),
             dict(display_text=_('FLAC'), value="flac", chain="FormatCodecFLACMode"),
-            dict(display_text=_('Speex'), value="speex", chain="FormatCodecSpeexMode")))
+            dict(display_text=_('Speex'), value="speex", chain="FormatCodecSpeexMode")), 0)
 
 
 
@@ -773,7 +828,7 @@ class FormatCodecMPEG(FormatDropdown):
             dict(display_text=_('MP3'), value="mp3", chain="FormatCodecMPEGMP3", default=True),
             dict(display_text=_('AAC'), value="aac"),
             dict(display_text=_('AAC+'), value="aacp"),
-            dict(display_text=_('AAC+ v2'), value="aacpv2")))
+            dict(display_text=_('AAC+ v2'), value="aacpv2")), 0)
 
 
 
@@ -788,7 +843,7 @@ class FormatFamily(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Family'), "family", (
             # TC: Xiph.org Ogg container format.
             dict(display_text=_('Xiph/Ogg'), value="ogg", chain="FormatCodecXiphOgg", shoutcast=False),
-            dict(display_text=_('MPEG'), value="mpeg", chain="FormatCodecMPEG", default=True)))
+            dict(display_text=_('MPEG'), value="mpeg", chain="FormatCodecMPEG", default=True)), 0)
 
 
 
@@ -797,8 +852,8 @@ class FormatControl(gtk.VBox):
         gtk.VBox.__init__(self)
         self.set_border_width(6)
         self.set_spacing(4)
-        elem_box = gtk.HBox()
-        self.pack_start(elem_box)
+        elem_box = [gtk.HBox()]
+        self.pack_start(elem_box[0])
         
         self.caps_frame = gtk.Frame(" %s " % _('Capabilities'))
         self.caps_frame.set_sensitive(False)
@@ -825,22 +880,15 @@ class FormatControl(gtk.VBox):
             caps_box.pack_start(hbox, fill=False)
             setattr(self, "_" + name + "_indicator", image)
 
+        elem_box.append(gtk.HBox())
+        self.pack_start(elem_box[-1])
         
-        label = gtk.Label(_('Metadata'))
-        metacombo = gtk.combo_box_new_text()
-        for each in (_('Suppressed'), _('UTF-8'), _('Latin 1'), _('Codec Default')):
-            metacombo.append_text(each)
-        metacombo.set_active(3)
-        hbox = gtk.HBox()
-        hbox.set_spacing(4)
-        hbox.pack_start(label, False)
-        hbox.pack_start(metacombo, False)
-        
-        self.pack_start(hbox, fill=False)
-        
-        
-        button_box = gtk.HButtonBox()
-        button_box.set_layout(gtk.BUTTONBOX_EDGE)
+        button_frame = gtk.AspectFrame(xalign=1.0)
+        button_frame.set_border_width(6)
+        button_frame.set_shadow_type(gtk.SHADOW_NONE)
+        button_box = gtk.HBox()
+        button_box.set_spacing(3)
+        button_frame.add(button_box)
         image = gtk.image_new_from_stock(gtk.STOCK_GO_BACK, gtk.ICON_SIZE_MENU)
         back_button = gtk.Button()
         back_button.set_sensitive(False)
@@ -850,18 +898,24 @@ class FormatControl(gtk.VBox):
         apply_button = self.apply_button = gtk.Button()
         apply_button.add(image)
         button_box.add(apply_button)
-        self.pack_start(button_box, False)
+        elem_box[-1].pack_end(button_frame, True)
         self.show_all()
 
         self._current = self._first = FormatFamily(prev_object=None)
-        elem_box.pack_start(self._first, False)
+        elem_box[self._first.row].pack_start(self._first, False)
         
         apply_button.connect("clicked", self._on_apply, back_button, elem_box)
         back_button.connect("clicked", self._on_back, apply_button)
         
-        self.send = send
-        self.receive = receive
+        sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
+        for each in elem_box:
+            sizegroup.add_widget(each)
+        
+        self._send = send
+        self._receive = receive
         self._reference_counter = 0
+
+        # GTK closures seem to be weak references.
         self.__ref = (back_button, elem_box)
 
 
@@ -873,7 +927,7 @@ class FormatControl(gtk.VBox):
             self._update_capabilities()
         else:
             self._current = globals()[next_element_name](self._current)
-            elem_box.pack_start(self._current, False)
+            elem_box[self._current.row].pack_start(self._current, False)
         back_button.set_sensitive(True)
         
         
@@ -1006,6 +1060,6 @@ class FormatControl(gtk.VBox):
 
 
     def _stop_encoder(self):
-        self.send("command=encoder_stop\n")
-        return self.receive() != "failed"
+        self._send("command=encoder_stop\n")
+        return self._receive() != "failed"
         
