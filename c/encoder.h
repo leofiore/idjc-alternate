@@ -29,7 +29,9 @@
 
 enum jack_dataflow { JD_OFF, JD_ON, JD_FLUSH };
 enum performance_warning { PW_OK, PW_AUDIO_DATA_DROPPED };
-enum data_format { DF_UNHANDLED, DF_JACK_MP3, DF_JACK_OGG, DF_FILE_MP3, DF_FILE_OGG };
+enum encoder_source {ENCODER_SOURCE_UNHANDLED, ENCODER_SOURCE_JACK, ENCODER_SOURCE_FILE};
+enum encoder_family {ENCODER_FAMILY_UNHANDLED, ENCODER_FAMILY_MPEG, ENCODER_FAMILY_OGG};
+enum encoder_codec {ENCODER_CODEC_UNHANDLED, ENCODER_CODEC_MP3, ENCODER_CODEC_VORBIS, ENCODER_CODEC_FLAC, ENCODER_CODEC_SPEEX};
 enum encoder_state { ES_STOPPED, ES_STARTING, ES_RUNNING, ES_STOPPING, ES_PAUSED };
 enum packet_flags {     PF_UNSET    = 0x00,
                                 PF_INITIAL  = 0x01, 
@@ -42,20 +44,18 @@ enum packet_flags {     PF_UNSET    = 0x00,
 struct encoder_vars
     {
     char *encode_source;
-    char *sample_rate;
+    char *samplerate;
     char *resample_quality;
-    char *format;
-    char *subformat;
-    char *bit_rate;
-    char *bit_rate_min;
-    char *bit_rate_max;
-    char *bit_width;
-    char *speex_mode;
-    char *speex_quality;
-    char *speex_complexity;
-    char *stereo;
-    char *encode_quality;
-    char *use_metadata;
+    char *family;
+    char *codec;
+    char *bitrate;
+    char *variability;
+    char *bitwidth;
+    char *quality;
+    char *complexity;
+    char *mode;
+    char *metadata_mode;
+    char *standard;
     char *filename;              /* for streaming a pre-recorded file */
     char *offset;
     char *custom_meta;            /* extra/replacement information to use for metadata */
@@ -64,7 +64,13 @@ struct encoder_vars
     char *title;
     char *album;
     char *artist_title_lat1;
-    char *freeformat_mp3;
+    };
+
+struct encoder_data_format
+    {
+    enum encoder_source source;
+    enum encoder_family family;
+    enum encoder_codec codec;
     };
 
 struct encoder_ip_data
@@ -78,7 +84,7 @@ struct encoder_ip_data
 struct encoder_op_packet_header
     {
     uint32_t magic;                      /* the magic number to check packet sync with */
-    enum data_format encoding_data_format;/* the audio compression format in use */
+    struct encoder_data_format data_format;  /* details of the format in use */
     uint16_t bit_rate;                   /* bit rate in kb/s */
     uint32_t sample_rate;                /* sample rate - typically 44100 or 48000 */
     uint16_t n_channels;                 /* number of audio channels 1 or 2 for mono/stereo */
@@ -120,7 +126,7 @@ struct encoder
     enum encoder_state encoder_state;    /* indicate what the encoder should be doing */
     enum jack_dataflow jack_dataflow_control;    /* tells the jack callback routine what we want it to do */
     jack_ringbuffer_t *input_rb[2];      /* circular buffer containing pcm audio data */
-    enum data_format data_format;
+    struct encoder_data_format data_format;
     int n_channels;              /* stream parameters information... */
     int bitrate;
     long samplerate;
@@ -144,6 +150,7 @@ struct encoder
     char *album;
     char *artist_title_lat1;     /* default for mp3 stream metadata - used when no custom metadata is set */
     int new_metadata;            /* a trigger flag */
+    int use_metadata;            /* false means encoder to compose a blank set of tags and ignore the new_metadata flag */
     int flush;
     int oggserial;               /* n.b. not restricted to ogg useage */
     double timestamp;            /* running counter in seconds for current serial */

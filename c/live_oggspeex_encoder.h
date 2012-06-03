@@ -48,10 +48,9 @@ struct lose_data
     int eos;
     char vendor_string[64];
     size_t vs_len;
-    enum speex_mode mode;
+    struct SpeexMode const *mode;
     int quality;
     int complexity;
-    int use_metadata;
     char *metadata_vc;
     size_t metadata_vclen;
     enum packet_flags flags;

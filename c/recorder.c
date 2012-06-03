@@ -594,7 +594,7 @@ static void *recorder_main(void *args)
                         {
                         if (packet->header.serial >= self->initial_serial)
                             {
-                            if ((packet->header.flags & PF_INITIAL) && self->mp3_mode)
+                            if ((packet->header.flags & PF_INITIAL) && self->id3_mode)
                                 recorder_append_metadata2(self, packet);
                             if (packet->header.flags & (PF_OGG | PF_MP3))
                                 {
@@ -669,7 +669,7 @@ static void *recorder_main(void *args)
                     }
                 else
                     {
-                    if (self->mp3_mode)
+                    if (self->id3_mode)
                         {
                         recorder_append_metadata(self, NULL);
                         recorder_append_metadata2(self, NULL);
@@ -690,7 +690,7 @@ static void *recorder_main(void *args)
                 memset(self->first_mp3_header, 0x00, 4);
                 self->oldbitrate = 0;
                 self->oldsamplerate = 0;
-                self->mp3_mode = FALSE;
+                self->id3_mode = FALSE;
                 self->is_vbr = FALSE;
                 self->recording_length_s = 0;
                 self->recording_length_ms = 0;
@@ -757,7 +757,7 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
     struct recorder *self = ti->recorder[uv->tab];
     time_t t;
     struct tm *tm;
-    char *file_extension;
+    char *file_extension = NULL;
     size_t pathname_size;
     char timestamp[TIMESTAMP_SIZ];
     size_t base;
@@ -788,22 +788,47 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
             encoder_unregister_client(self->encoder_op);
             return FAILED;
             }
-        switch (self->encoder_op->encoder->data_format)
+
             {
-            case DF_JACK_MP3:
-            case DF_FILE_MP3:
-                self->mp3_mode = TRUE;
-                file_extension = ".mp3";
-                break;
-            case DF_JACK_OGG:
-            case DF_FILE_OGG:
-                file_extension = ".oga";
-                break;
-            default:
+            struct encoder_data_format *df = &self->encoder_op->encoder->data_format;
+
+            switch (df->family) {
+                case ENCODER_FAMILY_OGG:
+                    switch (df->codec) {
+                        case ENCODER_CODEC_VORBIS:
+                        case ENCODER_CODEC_FLAC:
+                        case ENCODER_CODEC_SPEEX:
+                            file_extension = ".oga";
+                        case ENCODER_CODEC_UNHANDLED:
+                        default:
+                            break;
+                        }
+                    break;
+
+                case ENCODER_FAMILY_MPEG:
+                    switch (df->codec) {
+                        case ENCODER_CODEC_MP3:
+                            file_extension = ".mp3";
+                            self->id3_mode = TRUE;
+                            break;
+                        case ENCODER_CODEC_UNHANDLED:
+                        default:
+                            break;
+                        }
+                    break;
+            
+                case ENCODER_FAMILY_UNHANDLED:
+                default:
+                    break;
+                }
+
+            if (file_extension == NULL) {
                 fprintf(stderr, "recorder_start: data_format is not set to a handled value\n");
                 encoder_unregister_client(self->encoder_op);
                 return FAILED;
+                }
             }
+                
         }
 
     if (!(self->pathname = malloc(pathname_size = strlen(rv->record_folder) + strlen(file_extension) + TIMESTAMP_SIZ + 9)))

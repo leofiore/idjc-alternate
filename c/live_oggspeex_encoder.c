@@ -134,14 +134,11 @@ static void live_oggspeex_encoder_main(struct encoder *encoder)
     if (encoder->encoder_state == ES_STARTING)
         {
         SpeexHeader header;
-        struct SpeexMode const *mode;
-        struct SpeexMode const *modelist[] = { &speex_uwb_mode, &speex_wb_mode, &speex_nb_mode };
-        int ratelist[] = { 32000, 16000, 8000 };
         char *packet;
         int packet_size;
         
         speex_bits_init(&s->bits);
-        if (!(s->enc_state = speex_encoder_init(mode = modelist[s->mode])))
+        if (!(s->enc_state = speex_encoder_init(s->mode)))
             {
             fprintf(stderr, "live_oggspeex_encoder_main: failed to initialise speex encoder\n");
             goto bailout;
@@ -158,7 +155,7 @@ static void live_oggspeex_encoder_main(struct encoder *encoder)
             goto bailout;
             }
         
-        speex_init_header(&header, ratelist[s->mode], encoder->n_channels, mode);
+        speex_init_header(&header, encoder->samplerate, encoder->n_channels, s->mode);
         header.frames_per_packet = 1;
         if (!(packet = speex_header_to_packet(&header, &packet_size)))
             {
@@ -187,28 +184,27 @@ static void live_oggspeex_encoder_main(struct encoder *encoder)
             s->pflags = PF_OGG | PF_HEADER;
             }
 
-        if (encoder->new_metadata)
+        if (encoder->use_metadata)
             {
-            encoder->new_metadata = FALSE;
-            
-            if (s->use_metadata)
+            if (encoder->new_metadata)
                 live_oggspeex_build_metadata(encoder, s);
-            else
-                {
-                /* make a bare-bones vorbis comment block */
-                fprintf(stderr, "making bare-bones comment block\n");
-                if (!(s->metadata_vc = realloc(s->metadata_vc, s->metadata_vclen = s->vs_len + 8)))
-                    {
-                    fprintf(stderr, "live_ogg_write_packet: malloc failure\n");
-                    goto bailout;
-                    }
-                
-                writeint(s->metadata_vc, 0, s->vs_len);
-                memcpy(s->metadata_vc + 4, s->vendor_string, s->vs_len);
-                writeint(s->metadata_vc, 4 + s->vs_len, 0);
-                }
             }
+        else
+            {
+            /* make a bare-bones vorbis comment block */
+            fprintf(stderr, "making bare-bones comment block\n");
+            if (!(s->metadata_vc = realloc(s->metadata_vc, s->metadata_vclen = s->vs_len + 8)))
+                {
+                fprintf(stderr, "live_ogg_write_packet: malloc failure\n");
+                goto bailout;
+                }
             
+            writeint(s->metadata_vc, 0, s->vs_len);
+            memcpy(s->metadata_vc + 4, s->vendor_string, s->vs_len);
+            writeint(s->metadata_vc, 4 + s->vs_len, 0);
+            }
+
+        encoder->new_metadata = FALSE;
         op.packet = (unsigned char *)s->metadata_vc;
         op.bytes = s->metadata_vclen;
         op.b_o_s = 0;
@@ -246,7 +242,7 @@ static void live_oggspeex_encoder_main(struct encoder *encoder)
  
         if (s->eos == FALSE)
             {
-            if ((encoder->new_metadata && s->use_metadata) || !encoder->run_request_f || encoder->flush)
+            if (encoder->new_metadata || !encoder->run_request_f || encoder->flush)
                 {
                 s->eos = TRUE;
                 memset(s->inbuf, '\0', s->fsamples * encoder->n_channels * sizeof (float));
@@ -375,14 +371,28 @@ int live_oggspeex_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
     speex_lib_ctl(SPEEX_LIB_GET_VERSION_STRING, (void *)&speex_version);
     snprintf(s->vendor_string, sizeof(s->vendor_string), "Encoded with Speex %s", speex_version); 
     s->vs_len = strlen(s->vendor_string);
-
-    s->mode = atoi(ev->speex_mode);
-    s->quality = atoi(ev->speex_quality);
-    s->complexity = atoi(ev->speex_complexity);
-    s->use_metadata = atoi(ev->use_metadata);
-    encoder->samplerate = atoi(ev->sample_rate);
+    s->quality = atoi(ev->quality);
+    s->complexity = atoi(ev->complexity);
+    encoder->use_metadata = strcmp(ev->metadata_mode, "suppressed") ? 1 : 0;
+    encoder->samplerate = atoi(ev->samplerate);
     encoder->encoder_private = s;
     encoder->run_encoder = live_oggspeex_encoder_main;
+
+    switch (encoder->samplerate) {
+        case 32000:
+            s->mode = &speex_uwb_mode;
+            break;
+        case 16000:
+            s->mode = &speex_wb_mode;
+            break;
+        case 8000:
+            s->mode = &speex_nb_mode;
+            break;
+        default:
+            fprintf(stderr, "unsupported sample rate %s\n", ev->samplerate);
+            return FAILED;
+        }
+
     return SUCCEEDED;
     }
 

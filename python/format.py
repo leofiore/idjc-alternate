@@ -304,7 +304,7 @@ def format_collate(specifier):
     
     d[specifier.ident] = specifier.value
     if not specifier.applied:
-        d["unapplied"] = specifier.ident
+        d["__unapplied__"] = specifier.ident
     return d
 
 
@@ -525,7 +525,7 @@ class FormatResampleQuality(FormatDropdown):
     """Resample quality."""
     
     def __init__(self, prev_object):
-        FormatDropdown.__init__(self, prev_object, _('Resample Qual.'), "resample_quality", (
+        FormatDropdown.__init__(self, prev_object, _('Resample Quality'), "resample_quality", (
             dict(display_text=_('Highest'), value="highest"),
             dict(display_text=_('Medium'), value="medium", default=True),
             dict(display_text=_('Lowest'), value="lowest")), 1)
@@ -536,7 +536,7 @@ class FormatMetadataChoice(FormatDropdown):
     """User can select the metadata encoding format."""
     
     def __init__(self, prev_object):
-        FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata", (
+        FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata_mode", (
             dict(display_text=_('Suppressed'), value="suppressed", chain="FormatResampleQuality"),
             dict(display_text=_('UTF-8'), value="utf-8", chain="FormatResampleQuality"),
             dict(display_text=_('Latin1'), value="latin1", chain="FormatResampleQuality"),
@@ -548,7 +548,7 @@ class FormatMetadataUTF8(FormatDropdown):
     """User can select whether to have metadata."""
     
     def __init__(self, prev_object):
-        FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata", (
+        FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata_mode", (
             dict(display_text=_('Suppressed'), value="suppressed", chain="FormatResampleQuality"),
             dict(display_text=_('UTF-8'), value="utf-8", chain="FormatResampleQuality", default=True)), 1)
 
@@ -558,7 +558,7 @@ class FormatMetadataLatin1(FormatDropdown):
     """User can select whether to have metadata."""
     
     def __init__(self, prev_object):
-        FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata", (
+        FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata_mode", (
             dict(display_text=_('Suppressed'), value="suppressed", chain="FormatResampleQuality"),
             dict(display_text=_('Latin1'), value="latin1", chain="FormatResampleQuality", default=True)), 1)
 
@@ -568,7 +568,7 @@ class FormatCodecMPEGMP3Quality(FormatDropdown):
     """MP3 quality."""
     
     def __init__(self, prev_object):
-        FormatDropdown.__init__(self, prev_object, _('Qual.'), "quality", (
+        FormatDropdown.__init__(self, prev_object, _('Quality'), "quality", (
             dict(display_text=_('0 most'), value="0", chain="FormatMetadataChoice"),
             dict(display_text="1", value="1", chain="FormatMetadataChoice"),
             # TC: * means is the recommended setting.
@@ -680,11 +680,11 @@ class FormatCodecMPEGMP3(FormatDropdown):
 
 
 
-class FormatCodecSpeexCPU(FormatDropdown):
+class FormatCodecSpeexComplexity(FormatDropdown):
     """Speex cpu usage selection."""
     
     def __init__(self, prev_object):
-        FormatDropdown.__init__(self, prev_object, _('CPU'), "cpu", 
+        FormatDropdown.__init__(self, prev_object, _('Complexity'), "complexity", 
             tuple(dict(display_text=str(x), value=str(x), chain="FormatMetadataUTF8", default=(x==5))
                                                             for x in range(9, -1, -1)), 0)
 
@@ -695,7 +695,7 @@ class FormatCodecSpeexQuality(FormatDropdown):
     
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Quality'), "quality", 
-            tuple(dict(display_text=str(x), value=str(x), default=(x==8), chain="FormatCodecSpeexCPU")
+            tuple(dict(display_text=str(x), value=str(x), default=(x==8), chain="FormatCodecSpeexComplexity")
                                                             for x in range(9, -1, -1)), 0)
 
 
@@ -704,10 +704,10 @@ class FormatCodecSpeexBandwidth(FormatDropdown):
     """Speex bandwidth selection."""
     
     def __init__(self, prev_object):
-        FormatDropdown.__init__(self, prev_object, _('Bandwidth'), "bandwidth", (
-            dict(display_text=_("Ultrawide"), value="ultrawide", chain="FormatCodecSpeexQuality"),
-            dict(display_text=_("Wide"), value="wide", chain="FormatCodecSpeexQuality"),
-            dict(display_text=_("Narrow"), value="narrow", chain="FormatCodecSpeexQuality")), 0)
+        FormatDropdown.__init__(self, prev_object, _('Bandwidth'), "samplerate", (
+            dict(display_text=_("Ultrawide"), value="32000", chain="FormatCodecSpeexQuality"),
+            dict(display_text=_("Wide"), value="16000", chain="FormatCodecSpeexQuality"),
+            dict(display_text=_("Narrow"), value="8000", chain="FormatCodecSpeexQuality")), 0)
 
 
 
@@ -883,21 +883,21 @@ class FormatControl(gtk.VBox):
         elem_box.append(gtk.HBox())
         self.pack_start(elem_box[-1])
         
-        button_frame = gtk.AspectFrame(xalign=1.0)
-        button_frame.set_border_width(6)
-        button_frame.set_shadow_type(gtk.SHADOW_NONE)
+        button_frame = gtk.Alignment(xalign=1.0, yscale=0.85)
+        button_frame.props.top_padding = 6
         button_box = gtk.HBox()
         button_box.set_spacing(3)
         button_frame.add(button_box)
         image = gtk.image_new_from_stock(gtk.STOCK_GO_BACK, gtk.ICON_SIZE_MENU)
-        back_button = gtk.Button()
+        back_button = self._back_button = gtk.Button()
         back_button.set_sensitive(False)
         back_button.add(image)
         button_box.add(back_button)
-        image = gtk.image_new_from_stock(gtk.STOCK_APPLY, gtk.ICON_SIZE_MENU)
+        image = gtk.image_new_from_stock(gtk.STOCK_GO_FORWARD, gtk.ICON_SIZE_MENU)
         apply_button = self.apply_button = gtk.Button()
         apply_button.add(image)
         button_box.add(apply_button)
+        
         elem_box[-1].pack_end(button_frame, True)
         self.show_all()
 
@@ -916,7 +916,7 @@ class FormatControl(gtk.VBox):
         self._reference_counter = 0
 
         # GTK closures seem to be weak references.
-        self.__ref = (back_button, elem_box)
+        self.__refs = (elem_box,)
 
 
     def _on_apply(self, apply_button, back_button, elem_box):
@@ -943,6 +943,13 @@ class FormatControl(gtk.VBox):
             self._current.unapply()
         back_button.set_sensitive(self._current.prev_object is not None)
 
+
+    def _on_test(self, widget):
+        if widget.get_active():
+            self.start_encoder_rc()
+        else:
+            self.stop_encoder_rc()
+            
 
     _cap_shoutcast = _cap_icecast = _cap_recordable = False
     _caps = {"ogg": {
@@ -976,7 +983,7 @@ class FormatControl(gtk.VBox):
 
     def unmarshall(self, data):
         dict_ = json.loads(data)
-        unapplied = dict_.get("unapplied", None)
+        unapplied = dict_.get("__unapplied__", None)
         
         while 1:
             try:
@@ -991,6 +998,10 @@ class FormatControl(gtk.VBox):
                 self.apply_button.clicked()
                 if oldcurr.next_element_name is None:
                     break
+
+
+    def get_settings(self):
+        return format_collate(self._current)
 
 
     def start_encoder_rc(self):
@@ -1048,18 +1059,26 @@ class FormatControl(gtk.VBox):
 
 
     def _start_encoder(self):
-        kvps = [] 
-        for pairs in format_collate(self._current).iteritems():
-            kvps.append("=".join(pairs))
-        kvps.append("encode_source=jack")
-        kvps = "\n".join(kvps)
-        
-        print kvps
-        
-        return False
+        if self._current.applied:
+            kvps = [] 
+            for pairs in format_collate(self._current).iteritems():
+                kvps.append("=".join(pairs))
+            kvps.append("encode_source=jack\ncommand=encoder_start\n")
+            kvps = "\n".join(kvps)
+
+            self._send(kvps)
+            
+            ret = self._receive() != "failed"
+            if ret:
+                self._back_button.set_sensitive(False)
+            return ret
+        else:
+            print "encoder settings are not finalised"
+            return False
 
 
     def _stop_encoder(self):
+        self._back_button.set_sensitive(True)
         self._send("command=encoder_stop\n")
         return self._receive() != "failed"
         

@@ -99,7 +99,6 @@ static void live_mp3_encoder_main(struct encoder *encoder)
         lame_set_out_samplerate(s->gfp, encoder->target_samplerate);
         lame_set_mode(s->gfp, s->lame_mode);
         lame_set_quality(s->gfp, s->lame_quality);
-        lame_set_free_format(s->gfp, s->lame_freeformat);
         lame_set_bWriteVbrTag(s->gfp, 0);
         if (lame_init_params(s->gfp) < 0)
             {
@@ -147,7 +146,7 @@ static void live_mp3_encoder_main(struct encoder *encoder)
                 live_mp3_write_packet(encoder, s, s->mp3buf, mp3bytes, PF_MP3 | s->packetflags);
                 s->packetflags = PF_UNSET;
                 }
-            if (encoder->new_metadata)
+            if (encoder->new_metadata && encoder->use_metadata)
                 {
                 live_mp3_packetize_metadata(encoder, s);
                 if (s->metadata)
@@ -189,16 +188,14 @@ int live_mp3_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         fprintf(stderr, "live_mp3_encoder: malloc failure\n");
         return FAILED;
         }
-    if (!(strcmp("stereo", ev->stereo)))
+    if (!(strcmp("stereo", ev->mode)))
         s->lame_mode = 0;
-    else if (!(strcmp("jstereo", ev->stereo)))
+    else if (!(strcmp("jointstereo", ev->mode)))
         s->lame_mode = 1;
-    else if (!(strcmp("mono", ev->stereo)))
+    else if (!(strcmp("mono", ev->mode)))
         s->lame_mode = 3;
-    s->lame_quality = atoi(ev->encode_quality);
-    s->lame_freeformat = ev->freeformat_mp3[0] == '1';
+    s->lame_quality = atoi(ev->quality);
     encoder->encoder_private = s;
-    encoder->new_metadata = TRUE;
     encoder->run_encoder = live_mp3_encoder_main;
     return SUCCEEDED;
     }

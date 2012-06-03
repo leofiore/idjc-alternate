@@ -204,7 +204,7 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
     {
     struct streamer_vars *sv = other;
     struct streamer *self = ti->streamer[uv->tab];
-    int protocol, data_format;
+    int protocol, data_format = -1;
     char channels[2];
     char bitrate[4];
     char samplerate[6];
@@ -227,21 +227,32 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
         }
     else
         {
-        switch (self->encoder_op->encoder->data_format)
-            {
-            case DF_JACK_MP3:
-            case DF_FILE_MP3:
-                data_format = SHOUT_FORMAT_MP3;
-                break;
-            case DF_JACK_OGG:
-            case DF_FILE_OGG:
+        const struct encoder_data_format *df = &self->encoder_op->encoder->data_format;            
+        int failed = FALSE;
+
+        switch (df->family) {
+            case ENCODER_FAMILY_OGG:
                 data_format = SHOUT_FORMAT_OGG;
                 break;
-            case DF_UNHANDLED:
-            default:
-                fprintf(stderr, "streamer_start: unhandled encoder data format\n");
-                encoder_unregister_client(self->encoder_op);
-                return FAILED;
+            case ENCODER_FAMILY_MPEG:
+                switch (df->codec) {
+                    case ENCODER_CODEC_MP3:
+                        data_format = SHOUT_FORMAT_MP3;
+                        break;
+                    case ENCODER_CODEC_UNHANDLED:
+                    default:
+                        failed = TRUE;
+                    }
+                    break;
+            case ENCODER_FAMILY_UNHANDLED:
+                failed = TRUE;
+            }
+            
+        if (failed)
+            {
+            fprintf(stderr, "streamer_start: unhandled encoder data format\n");
+            encoder_unregister_client(self->encoder_op);
+            return FAILED;
             }
         }
         

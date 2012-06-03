@@ -32,7 +32,6 @@ struct lme_data
     int lame_mode;
     int lame_channels;
     int lame_quality;
-    int lame_freeformat;
     char *metadata;
     int lame_samples;
     unsigned char *mp3buf;

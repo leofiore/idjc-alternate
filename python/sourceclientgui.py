@@ -1531,43 +1531,40 @@ class StreamTab(Tab):
             cell.set_property("sensitive", True)
     
     def cb_metadata(self, widget):
-        
-        return
-        
-        
-        fallback = self.metadata_fallback.get_text()
-        songname = self.scg.parent.songname.encode("utf-8") or fallback
-        table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((
-                        getattr(self.scg.parent, x) or fallback) for x in (
-                        "artist", "title", "album")))
-        table.append(("%s", songname))
-        raw_cm = self.metadata.get_text().encode("utf-8", "replace").strip()
-        cm = string_multireplace(raw_cm, table)
-        
-        if self.scg.parent.prefs_window.mp3_utf8.get_active():
-            cm_lat1 = cm
-        else:
-            cm_lat1 = cm.decode("utf-8").encode("iso8859-1", "replace").strip()
-
-        if cm:
-            disp = cm
-        else:
-            tab = ("mp3", "ogg")[self.format_page] if self.encoder == "off" \
-                                                            else self.encoder
-            if tab == "mp3":
+        if self.format_control.finalised:
+            fallback = self.metadata_fallback.get_text()
+            songname = self.scg.parent.songname.encode("utf-8") or fallback
+            table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((
+                            getattr(self.scg.parent, x) or fallback) for x in (
+                            "artist", "title", "album")))
+            table.append(("%s", songname))
+            raw_cm = self.metadata.get_text().encode("utf-8", "replace").strip()
+            cm = string_multireplace(raw_cm, table)
+            
+            fdata = self.format_control.get_settings()
+            if fdata["family"] == "mpeg" and fdata["codec"] == "mp3":
+                if fdata["metadata_mode"] == "utf-8":
+                    other_encoding = "utf-8"
+                else:
+                    other_encoding = "latin1"
                 disp = songname
-            elif tab == "ogg":
+            elif fdata["family"] == "ogg":
+                other_encoding = "utf-8"
                 disp = "[{0[%r]}], [{0[%t]}], [{0[%l]}]".format(dict(table))
             else:
+                other_encoding = "utf-8"
                 disp = "no metadata string defined for this stream format"
+            
+            cm_other_enc = cm.decode("utf-8").encode(other_encoding, "replace")
+            if fdata["metadata_mode"] == "suppressed":
+                disp = _('[Metadata suppressed]')
 
-                
-        self.metadata_display.push(0, disp)
-        self.metadata_update.set_relief(gtk.RELIEF_HALF)
-        self.scg.send("tab_id=%d\ndev_type=encoder\ncustom_meta=%s\n"
+            self.metadata_display.push(0, disp)
+            self.metadata_update.set_relief(gtk.RELIEF_HALF)
+            self.scg.send("tab_id=%d\ndev_type=encoder\ncustom_meta=%s\n"
                     "custom_meta_lat1=%s\ncommand=new_custom_metadata\n" % (
-                    self.numeric_id, cm, cm_lat1))
-        self.scg.receive()
+                    self.numeric_id, cm, cm_other_enc))
+            self.scg.receive()
 
     def cb_new_metadata_format(self, widget):
         self.metadata_update.set_relief(gtk.RELIEF_NORMAL)  

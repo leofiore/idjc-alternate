@@ -30,7 +30,6 @@ struct lofe_data
     struct ogg_tag_data tag_data;
     FLAC__StreamEncoder *enc;
     int bits_per_sample;
-    int use_metadata;
     FLAC__StreamMetadata *metadata[1];
     FLAC__byte *pab;
     size_t pab_rqd;
