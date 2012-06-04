@@ -67,8 +67,6 @@ BLANK_LISTLINE = ListLine(1, 0, "", 8000, "", -1, "", "")
 
 
 
-
-
 class SmallLabel(gtk.Label):
     """A gtk.Label with small text size."""
     
@@ -2102,9 +2100,8 @@ class RecordTab(Tab):
             else:
                 self.streamtab = None
             self.parentobject.record_buttons.record_button.set_sensitive(
-                self.streamtab is None or (self.cansave and ((
-                self.streamtab.server_connect.flags() & gtk.SENSITIVE) or 
-                self.streamtab.recorder_valid_override)))
+                self.cansave and (self.streamtab is None or 
+                self.streamtab.format_control.props.cap_recordable))
 
 
         def populate_stream_selector(self, text, tabs):
@@ -2113,6 +2110,9 @@ class RecordTab(Tab):
                 self.source_combo.append_text(" ".join((text, str(index + 1))))
             self.source_combo.connect("changed", self.cb_source_combo)
             self.source_combo.set_active(0)
+            for tab in tabs:
+                tab.format_control.connect("notify::cap-recordable",
+                                lambda w, v: self.source_combo.emit("changed"))
 
 
         def cb_new_folder(self, filechooser):

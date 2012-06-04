@@ -848,6 +848,21 @@ class FormatFamily(FormatDropdown):
 
 
 class FormatControl(gtk.VBox):
+    __gproperties__ = {
+        'cap-icecast': (gobject.TYPE_BOOLEAN, 'icecast capable',
+                        'if true this format can stream to icecast',
+                        0, gobject.PARAM_READABLE),
+                        
+        'cap-shoutcast': (gobject.TYPE_BOOLEAN, 'shoutcast capable',
+                        'if true this format can stream to shoutcast',
+                        0, gobject.PARAM_READABLE),
+                        
+        'cap-recordable': (gobject.TYPE_BOOLEAN, 'can be recorded',
+                        'if true this format is compatible with the recording facility',
+                        0, gobject.PARAM_READABLE)
+    }
+    
+    
     def __init__(self, send, receive):
         gtk.VBox.__init__(self)
         self.set_border_width(6)
@@ -914,6 +929,7 @@ class FormatControl(gtk.VBox):
         self._send = send
         self._receive = receive
         self._reference_counter = 0
+        self._cap_icecast = self._cap_shoutcast = self._cap_recordable = False
 
         # GTK closures seem to be weak references.
         self.__refs = (elem_box,)
@@ -951,8 +967,7 @@ class FormatControl(gtk.VBox):
             self.stop_encoder_rc()
             
 
-    _cap_shoutcast = _cap_icecast = _cap_recordable = False
-    _caps = {"ogg": {
+    _cap_table = {"ogg": {
                 "vorbis":
                     {"shoutcast": False, "icecast": True, "recordable": True},
                 "flac":
@@ -966,17 +981,27 @@ class FormatControl(gtk.VBox):
 
     def _update_capabilities(self):
         settings = format_collate(self._current)
-        dict_ = self._caps[settings["family"]][settings["codec"]]
+        dict_ = self._cap_table[settings["family"]][settings["codec"]]
             
         for each in "shoutcast icecast recordable".split():
             can = dict_[each] and self._current.applied
             indicator = getattr(self, "_" + each + "_indicator")
             indicator.set_from_pixbuf(self.green if can else self.clear)
-            setattr(self, "_cap_" + each, can)
-        
+            name = "_cap_" + each
+            if getattr(self, name) != can:
+                setattr(self, name, can)
+                self.notify("cap-" + each)
+            
         self.caps_frame.set_sensitive(self._current.applied)
-        
-        
+
+
+    def do_get_property(self, property):
+        if property.name not in (
+                            "cap-icecast", "cap-shoutcast", "cap-recordable"):
+            raise AttributeError('unknown property %s' % property.name)
+        return getattr(self, "_" + property.name.replace("-", "_"))
+
+
     def marshall(self):
         return json.dumps(format_collate(self._current))
 
@@ -1035,27 +1060,6 @@ class FormatControl(gtk.VBox):
         """Return whether the encoder settings list is complete."""
 
         return self._current.applied
-
-
-    @property
-    def cap_icecast(self):
-        """Return the capability property based on encoder configuration."""
-
-        return self._cap_icecast
-        
-        
-    @property
-    def cap_shoutcast(self):
-        """Return the capability property based on encoder configuration."""
-
-        return self._cap_shoutcast
-        
-        
-    @property
-    def cap_recordable(self):
-        """Return the capability property based on encoder configuration."""
-        
-        return self._cap_recordable
 
 
     def _start_encoder(self):
