@@ -471,6 +471,7 @@ class ConnectionPane(gtk.VBox):
 
     def streaming_set(self, val):
         self._streaming_set = val
+        self.treeview.get_selection().emit("changed")
 
     def streaming_is_set(self):
         return self._streaming_set
@@ -620,13 +621,15 @@ class ConnectionPane(gtk.VBox):
 
     def on_selection_changed(self, tree_selection):
         sens = tree_selection.get_selected()[1] is not None
+        if self._streaming_set and tree_selection.path_is_selected((0,)):
+            sens = False
         for button in self.require_selection:
             button.set_sensitive(sens)
 
     def __init__(self, set_tip, tab):
         self.tab = tab
         gtk.VBox.__init__(self)
-        self.streaming_set(False)
+        self._streaming_set = False
         vbox = gtk.VBox()
         vbox.set_border_width(6)
         vbox.set_spacing(6)
@@ -1651,12 +1654,11 @@ class StreamTab(Tab):
         self.server_connect = gtk.ToggleButton()
         set_tip(self.server_connect, _('Connect to or disconnect from the radio'
             ' server. If the button does not stay in, the connection failed '
-            'for some reason.\n \nIf the button is greyed out it means you are'
-            ' using unsupported settings. Shoutcast only supports mp3 and mp3'
-            ' requires that you use one of the sample rates in the drop down'
-            ' box. Ogg only supports certain sample rate, bit rate, and stereo'
-            ' combinations. Also, the connection list must contain details for'
-            ' a master server.'))
+            'for some reason.\n\nIf the button is greyed out it means your '
+            'settings within the \'Connections\' and \'Format\' sections are '
+            'either incompatible with one another or are incomplete.\n\n'
+            'One master server must be specified and must be capable of '
+            'handling the chosen streaming format.'))
         self.server_connect.connect("toggled", self.cb_server_connect)
         hbox.pack_start(self.server_connect, True, True, 0)
         self.server_connect_label = gtk.Label()
