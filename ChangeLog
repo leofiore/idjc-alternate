@@ -1,5 +1,7 @@
 * Changes in version 0.8.8 *
 
+Added a brand new encoder format selection user interface which eliminates the possiblity of the user to select bad encoder setting combinations. It also looks much better.
+
 Added the ability to remove the main players' visibility. Useful for when using external players.
 
 Added JACK audio routing for all players. This means that individual player audio effects or external players can be used.

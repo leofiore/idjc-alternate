@@ -443,13 +443,22 @@ class ConnectionPane(gtk.VBox):
         return 0 if s_type >= 2 else s_type + 1
 
     def set_button(self, tab):
-        if self.get_master_server_type():
+        st = self.get_master_server_type()
+        if st:
             config = ListLine(*self.liststore[0])
-            text = "{0.host}:{0.port}{0.mount}".format(config)
-            tab.server_connect_label.set_text(text)
+            p = tab.format_control.props
+            sens = (p.cap_icecast, p.cap_shoutcast)[st - 1]
+            if sens:
+                text = "{0.host}:{0.port}{0.mount}".format(config)
+            else:
+                text = _("Encoder Format Not Set/Compatible")
         else:
             # TC: Connection button text when no details have been entered.
-            tab.server_connect_label.set_text(_('No Master Server Configured'))
+            text = _('No Master Server Configured')
+            sens = False
+
+        tab.server_connect_label.set_text(text)
+        tab.server_connect.set_sensitive(sens)
     
     def individual_listeners_toggle_cb(self, cell, path):
         self.liststore[path][0] = not self.liststore[path][0]
@@ -617,7 +626,8 @@ class ConnectionPane(gtk.VBox):
 
     def on_keypress(self, widget, event):
         if gtk.gdk.keyval_name(event.keyval) == "Delete":
-            self.remove.clicked()
+            if self.remove.get_sensitive():
+                self.remove.clicked()
 
     def on_selection_changed(self, tree_selection):
         sens = tree_selection.get_selected()[1] is not None
@@ -1657,8 +1667,9 @@ class StreamTab(Tab):
             'for some reason.\n\nIf the button is greyed out it means your '
             'settings within the \'Connections\' and \'Format\' sections are '
             'either incompatible with one another or are incomplete.\n\n'
-            'One master server must be specified and must be capable of '
-            'handling the chosen streaming format.'))
+            'In order to stream a master server needs to be specified in the '
+            'configuration section below and must be capable of handling the '
+            'chosen streaming format.'))
         self.server_connect.connect("toggled", self.cb_server_connect)
         hbox.pack_start(self.server_connect, True, True, 0)
         self.server_connect_label = gtk.Label()
@@ -1818,6 +1829,8 @@ class StreamTab(Tab):
         label = gtk.Label(_('Format'))  # Format box
         self.format_control = FormatControl(self.send, self.receive)
         self.details_nb.append_page(self.format_control, label)
+        self.format_control.connect("notify::cap-icecast", lambda a, b: self.connection_pane.set_button(self))
+        self.format_control.connect("notify::cap-shoutcast", lambda a, b: self.connection_pane.set_button(self))
         label.show()
         
         vbox = gtk.VBox()
@@ -2037,12 +2050,9 @@ class RecordTab(Tab):
                     _('Stop recording.')),
                     (self.record_button, "rec", "toggled",
                     _('Start recording.\n\nIf this button is greyed out it '
-                    'could mean the encoder settings are not valid. This can'
-                    ' be fixed by using one of the approved sample rates for'
-                    ' mp3 or by choosing a sensible samplerate and bitrate'
-                    ' combination for Ogg.\n\nAlso check that you have write '
-                    'permission on the folder you have selected to record '
-                    'to.')),
+                    'could mean either the encoder settings are not valid or '
+                    'write permission is not granted on the selected folder.'
+                    )),
                     (self.pause_button,  "pause", "toggled",
                                                         _('Pause recording.'))):
                 button.set_size_request(30, -1)
