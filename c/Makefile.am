@@ -18,21 +18,21 @@ idjcbe_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecde
 			\
 				sndfiledecode.c sndfiledecode.h sndfileinfo.c sndfileinfo.h sourceclient.c sourceclient.h speextag.c		\
 			\
-				speextag.h streamer.c streamer.h xlplayer.c xlplayer.h
+				speextag.h streamer.c streamer.h xlplayer.c xlplayer.h live_mp2_encoder.c live_mp2_encoder.h
 
 
 idjcbe_CFLAGS = ${GLIB_CFLAGS} ${LIBAVCODEC_CFLAGS} ${LIBAVFORMAT_CFLAGS} ${LIBAVUTIL_CFLAGS} ${LIBFLAC_CFLAGS}		\
 			\
 				${LIBJACK_CFLAGS} ${LIBMAD_CFLAGS} ${LIBSAMPLERATE_CFLAGS} ${LIBSHOUT_CFLAGS} ${LIBSNDFILE_CFLAGS} 		\
 			\
-				${LIBSPEEX_CFLAGS} ${LIBVORBISENC_CFLAGS} ${LIBVORBIS_CFLAGS} -O2 -Wall -std=gnu99
+				${LIBSPEEX_CFLAGS} ${LIBVORBISENC_CFLAGS} ${LIBVORBIS_CFLAGS} ${TWOLAME_CFLAGS} -O2 -Wall -std=gnu99
 
 
 idjcbe_LDADD = ${DYN_LIBS} ${GLIB_LIBS} ${LIBAVCODEC_LIBS} ${LIBAVFORMAT_LIBS} ${LIBAVUTIL_LIBS} ${LIBFLAC_LIBS} 		\
 			\
 				${LIBJACK_LIBS} ${LIBMAD_LIBS} ${LIBMP3LAME} ${LIBM} ${LIBSAMPLERATE_LIBS} ${LIBSHOUT_LIBS} 					\
 			\
-				${LIBSNDFILE_LIBS} ${LIBSPEEX_LIBS} ${LIBVORBISENC_LIBS} ${LIBVORBIS_LIBS} -lpthread
+				${LIBSNDFILE_LIBS} ${LIBSPEEX_LIBS} ${LIBVORBISENC_LIBS} ${LIBVORBIS_LIBS} ${TWOLAME_LIBS} -lpthread
 
 
 idjcbe_LDFLAGS = ${DYN_LDFLAGS}

@@ -1,6 +1,6 @@
 /*
-#   live_mp3_encoder.h: encode mp3 files from a live source
-#   Copyright (C) 2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   live_mp2_encoder.h: encode mp2 files from a live source
+#   Copyright (C) 2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -17,27 +17,19 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "../config.h"
-
-#ifdef DYN_LAME
-#include "lame.h"
-#else
-#include <lame/lame.h>
-#endif /* DYN_LAME */
+#include "twolame.h"
 #include "sourceclient.h"
 
-struct lm3e_data
+struct lm2e_data
     {
-    lame_global_flags *gfp;
-    int lame_mode;
-    int lame_channels;
-    int lame_quality;
+    twolame_options *gfp;
+    int twolame_mode;
+    int twolame_channels;
     char *metadata;
-    int lame_samples;
-    unsigned char *mp3buf;
-    size_t mp3bufsize;
+    int twolame_samples;
+    unsigned char *mp2buf;
+    size_t mp2bufsize;
     enum packet_flags packetflags;
     };
 
-int live_mp3_encoder_init(struct encoder *encoder, struct encoder_vars *ev);
-
+int live_mp2_encoder_init(struct encoder *encoder, struct encoder_vars *ev);

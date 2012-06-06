@@ -22,9 +22,10 @@ AM_GNU_GETTEXT_VERSION([0.18.1])
 # We need libjack in order to compile.
 PKG_CHECK_MODULES(LIBJACK, [jack >= 0.98.0])
 
-# Also check for libvorbis and libvorbisenc
+# Base encoder requirements.
 PKG_CHECK_MODULES([LIBVORBIS], [vorbis >= 1.0.0])
 PKG_CHECK_MODULES([LIBVORBISENC], [vorbisenc >= 1.0.0])
+PKG_CHECK_MODULES([TWOLAME], [twolame])
 
 AC_ARG_ENABLE(mad,
    AC_HELP_STRING([--disable-mad],[remove capability to decode mp3 files]),[makemad=$enableval],[makemad="maybe"])
@@ -55,7 +56,7 @@ if test $makelibav != "no" ; then
             AC_SUBST(HAVE_AVCODEC, 1)
             
             AC_MSG_CHECKING([for avcodec.h in legacy ffmpeg directory])
-            gcc `pkg-config --cflags libavcodec` ffmpeg_avcodec.c -o /dev/null >/dev/null 2>&1
+            gcc $(pkg-config --cflags libavcodec) ffmpeg_avcodec.c -o /dev/null >/dev/null 2>&1
             if test $? -eq 0 ; then
                 AC_MSG_RESULT([yes])
                 AC_DEFINE(FFMPEG_AVCODEC, 1, [if set use legacy include file location])
