@@ -131,12 +131,12 @@ static void encoder_main(struct encoder *encoder)
                 {
                 if (id->channels == 1)      /* mono and stereo audio rescaling */
                     for (l = id->buffer[0], endp = l + id->qty_samples; l < endp;)
-                        *l++ *= 32768.0F;
+                        *l++ *= 1.0F;
                 else
                     for (l = id->buffer[0], r = id->buffer[1], endp = l + id->qty_samples; l < endp;)
                         {
-                        *l++ *= 32768.0F;
-                        *r++ *= 32768.0F;
+                        *l++ *= 1.0F;
+                        *r++ *= 1.0F;
                         }
                 mp2bytes = twolame_encode_buffer_float32(s->gfp, id->buffer[0], id->buffer[1], id->qty_samples, s->mp2buf, s->mp2bufsize);
                 encoder_ip_data_free(id);

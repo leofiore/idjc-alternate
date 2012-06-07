@@ -89,6 +89,7 @@ struct recorder
     struct metadata_item2 *mi2_first;    /* log mp3 block sizes and durations */
     struct metadata_item2 *mi2_last;
     int id3_mode;                /* when set applies an id3 tag */
+    int include_xing_tag;        /* if true a xing/info tag is to be written */
     int is_vbr;                  /* frame length changed */
     unsigned oldbitrate;
     unsigned oldsamplerate;

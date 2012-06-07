@@ -189,7 +189,7 @@ static int recorder_create_mp3_cuesheet(struct recorder *self)
     return SUCCEEDED;
     }
         
-static int recorder_write_vbr_tag(struct recorder *self, FILE *fp)
+static int recorder_write_xing_tag(struct recorder *self, FILE *fp)
     {
     int mpeg1_f, mono_f;
     int xing_offset, initial_offset;
@@ -198,13 +198,16 @@ static int recorder_write_vbr_tag(struct recorder *self, FILE *fp)
     double seek, look_ms, seg_prop;
     unsigned char seek_table[100], *ptr;
     struct metadata_item2 *mi2;
+
+    if (!self->include_xing_tag)
+        return SUCCEEDED;
     
     if (self->mi2_first == NULL)
         {
-        fprintf(stderr, "recorder_write_vbr_tag: no metadata collected, skipping vbr tag\n");
+        fprintf(stderr, "recorder_write_xing_tag: no metadata collected, skipping vbr tag\n");
         return SUCCEEDED;
         }
-    fprintf(stderr, "recorder_write_vbr_tag: commencing\n");
+    fprintf(stderr, "recorder_write_xing_tag: commencing\n");
     initial_offset = ftell(fp);
     padding = (self->first_mp3_header[2] & 0x2) ? 1 : 0;
     mpeg1_f = ((self->first_mp3_header[1] & 0x18) == 0x18) ? 1 : 0;
@@ -243,7 +246,7 @@ static int recorder_write_vbr_tag(struct recorder *self, FILE *fp)
     fputc( self->bytes_written        & 0xFF, fp);
     if (self->is_vbr)
         {
-        fprintf(stderr, "recorder_write_vbr_tag: creating a seek table\n");
+        fprintf(stderr, "recorder_write_xing_tag: creating a seek table\n");
         /* generate a vbr seek table with 100 entries in it */
         for (seek = 0.0, ptr = seek_table, mi2 = self->mi2_first; seek < 1.0; seek += 0.01, ptr++)
             {
@@ -253,7 +256,7 @@ static int recorder_write_vbr_tag(struct recorder *self, FILE *fp)
                 mi2 = mi2->next;
                 if (mi2 == NULL)    /* this should never ever happen */
                     {
-                    fprintf(stderr, "recorder_write_vbr_tag: WARNING: bad metadata, failed creation of seek table\n");
+                    fprintf(stderr, "recorder_write_xing_tag: WARNING: bad metadata, failed creation of seek table\n");
                     return FAILED;
                     }
                 }
@@ -313,7 +316,7 @@ static void recorder_apply_mp3_tags(struct recorder *self)
         } 
     rewind(fpr);
         
-    if (!(recorder_write_id3_tag(self, fpw) && recorder_write_vbr_tag(self, fpw)))
+    if (!(recorder_write_id3_tag(self, fpw) && recorder_write_xing_tag(self, fpw)))
         {
         fprintf(stderr, "recorder_apply_mp3_tags: failed to tag the mp3 file\n");
         fclose(fpr);
@@ -389,7 +392,7 @@ static void recorder_append_metadata2(struct recorder *self, struct encoder_op_p
         else
             free(mi2);
         }
-    if (packet && (packet->header.bit_rate != self->oldbitrate || packet->header.sample_rate != self->oldsamplerate) && (packet->header.flags & PF_MP3))
+    if (packet && (packet->header.bit_rate != self->oldbitrate || packet->header.sample_rate != self->oldsamplerate) && (packet->header.flags & (PF_MP3 | PF_MP2)))
         {
         if (self->oldbitrate && self->oldsamplerate)
             {
@@ -596,7 +599,7 @@ static void *recorder_main(void *args)
                             {
                             if ((packet->header.flags & PF_INITIAL) && self->id3_mode)
                                 recorder_append_metadata2(self, packet);
-                            if (packet->header.flags & (PF_OGG | PF_MP3))
+                            if (packet->header.flags & (PF_OGG | PF_MP3 | PF_MP2))
                                 {
                                 if (packet->header.data_size != fwrite(packet->data, 1, packet->header.data_size, self->fp))
                                     {
@@ -691,6 +694,7 @@ static void *recorder_main(void *args)
                 self->oldbitrate = 0;
                 self->oldsamplerate = 0;
                 self->id3_mode = FALSE;
+                self->include_xing_tag = FALSE;
                 self->is_vbr = FALSE;
                 self->recording_length_s = 0;
                 self->recording_length_ms = 0;
@@ -809,6 +813,11 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
                     switch (df->codec) {
                         case ENCODER_CODEC_MP3:
                             file_extension = ".mp3";
+                            self->id3_mode = TRUE;
+                            self->include_xing_tag = TRUE;
+                            break;
+                        case ENCODER_CODEC_MP2:
+                            file_extension = ".mp2";
                             self->id3_mode = TRUE;
                             break;
                         case ENCODER_CODEC_UNHANDLED:

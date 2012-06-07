@@ -29,6 +29,7 @@
 #include "sig.h"
 #include "live_ogg_encoder.h"
 #include "live_mp3_encoder.h"
+#include "live_mp2_encoder.h"
 #include "live_oggflac_encoder.h"
 #include "live_oggspeex_encoder.h"
 #include "bsdcompat.h"
@@ -85,6 +86,9 @@ static struct encoder_data_format encoder_lex_format(char *source, char *family,
         
     if (!strcmp(codec, "mp3"))
         df.codec = ENCODER_CODEC_MP3;
+
+    if (!strcmp(codec, "mp2"))
+        df.codec = ENCODER_CODEC_MP2;
         
     if (!strcmp(codec, "vorbis"))
         df.codec = ENCODER_CODEC_VORBIS;
@@ -524,6 +528,9 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
                     switch (self->data_format.codec) {
                         case ENCODER_CODEC_MP3:
                             encoder_init = live_mp3_encoder_init;
+                            break;
+                        case ENCODER_CODEC_MP2:
+                            encoder_init = live_mp2_encoder_init;
                             break;
                         case ENCODER_CODEC_UNHANDLED:
                         default:
