@@ -314,7 +314,7 @@ static void *xlplayer_main(struct xlplayer *self)
                           || ((!strcmp(extension, "m4a") || !strcmp(extension, "mp4") || !strcmp(extension, "m4b") || !strcmp(extension, "m4p") || !strcmp(extension, "wma") || !strcmp(extension, "avi") || !strcmp(extension, "mpc") || !strcmp(extension, "ape")) && avcodecdecode_reg(self))
 #endif /* HAVE_AVFORMAT */
 #endif /* HAVE_AVCODEC */
-                          || (!strcmp(extension, "mp3") && mp3decode_reg(self))
+                          || ((!strcmp(extension, "mp3") || (!strcmp(extension, "mp2"))) && mp3decode_reg(self))
                     )
                     {
                     self->playmode = PM_PLAYING;

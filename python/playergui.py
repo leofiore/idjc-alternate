@@ -575,7 +575,7 @@ class Supported(object):
     def check_playlists(self, pathname):
         return self._check(pathname, self.playlists)
     def __init__(self):
-        self.media = [ ".ogg", ".oga", ".wav", ".aiff", ".au", ".txt", ".cue" ]
+        self.media = [ ".mp2", ".mp3", ".ogg", ".oga", ".wav", ".aiff", ".au", ".txt", ".cue" ]
         self.playlists = [ ".m3u", ".xspf", ".pls" ]
 
         if FGlobs.avcodec and FGlobs.avformat:

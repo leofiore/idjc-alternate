@@ -45,5 +45,3 @@ struct mp3decode_vars
 
 /* register mp3 decoder */
 int mp3decode_reg(struct xlplayer *xlplayer);
-/* returns true if we can decode mp3 */
-int mp3decode_cap();

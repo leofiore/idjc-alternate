@@ -1553,7 +1553,7 @@ class StreamTab(Tab):
             cm = string_multireplace(raw_cm, table)
             
             fdata = self.format_control.get_settings()
-            if fdata["family"] == "mpeg" and fdata["codec"] == "mp3":
+            if fdata["family"] == "mpeg" and fdata["codec"] in ("mp2", "mp3"):
                 if fdata["metadata_mode"] == "utf-8":
                     other_encoding = "utf-8"
                 else:
@@ -1565,6 +1565,9 @@ class StreamTab(Tab):
             else:
                 other_encoding = "utf-8"
                 disp = "no metadata string defined for this stream format"
+            
+            if cm:
+                disp = cm
             
             cm_other_enc = cm.decode("utf-8").encode(other_encoding, "replace")
             if fdata["metadata_mode"] == "suppressed":

@@ -2,7 +2,7 @@ libexec_PROGRAMS = idjcbe
 
 idjcbe_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecdecode.h bsdcompat.c bsdcompat.h			\
 			\
-				compressor.c compressor.h dbconvert.c dbconvert.h dyn_lame.c dyn_lame.h dyn_mad.c dyn_mad.h encoder.c		\
+				compressor.c compressor.h dbconvert.c dbconvert.h dyn_lame.c dyn_lame.h encoder.c						\
 			\
 				encoder.h fade.c fade.h flacdecode.c flacdecode.h gnusource.h ialloc.c ialloc.h id3.c id3.h kvpdict.c		\
 			\
@@ -10,7 +10,7 @@ idjcbe_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecde
 			\
 				live_ogg_encoder.h live_oggflac_encoder.c live_oggflac_encoder.h live_oggspeex_encoder.c						\
 			\
-				live_oggspeex_encoder.h mad.h main.c main.h mic.c mic.h mixer.c mixer.h mp3dec.c mp3dec.h mp3tagread.c	\
+				live_oggspeex_encoder.h main.c main.h mic.c mic.h mixer.c mixer.h mp3dec.c mp3dec.h mp3tagread.c	\
 			\
 				mp3tagread.h ogg_flac_dec.c ogg_flac_dec.h ogg_speex_dec.c ogg_speex_dec.h ogg_vorbis_dec.c					\
 			\

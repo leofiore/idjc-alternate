@@ -120,7 +120,7 @@ static void *streamer_main(void *args)
                             /* determine how much audio to hold in the send buffer */
                             self->max_shout_queue = (shout_buffer_seconds * packet->header.bit_rate) << 7;
                             }
-                        if (packet->header.flags & (PF_OGG | PF_MP3))
+                        if (packet->header.flags & (PF_OGG | PF_MP3 | PF_MP2))
                             {
                             if ((packet->header.flags & (PF_HEADER | PF_FINAL)) || shout_queuelen(self->shout) < self->max_shout_queue)
                                 data_size = packet->header.data_size;
@@ -147,10 +147,10 @@ static void *streamer_main(void *args)
                             self->stream_mode = SM_DISCONNECTING;
                             }
                         }
-                    if (packet->header.flags & PF_METADATA)  /* tell server about new mp3 metadata */
+                    if (packet->header.flags & PF_METADATA)  /* tell server about new metadata */
                         {
                         *strpbrk(packet->data, "\n") = '\0';
-                        fprintf(stderr, "streamer_main: packet is mp3 metadata: %s\n", (char *)packet->data);
+                        fprintf(stderr, "streamer_main: packet is metadata: %s\n", (char *)packet->data);
                         shout_metadata_add(self->shout_meta, "song", packet->data);
                         switch (shout_set_metadata(self->shout, self->shout_meta))
                             {
@@ -237,6 +237,7 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
             case ENCODER_FAMILY_MPEG:
                 switch (df->codec) {
                     case ENCODER_CODEC_MP3:
+                    case ENCODER_CODEC_MP2:
                         data_format = SHOUT_FORMAT_MP3;
                         break;
                     case ENCODER_CODEC_UNHANDLED:

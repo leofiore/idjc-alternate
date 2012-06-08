@@ -2775,10 +2775,6 @@ class MainWindow:
         self.session_loaded = False
 
         self.mixer_write("bootstrap")
-        self.mixer_write("ACTN=mp3status\nend\n")
-        rply = self.mixer_read()
-        if rply == "IDJC: mp3=1\n":
-            supported.media.append(".mp3")
   
         # create the GUI elements
         self.window_group = gtk.WindowGroup()

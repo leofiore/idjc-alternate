@@ -22,30 +22,13 @@ AM_GNU_GETTEXT_VERSION([0.18.1])
 # We need libjack in order to compile.
 PKG_CHECK_MODULES(LIBJACK, [jack >= 0.98.0])
 
-# Base encoder requirements.
+# Core dependencies.
 PKG_CHECK_MODULES([LIBVORBIS], [vorbis >= 1.0.0])
 PKG_CHECK_MODULES([LIBVORBISENC], [vorbisenc >= 1.0.0])
 PKG_CHECK_MODULES([TWOLAME], [twolame])
-
-AC_ARG_ENABLE(mad,
-   AC_HELP_STRING([--disable-mad],[remove capability to decode mp3 files]),[makemad=$enableval],[makemad="maybe"])
-
-if test $makemad != "no" ; then
-   PKG_CHECK_MODULES([LIBMAD], [mad],,
-         AC_DEFINE(DYN_MAD, 1, [libmad to be linked dynamically])
-         DYNAMIC="1"
-         if test $makemad = "yes" ; then 
-            AC_MSG_ERROR([libmad not detected but specifically requested in configure options])
-         fi)
-else
-   AC_DEFINE(DYN_MAD, 1, [libmad to be linked dynamically])
-   DYNAMIC="1"
-fi
-
+PKG_CHECK_MODULES([LIBMAD], [mad])
 PKG_CHECK_MODULES([LIBSAMPLERATE], [samplerate])
-
 PKG_CHECK_MODULES([LIBSNDFILE], [sndfile])
-
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 
 AC_ARG_ENABLE([ffmpeg],

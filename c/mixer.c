@@ -42,7 +42,6 @@
 #include "dbconvert.h"
 #include "compressor.h"
 #include "xlplayer.h"
-#include "mp3dec.h"
 #include "ialloc.h"
 #include "speextag.h"
 #include "sndfileinfo.h"
@@ -50,7 +49,6 @@
 #include "oggdec.h"
 #include "mic.h"
 #include "bsdcompat.h"
-#include "dyn_mad.h"
 #include "peakfilter.h"
 #include "sig.h"
 #include "main.h"
@@ -1519,12 +1517,6 @@ int mixer_main()
         jack_session_event_free(session_event);
         /* Unblock the user interface which is waiting on a reply. */
         fprintf(stdout, "session event handled\n");
-        fflush(stdout);
-        }
-
-    if (!strcmp(action, "mp3status"))
-        {
-        fprintf(stdout, "IDJC: mp3=%d\n", mp3decode_cap());
         fflush(stdout);
         }
 
