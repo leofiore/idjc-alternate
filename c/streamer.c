@@ -106,6 +106,7 @@ static void *streamer_main(void *args)
                         if (packet->header.flags & PF_INITIAL)
                             {
                             /* inform server of the layout of the stream */
+                            /*
                             if (shout_set_audio_info(self->shout, SHOUT_AI_BITRATE, s_conv(packet->header.bit_rate)) != SHOUTERR_SUCCESS)
                                 fprintf(stderr, "streamer_main: failed to set stream info bitrate\n");
                             if (shout_set_audio_info(self->shout, SHOUT_AI_SAMPLERATE, s_conv(packet->header.sample_rate)) != SHOUTERR_SUCCESS)
@@ -117,6 +118,7 @@ static void *streamer_main(void *args)
                                 shout_get_audio_info(self->shout, SHOUT_AI_BITRATE),
                                 shout_get_audio_info(self->shout, SHOUT_AI_SAMPLERATE),
                                 shout_get_audio_info(self->shout, SHOUT_AI_CHANNELS));
+                            */ 
                             /* determine how much audio to hold in the send buffer */
                             self->max_shout_queue = (shout_buffer_seconds * packet->header.bit_rate) << 7;
                             }
@@ -369,8 +371,11 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
         }
         
     snprintf(channels,   sizeof channels  , "%d",  self->encoder_op->encoder->n_channels);
-    snprintf(bitrate,    sizeof bitrate   , "%d",  self->encoder_op->encoder->bitrate);
-    snprintf(samplerate, sizeof samplerate, "%ld", self->encoder_op->encoder->samplerate);
+    {
+        int br = self->encoder_op->encoder->bitrate;
+        snprintf(bitrate, sizeof bitrate   , "%d",  ((br < 1000) ? br : br/1000));
+    }
+    snprintf(samplerate, sizeof samplerate, "%ld", self->encoder_op->encoder->target_samplerate);
         
     if (shout_set_audio_info(self->shout, SHOUT_AI_BITRATE, bitrate) != SHOUTERR_SUCCESS)
         {
