@@ -97,14 +97,17 @@ static void encoder_main(struct encoder *encoder)
         twolame_set_brate(s->gfp, encoder->bitrate);
         twolame_set_in_samplerate(s->gfp, encoder->target_samplerate);
         twolame_set_out_samplerate(s->gfp, encoder->target_samplerate);
-        twolame_set_mode(s->gfp, s->twolame_mode);
-        if (twolame_init_params(s->gfp) < 0)
+        twolame_set_mode(s->gfp, s->mpeg_mode);
+        twolame_set_version(s->gfp, s->mpeg_version);
+        if (twolame_init_params(s->gfp))
             {
             fprintf(stderr, "live_mp2_encoder_main: twolame rejected the parameters given\n");
             twolame_close(&s->gfp);
             free(s->mp2buf);
             goto bailout;
             }
+            
+        twolame_print_config(s->gfp);
 
         ++encoder->oggserial;
         s->packetflags = PF_INITIAL;
@@ -187,11 +190,22 @@ int live_mp2_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         return FAILED;
         }
     if (!(strcmp("stereo", ev->mode)))
-        s->twolame_mode = TWOLAME_STEREO;
+        s->mpeg_mode = TWOLAME_STEREO;
     else if (!(strcmp("jointstereo", ev->mode)))
-        s->twolame_mode = TWOLAME_JOINT_STEREO;
+        s->mpeg_mode = TWOLAME_JOINT_STEREO;
     else if (!(strcmp("mono", ev->mode)))
-        s->twolame_mode = TWOLAME_MONO;
+        s->mpeg_mode = TWOLAME_MONO;
+    switch (atoi(ev->standard)) {
+        case 1:
+            s->mpeg_version = TWOLAME_MPEG1;
+            break;
+        case 2:
+            s->mpeg_version = TWOLAME_MPEG2;
+            break;
+        default:
+            fprintf(stderr, "bad mpeg version\n");
+            return FAILED;
+        }
     encoder->encoder_private = s;
     encoder->run_encoder = encoder_main;
     return SUCCEEDED;

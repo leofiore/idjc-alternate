@@ -23,8 +23,8 @@
 struct lm2e_data
     {
     twolame_options *gfp;
-    int twolame_mode;
-    int twolame_channels;
+    TWOLAME_MPEG_version mpeg_version;
+    TWOLAME_MPEG_mode mpeg_mode;
     char *metadata;
     int twolame_samples;
     unsigned char *mp2buf;
