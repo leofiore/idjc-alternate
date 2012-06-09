@@ -33,26 +33,26 @@
 
 /* -- header structures -- */
 typedef struct {
-    unsigned int samplerate;
-    unsigned int samples;
-    unsigned int framesize; /* physical size in bytes */
+	unsigned int samplerate;
+	unsigned int samples;
+	unsigned int framesize; /* physical size in bytes */
 } mpeg_header_t;
 
 typedef struct {
-    int syncword;   /* always 0xFFF */
-    int version;    /* 0 for mpeg4, 1 for mpeg 2 */
-    int layer;      /* always 0 */
-    int protection_absent;
-    int profile;    /* the mpeg audio object type minus 1 */
-    int samplerate_index;
-    int private_stream;
-    int channel_configuration;
-    int originality;
-    int home;
-    int copyrighted_stream;
-    int copyright_start;
-    int buffer_fullness;
-    int extra_frames; /* number of additional aac frames (RDBs) */
+	int syncword;   /* always 0xFFF */
+	int version;	/* 0 for mpeg4, 1 for mpeg 2 */
+	int layer;	  /* always 0 */
+	int protection_absent;
+	int profile;	/* the mpeg audio object type minus 1 */
+	int samplerate_index;
+	int private_stream;
+	int channel_configuration;
+	int originality;
+	int home;
+	int copyrighted_stream;
+	int copyright_start;
+	int buffer_fullness;
+	int extra_frames; /* number of additional aac frames (RDBs) */
 } adts_header_t;
 
 typedef struct {
@@ -71,11 +71,12 @@ typedef struct {
 	int emphasis;
 	int stereo;
 	int bitrate;
+	int slotsize;
 } mp3_header_t;
 
 /* -- local state -- */
 typedef struct {
-    /* running count of number of frames processed */
+	/* running count of number of frames processed */
 	unsigned int frames;
 	/* the number of samples for the current frame */
 	int frame_samples;
@@ -87,10 +88,10 @@ typedef struct {
 	int header_bridges;
 	/* put part of header here if it spans a boundary */
 	unsigned char *header_bridge;
-    /* the size of the parsed part of the header */
-    int header_size;
-    /* the reader to use */
-    int (*header_read)(const uint8_t *window, mpeg_header_t *mh);
+	/* the size of the parsed part of the header */
+	int header_size;
+	/* the reader to use */
+	int (*header_read)(const uint8_t *window, mpeg_header_t *mh);
 } mpeg_data_t;
 
 /* -- static prototypes -- */
@@ -104,12 +105,12 @@ static int mp3_header(const uint8_t *window, mpeg_header_t *mh);
 
 int shout_open_adts(shout_t *self)
 {
-    return open_mpeg(self, MIN_ADTS_HEADER_SIZE, adts_header);
+	return open_mpeg(self, MIN_ADTS_HEADER_SIZE, adts_header);
 }
 
 int shout_open_mp3(shout_t *self)
 {
-    return open_mpeg(self, LAYER3_HEADER_SIZE, mp3_header);
+	return open_mpeg(self, LAYER3_HEADER_SIZE, mp3_header);
 }
 
 static int open_mpeg(shout_t *self, size_t header_size, int (*reader)(const uint8_t *, mpeg_header_t *))
@@ -118,16 +119,16 @@ static int open_mpeg(shout_t *self, size_t header_size, int (*reader)(const uint
 
 	if (!(mpeg_data = (mpeg_data_t *)calloc(1, sizeof(mpeg_data_t))))
 		return SHOUTERR_MALLOC;
-    if (!(mpeg_data->header_bridge = (unsigned char *)malloc(header_size - 1)))
-        return SHOUTERR_MALLOC;
+	if (!(mpeg_data->header_bridge = (unsigned char *)malloc(header_size - 1)))
+		return SHOUTERR_MALLOC;
 
 	self->format_data = mpeg_data;
 
 	self->send = send_mpeg;
 	self->close = close_mpeg;
 
-    mpeg_data->header_size = header_size;
-    mpeg_data->header_read = reader;
+	mpeg_data->header_size = header_size;
+	mpeg_data->header_read = reader;
 
 	return SHOUTERR_SUCCESS;
 }
@@ -168,7 +169,7 @@ static int send_mpeg(shout_t *self, const unsigned char *buff, size_t len)
 			return self->error = SHOUTERR_MALLOC;
 		}
 
-        memcpy(bridge_buff, mpeg_data->header_bridge, mpeg_data->header_bridges);
+		memcpy(bridge_buff, mpeg_data->header_bridge, mpeg_data->header_bridges);
 		memcpy(&bridge_buff[mpeg_data->header_bridges], buff, len);
 
 		buff = bridge_buff;
@@ -265,103 +266,115 @@ static int send_mpeg(shout_t *self, const unsigned char *buff, size_t len)
 
 static void close_mpeg(shout_t *self)
 {
-    mpeg_data_t *mpeg_data = (mpeg_data_t *)self->format_data;
+	mpeg_data_t *mpeg_data = (mpeg_data_t *)self->format_data;
 
-    free(mpeg_data->header_bridge);
+	free(mpeg_data->header_bridge);
 	free(mpeg_data);
 }
 
 /* -- adts/aac frame parsing stuff -- */
 static void parse_adts_header(adts_header_t *h, mpeg_header_t *mh, const uint8_t *window)
 {
-    static const unsigned int samplerate[16] = {
-        96000, 88200, 64000, 48000, 44100, 32000, 24000,
-        22050, 16000, 12000, 11025, 8000, 7350, 0, 0, 0
-    };
+	static const unsigned int samplerate[16] = {
+		96000, 88200, 64000, 48000, 44100, 32000, 24000,
+		22050, 16000, 12000, 11025, 8000, 7350, 0, 0, 0
+	};
 
-    h->syncword = (int)window[0] << 4 | window[1] >> 4;
-    h->layer = window[1] >> 1 & 0x3;
-    h->protection_absent = window[1] & 0x1;
-    h->samplerate_index = window[2] >> 2 & 0xf;
-    h->extra_frames = window[6] & 0x3;
+	h->syncword = (int)window[0] << 4 | window[1] >> 4;
+	h->layer = window[1] >> 1 & 0x3;
+	h->protection_absent = window[1] & 0x1;
+	h->samplerate_index = window[2] >> 2 & 0xf;
+	h->extra_frames = window[6] & 0x3;
 
-    mh->samplerate = samplerate[h->samplerate_index];
-    mh->samples = 1024 * (1 + h->extra_frames);
-    mh->framesize = ((int)window[3] << 11 | (int)window[4] << 3 | window[5] >> 5) & 0x1fff;
+	mh->samplerate = samplerate[h->samplerate_index];
+	mh->samples = 1024 * (1 + h->extra_frames);
+	mh->framesize = ((int)window[3] << 11 | (int)window[4] << 3 | window[5] >> 5) & 0x1fff;
 
-    /* -- unused values -- */
-    #if 0
-    h->version = window[1] >> 3 & 0x1;
-    h->profile = window[2] >> 6;
-    h->private_stream = window[2] >> 1 & 0x1;
-    h->channel_configuration = ((int)window[2] << 2 | window[3] >> 6) & 0x7;
-    h->originality = window[3] >> 5 & 0x1;
-    h->home = window[3] >> 4 & 0x1;
-    h->copyrighted_stream = window[3] >> 3 & 0x1;
-    h->copyright_start = window[3] >> 2 & 0x1;
-    h->buffer_fullness = ((int)window[5] << 6 | window[6] >> 2) & 0x7ff;
-    #endif
+	/* -- unused values -- */
+	#if 0
+	h->version = window[1] >> 3 & 0x1;
+	h->profile = window[2] >> 6;
+	h->private_stream = window[2] >> 1 & 0x1;
+	h->channel_configuration = ((int)window[2] << 2 | window[3] >> 6) & 0x7;
+	h->originality = window[3] >> 5 & 0x1;
+	h->home = window[3] >> 4 & 0x1;
+	h->copyrighted_stream = window[3] >> 3 & 0x1;
+	h->copyright_start = window[3] >> 2 & 0x1;
+	h->buffer_fullness = ((int)window[5] << 6 | window[6] >> 2) & 0x7ff;
+	#endif
 }
 
 static int adts_header(const uint8_t *window, mpeg_header_t *mh)
 {
-    adts_header_t h;
+	adts_header_t h;
 
-    /* fill out the header structs */
-    parse_adts_header(&h, mh, window);
+	/* fill out the header structs */
+	parse_adts_header(&h, mh, window);
 
-    /* check for syncword */
-    if (h.syncword != 0xfff)
-        return 0;
+	/* check for syncword */
+	if (h.syncword != 0xfff)
+		return 0;
 
-    /* check that layer is valid */
-    if (h.layer != 0)
-        return 0;
+	/* check that layer is valid */
+	if (h.layer != 0)
+		return 0;
 
-    /* make sure sample rate is sane */
-    if (mh->samplerate == 0)
-        return 0;
+	/* make sure sample rate is sane */
+	if (mh->samplerate == 0)
+		return 0;
 
-    /* make sure frame length is sane */
-    if (mh->framesize < (h.protection_absent ? MIN_ADTS_HEADER_SIZE : MAX_ADTS_HEADER_SIZE))
-        return 0;
+	/* make sure frame length is sane */
+	if (mh->framesize < (h.protection_absent ? MIN_ADTS_HEADER_SIZE : MAX_ADTS_HEADER_SIZE))
+		return 0;
 
-    return 1;
+	return 1;
 }
 
 /* -- mp3 frame parsing stuff -- */
 static void parse_mp3_header(mp3_header_t *h, mpeg_header_t *mh, const uint8_t *window)
 {
-    static const unsigned int bitrate[3][3][16] =
-    {
-        {
-            { 0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0 },
-            { 0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 0 },
-            { 0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0 }
-        }, {
-            { 0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0 },
-            { 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0 },
-            { 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0 }
-        }, {
-            { 0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0 },
-            { 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0 },
-            { 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0 }
-        }
-    };
+	static const unsigned int bitrate[3][3][16] =
+	{
+		{
+			{ 0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0 },
+			{ 0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 0 },
+			{ 0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0 }
+		}, {
+			{ 0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0 },
+			{ 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0 },
+			{ 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0 }
+		}, {
+			{ 0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0 },
+			{ 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0 },
+			{ 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0 }
+		}
+	};
 
-    static const unsigned int samplerate[3][4] =
-    {
-        { 44100, 48000, 32000, 0 },
-        { 22050, 24000, 16000, 0 },
-        { 11025, 8000, 8000, 0 }
-    };
+	static const unsigned int samplerate[3][4] =
+	{
+		{ 44100, 48000, 32000, 0 },
+		{ 22050, 24000, 16000, 0 },
+		{ 11025, 12000, 8000, 0 }
+	};
 
-    uint32_t head = (window[0] << 24) |
+	static const unsigned int samples[3][4] =
+	{
+		{ 384, 1152, 1152, 0 },
+		{ 384, 1152, 576, 0 },
+		{ 384, 1152, 576, 0 }
+	};
+	
+	static const unsigned int slotsize[4] = 
+	{
+		4, 1, 1, 0
+	};
+
+	uint32_t head = (window[0] << 24) |
 			(window[1] << 16) |
 			(window[2] << 8) |
 			(window[3]);
 
-    h->syncword = (head >> 20) & 0xfff;
+	h->syncword = (head >> 20) & 0xfff;
 	h->version = ((head >> 19) & 0x1) ? 0 : 1;
 	if ((h->syncword & 0x1) == 0)
 		h->version = 2;
@@ -379,20 +392,18 @@ static void parse_mp3_header(mp3_header_t *h, mpeg_header_t *mh, const uint8_t *
 
 	h->stereo = (h->mode == 3) ? 1 : 2;
 	h->bitrate = bitrate[h->version][h->layer][h->bitrate_index];
+	h->slotsize = slotsize[h->layer];
 	mh->samplerate = samplerate[h->version][h->samplerate_index];
+	mh->samples = samples[h->version][h->layer];
 
-	if (h->version == 0)
-		mh->samples = 1152;
-	else
-		mh->samples = 576;
-
-	if (mh->samplerate)
-		mh->framesize = (mh->samples * h->bitrate * 1000 / mh->samplerate) / 8 + h->padding;
+	if (mh->samplerate && h->slotsize)
+		mh->framesize = (mh->samples * h->bitrate * 1000 /
+				(8 * mh->samplerate * h->slotsize)) * h->slotsize + h->padding;
 }
 
 static int mp3_header(const uint8_t *window, mpeg_header_t *mh)
 {
-    mp3_header_t h;
+	mp3_header_t h;
 
 	/* fill out the header struct */
 	parse_mp3_header(&h, mh, window);
