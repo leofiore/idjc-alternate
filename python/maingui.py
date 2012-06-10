@@ -1795,7 +1795,7 @@ class MainWindow:
              deck2adj = self.deck2adj.get_value() * -1.0 + 100.0
 
         string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:" \
-                        "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" % (
+                        "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:" % (
                         deckadj,
                         deck2adj,
                         self.crossadj.get_value(),
@@ -1827,7 +1827,6 @@ class MainWindow:
                         self.prefs_window.dj_aud_adj.get_value(),
                         self.crosspattern.get_active(),
                         self.dsp_button.get_active(), 
-                        self.prefs_window.twodblimit.get_active(),
                         )
         self.mixer_write("MIXR=%s\nACTN=mixstats\nend\n" % string_to_send)
 

@@ -238,7 +238,17 @@ static long encoder_resampler_get_data(void *cb_data, float **data)
         }
     return (long)n_samples;
     }
-  
+
+static void encoder_apply_pregain(struct encoder_ip_data *id, float gain)
+    {
+    for (int i = 0; i < id->channels; ++i)
+        {
+        float *bp = id->buffer[i];
+        for (size_t s = id->qty_samples; s; --s)
+            *bp++ *= gain;
+        }
+    }
+
 struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, size_t min_samples_needed, size_t max_samples, float **caller_supplied_buffer)
     {
     struct encoder_ip_data *id;
@@ -300,7 +310,10 @@ struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, size_t m
         if (id->qty_samples == 0)
             goto no_data;
         }
+
+    encoder_apply_pregain(id, encoder->pregain);
     return id;
+
     no_data:
     encoder_ip_data_free(id);
     return NULL;
@@ -571,6 +584,7 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
     self->target_samplerate = atol(ev->samplerate);
     self->resample_f = !(self->samplerate == self->target_samplerate);
     self->sr_conv_ratio = (double)self->target_samplerate / (double)self->samplerate;
+    self->pregain = atof(ev->pregain);
     if (ev->bitrate)
         self->bitrate = atoi(ev->bitrate);
     self->n_channels = strcmp(ev->mode, "mono") ? 2 : 1;
@@ -666,8 +680,6 @@ int encoder_new_song_metadata(struct threads_info *ti, struct universal_vars *uv
             free(self->title);
         if (self->album)
             free(self->album);
-        if (self->artist_title_lat1)
-            free(self->artist_title_lat1);
         if (ev->artist)
             self->artist = strdup(ev->artist);
         else
@@ -680,11 +692,7 @@ int encoder_new_song_metadata(struct threads_info *ti, struct universal_vars *uv
             self->title = strdup(ev->title);
         else
             self->title = strdup("");
-        if (ev->artist_title_lat1)
-            self->artist_title_lat1 = strdup(ev->artist_title_lat1);
-        else
-            self->artist_title_lat1 = strdup("");
-        if (!(self->artist && self->title && self->album && self->artist_title_lat1))
+        if (!(self->artist && self->title && self->album))
             {
             pthread_mutex_unlock(&self->metadata_mutex);
             fprintf(stderr, "encoder_new_metadata: malloc failure\n");
@@ -706,16 +714,10 @@ int encoder_new_custom_metadata(struct threads_info *ti, struct universal_vars *
     self->new_metadata = FALSE;
     if (self->custom_meta)
         free(self->custom_meta);
-    if (self->custom_meta_lat1)
-        free(self->custom_meta_lat1);
     self->custom_meta = ev->custom_meta;
     ev->custom_meta = NULL;
-    self->custom_meta_lat1 = ev->custom_meta_lat1;
-    ev->custom_meta_lat1 = NULL;
     if (!self->custom_meta)
         self->custom_meta = strdup("");
-    if (!self->custom_meta_lat1)
-        self->custom_meta_lat1 = strdup("");
     if (self->use_metadata)
         self->new_metadata = TRUE;
     pthread_mutex_unlock(&self->metadata_mutex);
@@ -744,9 +746,7 @@ struct encoder *encoder_init(struct threads_info *ti, int numeric_id)
     self->artist = strdup("");
     self->title = strdup("");
     self->album = strdup("");
-    self->artist_title_lat1 = strdup("");
     self->custom_meta = strdup("%s");
-    self->custom_meta_lat1 = strdup("%s");
     while ((self->oggserial = rand()) + 20000 < 0 || self->oggserial < 100);
     pthread_mutex_init(&self->mutex, NULL);
     pthread_mutex_init(&self->metadata_mutex, NULL);
@@ -773,15 +773,11 @@ void encoder_destroy(struct encoder *self)
         free(self->rs_input[1]);
     if (self->custom_meta)
         free(self->custom_meta);
-    if (self->custom_meta_lat1)
-        free(self->custom_meta_lat1);
     if (self->artist)
         free(self->artist);
     if (self->title)
         free(self->title);
     if (self->album)
         free(self->album);
-    if (self->artist_title_lat1)
-        free(self->artist_title_lat1);
     free(self);
     }

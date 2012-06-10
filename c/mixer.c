@@ -105,8 +105,6 @@ static sample_t left_peak = -1.0F, right_peak = -1.0F;
 /*struct beatproc *beat_lp, *beat_rp;*/
 /* flag to indicate if audio is routed via dsp interface */
 static int using_dsp;
-/* flag to indicate that stream audio be reduced for improved encode quality */
-static int twodblimit;
 /* handles for microphone */
 static struct mic **mics;
 /* peakfilter handles for stream peak */
@@ -720,12 +718,6 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 *rsp = *dorp;
                 }
 
-            if (twodblimit)
-                {
-                *lsp *= 0.7943;
-                *rsp *= 0.7943;
-                }
-
             if (stream_monitor == FALSE)
                 {
                 *lap = ((lplcm * lp_lc_aud) + (rplcm * rp_lc_aud) + (jplcm * jp_lc_aud)) * df + d_micmix + lc_s_auxmix + (iplcm * ip_lc_aud);
@@ -864,12 +856,6 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                     *rsp = *dorp;
                     }
 
-                if (twodblimit)
-                    {
-                    *lsp *= 0.7943;
-                    *rsp *= 0.7943;
-                    }
-
                 if (stream_monitor == FALSE)
                     {
                     *lap = ((lplcm * lp_lc_aud) + (rplcm * rp_lc_aud)) * df + *lprp + lc_s_auxmix + (iplcm * ip_lc_aud) + d_micmix + (jplcm * jp_lc_str);
@@ -1002,12 +988,6 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                         *rsp = *dorp;
                         }
 
-                    if (twodblimit)
-                        {
-                        *lsp *= 0.7943;
-                        *rsp *= 0.7943;
-                        }
-
                     if (stream_monitor == FALSE) /* the DJ can hear the VOIP phone call */
                         {
                         *lap = (*lsp * mb_lc_aud) + (jplcm * jp_lc_aud) + d_micmix + (lc_s_auxmix *mb_lc_aud) + *lprp;
@@ -1137,12 +1117,6 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                             {
                             *lsp = *dolp;
                             *rsp = *dorp;
-                            }
-
-                        if (twodblimit)
-                            {
-                            *lsp *= 0.7943;
-                            *rsp *= 0.7943;
                             }
 
                         if (stream_monitor == FALSE)
@@ -1642,10 +1616,10 @@ int mixer_main()
     if (!strcmp(action, "mixstats"))
         {
         if(sscanf(mixer_string,
-                 ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:",
+                 ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:",
                  &volume, &volume2, &crossfade, &jinglesvolume, &jinglesvolume2 , &interludevol, &mixbackvol, &jingles_playing,
                  &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
-                 &s.new_left_pause, &s.new_right_pause, &s.flush_left, &s.flush_right, &s.flush_jingles, &s.flush_interlude, &simple_mixer, &eot_alarm_set, &mixermode, &s.fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed), &speed_variance, &dj_audio_level, &crosspattern, &s.use_dsp, &twodblimit) !=31)
+                 &s.new_left_pause, &s.new_right_pause, &s.flush_left, &s.flush_right, &s.flush_jingles, &s.flush_interlude, &simple_mixer, &eot_alarm_set, &mixermode, &s.fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed), &speed_variance, &dj_audio_level, &crosspattern, &s.use_dsp) !=30)
             {
             fprintf(stderr, "mixer got bad mixer string\n");
             return TRUE;

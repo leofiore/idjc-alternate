@@ -34,22 +34,16 @@ typedef jack_default_audio_sample_t sample_t;
 static void packetize_metadata(struct encoder *e, struct lm2e_data * const s)
     {
     size_t l = 4;
-    char *stream_meta;
     
     pthread_mutex_lock(&e->metadata_mutex);
     
-    if (e->custom_meta_lat1[0])
-        stream_meta = e->custom_meta_lat1;
-    else
-        stream_meta = e->artist_title_lat1;
-        
-    l += strlen(stream_meta);
+    l += strlen(e->custom_meta);
     l += strlen(e->artist);
     l += strlen(e->title);
     l += strlen(e->album);
     
     if ((s->metadata = realloc(s->metadata, l)))
-        snprintf(s->metadata, l, "%s\n%s\n%s\n%s", stream_meta, e->artist, e->title, e->album);
+        snprintf(s->metadata, l, "%s\n%s\n%s\n%s", e->custom_meta, e->artist, e->title, e->album);
     else
         fprintf(stderr, "malloc failure\n");
         
@@ -78,7 +72,6 @@ static void encoder_main(struct encoder *encoder)
     struct lm2e_data * const s = encoder->encoder_private;
     struct encoder_ip_data *id;
     int mp2bytes = 0;
-    float *l, *r, *endp;
 
     if (encoder->encoder_state == ES_STARTING)
         {
@@ -106,8 +99,6 @@ static void encoder_main(struct encoder *encoder)
             free(s->mp2buf);
             goto bailout;
             }
-            
-        twolame_print_config(s->gfp);
 
         ++encoder->oggserial;
         s->packetflags = PF_INITIAL;
@@ -132,15 +123,6 @@ static void encoder_main(struct encoder *encoder)
             {
             if ((id = encoder_get_input_data(encoder, 1024, 8192, NULL)))
                 {
-                if (id->channels == 1)      /* mono and stereo audio rescaling */
-                    for (l = id->buffer[0], endp = l + id->qty_samples; l < endp;)
-                        *l++ *= 1.0F;
-                else
-                    for (l = id->buffer[0], r = id->buffer[1], endp = l + id->qty_samples; l < endp;)
-                        {
-                        *l++ *= 1.0F;
-                        *r++ *= 1.0F;
-                        }
                 mp2bytes = twolame_encode_buffer_float32(s->gfp, id->buffer[0], id->buffer[1], id->qty_samples, s->mp2buf, s->mp2bufsize);
                 encoder_ip_data_free(id);
                 s->twolame_samples += id->qty_samples;

@@ -26,6 +26,7 @@ import gobject
 
 from idjc import FGlobs
 from .gtkstuff import LEDDict
+from .tooltips import set_tip
 
 
 _ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
@@ -310,7 +311,7 @@ def format_collate(specifier):
 
 
 class FormatDropdown(gtk.VBox):
-    def __init__(self, prev_object, title, ident, elements, row):
+    def __init__(self, prev_object, title, ident, elements, row, tooltip=None):
         """Parameter 'elements' is a tuple of dictionaries.
         
         @title: appears above the widget
@@ -325,6 +326,8 @@ class FormatDropdown(gtk.VBox):
         gtk.VBox.__init__(self)
         frame = gtk.Frame(" %s " % title)
         frame.set_label_align(0.5, 0.5)
+        if tooltip is not None:
+            set_tip(frame, tooltip)
         self.pack_start(frame, fill=False)
         size_group = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
         vbox = gtk.VBox()
@@ -417,7 +420,7 @@ class FormatDropdown(gtk.VBox):
 
 
 class FormatSpin(gtk.VBox):
-    def __init__(self, prev_object, title, ident, elements, row, unit, next_element_name, suggested_values):
+    def __init__(self, prev_object, title, ident, elements, row, unit, next_element_name, suggested_values, tooltip=None):
         """Parameter 'elements' is a tuple of dictionaries.
         
         @title: appears above the widget
@@ -435,6 +438,8 @@ class FormatSpin(gtk.VBox):
         gtk.VBox.__init__(self)
         frame = gtk.Frame(" %s " % title)
         frame.set_label_align(0.5, 0.5)
+        if tooltip is not None:
+            set_tip(frame, tooltip)
         self.pack_start(frame, fill=False)
         vbox = gtk.VBox()
         vbox.set_border_width(3)
@@ -444,6 +449,8 @@ class FormatSpin(gtk.VBox):
         self._spin_button = gtk.SpinButton(adjustment)
         if suggested_values is not None:
             self._spin_button.connect("populate_popup", self._on_populate_popup, suggested_values)
+            if tooltip is None:
+                set_tip(self._spin_button, _('Right click for suggested values.'))
         vbox.pack_start(self._spin_button, False)
         self._fixed = gtk.Label()
         self._fixed.set_alignment(0.5, 0.5)
@@ -523,14 +530,33 @@ class FormatSpin(gtk.VBox):
 
 
 
+class FormatPregain(FormatDropdown):
+    """Prescale audio before hitting the codec."""
+    
+    def __init__(self, prev_object):
+        codec = format_collate(prev_object)["codec"]
+        
+        FormatDropdown.__init__(self, prev_object, _('Pregain'), "pregain", (
+            dict(display_text=_('0 dB'), value="1.0"),
+            dict(display_text=_('-0.5 dB'), value="0.944"),
+            dict(display_text=_('-1.0 dB'), value="0.891"),
+            dict(display_text=_('-1.5 dB'), value="0.841"),
+            dict(display_text=_('-2.0 dB'), value="0.794", default=(codec in ("mp2", "mp3"))),
+            dict(display_text=_('-2.5 dB'), value="0.750"),
+            dict(display_text=_('-3.0 dB'), value="0.708", default=(codec == "speex"))), 1,
+            _("Older lossy codecs like mp3 don't handle loud audio as well as others. This control prevents them from being overdriven."))
+
+
+
 class FormatResampleQuality(FormatDropdown):
     """Resample quality."""
     
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Resample Quality'), "resample_quality", (
-            dict(display_text=_('Highest'), value="highest"),
-            dict(display_text=_('Medium'), value="medium", default=True),
-            dict(display_text=_('Lowest'), value="lowest")), 1)
+            dict(display_text=_('Highest'), value="highest", chain="FormatPregain"),
+            dict(display_text=_('Medium'), value="medium", chain="FormatPregain", default=True),
+            dict(display_text=_('Lowest'), value="lowest", chain="FormatPregain")), 1,
+            _("All of these settings will provide adequate audio quality. The highest setting will preserve more of the original audio bandwidth at the expense of many CPU cycles."))
 
 
 
@@ -541,8 +567,8 @@ class FormatMetadataChoice(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata_mode", (
             dict(display_text=_('Suppressed'), value="suppressed", chain="FormatResampleQuality"),
             dict(display_text=_('UTF-8'), value="utf-8", chain="FormatResampleQuality"),
-            dict(display_text=_('Latin1'), value="latin1", chain="FormatResampleQuality"),
-            dict(display_text=_('Default'), value="default-encoding", chain="FormatResampleQuality", default=True)), 1)
+            dict(display_text=_('Latin1 *'), value="latin1", chain="FormatResampleQuality", default=True)), 1,
+            _("This affects the stream metadata only. Recordings will use UTF-8 for their metadata."))
 
 
 
@@ -552,7 +578,8 @@ class FormatMetadataUTF8(FormatDropdown):
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata_mode", (
             dict(display_text=_('Suppressed'), value="suppressed", chain="FormatResampleQuality"),
-            dict(display_text=_('UTF-8'), value="utf-8", chain="FormatResampleQuality", default=True)), 1)
+            dict(display_text=_('UTF-8'), value="utf-8", chain="FormatResampleQuality", default=True)), 1,
+            _("Choose whether the stream will carry dynamic metadata. In the case of Ogg streams this is important as a great many players can't handle chained Ogg streams which result from the metadata updates."))
 
 
 
@@ -562,7 +589,8 @@ class FormatMetadataLatin1(FormatDropdown):
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Metadata'), "metadata_mode", (
             dict(display_text=_('Suppressed'), value="suppressed", chain="FormatResampleQuality"),
-            dict(display_text=_('Latin1'), value="latin1", chain="FormatResampleQuality", default=True)), 1)
+            dict(display_text=_('Latin1'), value="latin1", chain="FormatResampleQuality", default=True)), 1,
+            _("Choose whether to send metadata. Recordings will use UTF-8 metadata."))
 
 
 
@@ -580,9 +608,10 @@ class FormatCodecMPEGMP2Mode(FormatDropdown):
             defmode = "stereo"
 
         FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
-            dict(display_text=_("Mono"), value="mono", default=(defmode == "mono"), chain="FormatMetadataLatin1"),
-            dict(display_text=_("Stereo"), value="stereo", default=(defmode == "stereo"), chain="FormatMetadataLatin1"),
-            dict(display_text=_("Joint Stereo"), value="jointstereo", default=(defmode=="jointstereo"), chain="FormatMetadataLatin1")), 0)
+            dict(display_text=_("Mono"), value="mono", default=(defmode == "mono"), chain="FormatMetadataChoice"),
+            dict(display_text=_("Stereo"), value="stereo", default=(defmode == "stereo"), chain="FormatMetadataChoice"),
+            dict(display_text=_("Joint Stereo"), value="jointstereo", default=(defmode=="jointstereo"), chain="FormatMetadataChoice")), 0,
+            _('Joint Stereo is a good choice on streams with low bitrates.'))
 
 
 
@@ -593,7 +622,8 @@ class FormatCodecMPEGMP2ModeStereo(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
             dict(display_text=_("Mono"), value="mono", sensitive=False, chain="FormatMetadataLatin1"),
             dict(display_text=_("Stereo"), value="stereo", default=True, chain="FormatMetadataLatin1"),
-            dict(display_text=_("Joint Stereo"), value="jointstereo", chain="FormatMetadataLatin1")), 0)
+            dict(display_text=_("Joint Stereo"), value="jointstereo", chain="FormatMetadataLatin1")), 0,
+            _('Due to the high bitrate selected, this codec will only support stereo.'))
 
 
 
@@ -604,7 +634,8 @@ class FormatCodecMPEGMP2ModeSingle(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
             dict(display_text=_("Mono"), value="mono", chain="FormatMetadataLatin1"),
             dict(display_text=_("Stereo"), value="stereo", sensitive=False, chain="FormatMetadataLatin1"),
-            dict(display_text=_("Joint Stereo"), value="jointstereo", sensitive=False, chain="FormatMetadataLatin1")), 0)
+            dict(display_text=_("Joint Stereo"), value="jointstereo", sensitive=False, chain="FormatMetadataLatin1")), 0,
+            _('Due to the low bitrate selected, this codec will only support mono.'))
 
 
 
@@ -683,7 +714,8 @@ class FormatCodecMPEGMP2(FormatDropdown):
             # TC: v stands for version.
             dict(display_text=_("V 1"), value="1", chain="FormatCodecMPEGMP2V1SampleRates"),
             # TC: v stands for version.
-            dict(display_text=_("V 2"), value="2", chain="FormatCodecMPEGMP2V2SampleRates")), 0)
+            dict(display_text=_("V 2"), value="2", chain="FormatCodecMPEGMP2V2SampleRates")), 0,
+            _('MPEG2 introduced lower samplerate options and corresponding lower bitrates. Choose 2 if those are required.'))
 
 
 
@@ -696,7 +728,8 @@ class FormatCodecMPEGMP3Quality(FormatDropdown):
             dict(display_text="1", value="1", chain="FormatMetadataChoice"),
             # TC: * means is the recommended setting.
             dict(display_text=_("2 *"), value="2", chain="FormatMetadataChoice", default=True)) + tuple(
-            dict(display_text=str(x), value=str(x), chain="FormatMetadataChoice") for x in range(3, 10)), 0)
+            dict(display_text=str(x), value=str(x), chain="FormatMetadataChoice") for x in range(3, 10)), 0,
+            _('Higher quality costs more in terms of CPU cycles.'))
 
 
 
@@ -715,7 +748,8 @@ class FormatCodecMPEGMP3Mode(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
             dict(display_text=_("Mono"), value="mono", default=(defmode == "mono"), chain="FormatCodecMPEGMP3Quality"),
             dict(display_text=_("Stereo"), value="stereo", default=(defmode == "stereo"), chain="FormatCodecMPEGMP3Quality"),
-            dict(display_text=_("Joint Stereo"), value="jointstereo", default=(defmode == "jointstereo"), chain="FormatCodecMPEGMP3Quality")), 0)
+            dict(display_text=_("Joint Stereo"), value="jointstereo", default=(defmode == "jointstereo"), chain="FormatCodecMPEGMP3Quality")), 0,
+            _('Joint Stereo is a good choice on streams with low bitrates'))
 
 
 
@@ -817,7 +851,8 @@ class FormatCodecSpeexComplexity(FormatDropdown):
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Complexity'), "complexity", 
             tuple(dict(display_text=str(x), value=str(x), chain="FormatMetadataUTF8", default=(x==5))
-                                                            for x in range(9, -1, -1)), 0)
+                                                            for x in range(9, -1, -1)), 0,
+            _('A quality setting that affects how heavily the CPU is used.'))
 
 
 
@@ -827,7 +862,8 @@ class FormatCodecSpeexQuality(FormatDropdown):
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Quality'), "quality", 
             tuple(dict(display_text=str(x), value=str(x), default=(x==8), chain="FormatCodecSpeexComplexity")
-                                                            for x in range(9, -1, -1)), 0)
+                                                            for x in range(9, -1, -1)), 0,
+            _('The higher this setting, the higher the bitrate.'))
 
 
 
@@ -838,7 +874,8 @@ class FormatCodecSpeexBandwidth(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Bandwidth'), "samplerate", (
             dict(display_text=_("Ultrawide"), value="32000", chain="FormatCodecSpeexQuality"),
             dict(display_text=_("Wide"), value="16000", chain="FormatCodecSpeexQuality"),
-            dict(display_text=_("Narrow"), value="8000", chain="FormatCodecSpeexQuality")), 0)
+            dict(display_text=_("Narrow"), value="8000", chain="FormatCodecSpeexQuality")), 0,
+            _('Essentially a samplerate setting.'))
 
 
 
@@ -859,7 +896,8 @@ class FormatCodecFLACBits(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Width'), "bitwidth", (
             dict(display_text=_("24 bit"), value="24", chain="FormatMetadataUTF8"),
             dict(display_text=_("20 bit"), value="20", chain="FormatMetadataUTF8"),
-            dict(display_text=_("16 bit"), value="16", chain="FormatMetadataUTF8")), 0)
+            dict(display_text=_("16 bit"), value="16", chain="FormatMetadataUTF8")), 0,
+            _('24 bit records with the highest level of detail. If file size is a concern maybe FLAC is not the right codec.'))
 
 
 
@@ -874,7 +912,8 @@ class FormatCodecVorbisVariability(FormatDropdown):
             dict(display_text=_(u"\u00B120%"), value="20", chain="FormatMetadataUTF8"),
             dict(display_text=_(u"\u00B130%"), value="30", chain="FormatMetadataUTF8"),
             dict(display_text=_(u"\u00B140%"), value="40", chain="FormatMetadataUTF8"),
-            dict(display_text=_(u"\u00B150%"), value="50", chain="FormatMetadataUTF8")), 0)
+            dict(display_text=_(u"\u00B150%"), value="50", chain="FormatMetadataUTF8")), 0,
+            _('This control is for enabling variable bitrate on Vorbis streams.'))
 
 
 
@@ -946,7 +985,8 @@ class FormatCodecXiphOgg(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Codec'), "codec", (
             dict(display_text=_('Vorbis'), value="vorbis", chain="FormatCodecVorbisMode"),
             dict(display_text=_('FLAC'), value="flac", chain="FormatCodecFLACMode"),
-            dict(display_text=_('Speex'), value="speex", chain="FormatCodecSpeexMode")), 0)
+            dict(display_text=_('Speex'), value="speex", chain="FormatCodecSpeexMode")), 0,
+            _('Codecs of the Ogg container.'))
 
 
 
@@ -959,7 +999,8 @@ class FormatCodecMPEG(FormatDropdown):
             dict(display_text=_('MP3'), value="mp3", chain="FormatCodecMPEGMP3", default=True),
             dict(display_text=_('AAC'), value="aac"),
             dict(display_text=_('AAC+'), value="aacp"),
-            dict(display_text=_('AAC+ v2'), value="aacpv2")), 0)
+            dict(display_text=_('AAC+ v2'), value="aacpv2")), 0,
+            _('Codecs of the MPEG family.'))
 
 
 
@@ -974,7 +1015,8 @@ class FormatFamily(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Family'), "family", (
             # TC: Xiph.org Ogg container format.
             dict(display_text=_('Xiph/Ogg'), value="ogg", chain="FormatCodecXiphOgg", shoutcast=False),
-            dict(display_text=_('MPEG'), value="mpeg", chain="FormatCodecMPEG", default=True)), 0)
+            dict(display_text=_('MPEG'), value="mpeg", chain="FormatCodecMPEG", default=True)), 0,
+            _('Codecs have been grouped by standards body and or container format.'))
 
 
 

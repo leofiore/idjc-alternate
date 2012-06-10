@@ -1266,97 +1266,8 @@ class StreamTab(Tab):
         sens = bool(widget.get_active())
         for each in (self.mount_entry, self.login_entry):
             each.set_sensitive(sens)
-        self.update_sensitives()
-
-
-    def update_sensitives(self, *params):
-        pass
 
     
-    def cb_file_dialog_response(self, widget, response_id):
-        self.update_sensitives()
-
-
-    def cb_format_notebook(self, widget, page, page_num):
-        if self.format_page != page_num:
-            self.format_page = page_num
-            self.update_sensitives()
-
-
-    def cb_subformat_notebook(self, widget, page, page_num):
-        if self.subformat_page != page_num:
-            self.subformat_page = page_num
-            self.update_sensitives()
-
-
-    def cb_mp3tab(self, widget, data = None):
-        if data == "standard" or data == "custom":
-            if widget.get_active():
-                self.mp3_bitrate_widget = data
-            else:
-                return
-        self.mp3_stereo_type = ("stereo", "mono", "jstereo")[
-                                        self.mp3_stereo_combo_box.get_active()]
-        self.mp3_encode_quality = \
-                        self.mp3_encoding_quality_combo_box.get_active_text()
-        if self.mp3_bitrate_widget == "standard":
-            self.mp3_bitrate = int(self.mp3_bitrate_combo_box.get_active_text())
-        elif self.mp3_bitrate_widget == "custom":
-            self.mp3_bitrate = int(self.mp3_bitrate_spin_adj.get_value())
-        self.mp3_standard_bitrate = self.mp3_bitrate in \
-                                                    self.mp3_standard_bitrates
-        self.mp3_samplerate = self.stream_resample_frame.resample_rate
-        self.mp3_resample_compatible = self.stream_resample_frame.mp3_compatible
-        self.mp3_compatibility = "freeformat"
-        if not self.mp3_resample_compatible:
-            self.mp3_compatibility = "s-rate!"
-        else:
-            if self.mpeg_std_search(self.mp3_bitrate, self.mp3_samplerate, \
-                                        self.mp3_mpeg2_5_bitrates_samplerates):
-                self.mp3_compatibility = "mpeg 2.5"
-            if self.mpeg_std_search(self.mp3_bitrate, self.mp3_samplerate, \
-                                        self.mp3_mpeg2_bitrates_samplerates):
-                self.mp3_compatibility = "mpeg 2"
-            if self.mpeg_std_search(self.mp3_bitrate, self.mp3_samplerate, \
-                                        self.mp3_mpeg1_bitrates_samplerates):
-                self.mp3_compatibility = "mpeg 1"
-        self.mp3_compatibility_status.push(1, self.mp3_compatibility)
-        self.mp3_freeformat = ("0", "1")[self.mp3_compatibility == "freeformat"]
-        self.update_sensitives()
-
-    
-    def cb_oggtab(self, widget, data = None):
-        ogg_bitrate = self.ogg_encoding_nominal_spin_adj.get_value()
-        minactive = self.ogg_min_checkbutton.get_active()
-        maxactive = self.ogg_max_checkbutton.get_active()
-        self.ogg_encoding_relmin_spin_control.set_sensitive(minactive)
-        self.ogg_encoding_relmax_spin_control.set_sensitive(maxactive)
-        if minactive:
-            ogg_min = self.ogg_encoding_relmin_spin_adj.get_value() + \
-                                                                    ogg_bitrate
-            if ogg_min <= 0:
-                ogg_min = -1
-        else:
-            ogg_min = -1
-        if maxactive:
-            ogg_max = self.ogg_encoding_relmax_spin_adj.get_value() + \
-                                                                    ogg_bitrate
-        else:
-            ogg_max = -1
-        self.send("sample_rate=%d\nbit_rate=%d\nbit_rate_min=%d\n"
-                    "bit_rate_max=%d\nstereo=%s\ncommand=test_ogg_values\n" % (
-                    self.stream_resample_frame.resample_rate, 
-                    ogg_bitrate, ogg_min, ogg_max,
-                    ("mono","stereo")[
-                            self.ogg_encoding_stereo_checkbutton.get_active()]))
-        self.vorbis_settings_valid = self.receive() == "succeeded"
-        self.update_sensitives()
-
-
-    def mpeg_std_search(self, bitrate, samplerate, brsr):
-        return bitrate in brsr[0] and samplerate in brsr[1]
-
-
     def server_reconnect(self):
         if self.connection_string:
             self.send("command=server_disconnect\n")
@@ -1553,31 +1464,32 @@ class StreamTab(Tab):
             cm = string_multireplace(raw_cm, table)
             
             fdata = self.format_control.get_settings()
+            encoding = "utf-8"
             if fdata["family"] == "mpeg" and fdata["codec"] in ("mp2", "mp3"):
                 if fdata["metadata_mode"] == "utf-8":
-                    other_encoding = "utf-8"
+                    disp = songname
                 else:
-                    other_encoding = "latin1"
-                disp = songname
+                    encoding = "latin1"
+                    disp = songname.decode("utf-8").encode(encoding, "replace").decode(encoding)
+                if not cm:
+                    cm = songname
             elif fdata["family"] == "ogg":
-                other_encoding = "utf-8"
                 disp = "[{0[%r]}], [{0[%t]}], [{0[%l]}]".format(dict(table))
             else:
-                other_encoding = "utf-8"
                 disp = "no metadata string defined for this stream format"
             
             if cm:
-                disp = cm
-            
-            cm_other_enc = cm.decode("utf-8").encode(other_encoding, "replace")
+                cm = cm.decode("utf-8").encode(encoding, "replace")
+                disp = cm.decode(encoding)
+                
             if fdata["metadata_mode"] == "suppressed":
                 disp = _('[Metadata suppressed]')
 
             self.metadata_display.push(0, disp)
             self.metadata_update.set_relief(gtk.RELIEF_HALF)
             self.scg.send("tab_id=%d\ndev_type=encoder\ncustom_meta=%s\n"
-                    "custom_meta_lat1=%s\ncommand=new_custom_metadata\n" % (
-                    self.numeric_id, cm, cm_other_enc))
+                    "command=new_custom_metadata\n" % (
+                    self.numeric_id, cm))
             self.scg.receive()
 
     def cb_new_metadata_format(self, widget):
@@ -1820,10 +1732,6 @@ class StreamTab(Tab):
         self.pack_start(self.details_nb, False)
         
         self.connection_pane = ConnectionPane(set_tip, self)
-        self.connection_pane.liststore.connect("row-deleted",
-                                                        self.update_sensitives)
-        self.connection_pane.liststore.connect("row-changed",
-                                                        self.update_sensitives)
         label = gtk.Label(_('Connection'))
         self.details_nb.append_page(self.connection_pane, label)
         label.show()
@@ -2549,20 +2457,10 @@ class SourceClientGui:
             each.record_buttons.record_button.set_active(whichrecorders.pop(0))
                 
     def new_metadata(self, artist, title, album, songname):
-        if artist:
-            artist_title = artist + " - " + title
-        else:
-            artist_title = title
-        if not self.parent.prefs_window.mp3_utf8.get_active():
-            artist_title_lat1 = artist_title.decode("utf-8", "replace").encode(
-                                                        "iso8859-1", "replace")
-        else:
-            artist_title_lat1 = artist_title
-
-        self.send("artist=%s\ntitle=%s\nalbum=%s\nartist_title_lat1=%s\n"
+        self.send("artist=%s\ntitle=%s\nalbum=%s\n"
                                     "command=new_song_metadata\n" % (
                                     artist.strip(), title.strip(),
-                                    album.strip(), artist_title_lat1.strip()))
+                                    album.strip()))
         if self.receive() == "succeeded":
             print "updated song metadata successfully"
 

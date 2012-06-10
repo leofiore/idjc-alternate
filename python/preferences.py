@@ -750,17 +750,6 @@ class mixprefs:
             set_tip(self.parent.deckvol,
                         _('The volume control shared by both music players.'))
 
-    def cb_twodblimit(self, widget):
-        if widget.get_active():
-            level = -2.0
-        else:
-            level = None
-        self.parent.str_l_peak.set_line(level)
-        self.parent.str_r_peak.set_line(level)
-        self.parent.str_l_rms_vu.set_line(level)
-        self.parent.str_r_rms_vu.set_line(level)
-        self.parent.send_new_mixer_stats()
-        
     def cb_rg_indicate(self, widget):
         left = self.parent.player_left
         right = self.parent.player_right
@@ -1031,16 +1020,6 @@ class mixprefs:
         vbox.pack_start(self.bonus_killer, False, False, 0)
         self.bonus_killer.show()
         
-        self.twodblimit = gtk.CheckButton(
-                                _('Restrict the stream audio ceiling to -2dB'))
-        vbox.pack_start(self.twodblimit, False, False, 0)
-        self.twodblimit.connect("toggled", self.cb_twodblimit)
-        self.twodblimit.show()
-        set_tip(self.twodblimit, _('This option may improve the audio quality '
-                'at the expense of a little playback volume. Limiting audio to'
-                ' -2dB at the encoder input will generally prevent decoded '
-                'audio from breaching 0dB.'))
-        
         self.speed_variance = gtk.CheckButton(
                             _('Enable the main-player speed/pitch controls'))
         vbox.pack_start(self.speed_variance, False, False, 0)
@@ -1084,15 +1063,6 @@ class mixprefs:
         set_tip(self.dither, _('This feature maybe improves the sound quality '
                             'a little when listening on a 24 bit sound card.'))
 
-        self.mp3_utf8 = gtk.CheckButton(
-                            _('Use utf-8 encoding when streaming mp3 metadata'))
-        self.mp3_utf8.set_active(True)
-        vbox.pack_start(self.mp3_utf8, False, False, 0)
-        self.mp3_utf8.show()
-        set_tip(self.mp3_utf8, _('It is standard to stream mp3 metadata with '
-                                'iso-8859-1 character encoding on shoutcast. '
-                                'This option should therefore not be used.'))
-        
         self.enable_tooltips = gtk.CheckButton(_('Enable tooltips'))
         self.enable_tooltips.connect("toggled", self.callback, "tooltips")
         vbox.pack_start(self.enable_tooltips, False, False, 0)
@@ -1459,9 +1429,7 @@ class mixprefs:
             "fastest_rs"    : self.fastest_resample,
             "speed_var"     : self.speed_variance,
             "dual_volume"   : self.dual_volume,
-            "twodblimit"    : self.twodblimit,
             "showtips"      : self.enable_tooltips,
-            "mp3utf8"       : self.mp3_utf8,
             "silencekiller" : self.silence_killer,
             "bonuskiller"   : self.bonus_killer,
             "rg_indicate"   : self.rg_indicate,

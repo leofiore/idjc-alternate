@@ -34,22 +34,16 @@ typedef jack_default_audio_sample_t sample_t;
 static void live_mp3_packetize_metadata(struct encoder *e, struct lm3e_data * const s)
     {
     size_t l = 4;
-    char *stream_meta;
     
     pthread_mutex_lock(&e->metadata_mutex);
     
-    if (e->custom_meta_lat1[0])
-        stream_meta = e->custom_meta_lat1;
-    else
-        stream_meta = e->artist_title_lat1;
-        
-    l += strlen(stream_meta);
+    l += strlen(e->custom_meta);
     l += strlen(e->artist);
     l += strlen(e->title);
     l += strlen(e->album);
     
     if ((s->metadata = realloc(s->metadata, l)))
-        snprintf(s->metadata, l, "%s\n%s\n%s\n%s", stream_meta, e->artist, e->title, e->album);
+        snprintf(s->metadata, l, "%s\n%s\n%s\n%s", e->custom_meta, e->artist, e->title, e->album);
     else
         fprintf(stderr, "malloc failure\n");
         
@@ -78,7 +72,7 @@ static void live_mp3_encoder_main(struct encoder *encoder)
     struct lm3e_data * const s = encoder->encoder_private;
     struct encoder_ip_data *id;
     int mp3bytes = 0;
-    float *l, *r, *endp;
+    //float *l, *r, *endp;
 
     if (encoder->encoder_state == ES_STARTING)
         {
@@ -100,6 +94,7 @@ static void live_mp3_encoder_main(struct encoder *encoder)
         lame_set_mode(s->gfp, s->lame_mode);
         lame_set_quality(s->gfp, s->lame_quality);
         lame_set_bWriteVbrTag(s->gfp, 0);
+        lame_set_scale(s->gfp, 32767.0f);
         if (lame_init_params(s->gfp) < 0)
             {
             fprintf(stderr, "live_mp3_encoder_main: LAME rejected the parameters given\n");
@@ -131,15 +126,6 @@ static void live_mp3_encoder_main(struct encoder *encoder)
             {
             if ((id = encoder_get_input_data(encoder, 1024, 8192, NULL)))
                 {
-                if (id->channels == 1)      /* mono and stereo audio rescaling */
-                    for (l = id->buffer[0], endp = l + id->qty_samples; l < endp;)
-                        *l++ *= 32768.0F;
-                else
-                    for (l = id->buffer[0], r = id->buffer[1], endp = l + id->qty_samples; l < endp;)
-                        {
-                        *l++ *= 32768.0F;
-                        *r++ *= 32768.0F;
-                        }
                 mp3bytes = lame_encode_buffer_float(s->gfp, id->buffer[0], id->buffer[1], id->qty_samples, s->mp3buf, s->mp3bufsize);
                 encoder_ip_data_free(id);
                 s->lame_samples += id->qty_samples;
