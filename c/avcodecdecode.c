@@ -40,7 +40,6 @@ static pthread_mutex_t mutex;
 void once_init()
     {
     pthread_mutex_init(&mutex, NULL);
-    avcodec_init();
     avcodec_register_all();
     av_register_all();
     }
@@ -61,7 +60,7 @@ static void avcodecdecode_eject(struct xlplayer *xlplayer)
     pthread_mutex_lock(&mutex);
     avcodec_close(self->c);
     pthread_mutex_unlock(&mutex);
-    av_close_input_file(self->ic);
+    avformat_close_input(&self->ic);
     }
 
 static void avcodecdecode_init(struct xlplayer *xlplayer)
@@ -119,7 +118,6 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
     struct avcodecdecode_vars *self = xlplayer->dec_data;
     AVPacket pkt, pktcopy;
     int size, out_size, len, frames, channels = self->c->channels, ret;
-    uint8_t *inbuf_ptr;
     SRC_DATA *src_data = &xlplayer->src_data;
     
     if ((ret = av_read_frame(self->ic, &pkt)) < 0 || (size = pkt.size) == 0)
@@ -143,7 +141,6 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
         xlplayer->playmode = PM_EJECTING;
         return;
         }
-    inbuf_ptr = pkt.data;
     pktcopy = pkt;
 
     if (pkt.stream_index != (int)self->stream)
@@ -157,11 +154,10 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
         {
         out_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
         pthread_mutex_lock(&mutex);
-#ifdef AVCODEC_DECODE_AUDIO3
+
         len = avcodec_decode_audio3(self->c, (short *)self->outbuf, &out_size, &pktcopy);
-#else
-        len = avcodec_decode_audio2(self->c, (short *)self->outbuf, &out_size, inbuf_ptr, size);
-#endif
+
+
         pthread_mutex_unlock(&mutex);
         frames = (out_size >> 1) / channels;
 
@@ -173,7 +169,6 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
 
         pktcopy.data += len;
         pktcopy.size -= len;
-        inbuf_ptr += len;
         size -= len;
 
         if (out_size <= 0)
@@ -240,12 +235,18 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
     if (self->stream == self->ic->nb_streams)
         {
         fprintf(stderr, "avcodecdecode_reg: codec not found 1\n");
-        av_close_input_file(self->ic);
+        avformat_close_input(&self->ic);
         free(self);
         return REJECTED;
         }
     
-    av_find_stream_info(self->ic);
+    if (avformat_find_stream_info(self->ic, NULL) < 0)
+        {
+        fprintf(stderr, "avcodecdecode_reg: call to avformat_find_stream_info failed\n");
+        avformat_close_input(&self->ic);
+        free(self);
+        return REJECTED;
+        }
 
     pthread_mutex_lock(&mutex);
     self->codec = avcodec_find_decoder(self->c->codec_id);
@@ -253,7 +254,7 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
     if (!self->codec)
         {
         fprintf(stderr, "avcodecdecode_reg: codec not found 2\n");
-        av_close_input_file(self->ic);
+        avformat_close_input(&self->ic);
         free(self);
         return REJECTED;
         }
@@ -267,7 +268,7 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
         {
         pthread_mutex_unlock(&mutex);
         fprintf(stderr, "avcodecdecode_reg: could not open codec\n");
-        av_close_input_file(self->ic);
+        avformat_close_input(&self->ic);
         free(self);
         return REJECTED;
         }
@@ -300,9 +301,8 @@ void avformatinfo(char *pathname)
     char *keys[] = {"artist", "title", "album", NULL}, **kp;
     
     pthread_once(&once_control, once_init);
-    if (avformat_open_input(&ic, pathname, NULL, NULL) >= 0)
+    if (avformat_open_input(&ic, pathname, NULL, NULL) >= 0 && avformat_find_stream_info(ic, NULL) >= 0)
         {
-        av_find_stream_info(ic);
         mc = ic->metadata;
 
         for(kp = keys; *kp; kp++)
@@ -312,7 +312,7 @@ void avformatinfo(char *pathname)
             }
       
         printf("avformatinfo: duration=%d\n", (int)(ic->duration / AV_TIME_BASE));
-        av_close_input_file(ic);
+        avformat_close_input(&ic);
         }
     printf("avformatinfo: end\n");
     fflush(stdout);
