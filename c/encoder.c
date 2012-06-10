@@ -241,12 +241,13 @@ static long encoder_resampler_get_data(void *cb_data, float **data)
 
 static void encoder_apply_pregain(struct encoder_ip_data *id, float gain)
     {
-    for (int i = 0; i < id->channels; ++i)
-        {
-        float *bp = id->buffer[i];
-        for (size_t s = id->qty_samples; s; --s)
-            *bp++ *= gain;
-        }
+    if (gain != 1.0f)
+        for (int i = 0; i < id->channels; ++i)
+            {
+            float *bp = id->buffer[i];
+            for (size_t s = id->qty_samples; s; --s)
+                *bp++ *= gain;
+            }
     }
 
 struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, size_t min_samples_needed, size_t max_samples, float **caller_supplied_buffer)
