@@ -1,5 +1,11 @@
 * Changes in version 0.8.8 *
 
+Decoder module avcodecdecode.c now requests audio in float format from libavcodec with theoretically better audio quality.
+
+Fixed deprecation warnings from avcodecdecode.c.
+
+Fix to vu_update in python/maingui.py to allow received values to contain = characters.
+
 Added the ability to remove the main players' visibility. Useful for when using external players.
 
 Added JACK audio routing for all players. This means that individual player audio effects or external players can be used.
