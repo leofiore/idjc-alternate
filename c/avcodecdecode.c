@@ -184,10 +184,25 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
             continue;
             }
 
-        frames = (av_samples_get_buffer_size(NULL, channels,
-            self->frame->nb_samples, self->c->sample_fmt, 1) >> 1) / channels;
+        int buffer_size = av_samples_get_buffer_size(NULL, channels,
+                            self->frame->nb_samples, self->c->sample_fmt, 1);
 
-        xlplayer_make_audio_to_float(xlplayer, self->floatsamples, self->frame->data[0], frames, 16, channels); 
+        switch (self->c->sample_fmt) {
+            case AV_SAMPLE_FMT_FLT:
+                frames = (buffer_size >> 2) / channels;
+                memcpy(self->floatsamples, self->frame->data[0], buffer_size);
+                break;
+            case AV_SAMPLE_FMT_S16:
+                frames = (buffer_size >> 1) / channels;
+                xlplayer_make_audio_to_float(xlplayer, self->floatsamples,
+                                self->frame->data[0], frames, 16, channels);
+                break;
+            case AV_SAMPLE_FMT_NONE:
+            default:
+                fprintf(stderr, "avcodecdecode_play: unexpected data format\n");
+                xlplayer->playmode = PM_EJECTING;
+                return;
+            }
         
         if (self->resample)
             {
@@ -243,6 +258,8 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
         if(self->c->codec_type == AVMEDIA_TYPE_AUDIO)
             break;
         }
+        
+    self->c->request_sample_fmt = AV_SAMPLE_FMT_FLT;
 
     if (self->stream == self->ic->nb_streams)
         {
