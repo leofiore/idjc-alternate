@@ -2526,7 +2526,7 @@ class MainWindow:
                 if not line.count("="):
                     print line
                     continue
-                key, value = line.split("=")
+                key, value = line.split("=", 1)
 
                 if key == "midi":
                     midis= value

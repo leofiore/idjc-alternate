@@ -42,7 +42,7 @@ struct avcodecdecode_vars
     AVFormatContext *ic;
     int resample;
     unsigned int stream;
-    uint8_t *outbuf;
+    AVFrame *frame;
     float *floatsamples;
     float drop;
     };

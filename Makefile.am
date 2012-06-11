@@ -3,7 +3,7 @@ DISTDIRS = libshout
 
 EXTRA_SCRIPTS=
 nodist_bin_SCRIPTS=${PACKAGE_NAME}
-dist_noinst_SCRIPTS=idjc.in.in env-up ffmpeg_avcodec.c
+dist_noinst_SCRIPTS=idjc.in.in env-up
 nodist_doc_DATA=AUTHORS.gz NEWS.gz README.gz ChangeLog.gz
 docdir=${prefix}/share/doc/${PACKAGE_NAME}-${PACKAGE_VERSION}
 dist_noinst_DATA=idjc.desktop.in.in

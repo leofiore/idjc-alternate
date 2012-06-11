@@ -40,7 +40,6 @@ static pthread_mutex_t mutex;
 void once_init()
     {
     pthread_mutex_init(&mutex, NULL);
-    avcodec_init();
     avcodec_register_all();
     av_register_all();
     }
@@ -54,14 +53,16 @@ static void avcodecdecode_eject(struct xlplayer *xlplayer)
         xlplayer->src_state = src_delete(xlplayer->src_state);
         free(xlplayer->src_data.data_out);
         }
-    if (self->outbuf)
-        free(self->outbuf);
     if (self->floatsamples)
         free(self->floatsamples);
     pthread_mutex_lock(&mutex);
     avcodec_close(self->c);
     pthread_mutex_unlock(&mutex);
-    av_close_input_file(self->ic);
+    avformat_close_input(&self->ic);
+    if (self->frame)
+        av_free(self->frame);
+    free(self);
+    fprintf(stderr, "finished eject\n");
     }
 
 static void avcodecdecode_init(struct xlplayer *xlplayer)
@@ -75,9 +76,7 @@ static void avcodecdecode_init(struct xlplayer *xlplayer)
         switch (self->c->codec_id)
             {
             case CODEC_ID_MUSEPACK7:   /* add formats here that glitch when seeked */
-#ifdef CODEC_ID_MUSEPACK8
             case CODEC_ID_MUSEPACK8:
-#endif /* CODEC_ID_MUSEPACK8 */
                 self->drop = 1.6;
                 fprintf(stderr, "dropping %0.2f seconds of audio\n", self->drop);
             default:
@@ -118,8 +117,7 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
     {
     struct avcodecdecode_vars *self = xlplayer->dec_data;
     AVPacket pkt, pktcopy;
-    int size, out_size, len, frames, channels = self->c->channels, ret;
-    uint8_t *inbuf_ptr;
+    int size, len, frames, channels = self->c->channels, ret;
     SRC_DATA *src_data = &xlplayer->src_data;
     
     if ((ret = av_read_frame(self->ic, &pkt)) < 0 || (size = pkt.size) == 0)
@@ -143,7 +141,6 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
         xlplayer->playmode = PM_EJECTING;
         return;
         }
-    inbuf_ptr = pkt.data;
     pktcopy = pkt;
 
     if (pkt.stream_index != (int)self->stream)
@@ -155,15 +152,22 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
 
     while(size > 0 && xlplayer->command != CMD_EJECT)
         {
-        out_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
+        int got_frame = 0;
+        
+        if (!self->frame)
+            {
+            if (!(self->frame = avcodec_alloc_frame()))
+                {
+                fprintf(stderr, "avcodecdecode_play: malloc failure\n");
+                exit(1);
+                }
+            else
+                avcodec_get_frame_defaults(self->frame);
+            }
+
         pthread_mutex_lock(&mutex);
-#ifdef AVCODEC_DECODE_AUDIO3
-        len = avcodec_decode_audio3(self->c, (short *)self->outbuf, &out_size, &pktcopy);
-#else
-        len = avcodec_decode_audio2(self->c, (short *)self->outbuf, &out_size, inbuf_ptr, size);
-#endif
+        len = avcodec_decode_audio4(self->c, self->frame, &got_frame, &pktcopy);
         pthread_mutex_unlock(&mutex);
-        frames = (out_size >> 1) / channels;
 
         if (len < 0)
             {
@@ -173,15 +177,33 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
 
         pktcopy.data += len;
         pktcopy.size -= len;
-        inbuf_ptr += len;
         size -= len;
 
-        if (out_size <= 0)
+        if (!got_frame)
             {
             continue;
             }
 
-        xlplayer_make_audio_to_float(xlplayer, self->floatsamples, self->outbuf, frames, 16, channels); 
+        int buffer_size = av_samples_get_buffer_size(NULL, channels,
+                            self->frame->nb_samples, self->c->sample_fmt, 1);
+
+        switch (self->c->sample_fmt) {
+            case AV_SAMPLE_FMT_FLT:
+                frames = (buffer_size >> 2) / channels;
+                memcpy(self->floatsamples, self->frame->data[0], buffer_size);
+                break;
+            case AV_SAMPLE_FMT_S16:
+                frames = (buffer_size >> 1) / channels;
+                xlplayer_make_audio_to_float(xlplayer, self->floatsamples,
+                                self->frame->data[0], frames, 16, channels);
+                break;
+            case AV_SAMPLE_FMT_NONE:
+            default:
+                fprintf(stderr, "avcodecdecode_play: unexpected data format\n");
+                xlplayer->playmode = PM_EJECTING;
+                return;
+            }
+        
         if (self->resample)
             {
             src_data->input_frames = frames;
@@ -195,6 +217,7 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
             }
         else
             xlplayer_demux_channel_data(xlplayer, self->floatsamples, frames, channels, 1.f);
+            
         if (self->drop > 0)
             self->drop -= frames / (float)xlplayer->samplerate;
         else
@@ -212,7 +235,6 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
 int avcodecdecode_reg(struct xlplayer *xlplayer)
     {
     struct avcodecdecode_vars *self;
-    int error;
     
     pthread_once(&once_control, once_init);
     if (!(xlplayer->dec_data = self = calloc(1, sizeof (struct avcodecdecode_vars))))
@@ -236,16 +258,24 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
         if(self->c->codec_type == AVMEDIA_TYPE_AUDIO)
             break;
         }
+        
+    self->c->request_sample_fmt = AV_SAMPLE_FMT_FLT;
 
     if (self->stream == self->ic->nb_streams)
         {
         fprintf(stderr, "avcodecdecode_reg: codec not found 1\n");
-        av_close_input_file(self->ic);
+        avformat_close_input(&self->ic);
         free(self);
         return REJECTED;
         }
     
-    av_find_stream_info(self->ic);
+    if (avformat_find_stream_info(self->ic, NULL) < 0)
+        {
+        fprintf(stderr, "avcodecdecode_reg: call to avformat_find_stream_info failed\n");
+        avformat_close_input(&self->ic);
+        free(self);
+        return REJECTED;
+        }
 
     pthread_mutex_lock(&mutex);
     self->codec = avcodec_find_decoder(self->c->codec_id);
@@ -253,41 +283,33 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
     if (!self->codec)
         {
         fprintf(stderr, "avcodecdecode_reg: codec not found 2\n");
-        av_close_input_file(self->ic);
+        avformat_close_input(&self->ic);
         free(self);
         return REJECTED;
         }
     
     pthread_mutex_lock(&mutex);
-#ifdef AVCODEC_OPEN2
     if (avcodec_open2(self->c, self->codec, NULL) < 0)
-#else
-    if (avcodec_open(self->c, self->codec) < 0)
-#endif
         {
         pthread_mutex_unlock(&mutex);
         fprintf(stderr, "avcodecdecode_reg: could not open codec\n");
-        av_close_input_file(self->ic);
+        avformat_close_input(&self->ic);
         free(self);
         return REJECTED;
         }
     pthread_mutex_unlock(&mutex);
-     
-    error = posix_memalign((void *)&self->outbuf, 64, AVCODEC_MAX_AUDIO_FRAME_SIZE);
-    self->floatsamples = malloc(AVCODEC_MAX_AUDIO_FRAME_SIZE * 2);
-    if (error || !self->floatsamples)
+
+    if (!(self->floatsamples = malloc(AVCODEC_MAX_AUDIO_FRAME_SIZE * 2)))
         {
         fprintf(stderr, "avcodecdecode_reg: malloc failure\n");
         avcodecdecode_eject(xlplayer);
         return REJECTED;
         }
-    
+
     xlplayer->dec_init = avcodecdecode_init;
     xlplayer->dec_play = avcodecdecode_play;
     xlplayer->dec_eject = avcodecdecode_eject;
     
-fprintf(stderr, "avcodecdecode_reg: registered\n");
-
     return ACCEPTED;
     }
 
@@ -300,9 +322,8 @@ void avformatinfo(char *pathname)
     char *keys[] = {"artist", "title", "album", NULL}, **kp;
     
     pthread_once(&once_control, once_init);
-    if (avformat_open_input(&ic, pathname, NULL, NULL) >= 0)
+    if (avformat_open_input(&ic, pathname, NULL, NULL) >= 0 && avformat_find_stream_info(ic, NULL) >= 0)
         {
-        av_find_stream_info(ic);
         mc = ic->metadata;
 
         for(kp = keys; *kp; kp++)
@@ -312,7 +333,7 @@ void avformatinfo(char *pathname)
             }
       
         printf("avformatinfo: duration=%d\n", (int)(ic->duration / AV_TIME_BASE));
-        av_close_input_file(ic);
+        avformat_close_input(&ic);
         }
     printf("avformatinfo: end\n");
     fflush(stdout);

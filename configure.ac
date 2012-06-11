@@ -4,7 +4,7 @@
 AC_PREREQ(2.59)
 AC_INIT([idjc], [0.8.8_development], 
                 [https://sourceforge.net/tracker/?group_id=135773])
-AC_SUBST(COPYRIGHT_YEAR, [2011])
+AC_SUBST(COPYRIGHT_YEAR, [2012])
 AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
@@ -37,18 +37,29 @@ AC_ARG_ENABLE([ffmpeg],
 if test $makelibav != "no" ; then
    PKG_CHECK_MODULES([LIBAVCODEC], [libavcodec], [AC_DEFINE(HAVE_AVCODEC, 1, [Set if libavcodec was found])
             AC_SUBST(HAVE_AVCODEC, 1)
-            
-            AC_MSG_CHECKING([for avcodec.h in legacy ffmpeg directory])
-            gcc $(pkg-config --cflags libavcodec) ffmpeg_avcodec.c -o /dev/null >/dev/null 2>&1
-            if test $? -eq 0 ; then
-                AC_MSG_RESULT([yes])
-                AC_DEFINE(FFMPEG_AVCODEC, 1, [if set use legacy include file location])
-            else
-                AC_MSG_RESULT([no])
-            fi
-            
-            AC_CHECK_LIB([avcodec],[avcodec_decode_audio3], AC_DEFINE(AVCODEC_DECODE_AUDIO3, 1,[Used in avcodecdecode.c]))
-            AC_CHECK_LIB([avcodec],[avcodec_open2], AC_DEFINE(AVCODEC_OPEN2, 1,[Used in avcodecdecode.c]))
+
+            AC_MSG_CHECKING([for avcodec.h in ffmpeg directory])
+            AC_TRY_LINK([#include <ffmpeg/avcodec.h>],
+            [int main(void)]
+            [    {]
+            [    static const int v = LIBAVCODEC_VERSION_INT;]
+            [    return 0;]
+            [    }],
+            [AC_DEFINE(FFMPEG_AVCODEC, 1, [if set use legacy include file location]) AC_MSG_RESULT([yes])],
+            [AC_MSG_RESULT([no])]
+            AC_MSG_CHECKING([for avcodec.h in libavcodec directory])
+            AC_TRY_LINK([#include <libavcodec/avcodec.h>],
+            [int main(void)]
+            [    {]
+            [    static const int v = LIBAVCODEC_VERSION_INT;]
+            [    return 0;]
+            [    }],
+            [AC_MSG_RESULT([yes])],
+            [AC_MSG_RESULT([no])]
+            [AC_MSG_ERROR(["necessary header files not found"])]
+            ))
+
+            AC_CHECK_LIB([avcodec],[avcodec_decode_audio4], :, AC_MSG_ERROR("configure with --disable-libav or update ffmpeg/libav"))
             ],
             AC_SUBST(HAVE_AVCODEC, 0)
 
