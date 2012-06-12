@@ -24,8 +24,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dlfcn.h>
-#include "dyn_lame.h"
+
+#ifdef HAVE_LAME_LAME_H
+#include <lame/lame.h>
+#else
 #include "lame.h"
+#endif
+
+#include "dyn_lame.h"
+
 
 static void *handle;
 
@@ -33,11 +40,11 @@ static lame_global_flags *(*init)();
 static int (*encode_flush_nogap)(lame_global_flags *, unsigned char *, int);
 static int (*set_num_channels)(lame_global_flags *, int);
 static int (*set_brate)(lame_global_flags *, int);
+static int (*set_scale)(lame_global_flags *, float);
 static int (*set_in_samplerate)(lame_global_flags *, int);
 static int (*set_out_samplerate)(lame_global_flags *, int);
 static int (*set_mode)(lame_global_flags *, MPEG_mode);
 static int (*set_quality)(lame_global_flags *, int);
-static int (*set_free_format)(lame_global_flags *, int);
 static int (*set_bWriteVbrTag)(lame_global_flags *, int);
 static int (*init_params)(lame_global_flags *);
 static int (*close)(lame_global_flags *);
@@ -55,39 +62,30 @@ static void dyn_lame_close()
 
 int dyn_lame_init()
     {
-    char *error;
+    char *libname = getenv("libmp3lame_filename");
 
-    if (!((handle = dlopen("libmp3lame.so", RTLD_LAZY)) ||
-            (handle = dlopen("libmp3lame.dylib", RTLD_LAZY)) ||
-            (handle = dlopen("liblame.so", RTLD_LAZY)) ||
-            (handle = dlopen("liblame.dylib", RTLD_LAZY))))
+    fprintf(stderr, "dyn_lame_init: using library '%s'\n", libname);
+    if (libname == NULL || libname[0] == '\0' || !(handle = dlopen(libname, RTLD_LAZY)))
         {
-        fprintf(stderr, "failed to locate lib[mp3]lame dynamic library\n");
+        fprintf(stderr, "dyn_lame_init: failed to open library\n");
         return 0;
         }
-    dlerror();
 
-    if (!(   (init = dlsym(handle, "lame_init")) &&
+    if (!(      (init = dlsym(handle, "lame_init")) &&
                 (encode_flush_nogap = dlsym(handle, "lame_encode_flush_nogap")) &&
                 (set_num_channels = dlsym(handle, "lame_set_num_channels")) &&
                 (set_brate = dlsym(handle, "lame_set_brate")) &&
+                (set_scale = dlsym(handle, "lame_set_scale")) &&
                 (set_in_samplerate = dlsym(handle, "lame_set_in_samplerate")) &&
                 (set_out_samplerate = dlsym(handle, "lame_set_out_samplerate")) &&
                 (set_mode = dlsym(handle, "lame_set_mode")) &&
                 (set_quality = dlsym(handle, "lame_set_quality")) &&
-                (set_free_format = dlsym(handle, "lame_set_free_format")) &&
                 (set_bWriteVbrTag = dlsym(handle, "lame_set_bWriteVbrTag")) &&
                 (init_params = dlsym(handle, "lame_init_params")) &&
                 (close = dlsym(handle, "lame_close")) &&
                 (encode_buffer_float = dlsym(handle, "lame_encode_buffer_float"))))
         {
-        fprintf(stderr, "missing symbols in lib[mp3]lame\n");
-        }
-
-    if ((error = dlerror()))
-        {
-        fprintf(stderr, "dlsym failed with: %s\n", error);
-        dlclose(handle);
+        fprintf(stderr, "dyn_lame_init: missing symbol in %s: %s\n", libname, dlerror());
         return 0;
         }
 
@@ -97,7 +95,9 @@ int dyn_lame_init()
 
 lame_global_flags *lame_init()
     {
-    return init();
+    if (init)
+        return init();
+    return NULL;
     }
 
 int lame_encode_flush_nogap(lame_global_flags *gfp, unsigned char *mp3buf, int size)
@@ -113,6 +113,11 @@ int lame_set_num_channels(lame_global_flags *gfp, int channels)
 int lame_set_brate(lame_global_flags *lgf, int brate)
     {
     return set_brate(lgf, brate);
+    }
+
+int lame_set_scale(lame_global_flags *lgf, float scale)
+    {
+    return set_scale(lgf, scale);
     }
 
 int lame_set_in_samplerate(lame_global_flags *lgf, int inrate)
@@ -133,11 +138,6 @@ int lame_set_mode(lame_global_flags *lgf, MPEG_mode mode)
 int lame_set_quality(lame_global_flags *lgf, int quality)
     {
     return set_quality(lgf, quality);
-    }
-
-int lame_set_free_format(lame_global_flags *lgf, int free)
-    {
-    return set_free_format(lgf, free);
     }
 
 int lame_set_bWriteVbrTag(lame_global_flags *lgf, int tag)

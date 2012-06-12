@@ -31,11 +31,11 @@ PKG_CHECK_MODULES([LIBSAMPLERATE], [samplerate])
 PKG_CHECK_MODULES([LIBSNDFILE], [sndfile])
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 
-AC_ARG_ENABLE([ffmpeg],
+AC_ARG_ENABLE([libav],
    AC_HELP_STRING([--disable-libav],[remove capability to decode m4a/wma/avi files]),[makelibav=$enableval],[makelibav="maybe"])
 
 if test $makelibav != "no" ; then
-   PKG_CHECK_MODULES([LIBAVCODEC], [libavcodec], [AC_DEFINE(HAVE_AVCODEC, 1, [Set if libavcodec was found])
+    PKG_CHECK_MODULES([LIBAVCODEC], [libavcodec], [AC_DEFINE(HAVE_AVCODEC, 1, [Set if libavcodec was found])
             AC_SUBST(HAVE_AVCODEC, 1)
 
             AC_MSG_CHECKING([for avcodec.h in ffmpeg directory])
@@ -153,19 +153,24 @@ else
    AC_SUBST([HAVE_OGGFLAC],[0])
 fi
 
+AC_CHECK_HEADERS([lame/lame.h])
+
 AC_ARG_ENABLE(lame,
    AC_HELP_STRING([--disable-lame],[remove capability to stream/record mp3 format]),[makelame=$enableval],[makelame="maybe"])
 
 if test $makelame != "no" ; then
 AC_CHECK_LIB([mp3lame -lm], [lame_init],
-	  AC_SUBST(LIBMP3LAME, [-lmp3lame]),
-          AC_DEFINE(DYN_LAME, 1, [LAME to be linked dynamically])
-          DYNAMIC="1"
-          if test $makelame = "yes" ; then
-             AC_MSG_ERROR([libmp3lame not detected but specifically requested in configure options])
-          fi)
+        [AC_SUBST([LIBMP3LAME], [-lmp3lame])
+        AC_SUBST([DYN_LAME], [0])],
+            AC_DEFINE([DYN_LAME], [1], [LAME to be linked dynamically])
+            AC_SUBST([DYN_LAME], [1])
+            DYNAMIC="1"
+            if test $makelame = "yes" ; then
+              AC_MSG_ERROR([libmp3lame not detected but specifically requested in configure options])
+            fi)
 else
-   AC_DEFINE(DYN_LAME, 1, [LAME to be linked dynamically])
+   AC_DEFINE([DYN_LAME], [1], [LAME to be linked dynamically])
+   AC_SUBST([DYN_LAME], [1])
    DYNAMIC="1"
 fi
 

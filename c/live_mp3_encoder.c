@@ -72,7 +72,6 @@ static void live_mp3_encoder_main(struct encoder *encoder)
     struct lm3e_data * const s = encoder->encoder_private;
     struct encoder_ip_data *id;
     int mp3bytes = 0;
-    //float *l, *r, *endp;
 
     if (encoder->encoder_state == ES_STARTING)
         {
@@ -81,12 +80,14 @@ static void live_mp3_encoder_main(struct encoder *encoder)
             fprintf(stderr, "live_mp3_encoder_main: malloc failure\n");
             goto bailout;
             }
+            
         if (!(s->gfp = lame_init()))
             {
             fprintf(stderr, "live_mp3_encoder_main: failed to initialise LAME\n");
             free(s->mp3buf);
             goto bailout;
             }
+
         lame_set_num_channels(s->gfp, encoder->n_channels);
         lame_set_brate(s->gfp, encoder->bitrate);
         lame_set_in_samplerate(s->gfp, encoder->target_samplerate);

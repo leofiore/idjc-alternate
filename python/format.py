@@ -393,8 +393,13 @@ class FormatDropdown(gtk.VBox):
 
 
     def apply(self):
-        self._combo_box.hide()
-        self._fixed.show()
+        cbp = self._combo_box.props
+        if cbp.model[cbp.active][0].get("sensitive", True):
+            self._combo_box.hide()
+            self._fixed.show()
+            return True
+        else:
+            return False
         
         
     def unapply(self):
@@ -511,7 +516,8 @@ class FormatSpin(gtk.VBox):
     def apply(self):
         self._spin_button.hide()
         self._fixed.show()
-        
+        return True
+
         
     def unapply(self):
         self._spin_button.show()
@@ -994,13 +1000,26 @@ class FormatCodecMPEG(FormatDropdown):
     """MPEG codec selection."""
 
     def __init__(self, prev_object):
+        have_mp3 = FGlobs.have_libmp3lame
+        have_aac = FGlobs.avcodec and FGlobs.avformat
+        extra = []
+
+        if not have_mp3:
+            extra.append(_('Enable the MP3 option by installing libmp3lame.'))
+
+        if not have_aac:
+            extra.append(_('The AAC options require IDJC be built against libavcodec and libavformat.'))
+
+        spc = "\n\n\n" if extra else ""
+        tooltip = _('Codecs of the MPEG family.') + spc + "\n\n".join(extra)
+        
         FormatDropdown.__init__(self, prev_object, _('Codec'), "codec", (
             dict(display_text=_('MP2'), value="mp2", chain="FormatCodecMPEGMP2"),
-            dict(display_text=_('MP3'), value="mp3", chain="FormatCodecMPEGMP3", default=True),
-            dict(display_text=_('AAC'), value="aac"),
-            dict(display_text=_('AAC+'), value="aacp"),
-            dict(display_text=_('AAC+ v2'), value="aacpv2")), 0,
-            _('Codecs of the MPEG family.'))
+            dict(display_text=_('MP3'), value="mp3", chain="FormatCodecMPEGMP3", sensitive=have_mp3, default=have_mp3),
+            dict(display_text=_('AAC'), value="aac", sensitive=have_aac),
+            dict(display_text=_('AAC+'), value="aacp", sensitive=have_aac),
+            dict(display_text=_('AAC+ v2'), value="aacpv2", sensitive=have_aac)), 0,
+            tooltip)
 
 
 
@@ -1109,15 +1128,15 @@ class FormatControl(gtk.VBox):
 
 
     def _on_apply(self, apply_button, back_button, elem_box):
-        self._current.apply()
-        next_element_name = self._current.next_element_name
-        if next_element_name is None:
-            apply_button.set_sensitive(False)
-            self._update_capabilities()
-        else:
-            self._current = globals()[next_element_name](self._current)
-            elem_box[self._current.row].pack_start(self._current, False)
-        back_button.set_sensitive(True)
+        if self._current.apply():
+            next_element_name = self._current.next_element_name
+            if next_element_name is None:
+                apply_button.set_sensitive(False)
+                self._update_capabilities()
+            else:
+                self._current = globals()[next_element_name](self._current)
+                elem_box[self._current.row].pack_start(self._current, False)
+            back_button.set_sensitive(True)
         
         
     def _on_back(self, back_button, apply_button):
@@ -1190,6 +1209,7 @@ class FormatControl(gtk.VBox):
     def unmarshall(self, data):
         dict_ = json.loads(data)
         unapplied = dict_.get("__unapplied__", None)
+        oldcurr = None
         
         while 1:
             try:
@@ -1198,7 +1218,7 @@ class FormatControl(gtk.VBox):
                 print "key error", self._current.ident
                 break
             else:
-                if self._current.applied or self._current.ident == unapplied:
+                if self._current.applied or self._current.ident == unapplied or oldcurr == self._current:
                     break
                 oldcurr = self._current
                 self.apply_button.clicked()

@@ -19,11 +19,12 @@
 
 #include "../config.h"
 
-#ifdef DYN_LAME
-#include "lame.h"
-#else
+#ifdef HAVE_LAME_LAME_H
 #include <lame/lame.h>
-#endif /* DYN_LAME */
+#else 
+#include "lame.h"
+#endif /* HAVE_LAME_LAME_H */
+
 #include "sourceclient.h"
 
 struct lm3e_data

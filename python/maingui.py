@@ -2768,6 +2768,7 @@ class MainWindow:
         os.environ["num_encoders"] = str(PGlobs.num_encoders)
         os.environ["num_recorders"] = str(PGlobs.num_recorders)
         os.environ["has_head"] = "1"
+        os.environ["libmp3lame_filename"] = FGlobs.libmp3lame_filename
 
         print "jack client ID:", client_id
 
