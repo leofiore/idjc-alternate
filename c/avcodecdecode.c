@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "main.h"
 #include "xlplayer.h"
 #include "avcodecdecode.h"
 
@@ -34,15 +35,8 @@
 #define ACCEPTED 1
 #define REJECTED 0
 
-static pthread_once_t once_control = PTHREAD_ONCE_INIT;
-static pthread_mutex_t mutex;
+static const struct timespec time_delay = { .tv_nsec = 10 };
 
-void once_init()
-    {
-    pthread_mutex_init(&mutex, NULL);
-    avcodec_register_all();
-    av_register_all();
-    }
 
 static void avcodecdecode_eject(struct xlplayer *xlplayer)
     {
@@ -55,9 +49,10 @@ static void avcodecdecode_eject(struct xlplayer *xlplayer)
         }
     if (self->floatsamples)
         free(self->floatsamples);
-    pthread_mutex_lock(&mutex);
+    while (pthread_mutex_trylock(&g.avc_mutex))
+        nanosleep(&time_delay, NULL);
     avcodec_close(self->c);
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&g.avc_mutex);
     avformat_close_input(&self->ic);
     if (self->frame)
         av_free(self->frame);
@@ -165,9 +160,10 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
                 avcodec_get_frame_defaults(self->frame);
             }
 
-        pthread_mutex_lock(&mutex);
+        while (pthread_mutex_trylock(&g.avc_mutex))
+            nanosleep(&time_delay, NULL);
         len = avcodec_decode_audio4(self->c, self->frame, &got_frame, &pktcopy);
-        pthread_mutex_unlock(&mutex);
+        pthread_mutex_unlock(&g.avc_mutex);
 
         if (len < 0)
             {
@@ -236,7 +232,6 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
     {
     struct avcodecdecode_vars *self;
     
-    pthread_once(&once_control, once_init);
     if (!(xlplayer->dec_data = self = calloc(1, sizeof (struct avcodecdecode_vars))))
         {
         fprintf(stderr, "avcodecdecode_reg: malloc failure\n");
@@ -277,9 +272,10 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
         return REJECTED;
         }
 
-    pthread_mutex_lock(&mutex);
+    while (pthread_mutex_trylock(&g.avc_mutex))
+        nanosleep(&time_delay, NULL);
     self->codec = avcodec_find_decoder(self->c->codec_id);
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&g.avc_mutex);
     if (!self->codec)
         {
         fprintf(stderr, "avcodecdecode_reg: codec not found 2\n");
@@ -288,16 +284,17 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
         return REJECTED;
         }
     
-    pthread_mutex_lock(&mutex);
+    while (pthread_mutex_trylock(&g.avc_mutex))
+        nanosleep(&time_delay, NULL);
     if (avcodec_open2(self->c, self->codec, NULL) < 0)
         {
-        pthread_mutex_unlock(&mutex);
+        pthread_mutex_unlock(&g.avc_mutex);
         fprintf(stderr, "avcodecdecode_reg: could not open codec\n");
         avformat_close_input(&self->ic);
         free(self);
         return REJECTED;
         }
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&g.avc_mutex);
 
     if (!(self->floatsamples = malloc(AVCODEC_MAX_AUDIO_FRAME_SIZE * 2)))
         {
@@ -321,7 +318,6 @@ void avformatinfo(char *pathname)
     const int flags = AV_METADATA_DONT_STRDUP_KEY | AV_METADATA_DONT_STRDUP_VAL;
     char *keys[] = {"artist", "title", "album", NULL}, **kp;
     
-    pthread_once(&once_control, once_init);
     if (avformat_open_input(&ic, pathname, NULL, NULL) >= 0 && avformat_find_stream_info(ic, NULL) >= 0)
         {
         mc = ic->metadata;

@@ -17,6 +17,8 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "../config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <locale.h>
@@ -150,6 +152,16 @@ int main(void)
         fprintf(stderr, "main.c: jack_client_open failed");
         exit(5);
         }
+
+#ifdef HAVE_AVCODEC
+    if (pthread_mutex_init(&g.avc_mutex, NULL))
+        {
+        fprintf(stderr, "pthread_mutex_init failed\n");
+        exit(5);
+        }
+    avcodec_register_all();
+    av_register_all();
+#endif /* HAVE_AVCODEC */
 
     alarm(3);
 

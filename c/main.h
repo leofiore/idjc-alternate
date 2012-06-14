@@ -17,6 +17,7 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <pthread.h>
 #include <signal.h>
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
@@ -70,6 +71,7 @@ struct globs
     jack_client_t *client;     /* Client handle to JACK. */
     struct jack_ports port;    /* JACK port handles. */
     jack_ringbuffer_t *session_event_rb; /* Session event buffer */
+    pthread_mutex_t avc_mutex;   /* lock for avcodec */
     };
 
 extern struct globs g;
