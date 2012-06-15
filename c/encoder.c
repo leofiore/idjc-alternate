@@ -32,6 +32,7 @@
 #include "live_mp2_encoder.h"
 #include "live_oggflac_encoder.h"
 #include "live_oggspeex_encoder.h"
+#include "avcodec_encoder.h"
 #include "bsdcompat.h"
 #ifdef DYN_LAME
 #include "dyn_lame.h"
@@ -89,6 +90,12 @@ static struct encoder_data_format encoder_lex_format(char *source, char *family,
 
     if (!strcmp(codec, "mp2"))
         df.codec = ENCODER_CODEC_MP2;
+        
+    if (!strcmp(codec, "aac"))
+        df.codec = ENCODER_CODEC_AAC;
+        
+    if (!strcmp(codec, "aacplusv2"))
+        df.codec = ENCODER_CODEC_AACPLUSV2;
         
     if (!strcmp(codec, "vorbis"))
         df.codec = ENCODER_CODEC_VORBIS;
@@ -545,6 +552,10 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
                             break;
                         case ENCODER_CODEC_MP2:
                             encoder_init = live_mp2_encoder_init;
+                            break;
+                        case ENCODER_CODEC_AAC:
+                        case ENCODER_CODEC_AACPLUSV2:
+                            encoder_init = live_avcodec_encoder_init;
                             break;
                         case ENCODER_CODEC_UNHANDLED:
                         default:

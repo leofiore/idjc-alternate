@@ -27,7 +27,7 @@
 
 static void avcodec_encoder_main(struct encoder *encoder)
 {
-    struct avenc_data * const s = encoder->priv_data;
+    struct avenc_data * const s = encoder->encoder_private;
     
      if (encoder->encoder_state == ES_STARTING) {
         

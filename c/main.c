@@ -26,6 +26,19 @@
 #include <signal.h>
 #include <unistd.h>
 #include <jack/session.h>
+
+#ifdef HAVE_AVCODEC
+#ifdef HAVE_AVFORMAT
+#ifdef FFMPEG_AVCODEC
+#include <ffmpeg/avcodec.h>
+#include <ffmpeg/avformat.h>
+#else
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#endif /* FFMPEG_AVCODEC */
+#endif /* HAVE_AVFORMAT */
+#endif /* HAVE_AVCODEC */
+
 #include "sig.h"
 #include "mixer.h"
 #include "sourceclient.h"
@@ -154,6 +167,7 @@ int main(void)
         }
 
 #ifdef HAVE_AVCODEC
+#ifdef HAVE_AVFORMAT
     if (pthread_mutex_init(&g.avc_mutex, NULL))
         {
         fprintf(stderr, "pthread_mutex_init failed\n");
@@ -161,6 +175,7 @@ int main(void)
         }
     avcodec_register_all();
     av_register_all();
+#endif /* HAVE_AVFORMAT */
 #endif /* HAVE_AVCODEC */
 
     alarm(3);
