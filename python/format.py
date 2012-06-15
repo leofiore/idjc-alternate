@@ -545,7 +545,7 @@ class FormatPregain(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Pregain'), "pregain", (
             dict(display_text=_('0 dB'), value="1.0"),
             dict(display_text=_('-0.5 dB'), value="0.944"),
-            dict(display_text=_('-1.0 dB'), value="0.891"),
+            dict(display_text=_('-1.0 dB'), value="0.891", default=(codec in ("aac", "aacpv2"))),
             dict(display_text=_('-1.5 dB'), value="0.841"),
             dict(display_text=_('-2.0 dB'), value="0.794", default=(codec in ("mp2", "mp3"))),
             dict(display_text=_('-2.5 dB'), value="0.750"),
@@ -996,6 +996,89 @@ class FormatCodecXiphOgg(FormatDropdown):
 
 
 
+
+class FormatCodecMPEGAACMode(FormatDropdown):
+    """AAC mode selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
+            dict(display_text=_("Mono"), value="mono", chain="FormatMetadataUTF8"),
+            dict(display_text=_("Stereo"), value="stereo", default=True, chain="FormatMetadataUTF8")), 0)
+
+
+
+class FormatCodecMPEGAACModeStereo(FormatDropdown):
+    """AAC+ v2 mode selection which is always stereo."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
+            dict(display_text=_("Mono"), value="mono", sensitive=False),
+            dict(display_text=_("Stereo"), value="stereo", default=True, chain="FormatMetadataUTF8")), 0)
+
+
+
+class FormatCodecMPEGAACBitrate(FormatSpin):
+    """AAC bit rate selection."""
+    
+    def __init__(self, prev_object):
+        FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
+            (128000, 32000, 320000, 1, 10), 0, " Hz", "FormatCodecMPEGAACMode",
+            (192000, 160000, 128000, 112000, 96000, 80000, 64000, 48000, 45000, 32000))
+
+
+
+class FormatCodecMPEGAACPlusV2Bitrate(FormatSpin):
+    """AAC bit rate selection."""
+    
+    def __init__(self, prev_object):
+        FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
+            (64000, 16000, 96000, 1, 10), 0, " Hz", "FormatCodecMPEGAACModeStereo",
+            (96000, 80000, 64000, 48000, 45000, 32000, 24000, 16000))
+
+
+
+class FormatCodecMPEGAACSamplerate(FormatDropdown):
+    """Sample rates as allowed when using the ADTS header."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Samplerate'), "samplerate", (
+            dict(display_text=_('96000 Hz'), value="96000", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('88200 Hz'), value="88200", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('64000 Hz'), value="64000", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('48000 Hz'), value="48000", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('44100 Hz'), value="44100", chain="FormatCodecMPEGAACBitrate", default=True),
+            dict(display_text=_('32000 Hz'), value="32000", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('24000 Hz'), value="24000", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('22050 Hz'), value="22050", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('16000 Hz'), value="16000", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('12000 Hz'), value="12000", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('11025 Hz'), value="11025", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('8000 Hz'), value="8000", chain="FormatCodecMPEGAACBitrate"),
+            dict(display_text=_('7350 Hz'), value="7350", chain="FormatCodecMPEGAACBitrate")), 0)
+
+
+
+class FormatCodecMPEGAACPlusV2Samplerate(FormatDropdown):
+    """Sample rates as allowed when using the ADTS header."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Samplerate'), "samplerate", (
+            dict(display_text=_('96000 Hz'), value="96000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('88200 Hz'), value="88200", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('64000 Hz'), value="64000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('48000 Hz'), value="48000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('44100 Hz'), value="44100", chain="FormatCodecMPEGAACPlusV2Bitrate", default=True),
+            dict(display_text=_('32000 Hz'), value="32000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('24000 Hz'), value="24000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('22050 Hz'), value="22050", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('16000 Hz'), value="16000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('12000 Hz'), value="12000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('11025 Hz'), value="11025", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('8000 Hz'), value="8000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
+            dict(display_text=_('7350 Hz'), value="7350", chain="FormatCodecMPEGAACPlusV2Bitrate")), 0)
+
+
+
 class FormatCodecMPEG(FormatDropdown):
     """MPEG codec selection."""
 
@@ -1016,9 +1099,8 @@ class FormatCodecMPEG(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Codec'), "codec", (
             dict(display_text=_('MP2'), value="mp2", chain="FormatCodecMPEGMP2"),
             dict(display_text=_('MP3'), value="mp3", chain="FormatCodecMPEGMP3", sensitive=have_mp3, default=have_mp3),
-            dict(display_text=_('AAC'), value="aac", sensitive=have_aac),
-            dict(display_text=_('AAC+'), value="aacp", sensitive=have_aac),
-            dict(display_text=_('AAC+ v2'), value="aacpv2", sensitive=have_aac)), 0,
+            dict(display_text=_('AAC'), value="aac", chain="FormatCodecMPEGAACSamplerate", sensitive=have_aac),
+            dict(display_text=_('AAC+ v2'), value="aacpv2", chain="FormatCodecMPEGAACPlusV2Samplerate", sensitive=have_aac)), 0,
             tooltip)
 
 
@@ -1174,6 +1256,10 @@ class FormatControl(gtk.VBox):
                 "mp2":
                     {"shoutcast": True, "icecast": True, "recordable": True},
                 "mp3":
+                    {"shoutcast": True, "icecast": True, "recordable": True},
+                "aac":
+                    {"shoutcast": True, "icecast": True, "recordable": True},
+                "aacpv2":
                     {"shoutcast": True, "icecast": True, "recordable": True}
             }
     }
