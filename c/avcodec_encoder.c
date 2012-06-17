@@ -239,6 +239,7 @@ static void live_avcodec_encoder_main(struct encoder *encoder)
             if (avcodec_is_open(s->c))
                 avcodec_close(s->c);
             av_free(s->c);
+            s->c = NULL;
         }
         
         if (s->decoded_frame) {
@@ -246,11 +247,15 @@ static void live_avcodec_encoder_main(struct encoder *encoder)
             s->decoded_frame = NULL;
         }
         
-        if (s->avpkt.data)
+        if (s->avpkt.data) {
             free(s->avpkt.data);
+            s->avpkt.data;
+        }
             
-        if (s->inbuf)
+        if (s->inbuf) {
             free(s->inbuf);
+            s->inbuf = NULL;
+        }
 
         encoder->flush = FALSE;
         s->samples_written = 0;
