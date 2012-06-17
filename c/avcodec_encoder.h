@@ -30,8 +30,15 @@
 #include "sourceclient.h"
 
 struct avenc_data {
-
-
+    AVCodec *codec;
+    AVCodecContext *c;
+    AVPacket avpkt;
+	AVFrame *decoded_frame;
+    size_t inbufsize;
+    uint8_t *inbuf;
+    unsigned long samples_written;
+    enum packet_flags pkt_flags;
+    char *metadata;
 };
 
 int live_avcodec_encoder_init(struct encoder *encoder, struct encoder_vars *ev);

@@ -1032,8 +1032,8 @@ class FormatCodecMPEGAACPlusV2Bitrate(FormatSpin):
     
     def __init__(self, prev_object):
         FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
-            (64000, 16000, 96000, 1, 10), 0, " Hz", "FormatCodecMPEGAACModeStereo",
-            (96000, 80000, 64000, 48000, 45000, 32000, 24000, 16000))
+            (64000, 16000, 72000, 1, 10), 0, " Hz", "FormatCodecMPEGAACModeStereo",
+            (72000, 64000, 48000, 45000, 32000, 24000, 16000))
 
 
 
@@ -1063,19 +1063,8 @@ class FormatCodecMPEGAACPlusV2Samplerate(FormatDropdown):
     
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Samplerate'), "samplerate", (
-            dict(display_text=_('96000 Hz'), value="96000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
-            dict(display_text=_('88200 Hz'), value="88200", chain="FormatCodecMPEGAACPlusV2Bitrate"),
-            dict(display_text=_('64000 Hz'), value="64000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
             dict(display_text=_('48000 Hz'), value="48000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
-            dict(display_text=_('44100 Hz'), value="44100", chain="FormatCodecMPEGAACPlusV2Bitrate", default=True),
-            dict(display_text=_('32000 Hz'), value="32000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
-            dict(display_text=_('24000 Hz'), value="24000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
-            dict(display_text=_('22050 Hz'), value="22050", chain="FormatCodecMPEGAACPlusV2Bitrate"),
-            dict(display_text=_('16000 Hz'), value="16000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
-            dict(display_text=_('12000 Hz'), value="12000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
-            dict(display_text=_('11025 Hz'), value="11025", chain="FormatCodecMPEGAACPlusV2Bitrate"),
-            dict(display_text=_('8000 Hz'), value="8000", chain="FormatCodecMPEGAACPlusV2Bitrate"),
-            dict(display_text=_('7350 Hz'), value="7350", chain="FormatCodecMPEGAACPlusV2Bitrate")), 0)
+            dict(display_text=_('44100 Hz'), value="44100", chain="FormatCodecMPEGAACPlusV2Bitrate", default=True)), 0)
 
 
 
@@ -1186,6 +1175,10 @@ class FormatControl(gtk.VBox):
         apply_button = self.apply_button = gtk.Button()
         apply_button.add(image)
         button_box.add(apply_button)
+
+        #test_button = gtk.ToggleButton("Test")
+        #button_box.add(test_button)
+        #test_button.connect("toggled", self._on_test)
         
         elem_box[-1].pack_end(button_frame, True)
         self.show_all()

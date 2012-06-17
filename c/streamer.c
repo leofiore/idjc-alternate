@@ -122,7 +122,7 @@ static void *streamer_main(void *args)
                             /* determine how much audio to hold in the send buffer */
                             self->max_shout_queue = (shout_buffer_seconds * packet->header.bit_rate) << 7;
                             }
-                        if (packet->header.flags & (PF_OGG | PF_MP3 | PF_MP2))
+                        if (packet->header.flags & (PF_OGG | PF_MP3 | PF_MP2 | PF_AAC | PF_AACP2))
                             {
                             if ((packet->header.flags & (PF_HEADER | PF_FINAL)) || shout_queuelen(self->shout) < self->max_shout_queue)
                                 data_size = packet->header.data_size;
@@ -241,6 +241,12 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
                     case ENCODER_CODEC_MP3:
                     case ENCODER_CODEC_MP2:
                         data_format = SHOUT_FORMAT_MP3;
+                        break;
+                    case ENCODER_CODEC_AAC:
+                        data_format = SHOUT_FORMAT_AAC;
+                        break;
+                    case ENCODER_CODEC_AACPLUSV2:
+                        data_format = SHOUT_FORMAT_AACPLUS;
                         break;
                     case ENCODER_CODEC_UNHANDLED:
                     default:

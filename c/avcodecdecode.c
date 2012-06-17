@@ -35,8 +35,9 @@
 #define ACCEPTED 1
 #define REJECTED 0
 
-static const struct timespec time_delay = { .tv_nsec = 10 };
+extern int dynamic_metadata_form[];
 
+static const struct timespec time_delay = { .tv_nsec = 10 };
 
 static void avcodecdecode_eject(struct xlplayer *xlplayer)
     {
@@ -112,8 +113,9 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
     {
     struct avcodecdecode_vars *self = xlplayer->dec_data;
     AVPacket pkt, pktcopy;
-    int size, len, frames, channels = self->c->channels, ret;
+    int size, len, frames, channels = self->c->channels, ret, delay;
     SRC_DATA *src_data = &xlplayer->src_data;
+    struct chapter *chapter;
     
     if ((ret = av_read_frame(self->ic, &pkt)) < 0 || (size = pkt.size) == 0)
         {
@@ -226,11 +228,20 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
 
     if (pkt.data)
         av_free_packet(&pkt);
+    delay = xlplayer_calc_rbdelay(xlplayer);
+    chapter = mp3_tag_chapter_scan(&self->taginfo, xlplayer->play_progress_ms + delay);
+    if (chapter && chapter != self->current_chapter)
+        {
+        self->current_chapter = chapter;
+        xlplayer_set_dynamic_metadata(xlplayer, dynamic_metadata_form[chapter->title.encoding], chapter->artist.text, chapter->title.text, chapter->album.text, delay);
+        }
     }
     
 int avcodecdecode_reg(struct xlplayer *xlplayer)
     {
     struct avcodecdecode_vars *self;
+    FILE *fp;
+    struct chapter *chapter;
     
     if (!(xlplayer->dec_data = self = calloc(1, sizeof (struct avcodecdecode_vars))))
         {
@@ -239,6 +250,17 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
         }
     else
         xlplayer->dec_data = self;
+    
+    if ((fp = fopen(xlplayer->pathname, "r")))
+        {
+        mp3_tag_read(&self->taginfo, fp);
+        if ((chapter = mp3_tag_chapter_scan(&self->taginfo, xlplayer->play_progress_ms + 70)))
+            {
+            self->current_chapter = chapter;
+            xlplayer_set_dynamic_metadata(xlplayer, dynamic_metadata_form[chapter->title.encoding], chapter->artist.text, chapter->title.text, chapter->album.text, 70);
+            }
+        fclose(fp);
+        }
     
     if (avformat_open_input(&self->ic, xlplayer->pathname, NULL, NULL) < 0)
         {
@@ -263,7 +285,7 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
         free(self);
         return REJECTED;
         }
-    
+
     if (avformat_find_stream_info(self->ic, NULL) < 0)
         {
         fprintf(stderr, "avcodecdecode_reg: call to avformat_find_stream_info failed\n");

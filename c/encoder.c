@@ -94,7 +94,7 @@ static struct encoder_data_format encoder_lex_format(char *source, char *family,
     if (!strcmp(codec, "aac"))
         df.codec = ENCODER_CODEC_AAC;
         
-    if (!strcmp(codec, "aacplusv2"))
+    if (!strcmp(codec, "aacpv2"))
         df.codec = ENCODER_CODEC_AACPLUSV2;
         
     if (!strcmp(codec, "vorbis"))
@@ -262,6 +262,9 @@ struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, size_t m
     struct encoder_ip_data *id;
     size_t samples_available;
     int i;
+    
+    if (max_samples == 0)
+        return NULL;
     
     if (!(id = calloc(1, sizeof (struct encoder_ip_data))))
         {
@@ -633,6 +636,8 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
         self->run_request_f = TRUE;
         self->encoder_state = ES_STARTING;
         while (self->encoder_state == ES_STARTING)
+            nanosleep(&ms10, NULL);
+        while (self->encoder_state == ES_STOPPING)
             nanosleep(&ms10, NULL);
         if (self->encoder_state == ES_STOPPED)
             {

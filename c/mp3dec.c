@@ -37,7 +37,7 @@
 #define BSIZ 16384
 #define MAD_SCALE ((float)(1L << (MAD_F_SCALEBITS - 18)))
 
-static int metadata_form[4] = { DM_SPLIT_L1, DM_NOTAG, DM_NOTAG, DM_SPLIT_U8 };
+int dynamic_metadata_form[4] = { DM_SPLIT_L1, DM_NOTAG, DM_NOTAG, DM_SPLIT_U8 };
 
 static inline float scale(struct xlplayer *xlplayer, mad_fixed_t sample)
     {
@@ -382,7 +382,7 @@ static void mp3decode_play(struct xlplayer *xlplayer)
     if (chapter && chapter != self->current_chapter)
         {
         self->current_chapter = chapter;
-        xlplayer_set_dynamic_metadata(xlplayer, metadata_form[chapter->title.encoding], chapter->artist.text, chapter->title.text, chapter->album.text, delay);
+        xlplayer_set_dynamic_metadata(xlplayer, dynamic_metadata_form[chapter->title.encoding], chapter->artist.text, chapter->title.text, chapter->album.text, delay);
         }
     }
 
@@ -445,7 +445,7 @@ int mp3decode_reg(struct xlplayer *xlplayer)
                 if ((chapter = mp3_tag_chapter_scan(&self->taginfo, xlplayer->play_progress_ms + 70)))
                     {
                     self->current_chapter = chapter;
-                    xlplayer_set_dynamic_metadata(xlplayer, metadata_form[chapter->title.encoding], chapter->artist.text, chapter->title.text, chapter->album.text, 0);
+                    xlplayer_set_dynamic_metadata(xlplayer, dynamic_metadata_form[chapter->title.encoding], chapter->artist.text, chapter->title.text, chapter->album.text, 0);
                     }
                 return ACCEPTED;
             }

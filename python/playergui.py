@@ -44,6 +44,7 @@ from mutagen.mp4 import MP4
 from mutagen.easyid3 import EasyID3
 from mutagen.apev2 import APEv2
 from mutagen.asf import ASF
+from mutagen.id3 import ID3
 
 from idjc import FGlobs, PGlobs
 from . import popupwindow
@@ -583,6 +584,7 @@ class Supported(object):
             self.media.append(".wma")
             self.media.append(".ape")
             self.media.append(".mpc")
+            self.media.append(".aac")
             self.media.append(".mp4")
             self.media.append(".m4a")
             self.media.append(".m4b")
@@ -1032,11 +1034,20 @@ class IDJC_Media_Player:
                         rg = RGDEF
                 if line == "OIR:end\n":
                     break
+        elif filext == ".aac":
+            id3 = ID3(filename)
+            try:
+                length = int(id3["TLEN"].text[0]) / 1000
+            except (KeyError, ValueError, IndexError):
+                print "unknown track length -- add a TLEN tag if you know it"
+                length = ""
         else:
             # Mutagen used for all remaining formats.
             try:
                 audio = mutagen.File(filename)
-            except:
+                if audio is None:
+                    raise Exception
+            except Exception:
                 return NOTVALID._replace(filename=filename)
             else:
                 length = int(audio.info.length)

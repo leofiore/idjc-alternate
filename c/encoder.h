@@ -40,7 +40,9 @@ enum packet_flags {     PF_UNSET    = 0x00,
                                 PF_MP3      = 0x08,
                                 PF_METADATA = 0x10,
                                 PF_HEADER   = 0x20,
-                                PF_MP2      = 0x40 };
+                                PF_MP2      = 0x40,
+                                PF_AAC      = 0x80,
+                                PF_AACP2    = 0x100 };
 
 struct encoder_vars
     {

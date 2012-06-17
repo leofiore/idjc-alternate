@@ -634,7 +634,7 @@ class ApeTagger(MutagenTagger):
 
 
 class MutagenGUI:
-    ext2name = {"mp3": "ID3", "mp2": "ID3", "mp4": "MP4", "m4a": "MP4", "spx": "Speex",
+    ext2name = {"aac": "AAC", "mp3": "ID3", "mp2": "ID3", "mp4": "MP4", "m4a": "MP4", "spx": "Speex",
                 "flac": "FLAC", "ogg": "Ogg Vorbis", "oga": "XIPH Ogg audio",
                 "m4b": "MP4", "m4p": "MP4", "wma": "Windows Media Audio"}
 
@@ -654,7 +654,7 @@ class MutagenGUI:
     def is_supported(pathname):
         supported = [ "mp2", "mp3", "ogg", "oga" ]
         if FGlobs.avcodec and FGlobs.avformat:
-            supported += ["mp4", "m4a", "m4b", "m4p", "ape", "mpc", "wma"]
+            supported += ["aac", "mp4", "m4a", "m4b", "m4p", "ape", "mpc", "wma"]
         if FGlobs.flacenabled:
             supported.append("flac")
         if FGlobs.speexenabled:
@@ -738,7 +738,7 @@ class MutagenGUI:
         try:
             self.ape = ApeTagger(pathname, extension)
             
-            if extension == "mp3":
+            if extension in ("mp3", "aac"):
                 self.id3 = ID3Tagger(pathname, True)
                 self.native = None
             else:

@@ -1,5 +1,7 @@
 * Changes in version 0.8.8 *
 
+Added AAC and AAC Plus V2 streaming and recording support.
+
 Run-time linking to libmad removed. This is a forced dependency now.
 
 New dependency twolame adds official mp2 support for streaming, recording, playback, tagging.

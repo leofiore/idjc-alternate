@@ -392,7 +392,7 @@ static void recorder_append_metadata2(struct recorder *self, struct encoder_op_p
         else
             free(mi2);
         }
-    if (packet && (packet->header.bit_rate != self->oldbitrate || packet->header.sample_rate != self->oldsamplerate) && (packet->header.flags & (PF_MP3 | PF_MP2)))
+    if (packet && (packet->header.bit_rate != self->oldbitrate || packet->header.sample_rate != self->oldsamplerate) && (packet->header.flags & (PF_MP3 | PF_MP2 | PF_AAC | PF_AACP2)))
         {
         if (self->oldbitrate && self->oldsamplerate)
             {
@@ -599,7 +599,7 @@ static void *recorder_main(void *args)
                             {
                             if ((packet->header.flags & PF_INITIAL) && self->id3_mode)
                                 recorder_append_metadata2(self, packet);
-                            if (packet->header.flags & (PF_OGG | PF_MP3 | PF_MP2))
+                            if (packet->header.flags & (PF_OGG | PF_MP3 | PF_MP2 | PF_AAC | PF_AACP2))
                                 {
                                 if (packet->header.data_size != fwrite(packet->data, 1, packet->header.data_size, self->fp))
                                     {
@@ -818,6 +818,11 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
                             break;
                         case ENCODER_CODEC_MP2:
                             file_extension = ".mp2";
+                            self->id3_mode = TRUE;
+                            break;
+                        case ENCODER_CODEC_AAC:
+                        case ENCODER_CODEC_AACPLUSV2:
+                            file_extension = ".aac";
                             self->id3_mode = TRUE;
                             break;
                         case ENCODER_CODEC_UNHANDLED:

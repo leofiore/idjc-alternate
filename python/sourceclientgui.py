@@ -1465,7 +1465,7 @@ class StreamTab(Tab):
             
             fdata = self.format_control.get_settings()
             encoding = "utf-8"
-            if fdata["family"] == "mpeg" and fdata["codec"] in ("mp2", "mp3"):
+            if fdata["family"] == "mpeg" and fdata["codec"] in ("mp2", "mp3", "aac", "aacpv2"):
                 if fdata["metadata_mode"] == "utf-8":
                     disp = songname
                 else:
@@ -1476,7 +1476,7 @@ class StreamTab(Tab):
             elif fdata["family"] == "ogg":
                 disp = "[{0[%r]}], [{0[%t]}], [{0[%l]}]".format(dict(table))
             else:
-                disp = "no metadata string defined for this stream format"
+                disp = "no metadata string defined for this stream format: %s %s" % (fdata["family"], fdata["codec"])
             
             if cm:
                 cm = cm.decode("utf-8").encode(encoding, "replace")
