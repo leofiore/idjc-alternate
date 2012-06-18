@@ -273,10 +273,13 @@ static void live_avcodec_encoder_main(struct encoder *encoder)
     }
 }
 
+static const char *aac = "libfaac";
+static const char *aacpv2 = "libaacplus";
+
 int live_avcodec_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
 {
     struct avenc_data * const s = calloc(1, sizeof (struct avenc_data));
-    char *codecname;
+    const char *codecname;
 
     if (!s)
         {
@@ -285,12 +288,12 @@ int live_avcodec_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         }
 
     if (!strcmp(ev->codec, "aac")) {
-        codecname = "libfaac";
+        codecname = aac;
         s->pkt_flags = PF_AAC;
         }
     else {
         if (!strcmp(ev->codec, "aacpv2")) {
-            codecname = "libaacplus";
+            codecname = aacpv2;
             s->pkt_flags = PF_AACP2;
         } else {
             fprintf(stderr, "avcodec_encoder: unsupported codec\n");
@@ -313,6 +316,21 @@ int live_avcodec_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
 clean1:
     free(s);
     return FAILED;
+}
+
+int live_avcodec_encoder_aac_functionality()
+{
+    //int aac_f = avcodec_find_encoder_by_name(aac) ? 1 : 0;
+    //int aacpv2_f = avcodec_find_encoder_by_name(aacpv2) ? 1 : 0;
+    int aac_f = 1;
+    int aacpv2_f = 1;
+    
+    fprintf(stdout, "idjcsc: aac_functionality=%d:%d\n", aac_f, aacpv2_f);
+    fflush(stdout);
+    if (ferror(stdout))
+        return FAILED;
+    
+    return SUCCEEDED;
 }
 
 #endif /* HAVE_AVUTIL */

@@ -43,7 +43,7 @@ from .utils import string_multireplace
 from .gtkstuff import DefaultEntry, threadslock, HistoryEntry, WindowSizeTracker
 from .dialogs import *
 from .irc import IRCPane
-from .format import FormatControl
+from .format import FormatControl, FormatCodecMPEG
 from .tooltips import set_tip
 from .prelims import ProfileManager
 
@@ -65,7 +65,7 @@ ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
 
 BLANK_LISTLINE = ListLine(1, 0, "", 8000, "", -1, "", "")
 
-
+lame_enabled = False
 
 class SmallLabel(gtk.Label):
     """A gtk.Label with small text size."""
@@ -1447,7 +1447,7 @@ class StreamTab(Tab):
     
     def server_type_cell_data_func(self, celllayout, cell, model, iter):
         text = model.get_value(iter, 0)
-        if text == _('Shoutcast') and lameenabled == 0:
+        if text == _('Shoutcast') and lame_enabled == 0:
             cell.set_property("sensitive", False)
         else:
             cell.set_property("sensitive", True)
@@ -2478,6 +2478,8 @@ class SourceClientGui:
             tab.ircpane.connections_controller.new_metadata(ircmetadata)
         
     def source_client_open(self):
+        global lame_enabled
+
         self.comms_reply_pending = False
         self.send("command=jack_samplerate_request\n")
         reply = self.receive()
@@ -2496,11 +2498,10 @@ class SourceClientGui:
         reply = self.receive()
         if reply != "failed" and self.receive() == "succeeded" and \
                                             reply.startswith("lame_available="):
-            global lameenabled
             if reply[15] == "1":
-                lameenabled = 1
+                lame_enabled = 1
             else:
-                lameenabled = 0
+                lame_enabled = 0
         else:
             print self.unexpected_reply
             self.app_exit()
@@ -2516,6 +2517,17 @@ class SourceClientGui:
         except (NameError, AttributeError):
             # If this is the initial call the stream tabs will not exist yet.
             pass
+        if FGlobs.avcodec:
+            self.send("command=encoder_aac_availability\n")
+            reply = self.receive()
+            assert reply != "failed" and self.receive() == "succeeded" and \
+                                        reply.startswith("aac_functionality=")
+            FormatCodecMPEG.aac_enabled = int(reply[-3])
+            FormatCodecMPEG.aacpv2_enabled = int(reply[-1])
+        else:
+            FormatCodecMPEG.aac_enabled = 0
+            FormatCodecMPEG.aacpv2_enabled = 0
+            
         self.uptime = time.time()
 
     def cb_delete_event(self, widget, event, data = None):

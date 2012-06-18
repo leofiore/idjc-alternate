@@ -1088,8 +1088,8 @@ class FormatCodecMPEG(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Codec'), "codec", (
             dict(display_text=_('MP2'), value="mp2", chain="FormatCodecMPEGMP2"),
             dict(display_text=_('MP3'), value="mp3", chain="FormatCodecMPEGMP3", sensitive=have_mp3, default=have_mp3),
-            dict(display_text=_('AAC'), value="aac", chain="FormatCodecMPEGAACSamplerate", sensitive=have_aac),
-            dict(display_text=_('AAC+ v2'), value="aacpv2", chain="FormatCodecMPEGAACPlusV2Samplerate", sensitive=have_aac)), 0,
+            dict(display_text=_('AAC'), value="aac", chain="FormatCodecMPEGAACSamplerate", sensitive=have_aac and FormatCodecMPEG.aac_enabled),
+            dict(display_text=_('AAC+ v2'), value="aacpv2", chain="FormatCodecMPEGAACPlusV2Samplerate", sensitive=have_aac and FormatCodecMPEG.aacpv2_enabled)), 0,
             tooltip)
 
 

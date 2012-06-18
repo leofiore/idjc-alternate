@@ -42,5 +42,6 @@ struct avenc_data {
 };
 
 int live_avcodec_encoder_init(struct encoder *encoder, struct encoder_vars *ev);
+int live_avcodec_encoder_aac_functionality();
 
 #endif /* HAVE_AVCODEC */
