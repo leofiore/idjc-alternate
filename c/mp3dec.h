@@ -1,6 +1,6 @@
 /*
 #   mp3dec.h: decodes mp3 file format for xlplayer
-#   Copyright (C) 2007-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -19,29 +19,17 @@
 
 #include "../config.h"
 
-#include <jack/ringbuffer.h>
+#include <stdio.h>
+#include <mpg123.h>
 #include "xlplayer.h"
 #include "mp3tagread.h"
 
 struct mp3decode_vars
-    {
-    FILE *fp;
-    struct mad_synth synth;
-    struct mad_stream stream;
-    struct mad_frame frame;
-    unsigned char *read_buffer;
-    size_t bytes_in_buffer;
-    float playduration;
-    int resample;
-    int nchannels;
-    unsigned samplerate;
-    struct mp3taginfo taginfo;
-    struct chapter *current_chapter;
-    jack_ringbuffer_t *lrb;
-    jack_ringbuffer_t *rrb;
-    int initial_data;
-    int errors;
-    };
+   {
+   FILE *fp;
+   mpg123_handle *mh;
+   struct mp3taginfo taginfo;
+   struct chapter *current_chapter;
+   };
 
-/* register mp3 decoder */
 int mp3decode_reg(struct xlplayer *xlplayer);
