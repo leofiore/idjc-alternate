@@ -1056,7 +1056,7 @@ class mixprefs:
         'but the alarm tone is not sent to the stream.'))
         
         self.dither = gtk.CheckButton(
-                                    _('Apply dither to MP3 and FLAC playback'))
+                                    _('Apply dither to 16 bit PCM playback'))
         vbox.pack_start(self.dither, False, False, 0)
         self.dither.connect("toggled", self.cb_dither)
         self.dither.show()
