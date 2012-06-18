@@ -249,7 +249,7 @@ static void live_avcodec_encoder_main(struct encoder *encoder)
         
         if (s->avpkt.data) {
             free(s->avpkt.data);
-            s->avpkt.data;
+            s->avpkt.data = NULL;
         }
             
         if (s->inbuf) {
