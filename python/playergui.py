@@ -1035,12 +1035,15 @@ class IDJC_Media_Player:
                 if line == "OIR:end\n":
                     break
         elif filext == ".aac":
-            id3 = ID3(filename)
             try:
-                length = int(id3["TLEN"].text[0]) / 1000
-            except (KeyError, ValueError, IndexError):
-                print "unknown track length -- add a TLEN tag if you know it"
-                length = ""
+                id3 = ID3(filename)
+                try:
+                    length = int(id3["TLEN"].text[0]) / 1000
+                except (KeyError, ValueError, IndexError):
+                    print "unknown track length -- add a TLEN tag if you know it"
+                    raise Exception
+            except Exception:
+                length = 0
         else:
             # Mutagen used for all remaining formats.
             try:
