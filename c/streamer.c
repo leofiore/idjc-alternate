@@ -105,22 +105,10 @@ static void *streamer_main(void *args)
                         {
                         if (packet->header.flags & PF_INITIAL)
                             {
-                            /* inform server of the layout of the stream */
-                            /*
-                            if (shout_set_audio_info(self->shout, SHOUT_AI_BITRATE, s_conv(packet->header.bit_rate)) != SHOUTERR_SUCCESS)
-                                fprintf(stderr, "streamer_main: failed to set stream info bitrate\n");
-                            if (shout_set_audio_info(self->shout, SHOUT_AI_SAMPLERATE, s_conv(packet->header.sample_rate)) != SHOUTERR_SUCCESS)
-                                fprintf(stderr, "streamer_main: failed to set stream info samplerate\n");
-                            if (shout_set_audio_info(self->shout, SHOUT_AI_CHANNELS, s_conv(packet->header.n_channels)) != SHOUTERR_SUCCESS)
-                                fprintf(stderr, "streamer_main: failed to set stream info channels\n");
-                            fprintf(stderr, "streamer_main: new stream settings for stream %d\nbitrate %s samplerate %s number of channels %s\n",
-                                self->numeric_id,
-                                shout_get_audio_info(self->shout, SHOUT_AI_BITRATE),
-                                shout_get_audio_info(self->shout, SHOUT_AI_SAMPLERATE),
-                                shout_get_audio_info(self->shout, SHOUT_AI_CHANNELS));
-                            */ 
+                            int br = packet->header.bit_rate;
+                            
                             /* determine how much audio to hold in the send buffer */
-                            self->max_shout_queue = (shout_buffer_seconds * packet->header.bit_rate) << 7;
+                            self->max_shout_queue = (shout_buffer_seconds * ((br > 1000) ? br / 1000 : br)) << 7;
                             }
                         if (packet->header.flags & (PF_OGG | PF_MP3 | PF_MP2 | PF_AAC | PF_AACP2))
                             {
@@ -131,6 +119,7 @@ static void *streamer_main(void *args)
                                 data_size = 0;
                                 fprintf(stderr, "streamer_main: **** packet dumped due to buffer being full ****\n");
                                 }
+#if 1                           
                             switch(shout_send(self->shout, packet->data, data_size))
                                 {
                                 case SHOUTERR_SUCCESS:
@@ -140,6 +129,13 @@ static void *streamer_main(void *args)
                                     fprintf(stderr, "streamer_main: failed writing to stream, shout_get_error reports: %s\n", shout_get_error(self->shout));
                                     self->stream_mode = SM_DISCONNECTING;
                                 }
+#else
+                            if (shout_send_raw(self->shout, packet->data, data_size) != data_size)
+                                {
+                                fprintf(stderr, "streamer_main: failed writing to stream, shout_get_error reports: %s\n", shout_get_error(self->shout));
+                                self->stream_mode = SM_DISCONNECTING;
+                                }
+#endif
                             }
                         if (packet->header.flags & PF_FINAL)
                             fprintf(stderr, "streamer_main: final packet with serial %d\n", packet->header.serial);
