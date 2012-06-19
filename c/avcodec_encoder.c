@@ -143,10 +143,8 @@ static void live_avcodec_encoder_main(struct encoder *encoder)
                     fprintf(stderr, "avcodec_encoder_main: failed to allocate frame\n");
                     encoder->encoder_state = ES_STOPPING;
                 }
-            } else {
+            } else
                 avcodec_get_frame_defaults(s->decoded_frame);
-                s->pkt_flags &= ~PF_INITIAL;
-            }
             s->decoded_frame->nb_samples = in_samples;
             
             if (id) {
@@ -213,13 +211,14 @@ static void live_avcodec_encoder_main(struct encoder *encoder)
                     s->samples_written += out_samples;
                     write_packet(encoder, s, s->avpkt.data, s->avpkt.size, s->pkt_flags);
                     av_free_packet(&s->avpkt);
+                    s->pkt_flags &= ~PF_INITIAL;
                 }
             } else {
                 // write out an empty last packet rather than flush the codec with digital silence
                 write_packet(encoder, s, (unsigned char *)"", 0, s->pkt_flags);
             }
 
-            if (encoder->new_metadata && encoder->use_metadata) {
+            if (encoder->new_metadata && encoder->use_metadata && !(s->pkt_flags & (PF_INITIAL | PF_FINAL))) {
                 packetize_metadata(encoder, s);
                 if (s->metadata)
                     write_packet(encoder, s, (unsigned char *)s->metadata, strlen(s->metadata) + 1, PF_METADATA);
