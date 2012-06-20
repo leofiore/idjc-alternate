@@ -1828,8 +1828,7 @@ class StreamTab(Tab):
         contact_details_pane.show()
         
         vbox.pack_start(frame, False)
-        if FGlobs.enh_libshout:
-            frame.show()
+
         label = gtk.Label(_('Extra Shoutcast'))
         self.details_nb.append_page(vbox, label)
         label.show()

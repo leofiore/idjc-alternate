@@ -32,7 +32,7 @@
 
 #include <ogg/ogg.h>
 
-#include <shout/shout.h>
+#include <shoutidjc/shout.h>
 #include "shout_private.h"
 #include "shout_ogg.h"
 

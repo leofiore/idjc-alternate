@@ -24,11 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#ifdef HAVE_SHOUT_SHOUT_H
-    #include <shout/shout.h>
-#else
-    #include <shout.h>
-#endif /* SHOUT_SHOUT_H */
+#include <shoutidjc/shout.h>
 #include "sourceclient.h"
 #include "sig.h"
 
@@ -349,7 +345,7 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
         sce("genre");
         goto error;
         }
-#ifdef ENH_SHOUT
+
     if (shout_set_irc(self->shout, sv->irc) != SHOUTERR_SUCCESS)
         {
         sce("irc");
@@ -365,7 +361,7 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
         sce("icq");
         goto error;
         }
-#endif /* ENH_SHOUT */
+
     if (shout_set_public(self->shout, !strcmp(sv->make_public, "True")) != SHOUTERR_SUCCESS)
         {
         sce("make public");

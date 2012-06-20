@@ -33,7 +33,7 @@
 #include <winsock2.h>
 #endif
 
-#include <shout/shout.h>
+#include <shoutidjc/shout.h>
 #include "util.h"
 
 char *_shout_util_strdup(const char *s)

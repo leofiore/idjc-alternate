@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 function missing {
 	echo "$1, is missing - please install it and try again"
@@ -23,5 +23,8 @@ if [ -d docsrc ]; then
   cd ..
 fi
 
+cd libshout-idjc
+autoreconf -ifs
+cd ..
 autoreconf -ifs
 

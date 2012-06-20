@@ -89,7 +89,6 @@ class FGlobs(object):
     
     package_name = """@PACKAGE_NAME@"""
     package_version = """@PACKAGE_VERSION@"""
-    enh_libshout = @ENH_SHOUT@
 
 
 

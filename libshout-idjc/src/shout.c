@@ -30,7 +30,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <shout/shout.h>
+#include <shoutidjc/shout.h>
 #include <net/sock.h>
 #include "timing/timing.h"
 #include "httpp/httpp.h"

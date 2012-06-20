@@ -6,7 +6,7 @@ m4_define(libshout_minor, 3)
 m4_define(libshout_micro, 0)
 m4_define(libshout_version, libshout_major.libshout_minor.libshout_micro)
 
-AC_INIT([libshout], libshout_version, [icecast-dev@xiph.org])
+AC_INIT([libshout-idjc], libshout_version, [s-fairchild@users.sourceforge.net])
 AC_PREREQ([2.54])
 AC_CONFIG_SRCDIR([src/shout.c])
 AM_CONFIG_HEADER(config.h)
@@ -21,7 +21,7 @@ AC_DEFINE([LIBSHOUT_MICRO], libshout_micro, [Shout library patch version])
 
 VERSION=libshout_version
 
-AM_INIT_AUTOMAKE([libshout], libshout_version)
+AM_INIT_AUTOMAKE([libshout-idjc], libshout_version)
 AM_MAINTAINER_MODE
 
 dnl create our name mangling macro
@@ -32,7 +32,6 @@ AH_VERBATIM([_mangle], [
 ])
 
 AC_PROG_CC
-AM_DISABLE_SHARED
 AM_PROG_LIBTOOL
 
 dnl Set some options based on environment
@@ -141,6 +140,23 @@ then
   AC_DEFINE([HAVE_SPEEX], 1, [Define if you want speex streams supported])
 fi
 
+dnl If pkgconfig is found, install a shout-idjc.pc file.
+
+AC_ARG_ENABLE([pkgconfig],
+  AC_HELP_STRING([--disable-pkgconfig],[disable pkgconfig data files (auto)]),
+  [dopkgconfig="$enableval"], [dopkgconfig="maybe"])
+if test "$dopkgconfig" = "maybe"
+then
+  AC_CHECK_PROG([PKGCONFIG], [pkg-config], [yes], [no])
+else
+  AC_MSG_CHECKING([whether pkgconfig should be used])
+  PKGCONFIG="$dopkgconfig"
+  AC_MSG_RESULT([$PKGCONFIG])
+fi
+AM_CONDITIONAL([HAVE_PKGCONFIG], [test "$PKGCONFIG" != "no"])
+
+# Collect flags for shout-idjc.pc
+
 # I hate myself for doing this.
 save_prefix="$prefix"
 if test "$prefix" = "NONE"
@@ -175,7 +191,7 @@ AC_SUBST(PROFILE)
 AC_SUBST(XIPH_CFLAGS)
 AC_SUBST(XIPH_CPPFLAGS)
 
-AC_OUTPUT([Makefile include/Makefile include/shout/Makefile
-  include/shout/shout.h src/Makefile src/net/Makefile src/timing/Makefile
-  src/thread/Makefile src/avl/Makefile src/httpp/Makefile
+AC_OUTPUT([Makefile include/Makefile include/shoutidjc/Makefile
+  include/shoutidjc/shout.h src/Makefile src/net/Makefile src/timing/Makefile
+  src/thread/Makefile src/avl/Makefile src/httpp/Makefile shout-idjc.pc
   ])

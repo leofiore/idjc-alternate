@@ -13,15 +13,15 @@ endif
 
 SUBDIRS = avl net timing httpp $(MAYBE_THREAD)
 
-lib_LTLIBRARIES = libshout.la
-libshout_la_LDFLAGS = -version-info 5:0:2
+lib_LTLIBRARIES = libshout-idjc.la
+libshout_idjc_la_LDFLAGS = -version-info 5:0:2
 
 EXTRA_DIST = speex.c
 noinst_HEADERS = shout_ogg.h shout_private.h util.h
-libshout_la_SOURCES = shout.c util.c ogg.c vorbis.c mpeg.c webm.c $(MAYBE_SPEEX)
+libshout_idjc_la_SOURCES = shout.c util.c ogg.c vorbis.c mpeg.c webm.c $(MAYBE_SPEEX)
 AM_CFLAGS = @XIPH_CFLAGS@
 
-libshout_la_LIBADD = net/libicenet.la timing/libicetiming.la avl/libiceavl.la\
+libshout_idjc_la_LIBADD = net/libicenet.la timing/libicetiming.la avl/libiceavl.la\
 		httpp/libicehttpp.la $(MAYBE_THREAD_LIB) $(VORBIS_LIBS) $(SPEEX_LIBS)
 
 INCLUDES = -I$(top_builddir)/include

@@ -201,20 +201,8 @@ AC_CHECK_FUNCS([getline strndup canonicalize_file_name], :,
 # Use png or xpm for graphics
 AC_SUBST(EXT,[png])
 
-AC_ARG_ENABLE([static],AC_HELP_STRING([--disable-static],[build with shared libshout library]),[static=$enableval],[static="yes"])
-
-if test x$static = "xyes" ; then
-   AC_CONFIG_SUBDIRS([libshout])
-   AC_SUBST([LIBSHOUT_CFLAGS],['-I$(top_builddir)/libshout/include/shout'])
-   AC_SUBST([LIBSHOUT_LIBS],['$(top_builddir)/libshout/src/.libs/libshout.a'])
-   AC_SUBST([MAYBE_LIBSHOUT],[libshout])
-   AC_SUBST([ENH_SHOUT],[1])
-   AC_DEFINE([ENH_SHOUT],[1],[Set if using an enhanced libshout])
-else
-   PKG_CHECK_MODULES([LIBSHOUT], [shout])
-   AC_CHECK_HEADERS([shout/shout.h])
-   AC_SUBST([ENH_SHOUT],[0])
-fi
+PKG_CHECK_MODULES([SHOUTIDJC], [shout-idjc])
+AC_CHECK_HEADERS([shoutidjc/shout.h])
 
 if test x$DYNAMIC = "x1" ; then
    AC_CHECK_FUNCS([dlopen], :, AC_CHECK_LIB([dl], [dlopen], AC_SUBST([DYN_LIBS], [-ldl]), AC_MSG_ERROR([Runtime linking functions not found])))
