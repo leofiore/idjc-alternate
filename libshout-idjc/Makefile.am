@@ -5,7 +5,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = include src
 
-EXTRA_DIST = INSTALL m4/acx_pthread.m4 \
+EXTRA_DIST = m4/acx_pthread.m4 \
 	m4/ogg.m4 m4/vorbis.m4 m4/xiph_compiler.m4 m4/xiph_net.m4 \
 	m4/xiph_types.m4
 
