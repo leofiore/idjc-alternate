@@ -2740,8 +2740,18 @@ class SourceClientGui:
                 rec = tab.record_buttons.record_button
                 stop = tab.record_buttons.stop_button
                 sens = rec.get_sensitive()
-                mi = gtk.CheckMenuItem(str(tab.numeric_id + 1) + 
-                                    ("" if sens else " " + _('Misconfigured')))
+                src = tab.source_dest.source_combo.get_active_text().strip()
+                dest = tab.source_dest.file_dialog.get_filename()
+                mi = gtk.CheckMenuItem()
+                label = gtk.Label()
+                label.set_alignment(0.0, 0.5)
+                label.set_markup(
+                    # TC: Recorder menu format string.
+                    (_("{numericid} [{source}] > [{directory}]").format(
+                    numericid=tab.numeric_id + 1, source=src, directory=dest)
+                    if sens else " " + _('Misconfigured')))
+                mi.add(label)
+                label.show()
                 mi.set_active(rec.get_active())
                 mi.set_sensitive(sens)
                 menu.append(mi)
