@@ -1,5 +1,7 @@
 * Changes in version 0.8.8 *
 
+Fix to unhandled exceptions and bad behaviour in IRC code relating to the adding or removal of IRC servers during streaming.
+
 Replaced libmad mp3 decoder with mpg123.
 
 Added AAC and AAC Plus V2 streaming and recording support.
