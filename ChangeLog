@@ -1,5 +1,7 @@
 * Changes in version 0.8.8 *
 
+Removed the 'Fastest' player resample option from the preferences due to its inferiority. The remaining items renamed in accordance with the stream encoder names for the same modes.
+
 Fix to unhandled exceptions and bad behaviour in IRC code relating to the adding or removal of IRC servers during streaming.
 
 Replaced libmad mp3 decoder with mpg123.

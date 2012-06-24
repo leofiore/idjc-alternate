@@ -1110,9 +1110,8 @@ class mixprefs:
         'used whenever the sample rate of the music file currently playing does'
         ' not match the sample rate of the JACK sound server. Highest mode '
         'offers the best sound quality but also uses the most CPU (not '
-        'recommended for systems built before 2006). Fastest mode while it '
-        'uses by far the least amount of CPU should be avoided '
-        'if at all possible.'))
+        'recommended for systems built before 2006). All these modes provide '
+        'adequate sound quality.'))
         frame.add(hbox)
         hbox.show()
         self.best_quality_resample = gtk.RadioButton(None, _('Highest'))
@@ -1124,7 +1123,7 @@ class mixprefs:
         hbox.add(rsbox)
         self.best_quality_resample.show()
         self.good_quality_resample = gtk.RadioButton(
-                                        self.best_quality_resample, _('Good'))
+                                        self.best_quality_resample, _('Medium'))
         self.good_quality_resample.connect(
                                         "toggled", self.cb_resample_quality, 1) 
         rsbox = gtk.HBox()
@@ -1133,21 +1132,14 @@ class mixprefs:
         hbox.add(rsbox)
         self.good_quality_resample.show()
         self.fast_resample = gtk.RadioButton(
-                                        self.good_quality_resample, _('Fast'))
+                                        self.good_quality_resample, _('Lowest'))
         self.fast_resample.connect("toggled", self.cb_resample_quality, 2) 
         rsbox = gtk.HBox()
         rsbox.pack_start(self.fast_resample, True, False, 0)
         rsbox.show()
         hbox.add(rsbox)
         self.fast_resample.show()
-        self.fastest_resample = gtk.RadioButton(
-                                            self.fast_resample, _('Fastest'))
-        self.fastest_resample.connect("toggled", self.cb_resample_quality, 4) 
-        rsbox = gtk.HBox()
-        rsbox.pack_start(self.fastest_resample, True, False, 0)
-        rsbox.show()
-        hbox.add(rsbox)
-        self.fastest_resample.show()
+
         aud_rs_hbox.pack_start(frame, True, True, 0)
         frame.show()
         
@@ -1426,7 +1418,6 @@ class mixprefs:
             "best_rs"       : self.best_quality_resample,
             "good_rs"       : self.good_quality_resample,
             "fast_rs"       : self.fast_resample,
-            "fastest_rs"    : self.fastest_resample,
             "speed_var"     : self.speed_variance,
             "dual_volume"   : self.dual_volume,
             "showtips"      : self.enable_tooltips,
