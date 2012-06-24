@@ -49,7 +49,6 @@ struct loe_data
     };
 
 int live_ogg_encoder_init(struct encoder *encoder, struct encoder_vars *ev);
-int live_ogg_test_values(struct threads_info *ti, struct universal_vars *uv, void *other);
 int live_ogg_write_packet(struct encoder *encoder, ogg_page *op, int flags);
 void live_ogg_capture_metadata(struct encoder *e, struct ogg_tag_data *td);
 void live_ogg_free_metadata(struct ogg_tag_data *td);

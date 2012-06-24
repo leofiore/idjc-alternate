@@ -19,20 +19,20 @@
 
 #include "../config.h"
 
-#ifdef DYN_LAME
-#include "lame.h"
-#else
+#ifdef HAVE_LAME_LAME_H
 #include <lame/lame.h>
-#endif /* DYN_LAME */
+#else 
+#include "lame.h"
+#endif /* HAVE_LAME_LAME_H */
+
 #include "sourceclient.h"
 
-struct lme_data
+struct lm3e_data
     {
     lame_global_flags *gfp;
     int lame_mode;
     int lame_channels;
     int lame_quality;
-    int lame_freeformat;
     char *metadata;
     int lame_samples;
     unsigned char *mp3buf;

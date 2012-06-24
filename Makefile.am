@@ -1,15 +1,13 @@
-SUBDIRS = po ${MAYBE_LIBSHOUT} c python artwork man doc
-DISTDIRS = libshout
+SUBDIRS = po c python artwork man doc
 
 EXTRA_SCRIPTS=
 nodist_bin_SCRIPTS=${PACKAGE_NAME}
-dist_noinst_SCRIPTS=idjc.in.in env-up ffmpeg_avcodec.c
+dist_noinst_SCRIPTS=idjc.in.in bootstrap.sh
 nodist_doc_DATA=AUTHORS.gz NEWS.gz README.gz ChangeLog.gz
 docdir=${prefix}/share/doc/${PACKAGE_NAME}-${PACKAGE_VERSION}
 dist_noinst_DATA=idjc.desktop.in.in
 nodist_appmenu_DATA=${PACKAGE_NAME}.desktop
 appmenudir=${prefix}/share/applications
-
 
 ${PACKAGE_NAME}: idjc.in
 	@sed -e 's|$${prefix}|${prefix}|g' $? >$@

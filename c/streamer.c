@@ -24,11 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#ifdef HAVE_SHOUT_SHOUT_H
-    #include <shout/shout.h>
-#else
-    #include <shout.h>
-#endif /* SHOUT_SHOUT_H */
+#include <shoutidjc/shout.h>
 #include "sourceclient.h"
 #include "sig.h"
 
@@ -105,22 +101,12 @@ static void *streamer_main(void *args)
                         {
                         if (packet->header.flags & PF_INITIAL)
                             {
-                            /* inform server of the layout of the stream */
-                            if (shout_set_audio_info(self->shout, SHOUT_AI_BITRATE, s_conv(packet->header.bit_rate)) != SHOUTERR_SUCCESS)
-                                fprintf(stderr, "streamer_main: failed to set stream info bitrate\n");
-                            if (shout_set_audio_info(self->shout, SHOUT_AI_SAMPLERATE, s_conv(packet->header.sample_rate)) != SHOUTERR_SUCCESS)
-                                fprintf(stderr, "streamer_main: failed to set stream info samplerate\n");
-                            if (shout_set_audio_info(self->shout, SHOUT_AI_CHANNELS, s_conv(packet->header.n_channels)) != SHOUTERR_SUCCESS)
-                                fprintf(stderr, "streamer_main: failed to set stream info channels\n");
-                            fprintf(stderr, "streamer_main: new stream settings for stream %d\nbitrate %s samplerate %s number of channels %s\n",
-                                self->numeric_id,
-                                shout_get_audio_info(self->shout, SHOUT_AI_BITRATE),
-                                shout_get_audio_info(self->shout, SHOUT_AI_SAMPLERATE),
-                                shout_get_audio_info(self->shout, SHOUT_AI_CHANNELS));
+                            int br = packet->header.bit_rate;
+                            
                             /* determine how much audio to hold in the send buffer */
-                            self->max_shout_queue = (shout_buffer_seconds * packet->header.bit_rate) << 7;
+                            self->max_shout_queue = (shout_buffer_seconds * ((br > 1000) ? br / 1000 : br)) << 7;
                             }
-                        if (packet->header.flags & (PF_OGG | PF_MP3))
+                        if (packet->header.flags & (PF_OGG | PF_MP3 | PF_MP2 | PF_AAC | PF_AACP2))
                             {
                             if ((packet->header.flags & (PF_HEADER | PF_FINAL)) || shout_queuelen(self->shout) < self->max_shout_queue)
                                 data_size = packet->header.data_size;
@@ -129,6 +115,7 @@ static void *streamer_main(void *args)
                                 data_size = 0;
                                 fprintf(stderr, "streamer_main: **** packet dumped due to buffer being full ****\n");
                                 }
+#if 1                           
                             switch(shout_send(self->shout, packet->data, data_size))
                                 {
                                 case SHOUTERR_SUCCESS:
@@ -138,6 +125,13 @@ static void *streamer_main(void *args)
                                     fprintf(stderr, "streamer_main: failed writing to stream, shout_get_error reports: %s\n", shout_get_error(self->shout));
                                     self->stream_mode = SM_DISCONNECTING;
                                 }
+#else
+                            if (shout_send_raw(self->shout, packet->data, data_size) != data_size)
+                                {
+                                fprintf(stderr, "streamer_main: failed writing to stream, shout_get_error reports: %s\n", shout_get_error(self->shout));
+                                self->stream_mode = SM_DISCONNECTING;
+                                }
+#endif
                             }
                         if (packet->header.flags & PF_FINAL)
                             fprintf(stderr, "streamer_main: final packet with serial %d\n", packet->header.serial);
@@ -147,10 +141,10 @@ static void *streamer_main(void *args)
                             self->stream_mode = SM_DISCONNECTING;
                             }
                         }
-                    if (packet->header.flags & PF_METADATA)  /* tell server about new mp3 metadata */
+                    if (packet->header.flags & PF_METADATA)  /* tell server about new metadata */
                         {
                         *strpbrk(packet->data, "\n") = '\0';
-                        fprintf(stderr, "streamer_main: packet is mp3 metadata: %s\n", (char *)packet->data);
+                        fprintf(stderr, "streamer_main: packet is metadata: %s\n", (char *)packet->data);
                         shout_metadata_add(self->shout_meta, "song", packet->data);
                         switch (shout_set_metadata(self->shout, self->shout_meta))
                             {
@@ -204,7 +198,7 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
     {
     struct streamer_vars *sv = other;
     struct streamer *self = ti->streamer[uv->tab];
-    int protocol, data_format;
+    int protocol, data_format = -1;
     char channels[2];
     char bitrate[4];
     char samplerate[6];
@@ -227,21 +221,39 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
         }
     else
         {
-        switch (self->encoder_op->encoder->data_format)
-            {
-            case DF_JACK_MP3:
-            case DF_FILE_MP3:
-                data_format = SHOUT_FORMAT_MP3;
-                break;
-            case DF_JACK_OGG:
-            case DF_FILE_OGG:
+        const struct encoder_data_format *df = &self->encoder_op->encoder->data_format;            
+        int failed = FALSE;
+
+        switch (df->family) {
+            case ENCODER_FAMILY_OGG:
                 data_format = SHOUT_FORMAT_OGG;
                 break;
-            case DF_UNHANDLED:
-            default:
-                fprintf(stderr, "streamer_start: unhandled encoder data format\n");
-                encoder_unregister_client(self->encoder_op);
-                return FAILED;
+            case ENCODER_FAMILY_MPEG:
+                switch (df->codec) {
+                    case ENCODER_CODEC_MP3:
+                    case ENCODER_CODEC_MP2:
+                        data_format = SHOUT_FORMAT_MP3;
+                        break;
+                    case ENCODER_CODEC_AAC:
+                        data_format = SHOUT_FORMAT_AAC;
+                        break;
+                    case ENCODER_CODEC_AACPLUSV2:
+                        data_format = SHOUT_FORMAT_AACPLUS;
+                        break;
+                    case ENCODER_CODEC_UNHANDLED:
+                    default:
+                        failed = TRUE;
+                    }
+                    break;
+            case ENCODER_FAMILY_UNHANDLED:
+                failed = TRUE;
+            }
+            
+        if (failed)
+            {
+            fprintf(stderr, "streamer_start: unhandled encoder data format\n");
+            encoder_unregister_client(self->encoder_op);
+            return FAILED;
             }
         }
         
@@ -333,7 +345,7 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
         sce("genre");
         goto error;
         }
-#ifdef ENH_SHOUT
+
     if (shout_set_irc(self->shout, sv->irc) != SHOUTERR_SUCCESS)
         {
         sce("irc");
@@ -349,7 +361,7 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
         sce("icq");
         goto error;
         }
-#endif /* ENH_SHOUT */
+
     if (shout_set_public(self->shout, !strcmp(sv->make_public, "True")) != SHOUTERR_SUCCESS)
         {
         sce("make public");
@@ -357,8 +369,11 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
         }
         
     snprintf(channels,   sizeof channels  , "%d",  self->encoder_op->encoder->n_channels);
-    snprintf(bitrate,    sizeof bitrate   , "%d",  self->encoder_op->encoder->bitrate);
-    snprintf(samplerate, sizeof samplerate, "%ld", self->encoder_op->encoder->samplerate);
+    {
+        int br = self->encoder_op->encoder->bitrate;
+        snprintf(bitrate, sizeof bitrate   , "%d",  ((br < 1000) ? br : br/1000));
+    }
+    snprintf(samplerate, sizeof samplerate, "%ld", self->encoder_op->encoder->target_samplerate);
         
     if (shout_set_audio_info(self->shout, SHOUT_AI_BITRATE, bitrate) != SHOUTERR_SUCCESS)
         {

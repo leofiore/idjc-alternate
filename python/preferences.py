@@ -750,17 +750,6 @@ class mixprefs:
             set_tip(self.parent.deckvol,
                         _('The volume control shared by both music players.'))
 
-    def cb_twodblimit(self, widget):
-        if widget.get_active():
-            level = -2.0
-        else:
-            level = None
-        self.parent.str_l_peak.set_line(level)
-        self.parent.str_r_peak.set_line(level)
-        self.parent.str_l_rms_vu.set_line(level)
-        self.parent.str_r_rms_vu.set_line(level)
-        self.parent.send_new_mixer_stats()
-        
     def cb_rg_indicate(self, widget):
         show = widget.get_active()
         for each in (self.parent.player_left, self.parent.player_right,
@@ -1026,16 +1015,6 @@ class mixprefs:
         vbox.pack_start(self.bonus_killer, False, False, 0)
         self.bonus_killer.show()
         
-        self.twodblimit = gtk.CheckButton(
-                                _('Restrict the stream audio ceiling to -2dB'))
-        vbox.pack_start(self.twodblimit, False, False, 0)
-        self.twodblimit.connect("toggled", self.cb_twodblimit)
-        self.twodblimit.show()
-        set_tip(self.twodblimit, _('This option may improve the audio quality '
-                'at the expense of a little playback volume. Limiting audio to'
-                ' -2dB at the encoder input will generally prevent decoded '
-                'audio from breaching 0dB.'))
-        
         self.speed_variance = gtk.CheckButton(
                             _('Enable the main-player speed/pitch controls'))
         vbox.pack_start(self.speed_variance, False, False, 0)
@@ -1072,22 +1051,13 @@ class mixprefs:
         'but the alarm tone is not sent to the stream.'))
         
         self.dither = gtk.CheckButton(
-                                    _('Apply dither to MP3 and FLAC playback'))
+                                    _('Apply dither to 16 bit PCM playback'))
         vbox.pack_start(self.dither, False, False, 0)
         self.dither.connect("toggled", self.cb_dither)
         self.dither.show()
         set_tip(self.dither, _('This feature maybe improves the sound quality '
                             'a little when listening on a 24 bit sound card.'))
 
-        self.mp3_utf8 = gtk.CheckButton(
-                            _('Use utf-8 encoding when streaming mp3 metadata'))
-        self.mp3_utf8.set_active(True)
-        vbox.pack_start(self.mp3_utf8, False, False, 0)
-        self.mp3_utf8.show()
-        set_tip(self.mp3_utf8, _('It is standard to stream mp3 metadata with '
-                                'iso-8859-1 character encoding on shoutcast. '
-                                'This option should therefore not be used.'))
-        
         self.enable_tooltips = gtk.CheckButton(_('Enable tooltips'))
         self.enable_tooltips.connect("toggled", self.callback, "tooltips")
         vbox.pack_start(self.enable_tooltips, False, False, 0)
@@ -1135,9 +1105,8 @@ class mixprefs:
         'used whenever the sample rate of the music file currently playing does'
         ' not match the sample rate of the JACK sound server. Highest mode '
         'offers the best sound quality but also uses the most CPU (not '
-        'recommended for systems built before 2006). Fastest mode while it '
-        'uses by far the least amount of CPU should be avoided '
-        'if at all possible.'))
+        'recommended for systems built before 2006). All these modes provide '
+        'adequate sound quality.'))
         frame.add(hbox)
         hbox.show()
         self.best_quality_resample = gtk.RadioButton(None, _('Highest'))
@@ -1149,7 +1118,7 @@ class mixprefs:
         hbox.add(rsbox)
         self.best_quality_resample.show()
         self.good_quality_resample = gtk.RadioButton(
-                                        self.best_quality_resample, _('Good'))
+                                        self.best_quality_resample, _('Medium'))
         self.good_quality_resample.connect(
                                         "toggled", self.cb_resample_quality, 1) 
         rsbox = gtk.HBox()
@@ -1158,21 +1127,14 @@ class mixprefs:
         hbox.add(rsbox)
         self.good_quality_resample.show()
         self.fast_resample = gtk.RadioButton(
-                                        self.good_quality_resample, _('Fast'))
+                                        self.good_quality_resample, _('Lowest'))
         self.fast_resample.connect("toggled", self.cb_resample_quality, 2) 
         rsbox = gtk.HBox()
         rsbox.pack_start(self.fast_resample, True, False, 0)
         rsbox.show()
         hbox.add(rsbox)
         self.fast_resample.show()
-        self.fastest_resample = gtk.RadioButton(
-                                            self.fast_resample, _('Fastest'))
-        self.fastest_resample.connect("toggled", self.cb_resample_quality, 4) 
-        rsbox = gtk.HBox()
-        rsbox.pack_start(self.fastest_resample, True, False, 0)
-        rsbox.show()
-        hbox.add(rsbox)
-        self.fastest_resample.show()
+
         aud_rs_hbox.pack_start(frame, True, True, 0)
         frame.show()
         
@@ -1451,12 +1413,9 @@ class mixprefs:
             "best_rs"       : self.best_quality_resample,
             "good_rs"       : self.good_quality_resample,
             "fast_rs"       : self.fast_resample,
-            "fastest_rs"    : self.fastest_resample,
             "speed_var"     : self.speed_variance,
             "dual_volume"   : self.dual_volume,
-            "twodblimit"    : self.twodblimit,
             "showtips"      : self.enable_tooltips,
-            "mp3utf8"       : self.mp3_utf8,
             "silencekiller" : self.silence_killer,
             "bonuskiller"   : self.bonus_killer,
             "rg_indicate"   : self.rg_indicate,

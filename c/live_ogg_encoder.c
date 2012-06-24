@@ -97,23 +97,18 @@ static void live_ogg_encoder_main(struct encoder *encoder)
         {
         fprintf(stderr, "live_ogg_encoder_main: first pass of the encoder\n");
         vorbis_info_init(&s->vi);
-        if (vorbis_encode_setup_managed(&s->vi, encoder->n_channels, encoder->target_samplerate, s->max_bitrate * 1000, encoder->bitrate * 1000, s->min_bitrate * 1000))
+        if (vorbis_encode_setup_managed(&s->vi, encoder->n_channels, encoder->target_samplerate, s->max_bitrate, encoder->bitrate, s->min_bitrate))
             {
             fprintf(stderr, "live_ogg_encoder_main: mode initialisation failed\n");
             vorbis_info_clear(&s->vi);
             goto bailout;
             }
-        /* turn off bitrate management in case it was turned on */
-        if (s->min_bitrate == -1 && s->max_bitrate == -1)
-            vorbis_encode_ctl(&s->vi, OV_ECTL_RATEMANAGE2_SET, NULL);
-        /* if a minimum bitrate was set, enforce it for dead silence */
-        if (s->min_bitrate != -1)
-            {
-            vorbis_encode_ctl(&s->vi, OV_ECTL_RATEMANAGE2_GET, &ai);
-            ai.bitrate_limit_min_kbps = s->min_bitrate;
-            if (vorbis_encode_ctl(&s->vi, OV_ECTL_RATEMANAGE2_SET, &ai))
-                fprintf(stderr, "live_ogg_encoder_main: failed to set hard bitrate floor\n");
-            }
+
+        vorbis_encode_ctl(&s->vi, OV_ECTL_RATEMANAGE2_GET, &ai);
+        ai.bitrate_limit_min_kbps = s->min_bitrate / 1000;
+        if (vorbis_encode_ctl(&s->vi, OV_ECTL_RATEMANAGE2_SET, &ai))
+            fprintf(stderr, "live_ogg_encoder_main: failed to set hard bitrate floor\n");
+            
         vorbis_encode_setup_init(&s->vi);
         vorbis_analysis_init(&s->vd, &s->vi);
         vorbis_block_init(&s->vd, &s->vb);
@@ -260,30 +255,18 @@ int live_ogg_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         fprintf(stderr, "live_ogg_encoder: malloc failure\n");
         return FAILED;
         }
-    s->max_bitrate = atol(ev->bit_rate_max);
-    s->min_bitrate = atol(ev->bit_rate_min);
+
+    if (!strcmp(ev->variability, "constant"))
+        s->max_bitrate = s->min_bitrate = encoder->bitrate;
+    else
+        {
+        long var = encoder->bitrate * atol(ev->variability) / 100;
+        
+        s->max_bitrate = encoder->bitrate + var;
+        s->min_bitrate = encoder->bitrate - var;
+        }
+
     encoder->encoder_private = s;
     encoder->run_encoder = live_ogg_encoder_main;
     return SUCCEEDED;
-    }
-
-int live_ogg_test_values(struct threads_info *ti, struct universal_vars *uv, void *other)
-    {
-    struct encoder_vars *ev = other;
-    long sample_rate, max_bitrate, bitrate, min_bitrate, channels;
-    int retval;
-    vorbis_info vi;
-
-    sample_rate = atol(ev->sample_rate);
-    bitrate = atol(ev->bit_rate) * 1000;
-    if ((max_bitrate = atol(ev->bit_rate_max)) != -1)
-        max_bitrate *= 1000;
-    if ((min_bitrate = atol(ev->bit_rate_min)) != -1)
-        min_bitrate *= 1000;
-    channels = strcmp(ev->stereo, "mono") ? 2 : 1;
-
-    vorbis_info_init(&vi);
-    retval = vorbis_encode_setup_managed(&vi, channels, sample_rate, max_bitrate, bitrate, min_bitrate) ? FAILED : SUCCEEDED;
-    vorbis_info_clear(&vi);
-    return retval;
     }

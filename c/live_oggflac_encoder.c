@@ -250,7 +250,7 @@ static void live_oggflac_encoder_main(struct encoder *encoder)
         FLAC__stream_encoder_set_bits_per_sample(s->enc, s->bits_per_sample);
         FLAC__stream_encoder_set_sample_rate(s->enc, encoder->target_samplerate);
         FLAC__stream_encoder_set_ogg_serial_number(s->enc, ++encoder->oggserial);
-        if (s->metadata[0] && s->use_metadata)
+        if (encoder->use_metadata && s->metadata[0])
             FLAC__stream_encoder_set_metadata(s->enc, s->metadata, 1);
         FLAC__stream_encoder_init_ogg_stream(s->enc, NULL, live_oggflac_encoder_write_cb, NULL, NULL, NULL, encoder);
         encoder->timestamp = 0.0;
@@ -262,7 +262,7 @@ static void live_oggflac_encoder_main(struct encoder *encoder)
         {
         struct encoder_ip_data *id;
 
-        if ((encoder->new_metadata && s->use_metadata) || !encoder->run_request_f || encoder->flush)
+        if (encoder->new_metadata || !encoder->run_request_f || encoder->flush)
             {
             FLAC__stream_encoder_finish(s->enc);
             encoder->flush = FALSE;
@@ -333,8 +333,8 @@ int live_oggflac_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         return FAILED;
         }
 
-    s->bits_per_sample = atoi(ev->bit_width);
-    s->use_metadata = atoi(ev->use_metadata);
+    s->bits_per_sample = atoi(ev->bitwidth);
+    encoder->use_metadata = strcmp(ev->metadata_mode, "suppressed") ? 1 : 0;
     encoder->encoder_private = s;
     encoder->run_encoder = live_oggflac_encoder_main;
     return SUCCEEDED;

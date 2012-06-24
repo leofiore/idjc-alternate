@@ -1,6 +1,6 @@
 #   sourceclientgui.py: new for version 0.7 this provides the graphical
 #   user interface for the new improved streaming module
-#   Copyright (C) 2007 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2007-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ import gettext
 import traceback
 import xml.dom.minidom as mdom
 import xml.etree.ElementTree
+import ctypes
 from collections import namedtuple
 from threading import Thread
 
@@ -42,6 +43,7 @@ from .utils import string_multireplace
 from .gtkstuff import DefaultEntry, threadslock, HistoryEntry, WindowSizeTracker
 from .dialogs import *
 from .irc import IRCPane
+from .format import FormatControl, FormatCodecMPEG
 from .tooltips import set_tip
 from .prelims import ProfileManager
 
@@ -63,7 +65,7 @@ ListLine = namedtuple("ListLine", " ".join([x[0] for x in LISTFORMAT]))
 
 BLANK_LISTLINE = ListLine(1, 0, "", 8000, "", -1, "", "")
 
-
+lame_enabled = False
 
 class SmallLabel(gtk.Label):
     """A gtk.Label with small text size."""
@@ -441,13 +443,22 @@ class ConnectionPane(gtk.VBox):
         return 0 if s_type >= 2 else s_type + 1
 
     def set_button(self, tab):
-        if self.get_master_server_type():
+        st = self.get_master_server_type()
+        if st:
             config = ListLine(*self.liststore[0])
-            text = "{0.host}:{0.port}{0.mount}".format(config)
-            tab.server_connect_label.set_text(text)
+            p = tab.format_control.props
+            sens = (p.cap_icecast, p.cap_shoutcast)[st - 1]
+            if sens:
+                text = "{0.host}:{0.port}{0.mount}".format(config)
+            else:
+                text = _("Encoder Format Not Set/Compatible")
         else:
             # TC: Connection button text when no details have been entered.
-            tab.server_connect_label.set_text(_('No Master Server Configured'))
+            text = _('No Master Server Configured')
+            sens = False
+
+        tab.server_connect_label.set_text(text)
+        tab.server_connect.set_sensitive(sens)
     
     def individual_listeners_toggle_cb(self, cell, path):
         self.liststore[path][0] = not self.liststore[path][0]
@@ -469,6 +480,7 @@ class ConnectionPane(gtk.VBox):
 
     def streaming_set(self, val):
         self._streaming_set = val
+        self.treeview.get_selection().emit("changed")
 
     def streaming_is_set(self):
         return self._streaming_set
@@ -614,17 +626,20 @@ class ConnectionPane(gtk.VBox):
 
     def on_keypress(self, widget, event):
         if gtk.gdk.keyval_name(event.keyval) == "Delete":
-            self.remove.clicked()
+            if self.remove.get_sensitive():
+                self.remove.clicked()
 
     def on_selection_changed(self, tree_selection):
         sens = tree_selection.get_selected()[1] is not None
+        if self._streaming_set and tree_selection.path_is_selected((0,)):
+            sens = False
         for button in self.require_selection:
             button.set_sensitive(sens)
 
     def __init__(self, set_tip, tab):
         self.tab = tab
         gtk.VBox.__init__(self)
-        self.streaming_set(False)
+        self._streaming_set = False
         vbox = gtk.VBox()
         vbox.set_border_width(6)
         vbox.set_spacing(6)
@@ -1088,89 +1103,6 @@ class Troubleshooting(gtk.VBox):
 
 
 class StreamTab(Tab):
-    class ResampleFrame(SubcategoryFrame):
-        def cb_eval(self, widget, data = None):
-            if data is not None:
-                if widget.get_active():
-                    self.extraction_method = data
-                else:
-                    return
-            if self.extraction_method == "no_resample":
-                self.resample_rate = self.jack_sample_rate
-            elif self.extraction_method == "standard":
-                self.resample_rate = int(
-                                self.resample_rate_combo_box.get_active_text())
-            else:
-                self.resample_rate = int(
-                                self.resample_rate_spin_adj.get_value())
-            self.resample_quality = ("highest", "high", "fast", "fastest")[
-                                self.resample_quality_combo.get_active()]
-            self.mp3_compatible = self.resample_rate in self.mp3_samplerates
-            self.parentobject.mp3_dummy_object.clicked()  # update mp3 pane
-            self.parentobject.vorbis_dummy_object.clicked()
-
-
-        def __init__(self, parent, sizegroup):
-            self.parentobject = parent
-            self.jack_sample_rate = parent.source_client_gui.jack_sample_rate
-            self.resample_rate = self.jack_sample_rate
-            self.extraction_method = "no_resample"
-            self.mp3_compatible = True
-            SubcategoryFrame.__init__(self, " %s " % _('Sample rate'))
-            (self.resample_no_resample, self.resample_standard,
-                        self.resample_custom) = self.parentobject.make_radio(3)
-            self.resample_no_resample.connect("clicked", self.cb_eval,
-                                                                "no_resample")
-            self.resample_standard.connect("clicked", self.cb_eval,
-                                                                "standard")
-            self.resample_custom.connect("clicked", self.cb_eval, "custom")
-            no_resample_label = gtk.Label(_('Use JACK sample rate'))
-            self.mp3_samplerates = (48000, 44100, 32000, 24000, 22050, 16000,
-                                                            12000, 11025, 8000)
-            self.resample_rate_combo_box = self.parentobject.make_combo_box(
-                                                map(str, self.mp3_samplerates))
-            self.resample_rate_combo_box.set_active(1)
-            self.resample_rate_combo_box.connect("changed", self.cb_eval)
-            self.resample_rate_spin_adj = gtk.Adjustment(
-                                            44100, 4000, 190000, 10, 100, 0)
-            self.resample_rate_spin_control = gtk.SpinButton(
-                                            self.resample_rate_spin_adj, 0, 0)
-            self.resample_rate_spin_control.connect(
-                                            "value-changed", self.cb_eval)
-            resample_quality_label = gtk.Label(_('Quality'))
-            self.resample_quality_combo = self.parentobject.make_combo_box(
-                            (_('Highest'), _('Good'), _('Fast'), _('Fastest')))
-            self.resample_quality_combo.set_active(2)
-            self.resample_quality_combo.connect("changed", self.cb_eval)
-            self.resample_dummy_object = gtk.Button()
-            self.resample_dummy_object.connect("clicked", self.cb_eval)
-            sample_rate_pane = self.parentobject.item_item_layout(((
-                self.resample_no_resample, no_resample_label),
-                (self.resample_standard, self.resample_rate_combo_box),
-                (self.resample_custom, self.resample_rate_spin_control),
-                (resample_quality_label, self.resample_quality_combo)),
-                sizegroup)
-            sample_rate_pane.set_border_width(10)
-            self.add(sample_rate_pane)
-            sample_rate_pane.show()
-            set_tip(self.resample_no_resample.get_parent(),
-                _('No additional resampling will occur. The stream sample rate'
-                ' will be that of the JACK sound server.'))
-            set_tip(self.resample_standard.get_parent(),
-                _('Use one of the standard mp3 sample rates for the stream.'))
-            set_tip(self.resample_custom.get_parent(),
-                _('Complete sample rate freedom. Note that only sample rates '
-                'that appear in the drop down box can be used with an mp3 '
-                'stream.'))
-            set_tip(self.resample_quality_combo.get_parent(),
-                _('This selects the audio resampling method to be used, '
-                'efficiency versus quality. Highest mode offers the best sound'
-                ' quality but also uses the most CPU (not recommended for '
-                'systems built before 2006). Fastest mode while it uses by far'
-                ' the least amount of CPU should be avoided if at all '
-                'possible.'))
-
-
     def make_combo_box(self, items):
         combobox = gtk.combo_box_new_text()
         for each in items:
@@ -1334,178 +1266,8 @@ class StreamTab(Tab):
         sens = bool(widget.get_active())
         for each in (self.mount_entry, self.login_entry):
             each.set_sensitive(sens)
-        self.update_sensitives()
-
-
-    def update_sensitives(self, *params):
-        if self.encoder == "off":
-            self.update_button.set_sensitive(False)
-        mode = self.connection_pane.get_master_server_type()
-        self.recorder_valid_override = False
-        
-        if self.encoder == "ogg":
-            self.server_connect.set_sensitive(mode == 1 or 
-                                            self.server_connect.get_active())
-            if self.format_page == 0:
-                self.update_button.set_sensitive(False)
-            elif self.format_page == 1:
-              self.update_button.set_sensitive(self.vorbis_settings_valid)
-            elif self.format_page == 2:
-                try:
-                    self.update_button.set_sensitive(
-                    self.file_dialog.get_filename().lower().endswith(".ogg"))
-                except AttributeError:
-                    self.update_button.set_sensitive(False)
-            else:
-                print "update_sensitives: unhandled format page"
-        elif self.encoder == "mp3":
-            self.server_connect.set_sensitive(mode != 0 or 
-                                            self.server_connect.get_active())
-            if self.format_page == 0:
-                self.update_button.set_sensitive(
-                                            self.mp3_compatibility != "s-rate!")
-            elif self.format_page == 1:
-                self.update_button.set_sensitive(False)
-            elif self.format_page == 2:
-                try:
-                    self.update_button.set_sensitive(
-                    self.file_dialog.get_filename().lower().endswith(".mp3"))
-                except AttributeError:
-                    self.update_button.set_sensitive(False)
-            else:
-                print "update_sensitives: unhandled format page"
-        elif self.encoder == "off":
-            self.test_monitor.set_sensitive(True)
-            if self.format_page == 0:
-                self.recorder_valid_override = sens = bool(
-                            self.mp3_compatibility != "s-rate!" and lameenabled)
-                sens = sens and mode
-                self.server_connect.set_sensitive(sens)
-                self.test_monitor.set_sensitive(sens)
-            elif self.format_page == 1:
-                if self.subformat_page == 0:
-                    sens = self.vorbis_settings_valid
-                    self.recorder_valid_override = sens
-                elif self.subformat_page == 1:  # OggFLAC
-                    sr = self.stream_resample_frame.resample_rate
-                    self.recorder_valid_override = sens = sr <= 65535 or \
-                                                                    sr % 10 == 0
-                elif self.subformat_page == 2:  # Speex
-                    self.recorder_valid_override = sens = True
-                self.server_connect.set_sensitive(sens and mode == 1)
-                self.test_monitor.set_sensitive(sens)
-            try:
-                record_tabs = self.source_client_gui.recordtabframe.tabs
-            except:
-                pass
-            else:
-                for rectab in record_tabs:
-                    rectab.source_dest.source_combo.emit("changed")
-        if self.encoder != "off":
-            if self.format_page == 0:
-                if self.encoder == "ogg" or self.mp3_compatibility == "s-rate!":
-                    self.update_button.set_sensitive(False)
-            if self.format_page == 1 and self.encoder == "mp3":
-                    self.update_button.set_sensitive(False)
 
     
-    def cb_file_dialog_response(self, widget, response_id):
-        self.update_sensitives()
-
-
-    def cb_format_notebook(self, widget, page, page_num):
-        if self.format_page != page_num:
-            self.format_page = page_num
-            self.update_sensitives()
-
-
-    def cb_subformat_notebook(self, widget, page, page_num):
-        if self.subformat_page != page_num:
-            self.subformat_page = page_num
-            self.update_sensitives()
-
-
-    def cb_mp3tab(self, widget, data = None):
-        if data == "standard" or data == "custom":
-            if widget.get_active():
-                self.mp3_bitrate_widget = data
-            else:
-                return
-        self.mp3_stereo_type = ("stereo", "mono", "jstereo")[
-                                        self.mp3_stereo_combo_box.get_active()]
-        self.mp3_encode_quality = \
-                        self.mp3_encoding_quality_combo_box.get_active_text()
-        if self.mp3_bitrate_widget == "standard":
-            self.mp3_bitrate = int(self.mp3_bitrate_combo_box.get_active_text())
-        elif self.mp3_bitrate_widget == "custom":
-            self.mp3_bitrate = int(self.mp3_bitrate_spin_adj.get_value())
-        self.mp3_standard_bitrate = self.mp3_bitrate in \
-                                                    self.mp3_standard_bitrates
-        self.mp3_samplerate = self.stream_resample_frame.resample_rate
-        self.mp3_resample_compatible = self.stream_resample_frame.mp3_compatible
-        self.mp3_compatibility = "freeformat"
-        if not self.mp3_resample_compatible:
-            self.mp3_compatibility = "s-rate!"
-        else:
-            if self.mpeg_std_search(self.mp3_bitrate, self.mp3_samplerate, \
-                                        self.mp3_mpeg2_5_bitrates_samplerates):
-                self.mp3_compatibility = "mpeg 2.5"
-            if self.mpeg_std_search(self.mp3_bitrate, self.mp3_samplerate, \
-                                        self.mp3_mpeg2_bitrates_samplerates):
-                self.mp3_compatibility = "mpeg 2"
-            if self.mpeg_std_search(self.mp3_bitrate, self.mp3_samplerate, \
-                                        self.mp3_mpeg1_bitrates_samplerates):
-                self.mp3_compatibility = "mpeg 1"
-        self.mp3_compatibility_status.push(1, self.mp3_compatibility)
-        self.mp3_freeformat = ("0", "1")[self.mp3_compatibility == "freeformat"]
-        self.update_sensitives()
-
-    
-    def cb_oggtab(self, widget, data = None):
-        ogg_bitrate = self.ogg_encoding_nominal_spin_adj.get_value()
-        minactive = self.ogg_min_checkbutton.get_active()
-        maxactive = self.ogg_max_checkbutton.get_active()
-        self.ogg_encoding_relmin_spin_control.set_sensitive(minactive)
-        self.ogg_encoding_relmax_spin_control.set_sensitive(maxactive)
-        if minactive:
-            ogg_min = self.ogg_encoding_relmin_spin_adj.get_value() + \
-                                                                    ogg_bitrate
-            if ogg_min <= 0:
-                ogg_min = -1
-        else:
-            ogg_min = -1
-        if maxactive:
-            ogg_max = self.ogg_encoding_relmax_spin_adj.get_value() + \
-                                                                    ogg_bitrate
-        else:
-            ogg_max = -1
-        self.send("sample_rate=%d\nbit_rate=%d\nbit_rate_min=%d\n"
-                    "bit_rate_max=%d\nstereo=%s\ncommand=test_ogg_values\n" % (
-                    self.stream_resample_frame.resample_rate, 
-                    ogg_bitrate, ogg_min, ogg_max,
-                    ("mono","stereo")[
-                            self.ogg_encoding_stereo_checkbutton.get_active()]))
-        self.vorbis_settings_valid = self.receive() == "succeeded"
-        self.update_sensitives()
-
-
-    def cb_vorbistab(self, widget, data = None):
-        vorbis_bitrate = self.vorbis_encoding_nominal.get_value()
-        vorbis_min = self.vorbis_encoding_lower.get_cooked_value()
-        vorbis_max = self.vorbis_encoding_upper.get_cooked_value()
-        self.send("sample_rate=%d\nbit_rate=%d\nbit_rate_min=%d\n"
-                    "bit_rate_max=%d\nstereo=%s\ncommand=test_ogg_values\n" % (
-                    self.stream_resample_frame.resample_rate, 
-                    vorbis_bitrate, vorbis_min, vorbis_max,
-                    ("mono","stereo")[self.vorbis_stereo_rb.get_active()]))
-        self.vorbis_settings_valid = self.receive() == "succeeded"
-        self.update_sensitives()
-
-
-    def mpeg_std_search(self, bitrate, samplerate, brsr):
-        return bitrate in brsr[0] and samplerate in brsr[1]
-
-
     def server_reconnect(self):
         if self.connection_string:
             self.send("command=server_disconnect\n")
@@ -1573,25 +1335,13 @@ class StreamTab(Tab):
             self.start_stop_encoder(ENCODER_STOP)
 
 
-    def cb_update_button(self, widget):
-        self.start_encoder("encoder_update")
-        if self.server_connect.get_active() and self.is_shoutcast:
-            self.server_reconnect()
-
-
     def start_stop_encoder(self, command):
         """Reference counting starter and stopper for the encoder."""
-        
-        
+                
         if command == ENCODER_START:
-            self.encoder_on_count += 1
-            if self.encoder_on_count == 1:
-                self.start_encoder()
-        else:
-            self.encoder_on_count -= 1
-            if self.encoder_on_count == 0:
-                self.stop_encoder()
-        self.update_sensitives()
+            self.format_control.start_encoder_rc()
+        elif command == ENCODER_STOP:
+            self.format_control.stop_encoder_rc()
 
 
     def start_encoder(self, command = "encoder_start"):
@@ -1693,54 +1443,54 @@ class StreamTab(Tab):
                 self.format_info_bar.push(1, self.file_dialog.get_filename())
             else:
                 self.format_info_bar.push(1, "")
-    def stop_encoder(self):
-        self.encoder = "off"
-        self.send("command=encoder_stop\n")
-        if self.receive() == "failed":
-            print "stop_encoder: encoder was already stopped"
-        self.format_info_bar.push(1, "")
+
     
     def server_type_cell_data_func(self, celllayout, cell, model, iter):
         text = model.get_value(iter, 0)
-        if text == _('Shoutcast') and lameenabled == 0:
+        if text == _('Shoutcast') and lame_enabled == 0:
             cell.set_property("sensitive", False)
         else:
             cell.set_property("sensitive", True)
     
     def cb_metadata(self, widget):
-        fallback = self.metadata_fallback.get_text()
-        songname = self.scg.parent.songname.encode("utf-8") or fallback
-        table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((
-                        getattr(self.scg.parent, x) or fallback) for x in (
-                        "artist", "title", "album")))
-        table.append(("%s", songname))
-        raw_cm = self.metadata.get_text().encode("utf-8", "replace").strip()
-        cm = string_multireplace(raw_cm, table)
-        
-        if self.scg.parent.prefs_window.mp3_utf8.get_active():
-            cm_lat1 = cm
-        else:
-            cm_lat1 = cm.decode("utf-8").encode("iso8859-1", "replace").strip()
-
-        if cm:
-            disp = cm
-        else:
-            tab = ("mp3", "ogg")[self.format_page] if self.encoder == "off" \
-                                                            else self.encoder
-            if tab == "mp3":
-                disp = songname
-            elif tab == "ogg":
+        if self.format_control.finalised:
+            fallback = self.metadata_fallback.get_text()
+            songname = self.scg.parent.songname.encode("utf-8") or fallback
+            table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((
+                            getattr(self.scg.parent, x) or fallback) for x in (
+                            "artist", "title", "album")))
+            table.append(("%s", songname))
+            raw_cm = self.metadata.get_text().encode("utf-8", "replace").strip()
+            cm = string_multireplace(raw_cm, table)
+            
+            fdata = self.format_control.get_settings()
+            encoding = "utf-8"
+            if fdata["family"] == "mpeg" and fdata["codec"] in ("mp2", "mp3", "aac", "aacpv2"):
+                if fdata["metadata_mode"] == "utf-8":
+                    disp = songname
+                else:
+                    encoding = "latin1"
+                    disp = songname.decode("utf-8").encode(encoding, "replace").decode(encoding)
+                if not cm:
+                    cm = songname
+            elif fdata["family"] == "ogg":
                 disp = "[{0[%r]}], [{0[%t]}], [{0[%l]}]".format(dict(table))
             else:
-                disp = "no metadata string defined for this stream format"
-
+                disp = "no metadata string defined for this stream format: %s %s" % (fdata["family"], fdata["codec"])
+            
+            if cm:
+                cm = cm.decode("utf-8").encode(encoding, "replace")
+                disp = cm.decode(encoding)
                 
-        self.metadata_display.push(0, disp)
-        self.metadata_update.set_relief(gtk.RELIEF_HALF)
-        self.scg.send("tab_id=%d\ndev_type=encoder\ncustom_meta=%s\n"
-                    "custom_meta_lat1=%s\ncommand=new_custom_metadata\n" % (
-                    self.numeric_id, cm, cm_lat1))
-        self.scg.receive()
+            if fdata["metadata_mode"] == "suppressed":
+                disp = _('[Metadata suppressed]')
+
+            self.metadata_display.push(0, disp)
+            self.metadata_update.set_relief(gtk.RELIEF_HALF)
+            self.scg.send("tab_id=%d\ndev_type=encoder\ncustom_meta=%s\n"
+                    "command=new_custom_metadata\n" % (
+                    self.numeric_id, cm))
+            self.scg.receive()
 
     def cb_new_metadata_format(self, widget):
         self.metadata_update.set_relief(gtk.RELIEF_NORMAL)  
@@ -1811,10 +1561,6 @@ class StreamTab(Tab):
         self.scg = scg
         self.show_indicator("clear")
         self.tab_type = "streamer"
-        self.encoder = "off"                
-        self.encoder_on_count = 0           
-        self.format_page = 0                
-        self.subformat_page = 0             
         self.set_spacing(10)
               
         self.ic_expander = gtk.Expander(_('Individual Controls'))
@@ -1833,12 +1579,12 @@ class StreamTab(Tab):
         self.server_connect = gtk.ToggleButton()
         set_tip(self.server_connect, _('Connect to or disconnect from the radio'
             ' server. If the button does not stay in, the connection failed '
-            'for some reason.\n \nIf the button is greyed out it means you are'
-            ' using unsupported settings. Shoutcast only supports mp3 and mp3'
-            ' requires that you use one of the sample rates in the drop down'
-            ' box. Ogg only supports certain sample rate, bit rate, and stereo'
-            ' combinations. Also, the connection list must contain details for'
-            ' a master server.'))
+            'for some reason.\n\nIf the button is greyed out it means your '
+            'settings within the \'Connections\' and \'Format\' sections are '
+            'either incompatible with one another or are incomplete.\n\n'
+            'In order to stream a master server needs to be specified in the '
+            'configuration section below and must be capable of handling the '
+            'chosen streaming format.'))
         self.server_connect.connect("toggled", self.cb_server_connect)
         hbox.pack_start(self.server_connect, True, True, 0)
         self.server_connect_label = gtk.Label()
@@ -1986,341 +1732,18 @@ class StreamTab(Tab):
         self.pack_start(self.details_nb, False)
         
         self.connection_pane = ConnectionPane(set_tip, self)
-        self.connection_pane.liststore.connect("row-deleted",
-                                                        self.update_sensitives)
-        self.connection_pane.liststore.connect("row-changed",
-                                                        self.update_sensitives)
         label = gtk.Label(_('Connection'))
         self.details_nb.append_page(self.connection_pane, label)
         label.show()
         self.connection_pane.show()
          
-        vbox = gtk.VBox()            # format box
-        vbox.set_border_width(10)
-        vbox.set_spacing(14)
-        label = gtk.Label(_('Format'))
-        self.details_nb.append_page(vbox, label)
+        label = gtk.Label(_('Format'))  # Format box
+        self.format_control = FormatControl(self.send, self.receive)
+        self.details_nb.append_page(self.format_control, label)
+        self.format_control.connect("notify::cap-icecast", lambda a, b: self.connection_pane.set_button(self))
+        self.format_control.connect("notify::cap-shoutcast", lambda a, b: self.connection_pane.set_button(self))
         label.show()
-        vbox.show()
-        hbox = gtk.HBox(True)
-        hbox.set_spacing(16)
-        vbox.pack_start(hbox, False)
-        hbox.show()
-        sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
-        self.stream_resample_frame = self.ResampleFrame(self, sizegroup)
-        hbox.add(self.stream_resample_frame)
-        self.stream_resample_frame.show()
-        self.format_notebook = gtk.Notebook()  # [mp3 / ogg / file] chooser
-        hbox.add(self.format_notebook)
-        self.format_notebook.show()
         
-        # mp3 tab
-        self.mp3tab = self.make_notebook_tab(self.format_notebook, "MP3",
-            _('Clicking this tab selects the mp3 file format for streaming and'
-            ' contains settings for configuring the mp3 encoder.'))
-        self.standard_mp3_bitrate, self.custom_mp3_bitrate = self.make_radio(2)
-        set_tip(self.standard_mp3_bitrate,
-                                    _('Use one of the standard mp3 bit rates.'))
-        set_tip(self.custom_mp3_bitrate,
-            _("Freedom to choose a non standard bitrate. Note however that the"
-            " use of a non-standard bit rate will result in a 'free-format' "
-            "stream that cannot be handled by a great many media players."))
-        self.standard_mp3_bitrate.connect("clicked", self.cb_mp3tab, "standard")
-        self.custom_mp3_bitrate.connect("clicked", self.cb_mp3tab, "custom")
-        self.mp3_standard_bitrates = (320, 256, 224, 192, 160, 144, 128, 112,
-                                        96, 80, 64, 56, 48, 40, 32, 24, 16, 8)
-        self.mp3_mpeg1_bitrates_samplerates = ((320, 256, 224, 192, 160, 128,
-                        112, 96, 80, 64, 56, 48, 40, 32), (48000, 44100, 32000))
-        self.mp3_mpeg2_bitrates_samplerates = ((160, 144, 128, 112, 96, 80, 64,
-                        56, 48, 40, 32, 24, 16, 8), (24000, 22050, 16000))
-        self.mp3_mpeg2_5_bitrates_samplerates = ((160, 144, 128, 112, 96, 80,
-                        64, 56, 48, 40, 32, 24, 16, 8), (12000, 11025, 8000))
-        self.mp3_bitrate_combo_box = self.make_combo_box(map(str,
-                                                    self.mp3_standard_bitrates))
-        set_tip(self.mp3_bitrate_combo_box,
-                                    _('The bit-rate in kilobits per second.'))
-        self.mp3_bitrate_combo_box.set_active(6)
-        self.mp3_bitrate_combo_box.connect("changed", self.cb_mp3tab)
-        self.mp3_bitrate_spin_adj = gtk.Adjustment(128, 8, 640, 10, 100, 0)
-        self.mp3_bitrate_spin_control = gtk.SpinButton(
-                                                    self.mp3_bitrate_spin_adj)
-        set_tip(self.mp3_bitrate_spin_control,
-                                    _('The bit-rate in kilobits per second.'))
-        self.mp3_bitrate_spin_control.connect("value-changed", self.cb_mp3tab)
-        encoding_quality_label = gtk.Label(_('Quality (0=best)'))
-        self.mp3_encoding_quality_combo_box = self.make_combo_box(
-                            ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"))
-        set_tip(self.mp3_encoding_quality_combo_box, _('This trades off sound'
-        ' quality against CPU efficiency. The more streams you want to run '
-        'concurrently the more you might want to consider using a lower quality'
-        ' setting.'))
-        self.mp3_encoding_quality_combo_box.set_active(2)
-        self.mp3_encoding_quality_combo_box.connect("changed", self.cb_mp3tab)
-        self.mp3_stereo_combo_box = self.make_combo_box(
-                                            ("Stereo", "Mono", "Joint Stereo"))
-        set_tip(self.mp3_stereo_combo_box, _('Mono is self explanatory. '
-        'Joint Stereo is recommended below 160kb/s where regular Stereo might '
-        'result in metallic sounding distortion. At higher bitrates regular '
-        'stereo sounds better due to superior channel separation.'))
-        self.mp3_stereo_combo_box.set_active(2)
-        self.mp3_stereo_combo_box.connect("changed", self.cb_mp3tab)
-        self.mp3_compatibility_status = gtk.Statusbar()
-        set_tip(self.mp3_compatibility_status, _("The type of mpeg header used"
-        " in the mp3 stream or either s-rate or freeformat. Freeformat "
-        "indicates that the bitrate is not specified in the header since it is"
-        " non-standard, rather the listener client has to figure out what the "
-        "bitrate is by itself and not all of them are capable of doing that. "
-        "In short you'll be streaming something many listeners may not be able"
-        " to listen to. S-rate indicates the sample rate you have selected is "
-        "not compatible with mp3 and you'll need to change it if you want to"
-        " stream."))
-        self.mp3_compatibility_status.set_has_resize_grip(False)
-        self.mp3_dummy_object = gtk.Button()
-        self.mp3_dummy_object.connect("clicked", self.cb_mp3tab)
-        self.mp3_bitrate = 128
-        self.mp3_bitrate_widget = "standard"
-        
-        if lameenabled:
-            mp3_pane = self.item_item_layout(((self.standard_mp3_bitrate,
-                self.mp3_bitrate_combo_box),
-                (self.custom_mp3_bitrate, self.mp3_bitrate_spin_control),
-                (encoding_quality_label, self.mp3_encoding_quality_combo_box),
-                (self.mp3_stereo_combo_box, self.mp3_compatibility_status)),
-                sizegroup)
-            mp3_pane.set_border_width(10)
-        else:
-            mp3_pane = gtk.VBox(True)
-            for line in _("To enable MP3 streaming\ninstall the package named"
-                            "\n'libmp3lame'\n and restart IDJC.").splitlines():
-                label = gtk.Label(line)
-                mp3_pane.add(label)
-                label.show()
-            set_tip(mp3_pane, _('Installing libmp3lame will allow you to '
-                'stream the MP3 format to Shoutcast servers. Currently only'
-                ' Ogg streaming to Icecast servers is possible.'))
-        
-        self.mp3tab.add(mp3_pane)
-        mp3_pane.show()
-
-        # Ogg tab
-        self.oggtab = self.make_notebook_tab(self.format_notebook, "Ogg",
-                _('Clicking this tab selects the Ogg family of file formats.'))
-        self.subformat_notebook = gtk.Notebook()
-        self.oggtab.add(self.subformat_notebook)
-        self.subformat_notebook.show()
-        self.oggvorbistab = self.make_notebook_tab(self.subformat_notebook, 
-            "Vorbis",
-            _('This chooses the Ogg/vorbis format for streaming and '
-            'recording.'))
-        self.oggflactab = self.make_notebook_tab(self.subformat_notebook,
-            "FLAC",
-             _('This chooses the OggFLAC format for streaming and recording.'))
-        self.oggspeextab = self.make_notebook_tab(self.subformat_notebook,
-            "Speex",
-            _('This chooses the Speex format for streaming and recording.'))
-        
-        # Vorbis subtab contents
-        self.vorbis_encoding_nominal_adj = gtk.Adjustment(128, 8, 500, 1, 10, 0)
-        self.vorbis_encoding_nominal = SimpleFramedSpin(_('Bitrate'),
-                                            self.vorbis_encoding_nominal_adj)
-        self.vorbis_encoding_nominal.spin.connect("value-changed",
-                                                self.cb_vorbistab)
-        
-        self.vorbis_stereo_rb, self.vorbis_mono_rb = self.make_radio(2)
-        self.vorbis_stereo_rb.connect("toggled", self.cb_vorbistab)
-        radiovbox = gtk.VBox()
-        radiovbox.set_border_width(5)
-        stereohbox = gtk.HBox()
-        monohbox = gtk.HBox()
-        radiovbox.add(stereohbox)
-        radiovbox.add(monohbox)
-        stereohbox.pack_start(self.vorbis_stereo_rb, False, False, 0)
-        monohbox.pack_start(self.vorbis_mono_rb, False, False, 0)
-        label = gtk.Label(_('Stereo'))
-        stereohbox.pack_start(label)
-        label = gtk.Label(_('Mono'))
-        monohbox.pack_start(label)
-        radiovbox.show_all()
-        
-        upper_spin_adj = gtk.Adjustment(150, 100, 400, 1, 10, 0)
-        lower_spin_adj = gtk.Adjustment(50, 0, 100, 1, 10, 0)
-        # TC: The upper bitrate limit as a percentage.
-        self.vorbis_encoding_upper = FramedSpin(_('Upper %'), upper_spin_adj,
-                                                self.vorbis_encoding_nominal)
-        # TC: The lower bitrate limit as a percentage.
-        self.vorbis_encoding_lower = FramedSpin(_('Lower %'), lower_spin_adj,
-                                                self.vorbis_encoding_nominal)
-        
-        sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_VERTICAL)
-
-        vorbis_pane = self.item_item_layout2(((self.vorbis_encoding_nominal,
-            self.vorbis_encoding_upper),
-            (radiovbox, self.vorbis_encoding_lower)), sizegroup)
-        vorbis_pane.set_border_width(3)
-        self.oggvorbistab.add(vorbis_pane)
-        vorbis_pane.show()
-
-        set_tip(self.vorbis_encoding_nominal, _('The nominal Ogg/Vorbis bitrate'
-                                                ' in kilobits per second.'))
-        set_tip(self.vorbis_encoding_upper, _('The upper bitrate limit relative'
-        ' to the nominal bitrate. This is an advisory limit and it may be '
-        'exceeded. Normally it is safe to leave the upper limit uncapped since'
-        ' the bitrate will be averaged and the listeners have buffers that'
-        ' extend for many seconds. The checkbox enables/disables this '
-        'feature.'))
-        set_tip(self.vorbis_encoding_lower, _('The minimum bitrate in relative'
-        ' percentage terms. For streaming it is recommended that you set a '
-        'minimum bitrate to ensure correct listener client behaviour however'
-        ' setting any upper or lower limit will result in a significantly '
-        'higher CPU usage by a factor of at least three, and slightly degraded'
-        ' sound quality. The checkbox enables/disables this feature.'))
-
-        self.vorbis_settings_valid = False
-        self.vorbis_dummy_object = gtk.Button()
-        self.vorbis_dummy_object.connect("clicked", self.cb_vorbistab)
-
-        # FLAC subtab contents
-        self.flacstereo = gtk.CheckButton(_('Stereo'))
-        self.flacmetadata = gtk.CheckButton(_('Metadata'))
-        self.flacstereo.set_active(True)
-        self.flacmetadata.set_active(True)
-        set_tip(self.flacmetadata, _('You can prevent the sending of metadata'
-        ' by turning this feature off. This will prevent certain players from'
-        ' dropping the stream or inserting an audible gap every time the song'
-        ' title changes.'))
-        
-        flac_bitrates = (_('%d Bit') % x for x in (16, 20, 24))
-        self.flac16bit, self.flac20bit, self.flac24bit = \
-                                    self.make_radio_with_text(flac_bitrates)
-        set_tip(self.flac16bit, _('Useful for streaming but for recording '
-                                'choose a higher bitrate option.'))
-        set_tip(self.flac20bit, _('Ideal for very high quality streaming or '
-                            'recording although not as compatible as 16 bit.'))
-        set_tip(self.flac24bit, _('The highest quality audio format available'
-                            ' within IDJC. Recommended for pre-recording.'))
-        if FGlobs.oggflacenabled:
-            flac_pane = self.item_item_layout3((self.flacstereo,
-            self.flacmetadata),(self.flac16bit, self.flac20bit, self.flac24bit))
-        else:
-            flac_pane = gtk.Label(_('Feature Disabled'))
-        self.oggflactab.add(flac_pane)
-        flac_pane.show_all()
-        
-        # Speex subtab contents
-        self.speex_mode = gtk.combo_box_new_text()
-        # The Speex audio codec has specific modes that are user selectable.
-        speex_modes = (
-            # TC: One of the modes supported by the Speex codec.
-            _('Ultra Wide Band'), 
-            # TC: One of the modes supported by the Speex codec.
-            _('Wide Band'), 
-            # TC: One of the modes supported by the Speex codec.
-            _('Narrow Band'))
-        for each in speex_modes:
-            self.speex_mode.append_text(each)
-        self.speex_mode.set_active(0)
-        self.speex_stereo = gtk.CheckButton(_('Stereo'))
-        set_tip(self.speex_stereo, _('Apply intensity stereo to the audio '
-                    'stream. This is a very efficient implementation of stereo'
-                    ' but is only suited to voice.'))
-        self.speex_metadata = gtk.CheckButton(_('Metadata'))
-        set_tip(self.speex_metadata, _('Sending metadata may cause listener '
-                    'clients to misbehave when the metadata changes. '
-                    'By keeping this feature turned off you can avoid that.'))
-        self.speex_quality = gtk.combo_box_new_text()
-        for i in range(11):
-            self.speex_quality.append_text("%d" % i)
-        self.speex_quality.set_active(8)
-        self.speex_complexity = gtk.combo_box_new_text()
-        for i in range(1, 11):
-            self.speex_complexity.append_text("%d" % i)
-        self.speex_complexity.set_active(2)
-        
-        if FGlobs.speexenabled:
-            svbox = gtk.VBox()
-            svbox.set_border_width(5)
-            
-            # TC: The mode uesd by the Speex codec.
-            label = gtk.Label(_('Mode'))
-            shbox0 = gtk.HBox()
-            shbox0.set_spacing(5)
-            shbox0.pack_start(label, False, False, 0)
-            shbox0.pack_start(self.speex_mode, True, True, 0)
-            set_tip(shbox0, _('This is the audio bandwidth selector. Ultra '
-                'Wide Band has a bandwidth of 16kHz; Wide Band, 8kHz; Narrow '
-                'Band, 4kHz. The samplerate is twice the value of the selected'
-                ' bandwidth consequently all settings in the samplerate pane '
-                'to the left will be disregarded apart from the resample '
-                'quality setting.'))
-            svbox.pack_start(shbox0, True, False, 0)
-            shbox1 = gtk.HBox()
-            shbox1.pack_start(self.speex_stereo, True, False, 0)
-            shbox1.pack_end(self.speex_metadata, True, False, 0)
-            svbox.pack_start(shbox1, True, False, 0)
-            shbox2 = gtk.HBox()
-            shbox3 = gtk.HBox()
-            shbox3.set_spacing(5)
-            shbox4 = gtk.HBox()
-            shbox4.set_spacing(5)
-            shbox2.pack_start(shbox3, False, False, 0)
-            shbox2.pack_end(shbox4, False, False, 0)
-            
-            label = gtk.Label(_('Quality'))
-            shbox3.pack_start(label, False, False, 0)
-            shbox3.pack_start(self.speex_quality, False, False, 0)
-            set_tip(shbox3, _('This picks an appropriate bitrate for the '
-                'selected bandwidth on a quality metric. Q8 is a good choice'
-                ' for artifact-free speech and Q10 would be the ideal choice'
-                ' for music.'))
-            
-            label = gtk.Label(_('CPU'))
-            shbox4.pack_start(label, False, False, 0)
-            shbox4.pack_start(self.speex_complexity, False, False, 0)
-            set_tip(shbox4, _('This sets the level of complexity in the '
-                    'encoder. Higher values use more CPU but result in better '
-                    'sounding audio though not as great an improvement as you '
-                    'would get by increasing the quality setting to the left.'))
-            
-            svbox.pack_start(shbox2, True, False, 0)
-            self.oggspeextab.add(svbox)
-            svbox.show_all()
-        else:
-            label = gtk.Label(_('Feature Disabled'))
-            self.oggspeextab.add(label)
-            label.show()
-        
-        format_control_bar = gtk.HBox()  # Button box in Format frame
-        format_control_sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
-        format_control_bar.set_spacing(10)
-        vbox.pack_start(format_control_bar, False)
-        format_control_bar.show()
-        self.test_monitor = gtk.ToggleButton(_(' Test / Monitor '))
-        self.test_monitor.connect("toggled", self.cb_test_monitor)
-        format_control_sizegroup.add_widget(self.test_monitor)
-        format_control_bar.pack_start(self.test_monitor, False, False, 0)
-        #self.test_monitor.show()
-        self.update_button = gtk.Button(stock=gtk.STOCK_APPLY)
-        set_tip(self.update_button, _('Use this to change the encoder settings'
-            ' while streaming or recording.\n \nIf this button is greyed out it'
-            ' means that the encoder is not running, or the bitrate/samplerate '
-            'combination is not supported by the encoder, or you are trying to '
-            'switch between Ogg and mp3, which is not permitted.'))
-        self.update_button.connect("clicked", self.cb_update_button)
-        format_control_sizegroup.add_widget(self.update_button)
-        self.update_button.set_sensitive(False)
-        format_control_bar.pack_start(self.update_button, False, False, 0)
-        self.update_button.show()
-        self.format_info_bar = gtk.Statusbar()
-        self.format_info_bar.set_has_resize_grip(False)
-        format_control_bar.pack_start(self.format_info_bar, True, True, 0)
-        self.format_info_bar.show()
-        set_tip(self.format_info_bar, _('Information about how the encoder is'
-                                    'currently configured is displayed here.'))
-        self.format_notebook.connect("switch-page", self.cb_format_notebook)
-        self.subformat_notebook.connect("switch-page",
-                                                    self.cb_subformat_notebook)
-        self.format_notebook.set_current_page(0)
-
         vbox = gtk.VBox()
         # TC: Tab heading. User can enter information about the stream here.
         label = gtk.Label(_('Stream Info'))
@@ -2405,8 +1828,8 @@ class StreamTab(Tab):
         contact_details_pane.show()
         
         vbox.pack_start(frame, False)
-        if FGlobs.enh_libshout:
-            frame.show()
+        frame.show_all()
+
         label = gtk.Label(_('Extra Shoutcast'))
         self.details_nb.append_page(vbox, label)
         label.show()
@@ -2424,7 +1847,6 @@ class StreamTab(Tab):
 
         self.details_nb.set_current_page(0)
         
-        self.stream_resample_frame.resample_no_resample.emit("clicked")
         self.objects = {
             "metadata"    : (self.metadata, "history"),
             "metadata_fb" : (self.metadata_fallback, "text"),
@@ -2432,41 +1854,6 @@ class StreamTab(Tab):
             "connections" : (self.connection_pane, ("loader", "saver")),
             "stats_never" : (self.connection_pane.stats_never, "active"),
             "stats_always": (self.connection_pane.stats_always, "active"),
-            "rs_use_jack" :
-                (self.stream_resample_frame.resample_no_resample, "active"),
-            "rs_use_std" :
-                (self.stream_resample_frame.resample_standard, "active"),
-            "rs_use_custom_rate" :
-                (self.stream_resample_frame.resample_custom, "active"),
-            "rs_std_rate" :
-                (self.stream_resample_frame.resample_rate_combo_box, "active"),
-            "rs_custom_rate" :
-                (self.stream_resample_frame.resample_rate_spin_adj, "value"),
-            "rs_quality" :
-                (self.stream_resample_frame.resample_quality_combo, "active"),
-            "source_type" : (self.format_notebook, "notebookpage"),
-            "ogg_type": (self.subformat_notebook, "notebookpage"),
-            "std_mp3bitrate" : (self.standard_mp3_bitrate, "active"),
-            "custom_mp3_bitrate" : (self.custom_mp3_bitrate, "active"),
-            "mp3_bitrate_combo" : (self.mp3_bitrate_combo_box, "active"),
-            "mp3_bitrate_spin" : (self.mp3_bitrate_spin_adj, "value"),
-            "mp3_quality" : (self.mp3_encoding_quality_combo_box, "active"),
-            "mp3_stereo" : (self.mp3_stereo_combo_box, "active"),
-            "vorbis_bitrate" : (self.vorbis_encoding_nominal, "value"),
-            "vorbis_upper_pc": (self.vorbis_encoding_upper.spin, "value"),
-            "vorbis_lower_pc":  (self.vorbis_encoding_lower.spin, "value"),
-            "vorbis_upper_enable": (self.vorbis_encoding_upper.check, "active"),
-            "vorbis_lower_enable": (self.vorbis_encoding_lower.check, "active"),
-            "vorbis_mono": (self.vorbis_mono_rb, "active"),
-            "flac_stereo": (self.flacstereo, "active"),
-            "flac_metadata": (self.flacmetadata, "active"),
-            "flac_20_bit": (self.flac20bit, "active"),
-            "flac_24_bit": (self.flac24bit, "active"),
-            "speex_mode": (self.speex_mode, "active"),
-            "speex_stereo": (self.speex_stereo, "active"), 
-            "speex_metadata": (self.speex_metadata, "active"), 
-            "speex_quality": (self.speex_quality, "active"),
-            "speex_complexity": (self.speex_complexity, "active"),
             "dj_name" : (self.dj_name_entry, "text"),
             "listen_url" : (self.listen_url_entry, "text"),
             "description" : (self.description_entry, "text"),
@@ -2487,6 +1874,7 @@ class StreamTab(Tab):
             "action_record_active" : (self.start_recorder_action, "active"),
             "action_record_which" : (self.start_recorder_action, "radioindex"),
             "irc_data" : (self.ircpane, "marshall"),
+            "format_data" : (self.format_control, "marshall"),
             "details_nb" : (self.details_nb, "current_page"),
         }
                                 
@@ -2573,12 +1961,9 @@ class RecordTab(Tab):
                     _('Stop recording.')),
                     (self.record_button, "rec", "toggled",
                     _('Start recording.\n\nIf this button is greyed out it '
-                    'could mean the encoder settings are not valid. This can'
-                    ' be fixed by using one of the approved sample rates for'
-                    ' mp3 or by choosing a sensible samplerate and bitrate'
-                    ' combination for Ogg.\n\nAlso check that you have write '
-                    'permission on the folder you have selected to record '
-                    'to.')),
+                    'could mean either the encoder settings are not valid or '
+                    'write permission is not granted on the selected folder.'
+                    )),
                     (self.pause_button,  "pause", "toggled",
                                                         _('Pause recording.'))):
                 button.set_size_request(30, -1)
@@ -2638,9 +2023,8 @@ class RecordTab(Tab):
             else:
                 self.streamtab = None
             self.parentobject.record_buttons.record_button.set_sensitive(
-                self.streamtab is None or (self.cansave and ((
-                self.streamtab.server_connect.flags() & gtk.SENSITIVE) or 
-                self.streamtab.recorder_valid_override)))
+                self.cansave and (self.streamtab is None or 
+                self.streamtab.format_control.props.cap_recordable))
 
 
         def populate_stream_selector(self, text, tabs):
@@ -2649,6 +2033,9 @@ class RecordTab(Tab):
                 self.source_combo.append_text(" ".join((text, str(index + 1))))
             self.source_combo.connect("changed", self.cb_source_combo)
             self.source_combo.set_active(0)
+            for tab in tabs:
+                tab.format_control.connect("notify::cap-recordable",
+                                lambda w, v: self.source_combo.emit("changed"))
 
 
         def cb_new_folder(self, filechooser):
@@ -3009,14 +2396,10 @@ class SourceClientGui:
     def stop_recording_all(self):
         for rectab in self.recordtabframe.tabs:
             rectab.record_buttons.stop_button.clicked()
-    def stop_test_monitor_all(self):
-        for streamtab in self.streamtabframe.tabs:
-            streamtab.test_monitor.set_active(False)
     def cleanup(self):
         self.stop_recording_all()
         self.stop_streaming_all()
         self.stop_irc_all()
-        self.stop_test_monitor_all()
         gobject.source_remove(self.monitor_source_id)
     def app_exit(self):
         if self.parent.session_loaded:
@@ -3074,20 +2457,10 @@ class SourceClientGui:
             each.record_buttons.record_button.set_active(whichrecorders.pop(0))
                 
     def new_metadata(self, artist, title, album, songname):
-        if artist:
-            artist_title = artist + " - " + title
-        else:
-            artist_title = title
-        if not self.parent.prefs_window.mp3_utf8.get_active():
-            artist_title_lat1 = artist_title.decode("utf-8", "replace").encode(
-                                                        "iso8859-1", "replace")
-        else:
-            artist_title_lat1 = artist_title
-
-        self.send("artist=%s\ntitle=%s\nalbum=%s\nartist_title_lat1=%s\n"
+        self.send("artist=%s\ntitle=%s\nalbum=%s\n"
                                     "command=new_song_metadata\n" % (
                                     artist.strip(), title.strip(),
-                                    album.strip(), artist_title_lat1.strip()))
+                                    album.strip()))
         if self.receive() == "succeeded":
             print "updated song metadata successfully"
 
@@ -3105,6 +2478,8 @@ class SourceClientGui:
             tab.ircpane.connections_controller.new_metadata(ircmetadata)
         
     def source_client_open(self):
+        global lame_enabled
+
         self.comms_reply_pending = False
         self.send("command=jack_samplerate_request\n")
         reply = self.receive()
@@ -3123,11 +2498,10 @@ class SourceClientGui:
         reply = self.receive()
         if reply != "failed" and self.receive() == "succeeded" and \
                                             reply.startswith("lame_available="):
-            global lameenabled
             if reply[15] == "1":
-                lameenabled = 1
+                lame_enabled = 1
             else:
-                lameenabled = 0
+                lame_enabled = 0
         else:
             print self.unexpected_reply
             self.app_exit()
@@ -3143,6 +2517,17 @@ class SourceClientGui:
         except (NameError, AttributeError):
             # If this is the initial call the stream tabs will not exist yet.
             pass
+        if FGlobs.avcodec:
+            self.send("command=encoder_aac_availability\n")
+            reply = self.receive()
+            assert reply != "failed" and self.receive() == "succeeded" and \
+                                        reply.startswith("aac_functionality=")
+            FormatCodecMPEG.aac_enabled = int(reply[-3])
+            FormatCodecMPEG.aacpv2_enabled = int(reply[-1])
+        else:
+            FormatCodecMPEG.aac_enabled = 0
+            FormatCodecMPEG.aacpv2_enabled = 0
+            
         self.uptime = time.time()
 
     def cb_delete_event(self, widget, event, data = None):
@@ -3196,8 +2581,8 @@ class SourceClientGui:
                                 self.parent.prefs_window.keeppass.get_active():
                                 f.write("".join((lvalue, "=", rvalue, "\n")))
                         f.write("\n")
-        except:
-            print "error attempting to write file: serverdata"
+        except Exception as e:
+            print "error attempting to write file: serverdata", e
 
     def load_previous_session(self):
         try:
@@ -3355,8 +2740,18 @@ class SourceClientGui:
                 rec = tab.record_buttons.record_button
                 stop = tab.record_buttons.stop_button
                 sens = rec.get_sensitive()
-                mi = gtk.CheckMenuItem(str(tab.numeric_id + 1) + 
-                                    ("" if sens else " " + _('Misconfigured')))
+                src = tab.source_dest.source_combo.get_active_text().strip()
+                dest = tab.source_dest.file_dialog.get_filename()
+                mi = gtk.CheckMenuItem()
+                label = gtk.Label()
+                label.set_alignment(0.0, 0.5)
+                label.set_markup(
+                    # TC: Recorder menu format string.
+                    (_("{numericid} [{source}] > [{directory}]").format(
+                    numericid=tab.numeric_id + 1, source=src, directory=dest)
+                    if sens else " " + _('Misconfigured')))
+                mi.add(label)
+                label.show()
                 mi.set_active(rec.get_active())
                 mi.set_sensitive(sens)
                 menu.append(mi)

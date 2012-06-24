@@ -43,13 +43,13 @@
 #include "compressor.h"
 #include "xlplayer.h"
 #include "mp3dec.h"
+#include "ialloc.h"
 #include "speextag.h"
 #include "sndfileinfo.h"
 #include "avcodecdecode.h"
 #include "oggdec.h"
 #include "mic.h"
 #include "bsdcompat.h"
-#include "dyn_mad.h"
 #include "peakfilter.h"
 #include "sig.h"
 #include "main.h"
@@ -100,8 +100,6 @@ static int main_play;
 static int speed_variance;
 /* flag to indicate if audio is routed via dsp interface */
 static int using_dsp;
-/* flag to indicate that stream audio be reduced for improved encode quality */
-static int twodblimit;
 /* handles for microphone */
 static struct mic **mics;
 /* peakfilter handles for stream peak */
@@ -560,12 +558,6 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                         { \
                         *lsp = *dolp; \
                         *rsp = *dorp; \
-                        } \
-                    \
-                    if (twodblimit) \
-                        { \
-                        *lsp *= 0.7943; \
-                        *rsp *= 0.7943; \
                         } \
                 } while(0)
                 
@@ -1105,12 +1097,6 @@ int mixer_main()
         fflush(stdout);
         }
 
-    if (!strcmp(action, "mp3status"))
-        {
-        fprintf(stdout, "IDJC: mp3=%d\n", mp3decode_cap());
-        fflush(stdout);
-        }
-
     if (!strcmp(action, "mic_control"))
         {
         mic_valueparse(mics[atoi(item_index)], mic_param);
@@ -1242,14 +1228,14 @@ int mixer_main()
         {
         if(sscanf(mixer_string,
                  ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d"
-                 "%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:"
+                 "%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:"
                  "%1d:%1d:%1d:",
                  &volume, &volume2, &crossfade, &jinglesvolume, &jinglesvolume2 , &interludevol, &mixbackvol, &jingles_playing,
                  &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
                  &s.new_left_pause, &s.new_right_pause, &s.flush_left, &s.flush_right, &s.flush_jingles, &s.flush_interlude,
                  &simple_mixer, &eot_alarm_set, &mixermode, &s.fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed),
-                 &speed_variance, &dj_audio_level, &crosspattern, &s.use_dsp, &twodblimit, &s.new_inter_pause,
-                 &inter_stream, &inter_audio) !=34)
+                 &speed_variance, &dj_audio_level, &crosspattern, &s.use_dsp, &s.new_inter_pause,
+                 &inter_stream, &inter_audio) !=33)
             {
             fprintf(stderr, "mixer got bad mixer string\n");
             return TRUE;

@@ -31,25 +31,19 @@
 
 typedef jack_default_audio_sample_t sample_t;
 
-static void live_mp3_packetize_metadata(struct encoder *e, struct lme_data * const s)
+static void live_mp3_packetize_metadata(struct encoder *e, struct lm3e_data * const s)
     {
     size_t l = 4;
-    char *stream_meta;
     
     pthread_mutex_lock(&e->metadata_mutex);
     
-    if (e->custom_meta_lat1[0])
-        stream_meta = e->custom_meta_lat1;
-    else
-        stream_meta = e->artist_title_lat1;
-        
-    l += strlen(stream_meta);
+    l += strlen(e->custom_meta);
     l += strlen(e->artist);
     l += strlen(e->title);
     l += strlen(e->album);
     
     if ((s->metadata = realloc(s->metadata, l)))
-        snprintf(s->metadata, l, "%s\n%s\n%s\n%s", stream_meta, e->artist, e->title, e->album);
+        snprintf(s->metadata, l, "%s\n%s\n%s\n%s", e->custom_meta, e->artist, e->title, e->album);
     else
         fprintf(stderr, "malloc failure\n");
         
@@ -57,7 +51,7 @@ static void live_mp3_packetize_metadata(struct encoder *e, struct lme_data * con
     pthread_mutex_unlock(&e->metadata_mutex);
     }
 
-static int live_mp3_write_packet(struct encoder *encoder, struct lme_data *s, unsigned char *buffer, size_t buffersize, int flags)
+static int live_mp3_write_packet(struct encoder *encoder, struct lm3e_data *s, unsigned char *buffer, size_t buffersize, int flags)
     {
     struct encoder_op_packet packet;
 
@@ -75,10 +69,9 @@ static int live_mp3_write_packet(struct encoder *encoder, struct lme_data *s, un
 
 static void live_mp3_encoder_main(struct encoder *encoder)
     {
-    struct lme_data * const s = encoder->encoder_private;
+    struct lm3e_data * const s = encoder->encoder_private;
     struct encoder_ip_data *id;
     int mp3bytes = 0;
-    float *l, *r, *endp;
 
     if (encoder->encoder_state == ES_STARTING)
         {
@@ -87,20 +80,22 @@ static void live_mp3_encoder_main(struct encoder *encoder)
             fprintf(stderr, "live_mp3_encoder_main: malloc failure\n");
             goto bailout;
             }
+            
         if (!(s->gfp = lame_init()))
             {
             fprintf(stderr, "live_mp3_encoder_main: failed to initialise LAME\n");
             free(s->mp3buf);
             goto bailout;
             }
+
         lame_set_num_channels(s->gfp, encoder->n_channels);
         lame_set_brate(s->gfp, encoder->bitrate);
         lame_set_in_samplerate(s->gfp, encoder->target_samplerate);
         lame_set_out_samplerate(s->gfp, encoder->target_samplerate);
         lame_set_mode(s->gfp, s->lame_mode);
         lame_set_quality(s->gfp, s->lame_quality);
-        lame_set_free_format(s->gfp, s->lame_freeformat);
         lame_set_bWriteVbrTag(s->gfp, 0);
+        lame_set_scale(s->gfp, 32767.0f);
         if (lame_init_params(s->gfp) < 0)
             {
             fprintf(stderr, "live_mp3_encoder_main: LAME rejected the parameters given\n");
@@ -132,22 +127,13 @@ static void live_mp3_encoder_main(struct encoder *encoder)
             {
             if ((id = encoder_get_input_data(encoder, 1024, 8192, NULL)))
                 {
-                if (id->channels == 1)      /* mono and stereo audio rescaling */
-                    for (l = id->buffer[0], endp = l + id->qty_samples; l < endp;)
-                        *l++ *= 32768.0F;
-                else
-                    for (l = id->buffer[0], r = id->buffer[1], endp = l + id->qty_samples; l < endp;)
-                        {
-                        *l++ *= 32768.0F;
-                        *r++ *= 32768.0F;
-                        }
                 mp3bytes = lame_encode_buffer_float(s->gfp, id->buffer[0], id->buffer[1], id->qty_samples, s->mp3buf, s->mp3bufsize);
                 encoder_ip_data_free(id);
                 s->lame_samples += id->qty_samples;
                 live_mp3_write_packet(encoder, s, s->mp3buf, mp3bytes, PF_MP3 | s->packetflags);
                 s->packetflags = PF_UNSET;
                 }
-            if (encoder->new_metadata)
+            if (encoder->new_metadata && encoder->use_metadata)
                 {
                 live_mp3_packetize_metadata(encoder, s);
                 if (s->metadata)
@@ -182,23 +168,21 @@ static void live_mp3_encoder_main(struct encoder *encoder)
 
 int live_mp3_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
     {
-    struct lme_data * const s = calloc(1, sizeof (struct lme_data));
+    struct lm3e_data * const s = calloc(1, sizeof (struct lm3e_data));
 
     if (!s)
         {
         fprintf(stderr, "live_mp3_encoder: malloc failure\n");
         return FAILED;
         }
-    if (!(strcmp("stereo", ev->stereo)))
+    if (!(strcmp("stereo", ev->mode)))
         s->lame_mode = 0;
-    else if (!(strcmp("jstereo", ev->stereo)))
+    else if (!(strcmp("jointstereo", ev->mode)))
         s->lame_mode = 1;
-    else if (!(strcmp("mono", ev->stereo)))
+    else if (!(strcmp("mono", ev->mode)))
         s->lame_mode = 3;
-    s->lame_quality = atoi(ev->encode_quality);
-    s->lame_freeformat = ev->freeformat_mp3[0] == '1';
+    s->lame_quality = atoi(ev->quality);
     encoder->encoder_private = s;
-    encoder->new_metadata = TRUE;
     encoder->run_encoder = live_mp3_encoder_main;
     return SUCCEEDED;
     }

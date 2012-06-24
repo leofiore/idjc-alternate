@@ -26,6 +26,7 @@ import gettext
 import pygtk
 pygtk.require("2.0")
 import glib
+import ctypes
 
 from .utils import FixedAttributes
 from .utils import PolicedAttributes
@@ -35,6 +36,18 @@ from .utils import PathStr
 # pylint: disable=R0903
 #
 # namespace classes typically have no public methods
+
+
+
+def dlltest(name):
+    """Truth test for presence of runtime-linkable library going by name."""
+
+    try:
+        ctypes.CDLL(name)
+    except:
+        return False
+    return True
+
 
 
 class FGlobs(object):
@@ -57,9 +70,25 @@ class FGlobs(object):
     flacenabled = @HAVE_FLAC@
     oggflacenabled = @HAVE_OGGFLAC@
     speexenabled = @HAVE_SPEEX@
+    
+    libmp3lame_filename = ""
+    have_libmp3lame = False
+    if @DYN_LAME@:
+        for lib_name in ("libmp3lame.so.0", "liblame.so.0", "libmp3lame.dylib",
+                                                            "liblame.dylib"):
+            try:
+                ctypes.CDLL(lib_name)
+            except:
+                continue
+            else:
+                libmp3lame_filename = lib_name
+                have_libmp3lame = True
+                break
+    else:
+        have_libmp3lame = True
+    
     package_name = """@PACKAGE_NAME@"""
     package_version = """@PACKAGE_VERSION@"""
-    enh_libshout = @ENH_SHOUT@
 
 
 

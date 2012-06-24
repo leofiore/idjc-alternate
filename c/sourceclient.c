@@ -17,6 +17,8 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "../config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,6 +29,7 @@
 #include "sourceclient.h"
 #include "kvpparse.h"
 #include "live_ogg_encoder.h"
+#include "avcodec_encoder.h"
 #include "sig.h"
 #include "main.h"
 
@@ -142,29 +145,25 @@ static struct universal_vars uv;
 
 static struct kvpdict kvpdict[] = {
     { "encode_source",    &ev.encode_source, NULL },        /* encoder_vars */
-    { "sample_rate",      &ev.sample_rate, NULL },
+    { "samplerate",       &ev.samplerate, NULL },
     { "resample_quality", &ev.resample_quality, NULL },
-    { "format",           &ev.format, NULL },
-    { "subformat",        &ev.subformat, NULL },
-    { "bit_rate",         &ev.bit_rate, NULL },
-    { "bit_rate_min",     &ev.bit_rate_min, NULL },
-    { "bit_rate_max",     &ev.bit_rate_max, NULL },
-    { "bit_width",        &ev.bit_width, NULL },
-    { "stereo",           &ev.stereo, NULL },
-    { "use_metadata",     &ev.use_metadata, NULL },
-    { "encode_quality",   &ev.encode_quality, NULL },
-    { "speex_mode",       &ev.speex_mode, NULL },
-    { "speex_quality",    &ev.speex_quality, NULL },
-    { "speex_complexity", &ev.speex_complexity, NULL },
+    { "family",           &ev.family, NULL },
+    { "codec",            &ev.codec, NULL },
+    { "bitrate",          &ev.bitrate, NULL },
+    { "variability",      &ev.variability, NULL },
+    { "bitwidth",         &ev.bitwidth, NULL },
+    { "mode",             &ev.mode, NULL },
+    { "metadata_mode",    &ev.metadata_mode, NULL },
+    { "standard",         &ev.standard, NULL },
+    { "pregain",         &ev.pregain, NULL },
+    { "quality",          &ev.quality, NULL },
+    { "complexity",       &ev.complexity, NULL },
     { "filename",         &ev.filename, NULL },
     { "offset",           &ev.offset, NULL },
     { "custom_meta",      &ev.custom_meta, NULL },
-    { "custom_meta_lat1", &ev.custom_meta_lat1, NULL },
     { "artist",           &ev.artist, NULL },
     { "title",            &ev.title, NULL },
     { "album",            &ev.album, NULL },
-    { "artist_title_lat1", &ev.artist_title_lat1, NULL },
-    { "freeformat_mp3",   &ev.freeformat_mp3, NULL },
     { "stream_source",    &sv.stream_source, NULL },        /* streamer_vars */
     { "server_type",      &sv.server_type, NULL },
     { "host",             &sv.host, NULL },
@@ -184,7 +183,6 @@ static struct kvpdict kvpdict[] = {
     { "record_source",    &rv.record_source, NULL },        /* recorder_vars */
     { "record_folder",    &rv.record_folder, NULL },
     { "pause_button",     &rv.pause_button, NULL },
-    { "auto_pause_button",&rv.auto_pause_button, NULL },
     { "command",  &uv.command, NULL},
     { "dev_type", &uv.dev_type, NULL},
     { "tab_id",   &uv.tab_id, NULL},
@@ -193,11 +191,15 @@ static struct kvpdict kvpdict[] = {
 static struct commandmap commandmap[] = {
     { "jack_samplerate_request", audio_feed_jack_samplerate_request, NULL },
     { "encoder_lame_availability", encoder_init_lame, NULL},
+#ifdef HAVE_AVCODEC
+#ifdef HAVE_AVUTIL
+    { "encoder_aac_availability", live_avcodec_encoder_aac_functionality, NULL},
+#endif
+#endif    
     { "get_report", get_report, NULL },
     { "encoder_start", encoder_start, &ev },
     { "encoder_stop", encoder_stop, NULL },
     { "encoder_update", encoder_update, &ev },
-    { "test_ogg_values", live_ogg_test_values, &ev },
     { "new_song_metadata", encoder_new_song_metadata, &ev },
     { "new_custom_metadata", encoder_new_custom_metadata, &ev },
     { "recorder_start", recorder_start, &rv },

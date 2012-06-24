@@ -4,7 +4,7 @@
 AC_PREREQ(2.59)
 AC_INIT([idjc], [0.8.8_development], 
                 [https://sourceforge.net/tracker/?group_id=135773])
-AC_SUBST(COPYRIGHT_YEAR, [2011])
+AC_SUBST(COPYRIGHT_YEAR, [2012])
 AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
@@ -22,49 +22,44 @@ AM_GNU_GETTEXT_VERSION([0.18.1])
 # We need libjack in order to compile.
 PKG_CHECK_MODULES(LIBJACK, [jack >= 0.98.0])
 
-# Also check for libvorbis and libvorbisenc
+# Core dependencies.
 PKG_CHECK_MODULES([LIBVORBIS], [vorbis >= 1.0.0])
 PKG_CHECK_MODULES([LIBVORBISENC], [vorbisenc >= 1.0.0])
-
-AC_ARG_ENABLE(mad,
-   AC_HELP_STRING([--disable-mad],[remove capability to decode mp3 files]),[makemad=$enableval],[makemad="maybe"])
-
-if test $makemad != "no" ; then
-   PKG_CHECK_MODULES([LIBMAD], [mad],,
-         AC_DEFINE(DYN_MAD, 1, [libmad to be linked dynamically])
-         DYNAMIC="1"
-         if test $makemad = "yes" ; then 
-            AC_MSG_ERROR([libmad not detected but specifically requested in configure options])
-         fi)
-else
-   AC_DEFINE(DYN_MAD, 1, [libmad to be linked dynamically])
-   DYNAMIC="1"
-fi
-
+PKG_CHECK_MODULES([TWOLAME], [twolame])
+PKG_CHECK_MODULES([MPG123], [libmpg123])
 PKG_CHECK_MODULES([LIBSAMPLERATE], [samplerate])
-
 PKG_CHECK_MODULES([LIBSNDFILE], [sndfile])
-
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 
-AC_ARG_ENABLE([ffmpeg],
+AC_ARG_ENABLE([libav],
    AC_HELP_STRING([--disable-libav],[remove capability to decode m4a/wma/avi files]),[makelibav=$enableval],[makelibav="maybe"])
 
 if test $makelibav != "no" ; then
-   PKG_CHECK_MODULES([LIBAVCODEC], [libavcodec], [AC_DEFINE(HAVE_AVCODEC, 1, [Set if libavcodec was found])
+    PKG_CHECK_MODULES([LIBAVCODEC], [libavcodec], [AC_DEFINE(HAVE_AVCODEC, 1, [Set if libavcodec was found])
             AC_SUBST(HAVE_AVCODEC, 1)
-            
-            AC_MSG_CHECKING([for avcodec.h in legacy ffmpeg directory])
-            gcc `pkg-config --cflags libavcodec` ffmpeg_avcodec.c -o /dev/null >/dev/null 2>&1
-            if test $? -eq 0 ; then
-                AC_MSG_RESULT([yes])
-                AC_DEFINE(FFMPEG_AVCODEC, 1, [if set use legacy include file location])
-            else
-                AC_MSG_RESULT([no])
-            fi
-            
-            AC_CHECK_LIB([avcodec],[avcodec_decode_audio3], AC_DEFINE(AVCODEC_DECODE_AUDIO3, 1,[Used in avcodecdecode.c]))
-            AC_CHECK_LIB([avcodec],[avcodec_open2], AC_DEFINE(AVCODEC_OPEN2, 1,[Used in avcodecdecode.c]))
+
+            AC_MSG_CHECKING([for avcodec.h in ffmpeg directory])
+            AC_TRY_LINK([#include <ffmpeg/avcodec.h>],
+            [int main(void)]
+            [    {]
+            [    static const int v = LIBAVCODEC_VERSION_INT;]
+            [    return 0;]
+            [    }],
+            [AC_DEFINE(FFMPEG_AVCODEC, 1, [if set use legacy include file location]) AC_MSG_RESULT([yes])],
+            [AC_MSG_RESULT([no])]
+            AC_MSG_CHECKING([for avcodec.h in libavcodec directory])
+            AC_TRY_LINK([#include <libavcodec/avcodec.h>],
+            [int main(void)]
+            [    {]
+            [    static const int v = LIBAVCODEC_VERSION_INT;]
+            [    return 0;]
+            [    }],
+            [AC_MSG_RESULT([yes])],
+            [AC_MSG_RESULT([no])]
+            [AC_MSG_ERROR(["necessary header files not found"])]
+            ))
+
+            AC_CHECK_LIB([avcodec],[avcodec_decode_audio4], :, AC_MSG_ERROR("configure with --disable-libav or update ffmpeg/libav"))
             ],
             AC_SUBST(HAVE_AVCODEC, 0)
 
@@ -158,19 +153,24 @@ else
    AC_SUBST([HAVE_OGGFLAC],[0])
 fi
 
+AC_CHECK_HEADERS([lame/lame.h])
+
 AC_ARG_ENABLE(lame,
    AC_HELP_STRING([--disable-lame],[remove capability to stream/record mp3 format]),[makelame=$enableval],[makelame="maybe"])
 
 if test $makelame != "no" ; then
 AC_CHECK_LIB([mp3lame -lm], [lame_init],
-	  AC_SUBST(LIBMP3LAME, [-lmp3lame]),
-          AC_DEFINE(DYN_LAME, 1, [LAME to be linked dynamically])
-          DYNAMIC="1"
-          if test $makelame = "yes" ; then
-             AC_MSG_ERROR([libmp3lame not detected but specifically requested in configure options])
-          fi)
+        [AC_SUBST([LIBMP3LAME], [-lmp3lame])
+        AC_SUBST([DYN_LAME], [0])],
+            AC_DEFINE([DYN_LAME], [1], [LAME to be linked dynamically])
+            AC_SUBST([DYN_LAME], [1])
+            DYNAMIC="1"
+            if test $makelame = "yes" ; then
+              AC_MSG_ERROR([libmp3lame not detected but specifically requested in configure options])
+            fi)
 else
-   AC_DEFINE(DYN_LAME, 1, [LAME to be linked dynamically])
+   AC_DEFINE([DYN_LAME], [1], [LAME to be linked dynamically])
+   AC_SUBST([DYN_LAME], [1])
    DYNAMIC="1"
 fi
 
@@ -201,20 +201,8 @@ AC_CHECK_FUNCS([getline strndup canonicalize_file_name], :,
 # Use png or xpm for graphics
 AC_SUBST(EXT,[png])
 
-AC_ARG_ENABLE([static],AC_HELP_STRING([--disable-static],[build with shared libshout library]),[static=$enableval],[static="yes"])
-
-if test x$static = "xyes" ; then
-   AC_CONFIG_SUBDIRS([libshout])
-   AC_SUBST([LIBSHOUT_CFLAGS],['-I$(top_builddir)/libshout/include/shout'])
-   AC_SUBST([LIBSHOUT_LIBS],['$(top_builddir)/libshout/src/.libs/libshout.a'])
-   AC_SUBST([MAYBE_LIBSHOUT],[libshout])
-   AC_SUBST([ENH_SHOUT],[1])
-   AC_DEFINE([ENH_SHOUT],[1],[Set if using an enhanced libshout])
-else
-   PKG_CHECK_MODULES([LIBSHOUT], [shout])
-   AC_CHECK_HEADERS([shout/shout.h])
-   AC_SUBST([ENH_SHOUT],[0])
-fi
+PKG_CHECK_MODULES([SHOUTIDJC], [shout-idjc])
+AC_CHECK_HEADERS([shoutidjc/shout.h])
 
 if test x$DYNAMIC = "x1" ; then
    AC_CHECK_FUNCS([dlopen], :, AC_CHECK_LIB([dl], [dlopen], AC_SUBST([DYN_LIBS], [-ldl]), AC_MSG_ERROR([Runtime linking functions not found])))

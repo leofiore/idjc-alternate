@@ -29,8 +29,10 @@
 #include "sig.h"
 #include "live_ogg_encoder.h"
 #include "live_mp3_encoder.h"
+#include "live_mp2_encoder.h"
 #include "live_oggflac_encoder.h"
 #include "live_oggspeex_encoder.h"
+#include "avcodec_encoder.h"
 #include "bsdcompat.h"
 #ifdef DYN_LAME
 #include "dyn_lame.h"
@@ -58,32 +60,69 @@ int encoder_init_lame(struct threads_info *ti, struct universal_vars *uv, void *
     return SUCCEEDED;
     }
 
-static enum data_format encoder_get_data_format(char *format, char *source)
+static struct encoder_data_format encoder_lex_format(char *source, char *family, char *codec)
     {
-    if (!strcmp(format, "mp3"))
+    struct encoder_data_format df = {
+        .source = ENCODER_SOURCE_UNHANDLED,
+        .family = ENCODER_FAMILY_UNHANDLED,
+        .codec = ENCODER_CODEC_UNHANDLED
+        };
+        
+    void warning(char *msg, char *setting)
         {
-        if (!strcmp(source, "jack"))
-            return DF_JACK_MP3;
-        else
-            return DF_FILE_MP3;
+        fprintf(stderr, "warning: %s: setting: %s\n", msg, setting);
         }
-    if (!strcmp(format, "ogg"))
-        {
-        if (!strcmp(source, "jack"))
-            return DF_JACK_OGG;
-        else
-            return DF_FILE_OGG;
-        }
-    return DF_UNHANDLED;
+        
+    if (!strcmp(source, "jack"))
+        df.source = ENCODER_SOURCE_JACK;
+
+    if (!strcmp(source, "file"))
+        df.source = ENCODER_SOURCE_FILE;
+
+    if (!strcmp(family, "mpeg"))
+        df.family = ENCODER_FAMILY_MPEG;
+        
+    if (!strcmp(family, "ogg"))
+        df.family = ENCODER_FAMILY_OGG;
+        
+    if (!strcmp(codec, "mp3"))
+        df.codec = ENCODER_CODEC_MP3;
+
+    if (!strcmp(codec, "mp2"))
+        df.codec = ENCODER_CODEC_MP2;
+        
+    if (!strcmp(codec, "aac"))
+        df.codec = ENCODER_CODEC_AAC;
+        
+    if (!strcmp(codec, "aacpv2"))
+        df.codec = ENCODER_CODEC_AACPLUSV2;
+        
+    if (!strcmp(codec, "vorbis"))
+        df.codec = ENCODER_CODEC_VORBIS;
+        
+    if (!strcmp(codec, "flac"))
+        df.codec = ENCODER_CODEC_FLAC;
+    
+    if (!strcmp(codec, "speex"))
+        df.codec = ENCODER_CODEC_SPEEX;
+        
+    if (df.source == ENCODER_SOURCE_UNHANDLED)
+        warning("encoder source is not recognised", source);
+    
+    if (df.family == ENCODER_FAMILY_UNHANDLED)
+        warning("encoder family is not recognized", family);
+        
+    if (df.codec == ENCODER_CODEC_UNHANDLED)
+        warning("encoder codec is not recognized", codec);
+
+    return df;
     }
 
 static int encoder_get_resample_mode(char *rm_string)
     {
-    if (!strcmp(rm_string, "fastest"))
-        return SRC_LINEAR;
-    if (!strcmp(rm_string, "fast"))
+    if (!strcmp(rm_string, "lowest"))
         return SRC_SINC_FASTEST;
-    if (!strcmp(rm_string, "high"))
+    if (!strcmp(rm_string, "medium"))
         return SRC_SINC_MEDIUM_QUALITY;
     if (!strcmp(rm_string, "highest"))
         return SRC_SINC_BEST_QUALITY;
@@ -206,12 +245,26 @@ static long encoder_resampler_get_data(void *cb_data, float **data)
         }
     return (long)n_samples;
     }
-  
+
+static void encoder_apply_pregain(struct encoder_ip_data *id, float gain)
+    {
+    if (gain != 1.0f)
+        for (int i = 0; i < id->channels; ++i)
+            {
+            float *bp = id->buffer[i];
+            for (size_t s = id->qty_samples; s; --s)
+                *bp++ *= gain;
+            }
+    }
+
 struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, size_t min_samples_needed, size_t max_samples, float **caller_supplied_buffer)
     {
     struct encoder_ip_data *id;
     size_t samples_available;
     int i;
+    
+    if (max_samples == 0)
+        return NULL;
     
     if (!(id = calloc(1, sizeof (struct encoder_ip_data))))
         {
@@ -268,7 +321,10 @@ struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, size_t m
         if (id->qty_samples == 0)
             goto no_data;
         }
+
+    encoder_apply_pregain(id, encoder->pregain);
     return id;
+
     no_data:
     encoder_ip_data_free(id);
     return NULL;
@@ -478,7 +534,7 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
     struct encoder *self = ti->encoder[uv->tab];
     struct encoder_vars *ev = other;
     struct timespec ms10 = { 0, 10000000 };
-    int (*encoder_init)(struct encoder *, struct encoder_vars *);
+    int (*encoder_init)(struct encoder *, struct encoder_vars *) = NULL;
     int i, resample_mode, error;
 
     if (self->encoder_state != ES_STOPPED)
@@ -486,53 +542,69 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
         fprintf(stderr, "encoder_start: encoder state out of control - shouldn't be marked as running\n");
         goto failed;
         }
-    self->data_format = encoder_get_data_format(ev->format, ev->encode_source);
-    switch (self->data_format)
-        {
-        case DF_JACK_MP3:
-            encoder_init = live_mp3_encoder_init;
+
+    self->data_format = encoder_lex_format(ev->encode_source, ev->family, ev->codec);
+
+    switch (self->data_format.source) {
+        case ENCODER_SOURCE_JACK:
+            switch (self->data_format.family) {
+                case ENCODER_FAMILY_MPEG:
+                    switch (self->data_format.codec) {
+                        case ENCODER_CODEC_MP3:
+                            encoder_init = live_mp3_encoder_init;
+                            break;
+                        case ENCODER_CODEC_MP2:
+                            encoder_init = live_mp2_encoder_init;
+                            break;
+                        case ENCODER_CODEC_AAC:
+                        case ENCODER_CODEC_AACPLUSV2:
+                            encoder_init = live_avcodec_encoder_init;
+                            break;
+                        case ENCODER_CODEC_UNHANDLED:
+                        default:
+                            goto failed;
+                        }
+                    break;
+                case ENCODER_FAMILY_OGG:
+                    switch (self->data_format.codec) {
+                        case ENCODER_CODEC_VORBIS:
+                            encoder_init = live_ogg_encoder_init;
+                            break;
+                        case ENCODER_CODEC_FLAC:
+                            encoder_init = live_oggflac_encoder_init;
+                            break;
+                        case ENCODER_CODEC_SPEEX:
+                            encoder_init = live_oggspeex_encoder_init;
+                            break;
+                        case ENCODER_CODEC_UNHANDLED:
+                        default:
+                            goto failed;
+                    }
+                    break;
+                case ENCODER_FAMILY_UNHANDLED:
+                default:
+                    break;
+                }
             break;
-        case DF_JACK_OGG:
-            if (!strcmp(ev->subformat, "vorbis"))
-                {
-                encoder_init = live_ogg_encoder_init;
-                break;
-                }
-#ifdef HAVE_OGGFLAC
-            if (!strcmp(ev->subformat, "flac"))
-                {
-                encoder_init = live_oggflac_encoder_init;
-                break;
-                }
-#endif
-#ifdef HAVE_SPEEX
-            if (!strcmp(ev->subformat, "speex"))
-                {
-                encoder_init = live_oggspeex_encoder_init;
-                break;
-                }
-#endif
-        /*case DF_FILE_MP3:
-            encoder_init = file_mp3_encoder_init;
-            break;
-        case DF_FILE_OGG:
-            encoder_init = file_ogg_encoder_init;
-            break;*/
-            fprintf(stderr, "encoder_start: unhandled ogg format %s\n", ev->subformat);
+        case ENCODER_SOURCE_FILE:
+            fprintf(stderr, "streaming direct from a file is not supported\n");
             goto failed;
-        case DF_UNHANDLED:
+        case ENCODER_SOURCE_UNHANDLED:
         default:
-            fprintf(stderr, "encoder_start: unhandled file format %s:%s\n", ev->format, ev->encode_source);
             goto failed;
         }
+
     self->performance_warning_indicator = PW_OK;
     self->samplerate = (long)self->threads_info->audio_feed->sample_rate;
-    self->target_samplerate = atol(ev->sample_rate);
+    self->target_samplerate = atol(ev->samplerate);
     self->resample_f = !(self->samplerate == self->target_samplerate);
     self->sr_conv_ratio = (double)self->target_samplerate / (double)self->samplerate;
-    self->bitrate = atoi(ev->bit_rate);
-    self->n_channels = strcmp(ev->stereo, "mono") ? 2 : 1;
-    self->new_metadata = TRUE;
+    self->pregain = atof(ev->pregain);
+    if (ev->bitrate)
+        self->bitrate = atoi(ev->bitrate);
+    self->n_channels = strcmp(ev->mode, "mono") ? 2 : 1;
+    if ((self->use_metadata = (strcmp(ev->metadata_mode, "suppressed") ? 1 : 0)))
+        self->new_metadata = TRUE;
     if (self->resample_f)
         {
         fprintf(stderr, "encoder_start: initiating resampler(s)\n");
@@ -546,29 +618,26 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
         }
     else
         fprintf(stderr, "encoder_start: resampler will not be used\n");
+        
     if (encoder_init(self, ev))
         {
-        switch(self->data_format)
+        if (self->data_format.source == ENCODER_SOURCE_JACK)
             {
-            case DF_JACK_OGG:
-            case DF_JACK_MP3:
-                self->input_rb[0] = jack_ringbuffer_create(rb_n_samples * sizeof (sample_t));
-                self->input_rb[1] = jack_ringbuffer_create(rb_n_samples * sizeof (sample_t));
-                if (!(self->input_rb[0] && self->input_rb[1]))
-                    {
-                    fprintf(stderr, "encoder_start: jack ringbuffer creation failure\n");
-                    goto failed;
-                    }
-                self->jack_dataflow_control = JD_ON;
-                break;
-            case DF_FILE_OGG:
-            case DF_FILE_MP3:
-            default:
-                break;
+            self->input_rb[0] = jack_ringbuffer_create(rb_n_samples * sizeof (sample_t));
+            self->input_rb[1] = jack_ringbuffer_create(rb_n_samples * sizeof (sample_t));
+            if (!(self->input_rb[0] && self->input_rb[1]))
+                {
+                fprintf(stderr, "encoder_start: jack ringbuffer creation failure\n");
+                goto failed;
+                }
+            self->jack_dataflow_control = JD_ON;
             }
+
         self->run_request_f = TRUE;
         self->encoder_state = ES_STARTING;
         while (self->encoder_state == ES_STARTING)
+            nanosleep(&ms10, NULL);
+        while (self->encoder_state == ES_STOPPING)
             nanosleep(&ms10, NULL);
         if (self->encoder_state == ES_STOPPED)
             {
@@ -628,8 +697,6 @@ int encoder_new_song_metadata(struct threads_info *ti, struct universal_vars *uv
             free(self->title);
         if (self->album)
             free(self->album);
-        if (self->artist_title_lat1)
-            free(self->artist_title_lat1);
         if (ev->artist)
             self->artist = strdup(ev->artist);
         else
@@ -642,11 +709,7 @@ int encoder_new_song_metadata(struct threads_info *ti, struct universal_vars *uv
             self->title = strdup(ev->title);
         else
             self->title = strdup("");
-        if (ev->artist_title_lat1)
-            self->artist_title_lat1 = strdup(ev->artist_title_lat1);
-        else
-            self->artist_title_lat1 = strdup("");
-        if (!(self->artist && self->title && self->album && self->artist_title_lat1))
+        if (!(self->artist && self->title && self->album))
             {
             pthread_mutex_unlock(&self->metadata_mutex);
             fprintf(stderr, "encoder_new_metadata: malloc failure\n");
@@ -668,17 +731,12 @@ int encoder_new_custom_metadata(struct threads_info *ti, struct universal_vars *
     self->new_metadata = FALSE;
     if (self->custom_meta)
         free(self->custom_meta);
-    if (self->custom_meta_lat1)
-        free(self->custom_meta_lat1);
     self->custom_meta = ev->custom_meta;
     ev->custom_meta = NULL;
-    self->custom_meta_lat1 = ev->custom_meta_lat1;
-    ev->custom_meta_lat1 = NULL;
     if (!self->custom_meta)
         self->custom_meta = strdup("");
-    if (!self->custom_meta_lat1)
-        self->custom_meta_lat1 = strdup("");
-    self->new_metadata = TRUE;
+    if (self->use_metadata)
+        self->new_metadata = TRUE;
     pthread_mutex_unlock(&self->metadata_mutex);
     return SUCCEEDED;
     }
@@ -705,9 +763,7 @@ struct encoder *encoder_init(struct threads_info *ti, int numeric_id)
     self->artist = strdup("");
     self->title = strdup("");
     self->album = strdup("");
-    self->artist_title_lat1 = strdup("");
     self->custom_meta = strdup("%s");
-    self->custom_meta_lat1 = strdup("%s");
     while ((self->oggserial = rand()) + 20000 < 0 || self->oggserial < 100);
     pthread_mutex_init(&self->mutex, NULL);
     pthread_mutex_init(&self->metadata_mutex, NULL);
@@ -734,16 +790,11 @@ void encoder_destroy(struct encoder *self)
         free(self->rs_input[1]);
     if (self->custom_meta)
         free(self->custom_meta);
-    if (self->custom_meta_lat1)
-        free(self->custom_meta_lat1);
     if (self->artist)
         free(self->artist);
     if (self->title)
         free(self->title);
     if (self->album)
         free(self->album);
-    if (self->artist_title_lat1)
-        free(self->artist_title_lat1);
     free(self);
     }
-

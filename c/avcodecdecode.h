@@ -33,6 +33,7 @@
 #endif
 
 #include "xlplayer.h"
+#include "mp3tagread.h"
 
 struct avcodecdecode_vars
     {
@@ -42,9 +43,11 @@ struct avcodecdecode_vars
     AVFormatContext *ic;
     int resample;
     unsigned int stream;
-    uint8_t *outbuf;
+    AVFrame *frame;
     float *floatsamples;
     float drop;
+    struct mp3taginfo taginfo;
+    struct chapter *current_chapter;
     };
 
 int avcodecdecode_reg(struct xlplayer *xlplayer);

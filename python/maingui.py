@@ -1795,7 +1795,7 @@ class MainWindow:
              deck2adj = self.deck2adj.get_value() * -1.0 + 100.0
 
         string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:" \
-                        "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:%d:" \
+                        "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:" \
                         "%d:%d:%d:" % (
                         deckadj,
                         deck2adj,
@@ -1828,7 +1828,6 @@ class MainWindow:
                         self.prefs_window.dj_aud_adj.get_value(),
                         self.crosspattern.get_active(),
                         self.dsp_button.get_active(), 
-                        self.prefs_window.twodblimit.get_active(),
                         self.jingles.interlude.pause.get_active(),
                         self.jingles.interlude.stream.get_active(),
                         self.jingles.interlude.listen.get_active()
@@ -2504,7 +2503,7 @@ class MainWindow:
                 if not line.count("="):
                     print line
                     continue
-                key, value = line.split("=")
+                key, value = line.split("=", 1)
 
                 if key == "midi":
                     midis= value
@@ -2741,16 +2740,13 @@ class MainWindow:
         os.environ["num_encoders"] = str(PGlobs.num_encoders)
         os.environ["num_recorders"] = str(PGlobs.num_recorders)
         os.environ["has_head"] = "1"
+        os.environ["libmp3lame_filename"] = FGlobs.libmp3lame_filename
 
         print "jack client ID:", client_id
 
         self.session_loaded = False
 
         self.mixer_write("bootstrap")
-        self.mixer_write("ACTN=mp3status\nend\n")
-        rply = self.mixer_read()
-        if rply == "IDJC: mp3=1\n":
-            supported.media.append(".mp3")
   
         # create the GUI elements
         self.window_group = gtk.WindowGroup()

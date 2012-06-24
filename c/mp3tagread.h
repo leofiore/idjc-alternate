@@ -17,6 +17,9 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef MP3TAGREAD_H
+#define MP3TAGREAD_H
+
 #include "../config.h"
 
 #include <stdio.h>
@@ -76,3 +79,4 @@ void mp3_tag_read(struct mp3taginfo *ti, FILE *fp);
 void mp3_tag_cleanup(struct mp3taginfo *ti);
 struct chapter *mp3_tag_chapter_scan(struct mp3taginfo *ti, unsigned time_ms);
 
+#endif /* MP3TAGREAD_H */
