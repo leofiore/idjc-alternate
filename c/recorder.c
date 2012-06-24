@@ -25,6 +25,7 @@
 #include "sourceclient.h"
 #include "id3.h"
 #include "sig.h"
+#include "main.h"
 
 #define TIMESTAMP_SIZ 23
 
@@ -719,8 +720,8 @@ static void *recorder_main(void *args)
 
 int recorder_make_report(struct recorder *self)
     {
-    fprintf(stdout, "idjcsc: recorder%dreport=%d:%d\n", self->numeric_id, self->record_mode, self->recording_length_s);
-    fflush(stdout);
+    fprintf(g.out, "idjcsc: recorder%dreport=%d:%d\n", self->numeric_id, self->record_mode, self->recording_length_s);
+    fflush(g.out);
     return SUCCEEDED;
     }
 

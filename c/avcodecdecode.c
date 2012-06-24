@@ -347,14 +347,14 @@ void avformatinfo(char *pathname)
         for(kp = keys; *kp; kp++)
             {
             if ((tag = av_dict_get(mc, *kp, NULL, flags)))
-                printf("avformatinfo: %s=%s\n", tag->key, tag->value);
+                fprintf(g.out, "avformatinfo: %s=%s\n", tag->key, tag->value);
             }
       
-        printf("avformatinfo: duration=%d\n", (int)(ic->duration / AV_TIME_BASE));
+        fprintf(g.out, "avformatinfo: duration=%d\n", (int)(ic->duration / AV_TIME_BASE));
         avformat_close_input(&ic);
         }
-    printf("avformatinfo: end\n");
-    fflush(stdout);
+    fprintf(g.out, "avformatinfo: end\n");
+    fflush(g.out);
     }
     
 #endif /* HAVE_AVUTIL */

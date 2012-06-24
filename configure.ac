@@ -12,6 +12,9 @@ AM_CONFIG_HEADER([config.h])
 # Generate python installation stuff
 AM_PATH_PYTHON([2.7])
 
+# idjc backend library stuff
+LT_INIT([disable-static,dlopen])
+
 # Checks for programs.
 AM_PROG_CC_C_O
 

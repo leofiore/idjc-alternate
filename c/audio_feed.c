@@ -102,9 +102,9 @@ int audio_feed_process_audio(jack_nframes_t n_frames, void *arg)
 
 int audio_feed_jack_samplerate_request(struct threads_info *ti, struct universal_vars *uv, void *param)
     {
-    printf("idjcsc: sample_rate=%ld\n", (long)ti->audio_feed->sample_rate);
-    fflush(stdout);
-    if (ferror(stdout))
+    fprintf(g.out, "idjcsc: sample_rate=%ld\n", (long)ti->audio_feed->sample_rate);
+    fflush(g.out);
+    if (ferror(g.out))
         return FAILED;
     return SUCCEEDED;
     }

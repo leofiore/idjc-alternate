@@ -10,8 +10,9 @@ aclocal.m4
 artwork/idjc.png
 autom4te.cache/*
 c/.deps/
-c/idjcbe
-c/*.o
+c/.libs/
+c/*.lo
+c/idjc.la
 compile
 config.h
 config.h.in
@@ -23,11 +24,12 @@ idjc
 idjc.in
 idjc.desktop
 idjc.desktop.in
-idjcctrl
 python/*.pyc
 python/__init__.py
 python/__init__.py.in
 install-sh
+libtool
+ltmain.sh
 libshout-idjc/autom4te.cache/*
 libshout-idjc/config.guess
 libshout-idjc/config.sub

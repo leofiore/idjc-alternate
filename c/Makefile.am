@@ -1,6 +1,6 @@
-libexec_PROGRAMS = idjcbe
+lib_LTLIBRARIES = idjc.la
 
-idjcbe_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecdecode.h bsdcompat.c bsdcompat.h			\
+idjc_la_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecdecode.h bsdcompat.c bsdcompat.h			\
 			\
 				compressor.c compressor.h dbconvert.c dbconvert.h dyn_lame.c dyn_lame.h encoder.c						\
 			\
@@ -21,20 +21,18 @@ idjcbe_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecde
 				speextag.h streamer.c streamer.h xlplayer.c xlplayer.h live_mp2_encoder.c live_mp2_encoder.h \
 			\
 				avcodec_encoder.c avcodec_encoder.h
+				
 
-
-idjcbe_CFLAGS = ${GLIB_CFLAGS} ${LIBAVCODEC_CFLAGS} ${LIBAVFORMAT_CFLAGS} ${LIBAVUTIL_CFLAGS} ${LIBFLAC_CFLAGS}		\
+idjc_la_CFLAGS = ${GLIB_CFLAGS} ${LIBAVCODEC_CFLAGS} ${LIBAVFORMAT_CFLAGS} ${LIBAVUTIL_CFLAGS} ${LIBFLAC_CFLAGS}		\
 			\
 				${LIBJACK_CFLAGS} ${MPG123_CFLAGS} ${LIBSAMPLERATE_CFLAGS} ${SHOUTIDJC_CFLAGS} ${LIBSNDFILE_CFLAGS} 		\
 			\
 				${LIBSPEEX_CFLAGS} ${LIBVORBISENC_CFLAGS} ${LIBVORBIS_CFLAGS} ${TWOLAME_CFLAGS} -O2 -Wall -std=gnu99
-
-
-idjcbe_LDADD = ${DYN_LIBS} ${GLIB_LIBS} ${LIBAVCODEC_LIBS} ${LIBAVFORMAT_LIBS} ${LIBAVUTIL_LIBS} ${LIBFLAC_LIBS} 		\
+				
+idjc_la_LIBADD = ${DYN_LIBS} ${GLIB_LIBS} ${LIBAVCODEC_LIBS} ${LIBAVFORMAT_LIBS} ${LIBAVUTIL_LIBS} ${LIBFLAC_LIBS} 		\
 			\
 				${LIBJACK_LIBS} ${MPG123_LIBS} ${LIBMP3LAME} ${LIBM} ${LIBSAMPLERATE_LIBS} ${SHOUTIDJC_LIBS}			\
 			\
 				${LIBSNDFILE_LIBS} ${LIBSPEEX_LIBS} ${LIBVORBISENC_LIBS} ${LIBVORBIS_LIBS} ${TWOLAME_LIBS} -lpthread
-
-
-idjcbe_LDFLAGS = ${DYN_LDFLAGS}
+				
+idjc_la_LDFLAGS = ${DYN_LDFLAGS} -module

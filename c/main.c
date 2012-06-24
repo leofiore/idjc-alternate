@@ -26,6 +26,8 @@
 #include <signal.h>
 #include <unistd.h>
 #include <jack/session.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #ifdef HAVE_AVCODEC
 #ifdef HAVE_AVFORMAT
@@ -118,7 +120,7 @@ static int main_process_audio(jack_nframes_t n_frames, void *arg)
     return rv;
     }
 
-int main(void)
+static int backend_main()
     {
     char *buffer = NULL;
     size_t n = 10;
@@ -249,12 +251,12 @@ int main(void)
         }
     atexit(cleanup_jack);
 
-    printf("idjc backend ready\n");
-    fflush(stdout);
+    fprintf(g.out, "idjc backend ready\n");
+    fflush(g.out);
 
     alarm(1);
 
-    while (keep_running && getline(&buffer, &n, stdin) > 0 && !g.app_shutdown)
+    while (keep_running && getline(&buffer, &n, g.in) > 0 && !g.app_shutdown)
         {
         /* Filter commands to submodules. */
         if (!strcmp(buffer, "mx\n"))
@@ -286,4 +288,51 @@ int main(void)
         jack_ringbuffer_free(g.session_event_rb);
 
     return 0;
+    }
+
+int init_backend(int *read_pipe, int *write_pipe)
+    {
+    char *ui2be = getenv("ui2be");
+    char *be2ui = getenv("be2ui");
+    pid_t pid;
+
+    unlink(ui2be);
+    unlink(be2ui);
+    if (mkfifo(ui2be, S_IWUSR | S_IRUSR) || mkfifo(be2ui, S_IWUSR | S_IRUSR))
+        {
+        fprintf(stderr, "init_backend: failed to make fifo\n");
+        return -1;
+        }
+
+    if (!(pid = fork()))
+        {
+        int maxfd = sysconf(_SC_OPEN_MAX);
+
+        for (int fd = 3; fd < maxfd; ++fd)
+            close(fd);
+
+        if ((g.in = fopen(ui2be, "r")) && (g.out = fopen(be2ui, "w")))
+            {
+            fputc('#', g.out);
+                
+            int ret = backend_main();
+            fclose(g.in);
+            fclose(g.out);
+            exit(ret);
+            }
+        else
+            fprintf(stderr, "init_backend: in fork: failed to open fifo\n");
+        }
+
+    *write_pipe = open(ui2be, O_WRONLY);
+    *read_pipe = open(be2ui, O_RDONLY);
+    
+    char buffer;
+    if (read(*read_pipe, &buffer, 1) != 1)
+        {
+        fprintf(stderr, "init_backend: pipe failed\n");
+        return -1;
+        }
+    
+    return (int)pid;
     }

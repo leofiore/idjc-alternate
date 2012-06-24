@@ -133,8 +133,8 @@ static int command_parse(struct commandmap *map, struct threads_info *ti, struct
 
 void comms_send(char *message)
     {
-    fprintf(stdout, "idjcsc: %s\n", message);
-    fflush(stdout);
+    fprintf(g.out, "idjcsc: %s\n", message);
+    fflush(g.out);
     }
 
 static struct threads_info ti;
@@ -230,7 +230,7 @@ void sourceclient_init()
 
 int sourceclient_main()
     {
-    if (!kvp_parse(kvpdict, stdin))
+    if (!kvp_parse(kvpdict, g.in))
         return FALSE;
 
     if (uv.command && command_parse(commandmap, &ti, &uv))

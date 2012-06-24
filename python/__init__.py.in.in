@@ -61,7 +61,7 @@ class FGlobs(object):
 
 
     datarootdir = PathStr("""@datarootdir@""")
-    libexecdir = PathStr("""@libexecdir@""")
+    libdir = PathStr("""@libdir@""")
     pkgdatadir = PathStr("""${pkgdatadir}""")
     localedir = PathStr("""@localedir@""")
     bindir = PathStr("""@bindir@""")
@@ -89,6 +89,7 @@ class FGlobs(object):
     
     package_name = """@PACKAGE_NAME@"""
     package_version = """@PACKAGE_VERSION@"""
+    backend = PathStr("""@libdir@""") / """@PACKAGE_NAME@.so.0"""
 
 
 

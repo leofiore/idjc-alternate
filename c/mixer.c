@@ -591,7 +591,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
         if (!g.app_shutdown)
             {
             alarm(1);
-            printf("Malloc failure in process audio\n");
+            fprintf(stderr, "malloc failure in process audio\n");
             g.app_shutdown = TRUE;
             }
         mixer_stop_players();
@@ -1230,7 +1230,7 @@ static void send_metadata_update(struct xlp_dynamic_metadata *dm)
     fprintf(stderr, "new dynamic metadata\n");
     if (dm->data_type != DM_JOINED_UC)
         {
-        fprintf(stdout, "new_metadata=d%d:%sd%d:%sd%d:%sd9:%09dd9:%09dx\n", (int)strlen(dm->artist), dm->artist, (int)strlen(dm->title), dm->title, (int)strlen(dm->album), dm->album, dm->current_audio_context, dm->rbdelay);
+        fprintf(g.out, "new_metadata=d%d:%sd%d:%sd%d:%sd9:%09dd9:%09dx\n", (int)strlen(dm->artist), dm->artist, (int)strlen(dm->title), dm->title, (int)strlen(dm->album), dm->album, dm->current_audio_context, dm->rbdelay);
         fprintf(stderr, "new_metadata=d%d:%sd%d:%sd%d:%sd9:%09dd9:%09dx\n", (int)strlen(dm->artist), dm->artist, (int)strlen(dm->title), dm->title, (int)strlen(dm->album), dm->album, dm->current_audio_context, dm->rbdelay);
         }
     else
@@ -1265,27 +1265,27 @@ static void jackportread(const char *portname, const char *filter)
 
     cons = jack_port_get_all_connections(g.client, port);
     ports = jack_get_ports(g.client, NULL, type, flags);
-    fputs("jackports=", stdout);
+    fputs("jackports=", g.out);
     if (ports)
         for (i = 0; ports[i]; ++i)
             {
             if (i)
-                fputs(" ", stdout);
+                fputs(" ", g.out);
                 
             /* connected ports are prefaced with an @ character */
             if (cons)
                 for (j = 0; cons[j]; ++j)
                     if (!(strcmp(cons[j], ports[i])))
                         {
-                        putchar('@');
+                        fputc('@', g.out);
                         break;
                         }
             
-            fputs(ports[i], stdout);
+            fputs(ports[i], g.out);
             }
 
-    putchar('\n');
-    fflush(stdout);
+    fputc('\n', g.out);
+    fflush(g.out);
 
     if (cons)
         jack_free(cons);
@@ -1357,38 +1357,38 @@ void mixer_init(void)
     if(! ((plr_l = xlplayer_create(sr, RB_SIZE, "leftplayer", &g.app_shutdown)) &&
             (plr_r = xlplayer_create(sr, RB_SIZE, "rightplayer", &g.app_shutdown))))
         {
-        printf("failed to create main player modules\n");
+        fprintf(stderr, "failed to create main player modules\n");
         exit(5);
         }
     
     if (!(plr_j = xlplayer_create(sr, RB_SIZE, "jinglesplayer", &g.app_shutdown)))
         {
-        printf("failed to create jingles player module\n");
+        fprintf(stderr, "failed to create jingles player module\n");
         exit(5);
         }
 
     if (!(plr_i = xlplayer_create(sr, RB_SIZE, "interludeplayer", &g.app_shutdown)))
         {
-        printf("failed to create interlude player module\n");
+        fprintf(stderr, "failed to create interlude player module\n");
         exit(5);
         }
 
     if (!init_dblookup_table())
         {
-        fprintf(stderr, "Failed to allocate space for signal to db lookup table\n");
+        fprintf(stderr, "failed to allocate space for signal to db lookup table\n");
         exit(5);
         }
         
     if (!init_signallookup_table())
         {
-        fprintf(stderr, "Failed to allocate space for db to signal lookup table\n");
+        fprintf(stderr, "failed to allocate space for db to signal lookup table\n");
         exit(5);
         } 
         
     /* generate the wave table for the DJ alarm */
     if (!(eot_alarm_table = calloc(sizeof (sample_t), sr)))
         {
-        fprintf(stderr, "Failed to allocate space for end of track alarm wave table\n");
+        fprintf(stderr, "failed to allocate space for end of track alarm wave table\n");
         exit(5);
         }
     else
@@ -1443,8 +1443,17 @@ int mixer_main()
     unsigned int lead, ports_diff;
     jack_session_event_t *session_event;
     
-    if (!(kvp_parse(kvpdict, stdin)))
+    if (!(kvp_parse(kvpdict, g.in)))
+        {
+        fprintf(stderr, "kvp_parse returned false\n");
         return FALSE;
+        }
+
+    if (!strcmp(action, "ping"))
+        {
+        fprintf(g.out, "pong\n");
+        fflush(g.out);
+        }
 
     if (!strcmp(action, "jackportread"))
         jackportread(jackport, jackfilter);
@@ -1490,8 +1499,8 @@ int mixer_main()
         jack_session_reply(g.client, session_event);
         jack_session_event_free(session_event);
         /* Unblock the user interface which is waiting on a reply. */
-        fprintf(stdout, "session event handled\n");
-        fflush(stdout);
+        fprintf(g.out, "session event handled\n");
+        fflush(g.out);
         }
 
     if (!strcmp(action, "mic_control"))
@@ -1522,34 +1531,34 @@ int mixer_main()
 
     if (!strcmp(action, "playleft"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
-        fflush(stdout);
+        fprintf(g.out, "context_id=%d\n", xlplayer_play(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+        fflush(g.out);
         }
     if (!strcmp(action, "playright"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
-        fflush(stdout);
+        fprintf(g.out, "context_id=%d\n", xlplayer_play(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+        fflush(g.out);
         }
     if (!strcmp(action, "playnoflushleft"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
-        fflush(stdout);
+        fprintf(g.out, "context_id=%d\n", xlplayer_play_noflush(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+        fflush(g.out);
         }
     if (!strcmp(action, "playnoflushright"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
-        fflush(stdout);
+        fprintf(g.out, "context_id=%d\n", xlplayer_play_noflush(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+        fflush(g.out);
         }
  
     if (!strcmp(action, "playmanyjingles"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_playmany(plr_j, playerplaylist, loop[0]=='1'));
-        fflush(stdout);
+        fprintf(g.out, "context_id=%d\n", xlplayer_playmany(plr_j, playerplaylist, loop[0]=='1'));
+        fflush(g.out);
         }
     if (!strcmp(action, "playmanyinterlude"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_playmany(plr_i, playerplaylist, loop[0]=='1'));
-        fflush(stdout);
+        fprintf(g.out, "context_id=%d\n", xlplayer_playmany(plr_i, playerplaylist, loop[0]=='1'));
+        fflush(g.out);
         }
 
     if (!strcmp(action, "stopleft"))
@@ -1586,13 +1595,13 @@ int mixer_main()
         {
         if (oggdecode_get_metainfo(oggpathname, &s.artist, &s.title, &s.album, &s.length, &s.replaygain))
             {
-            fprintf(stdout, "OIR:ARTIST=%s\nOIR:TITLE=%s\nOIR:ALBUM=%s\nOIR:LENGTH=%f\nOIR:REPLAYGAIN_TRACK_GAIN=%s\nOIR:end\n", s.artist, s.title, s.album, s.length, s.replaygain);
-            fflush(stdout);
+            fprintf(g.out, "OIR:ARTIST=%s\nOIR:TITLE=%s\nOIR:ALBUM=%s\nOIR:LENGTH=%f\nOIR:REPLAYGAIN_TRACK_GAIN=%s\nOIR:end\n", s.artist, s.title, s.album, s.length, s.replaygain);
+            fflush(g.out);
             }
         else
             {
-            fprintf(stdout, "OIR:NOT VALID\n");
-            fflush(stdout);
+            fprintf(g.out, "OIR:NOT VALID\n");
+            fflush(g.out);
             }
         }
     
@@ -1691,7 +1700,7 @@ int mixer_main()
                         s.session_command = "savetemplate_JACK";
                     }
 
-                fprintf(stdout, "session_event=%p\n"
+                fprintf(g.out, "session_event=%p\n"
                                 "session_directory=%s\n"
                                 "session_uuid=%s\n",
                                  session_event,
@@ -1708,7 +1717,7 @@ int mixer_main()
         else
             ports_diff = lead - port_reports;
 
-        fprintf(stdout, 
+        fprintf(g.out, 
                      "str_l_peak=%d\nstr_r_peak=%d\n"
                      "str_l_rms=%d\nstr_r_rms=%d\n"
                      "jingles_playing=%d\n"
@@ -1771,7 +1780,7 @@ int mixer_main()
             send_metadata_update(&(plr_l->dynamic_metadata));
         if (plr_r->dynamic_metadata.data_type)
             send_metadata_update(&(plr_r->dynamic_metadata));
-        fflush(stdout);
+        fflush(g.out);
         }
         
     return TRUE;

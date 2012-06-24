@@ -32,6 +32,7 @@ import itertools
 import collections
 import json
 import uuid
+import ctypes
 
 import glib
 import gobject
@@ -2440,17 +2441,20 @@ class MainWindow:
                 print str(e)
             for i in range(1, 4 if self.session_loaded else 2):
                 print "backend launch attempt", i
-                try:
-                    subproc = subprocess.Popen([FGlobs.libexecdir / "idjcbe"],
-                                    bufsize = 4096, stdin = subprocess.PIPE,
-                                    stdout = subprocess.PIPE, close_fds = True)
-                except Exception, inst:
-                    print inst
-                    print "unable to open a pipe to the backend"
+
+
+                read = ctypes.c_int()
+                write = ctypes.c_int()
+                if not self.backend.init_backend(ctypes.byref(read), ctypes.byref(write)):
+                    print "call to init_backend failed"
                     continue
-                else:
-                    (self._mixer_ctrl, self._mixer_rply) = \
-                                                (subproc.stdin, subproc.stdout)
+                
+                try:
+                    self._mixer_ctrl = os.fdopen(write.value, "w")
+                    self._mixer_rply = os.fdopen(read.value, "r")
+                except OSError:
+                    "failed to open streams to backend"
+                    continue
                     
                 print "awaiting reply"
                     
@@ -2462,6 +2466,7 @@ class MainWindow:
                 else:
                     print "bad response from newly started backend"
                     continue
+              
                 if message != "bootstrap":
                     # Restore previous settings.
                     self.send_new_mixer_stats()
@@ -2769,10 +2774,22 @@ class MainWindow:
         os.environ["num_recorders"] = str(PGlobs.num_recorders)
         os.environ["has_head"] = "1"
         os.environ["libmp3lame_filename"] = FGlobs.libmp3lame_filename
+        # For IPC.
+        os.environ["ui2be"] = pm.basedir / "ui2be"
+        os.environ["be2ui"] = pm.basedir / "be2ui"
 
         print "jack client ID:", client_id
 
         self.session_loaded = False
+
+        try:
+            self.backend = ctypes.CDLL(FGlobs.backend)
+        except OSError:
+            try:
+                subprocess.call(["notify-send", "-u", "critical", "-a", "IDJC", "IDJC Failed to open %s\n\nCannot continue" % FGlobs.backend])
+            except OSError:
+                pass
+            raise self.initfailed
 
         self.mixer_write("bootstrap")
   
@@ -3071,6 +3088,7 @@ class MainWindow:
         
         # The crossfader.  No DJ should be without one. ;)
         self.outercrossbox = gtk.HBox()
+
         self.outercrossbox.viewlevels = (5,)
         crossframe = gtk.Frame()
         self.outercrossbox.pack_start(crossframe, True, True, 6)

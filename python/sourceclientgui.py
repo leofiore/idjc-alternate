@@ -2807,6 +2807,7 @@ class SourceClientGui:
         parent.server_window = self
         self.source_client_crash_count = 0
         self.source_client_open()
+
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.parent.window_group.add_window(self.window)
         # TC: Window title bar text.

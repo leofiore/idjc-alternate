@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "id3.h"
+#include "main.h"
 
 static void id3_frame_extra_cleanup(struct id3_frame *frame)
     {
@@ -231,7 +232,7 @@ void id3_compile(struct id3_tag *tag)
     uint32_t ssint;
     char *wp;
     
-    fflush(stdout);
+    fflush(g.out);
     ptr = tag->first_frame;
     if (ptr)
         chained_size = id3_compile_frames(tag->first_frame);

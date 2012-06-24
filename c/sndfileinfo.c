@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <sndfile.h>
 #include "sndfileinfo.h"
+#include "main.h"
 
 int sndfileinfo(char *pathname)
     {
@@ -36,16 +37,16 @@ int sndfileinfo(char *pathname)
     title = sf_get_string(handle, SF_STR_TITLE);
     album = sf_get_string(handle, SF_STR_ALBUM);
  
-    printf("idjcmixer: sndfileinfo length=%d\n", (int)(sfinfo.frames / sfinfo.samplerate));
+    fprintf(g.out, "idjcmixer: sndfileinfo length=%d\n", (int)(sfinfo.frames / sfinfo.samplerate));
     if (artist && title)
         {
-        printf("idjcmixer: sndfileinfo artist=%s\n", artist);
-        printf("idjcmixer: sndfileinfo title=%s\n", title);
+        fprintf(g.out, "idjcmixer: sndfileinfo artist=%s\n", artist);
+        fprintf(g.out, "idjcmixer: sndfileinfo title=%s\n", title);
         if (album)
-            printf("idjcmixer: sndfileinfo album=%s\n", album);
+            fprintf(g.out, "idjcmixer: sndfileinfo album=%s\n", album);
         }
-    printf("idjcmixer: sndfileinfo end\n");
+    fprintf(g.out, "idjcmixer: sndfileinfo end\n");
     sf_close(handle);
-    fflush(stdout);
+    fflush(g.out);
     return 1;
     }

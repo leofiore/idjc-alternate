@@ -324,9 +324,9 @@ int live_avcodec_encoder_aac_functionality()
     int aac_f = 1;
     int aacpv2_f = 1;
     
-    fprintf(stdout, "idjcsc: aac_functionality=%d:%d\n", aac_f, aacpv2_f);
-    fflush(stdout);
-    if (ferror(stdout))
+    fprintf(g.out, "idjcsc: aac_functionality=%d:%d\n", aac_f, aacpv2_f);
+    fflush(g.out);
+    if (ferror(g.out))
         return FAILED;
     
     return SUCCEEDED;

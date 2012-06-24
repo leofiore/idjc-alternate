@@ -27,6 +27,7 @@
 #include <shoutidjc/shout.h>
 #include "sourceclient.h"
 #include "sig.h"
+#include "main.h"
 
 /* other versions of libshout define SHOUT_FORMAT_VORBIS instead */
 #ifndef SHOUT_FORMAT_OGG
@@ -187,10 +188,10 @@ int streamer_make_report(struct streamer *self)
 
     if (self->stream_mode == SM_CONNECTED && max_shout_queue)
         buffer_fill_pc = (int)(shout_queuelen(self->shout) * 100 / max_shout_queue);
-    fprintf(stdout, "idjcsc: streamer%dreport=%d:%d:%d\n", self->numeric_id, (int)self->stream_mode, buffer_fill_pc, new_connection);
+    fprintf(g.out, "idjcsc: streamer%dreport=%d:%d:%d\n", self->numeric_id, (int)self->stream_mode, buffer_fill_pc, new_connection);
     if (new_connection)
         self->brand_new_connection = FALSE;
-    fflush(stdout);
+    fflush(g.out);
     return SUCCEEDED;
     }
 

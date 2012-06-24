@@ -34,6 +34,7 @@
 #include "live_oggspeex_encoder.h"
 #include "avcodec_encoder.h"
 #include "bsdcompat.h"
+#include "main.h"
 #ifdef DYN_LAME
 #include "dyn_lame.h"
 #endif
@@ -53,9 +54,9 @@ int encoder_init_lame(struct threads_info *ti, struct universal_vars *uv, void *
     l = dyn_lame_init();
 #endif
 
-    printf("idjcsc: lame_available=%d\n", l);
-    fflush(stdout);
-    if (ferror(stdout))
+    fprintf(g.out, "idjcsc: lame_available=%d\n", l);
+    fflush(g.out);
+    if (ferror(g.out))
         return FAILED;
     return SUCCEEDED;
     }

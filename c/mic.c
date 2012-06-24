@@ -24,6 +24,7 @@
 
 #include "mic.h"
 #include "dbconvert.h"
+#include "main.h"
 
 #define FALSE 0
 #define TRUE (!FALSE)
@@ -221,7 +222,7 @@ static void mic_stats(struct mic *self)
     int red, yellow, green;
     
     agc_get_meter_levels(self->host->agc, &red, &yellow, &green);
-    fprintf(stdout, "mic_%d_levels=%d,%d,%d,%d\n", self->id,
+    fprintf(g.out, "mic_%d_levels=%d,%d,%d,%d\n", self->id,
                                     mic_getpeak(self), red, yellow, green);
     }
 

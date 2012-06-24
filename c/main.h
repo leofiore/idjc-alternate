@@ -72,6 +72,8 @@ struct globs
     struct jack_ports port;    /* JACK port handles. */
     jack_ringbuffer_t *session_event_rb; /* Session event buffer */
     pthread_mutex_t avc_mutex;   /* lock for avcodec */
+    FILE *in;                   /* comms stream with user interface */
+    FILE *out;
     };
 
 extern struct globs g;

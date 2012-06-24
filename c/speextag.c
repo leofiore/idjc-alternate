@@ -30,6 +30,7 @@
 #include <ogg/ogg.h>
 #include "speextag.h"
 #include "bsdcompat.h"
+#include "main.h"
 
 #define TRUE  1
 #define FALSE 0
@@ -244,10 +245,10 @@ void speex_tag_read(char *pathname)
                     }
                 else
                     {
-                    printf("idjcmixer: speexcreatedread ");
+                    fprintf(g.out, "idjcmixer: speexcreatedread ");
                     if (!(fwrite(s + offset, size, 1, stdout)))
                         goto fail3;
-                    putchar('\n');
+                    fputc('\n', g.out);
                     offset += size;
                     }
 
@@ -271,10 +272,10 @@ void speex_tag_read(char *pathname)
                         }
                     else
                         {
-                        printf("idjcmixer: speextagread ");
+                        fprintf(g.out, "idjcmixer: speextagread ");
                         if (!(fwrite(s + offset, size, 1, stdout)))
                             goto fail3;
-                        putchar('\n');
+                        fputc('\n', g.out);
                         offset += size;
                         }
                     }
@@ -287,8 +288,8 @@ void speex_tag_read(char *pathname)
 
                 fprintf(stderr, "packet appears to be totally correct\n");
 
-                printf("idjcmixer: speextagread end\n");
-                fflush(stdout);
+                fprintf(g.out, "idjcmixer: speextagread end\n");
+                fflush(g.out);
                 ogg_stream_clear(&os);
                 ogg_sync_clear(&oy);
                 return;
@@ -304,8 +305,8 @@ void speex_tag_read(char *pathname)
     //fail1:
         fclose(fp);
     fail0:
-        printf("idjcmixer: speexfileinfo Not Valid\n");
-        fflush(stdout);
+        fprintf(g.out, "idjcmixer: speexfileinfo Not Valid\n");
+        fflush(g.out);
     }
 
 void speex_tag_write(char *suppliedpathname, char *createdby, char *taglist)
