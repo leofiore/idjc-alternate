@@ -1790,9 +1790,9 @@ class idjc_shutdown_dialog:
 class MainWindow:
     def send_new_mixer_stats(self):
 
-        deckadj = deck2adj = self.deckadj.get_value() * -1.0 + 100.0
+        deckadj = deck2adj = self.deckadj.get_value()
         if self.prefs_window.dual_volume.get_active():
-             deck2adj = self.deck2adj.get_value() * -1.0 + 100.0
+             deck2adj = self.deck2adj.get_value()
 
         string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:" \
                         "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:" \
@@ -1803,7 +1803,7 @@ class MainWindow:
                         self.jingles.jvol_adj.get_value(),
                         self.jingles.jmute_adj.get_value(),
                         self.jingles.ivol_adj.get_value(),
-                        self.mixbackadj.get_value() * -1.0 + 100.0,
+                        self.mixbackadj.get_value(),
                         self.jingles.playing,
                         self.player_left.stream.get_active(),
                         self.player_left.listen.get_active(),
@@ -2925,7 +2925,7 @@ class MainWindow:
         hboxvol.show()
         
         # Primary volume control
-        self.deckadj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 6.0)
+        self.deckadj = gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 6.0)
         self.deckadj.connect("value_changed", self.cb_deckvol)
         self.deckvol = gtk.VScale(self.deckadj)
         self.deckvol.set_update_policy(gtk.UPDATE_CONTINUOUS)
@@ -2937,7 +2937,7 @@ class MainWindow:
                         _('The volume control shared by both music players.'))
 
         # Visible when using separate player volume controls.
-        self.deck2adj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 6.0)
+        self.deck2adj = gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 6.0)
         self.deck2adj.connect("value_changed", self.cb_deckvol)
         self.deck2vol = gtk.VScale(self.deck2adj)
         self.deck2vol.set_update_policy(gtk.UPDATE_CONTINUOUS)
@@ -2957,7 +2957,7 @@ class MainWindow:
         self.pbphoneimage.set_from_pixbuf(pixbuf)
         self.vboxvol.pack_start(self.pbphoneimage, False, False, 0)
         
-        self.mixbackadj = gtk.Adjustment(50.0, 0.0, 100.0, 1.0, 6.0)
+        self.mixbackadj = gtk.Adjustment(64.0, 0.0, 127.0, 1.0, 6.0)
         self.mixbackadj.connect("value_changed", self.cb_deckvol)
         self.mixback = gtk.VScale(self.mixbackadj)
         self.mixback.set_update_policy(gtk.UPDATE_CONTINUOUS)

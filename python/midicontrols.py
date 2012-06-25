@@ -809,7 +809,6 @@ class Controls(object):
         if player is None: return
         deckadj= self.owner.deck2adj if player is self.owner.player_right \
                                                         else self.owner.deckadj
-        v= v/127.0*100
         cross= deckadj.get_value()+v if isd else v
         deckadj.set_value(cross)
 

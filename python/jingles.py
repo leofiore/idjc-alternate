@@ -146,9 +146,9 @@ class ExtraPlayers(gtk.HBox):
         self.sequences = JingleCluster(" %s " % _('Sequences'), 12, 1, Sequence)
         estable.attach(self.sequences, 2, 3, 0, 1)
         
-        self.jvol_adj = gtk.Adjustment(100.0, 0.0, 100.0, 1.0, 10.0)
-        self.jmute_adj = gtk.Adjustment(80.0, 0.0, 100.0, 1.0, 10.0)
-        self.ivol_adj = gtk.Adjustment(50.0, 0.0, 100.0, 1.0, 10.0)
+        self.jvol_adj = gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 10.0)
+        self.jmute_adj = gtk.Adjustment(100.0, 0.0, 127.0, 1.0, 10.0)
+        self.ivol_adj = gtk.Adjustment(64.0, 0.0, 127.0, 1.0, 10.0)
 
         for each in (self.jvol_adj, self.jmute_adj, self.ivol_adj):
             each.connect("value-changed",
@@ -161,10 +161,12 @@ class ExtraPlayers(gtk.HBox):
         
         jvol_image = gtk.image_new_from_pixbuf(volpb.copy())
         jvol = gtk.VScale(self.jvol_adj)
+        jvol.set_inverted(True)
         jvol.set_draw_value(False)
 
         jmute_image = gtk.image_new_from_file(FGlobs.pkgdatadir / "volume2.png")
         jmute = gtk.VScale(self.jmute_adj)
+        jmute.set_inverted(True)
         jmute.set_draw_value(False)
         
         for widget, expand in zip((jvol_image, jvol, jmute_image, jmute), 
@@ -179,6 +181,7 @@ class ExtraPlayers(gtk.HBox):
         ivol_image = gtk.image_new_from_pixbuf(volpb.copy())
         ilevel_vbox.pack_start(ivol_image, False)
         ivol = gtk.VScale(self.ivol_adj)
+        ivol.set_inverted(True)
         ivol.set_draw_value(False)
         ilevel_vbox.pack_start(ivol)
 

@@ -335,7 +335,7 @@ static void update_smoothed_volumes()
             currentmixbackvol++;
         else
             currentmixbackvol--;
-        mb_lc_aud = mb_rc_aud = powf(10.0F, -(currentmixbackvol * 0.018181818F));
+        mb_lc_aud = mb_rc_aud = powf(10.0F, (currentmixbackvol - 127) * 0.0141F);
         }
 
     /* mic headroom application */
@@ -1006,13 +1006,13 @@ void mixer_init(void)
         fprintf(stderr, "Failed to allocate space for signal to db lookup table\n");
         exit(5);
         }
-        
+
     if (!init_signallookup_table())
         {
         fprintf(stderr, "Failed to allocate space for db to signal lookup table\n");
         exit(5);
         } 
-        
+
     /* generate the wave table for the DJ alarm */
     if (!(eot_alarm_table = calloc(sizeof (sample_t), sr)))
         {
