@@ -38,35 +38,34 @@ LED = LEDDict(6)
 
 
 
-class JingleUnit(gtk.HBox):
-    """A trigger button for a Jingle or Sequence with additional widgets.
+class Effect(gtk.HBox):
+    """A trigger button for an audio effect or jingle.
     
-    Takes a numeric parameter for identification.
+    Takes a numeric parameter for identification. Also includes numeric I.D.,
+    L.E.D., stop, and config button.
     """
 
-
-    # All JingleUnit widgets' labels to be of uniform size.
-    sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
-
-
-    def __init__(self, num):
+    def __init__(self, num, parent):
+        self.num = num
+        self.approot = parent
+        
         gtk.HBox.__init__(self)
         self.set_border_width(2)
         self.set_spacing(3)
         
         label = gtk.Label("%02d" % (num + 1))
         self.pack_start(label, False)
-        self.sizegroup.add_widget(label)
         
         self.led = gtk.Image()
         self.led.set_from_pixbuf(LED["clear"].copy())
         self.pack_start(self.led, False)
         
         image = gtk.image_new_from_file(FGlobs.pkgdatadir / "stop.png")
+        image.set_padding(4, 4)
         self.stop = gtk.Button()
         self.stop.set_sensitive(False)
         self.stop.set_image(image)
-        self.pack_start(self.stop)
+        self.pack_start(self.stop, False)
         
         self.trigger = gtk.Button()
         self.trigger.set_size_request(80, -1)
@@ -78,28 +77,45 @@ class JingleUnit(gtk.HBox):
         self.config = gtk.Button()
         self.config.set_image(image)
         self.pack_start(self.config, False)
+        self.config.connect("clicked", self._on_config, parent.window)
+        
+        
+    def _on_config(self, widget, window):
+        EffectConfigDialog(self, window)
+        
+        
+        
+class EffectConfigDialog(gtk.Dialog):
+    """Configuration dialog for an Effect."""
+    
+    def __init__(self, effect, window):
+        gtk.Dialog.__init__(self, _('Effect %d Config') % (effect.num + 1),
+                            window,
+                            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+                            (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
+                             gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+        ca = self.get_content_area()
+        ca.set_spacing(5)
+        vbox = gtk.VBox()
+        ca.add(vbox)
+        vbox.set_border_width(5)
+        
+        hbox = gtk.HBox()
+        hbox.set_spacing(3)
+        label = gtk.Label(_('Text'))
+        text = gtk.Entry()
+        hbox.pack_start(label, False)
+        hbox.pack_start(text)
+        
+        #fcb = gtk.FileChooserButton()
+        
+        
+        vbox.pack_start(hbox, False)
+        
+        self.show_all()
 
 
-
-class Effect(JingleUnit):
-    """A trigger button for an effect."""
-
-
-    def __init__(self, num):
-        JingleUnit.__init__(self, num)
-
-
-
-class Sequence(JingleUnit):
-    """A trigger button for chained effects."""
-
-
-    def __init__(self, num):
-        JingleUnit.__init__(self, num)
-
-
-
-class JingleCluster(gtk.Frame):
+class EffectCluster(gtk.Frame):
     """A frame containing columns of widget."""
 
 
@@ -131,20 +147,18 @@ class ExtraPlayers(gtk.HBox):
 
         gtk.HBox.__init__(self)
         self.set_border_width(6)
-        self.set_spacing(12)
+        self.set_spacing(15)
         self.viewlevels = (5,)
 
         esbox = gtk.VBox()
         self.pack_start(esbox)
-        estable = gtk.Table(columns=3, homogeneous=True)
+        estable = gtk.Table(columns=2, homogeneous=True)
         estable.set_col_spacing(1, 8)
         esbox.pack_start(estable)
 
-        self.effects = JingleCluster(" %s " % _('Effects'), 24, 2, Effect)
+        self.effects = EffectCluster(" %s " % _('Effects'), 24, 2, Effect,
+                                                                        parent)
         estable.attach(self.effects, 0, 2, 0, 1)
-        
-        self.sequences = JingleCluster(" %s " % _('Sequences'), 12, 1, Sequence)
-        estable.attach(self.sequences, 2, 3, 0, 1)
         
         self.jvol_adj = gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 10.0)
         self.jmute_adj = gtk.Adjustment(100.0, 0.0, 127.0, 1.0, 10.0)
@@ -171,19 +185,17 @@ class ExtraPlayers(gtk.HBox):
         
         for widget, expand in zip((jvol_image, jvol, jmute_image, jmute), 
                                                 itertools.cycle((False, True))):
-            jlevel_vbox.pack_start(widget, expand)
-
-        self.pack_start(gtk.VSeparator(), False)
-        
+            jlevel_vbox.pack_start(widget, expand, padding=2)
+       
         ilevel_vbox = gtk.VBox()
         self.pack_start(ilevel_vbox, False)
         
         ivol_image = gtk.image_new_from_pixbuf(volpb.copy())
-        ilevel_vbox.pack_start(ivol_image, False)
+        ilevel_vbox.pack_start(ivol_image, False, padding=2)
         ivol = gtk.VScale(self.ivol_adj)
         ivol.set_inverted(True)
         ivol.set_draw_value(False)
-        ilevel_vbox.pack_start(ivol)
+        ilevel_vbox.pack_start(ivol, padding=2)
 
         interlude_frame = gtk.Frame(" %s " % _('Background Tracks'))
         self.pack_start(interlude_frame)
