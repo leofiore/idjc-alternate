@@ -1181,7 +1181,10 @@ class IDJC_Media_Player:
 
 
     def save_session(self, where=None):
-        fh = open((where or self.session_filename), "w")
+        if where is None:
+            where = PM.basedir
+       
+        fh = open(where / self.session_filename, "w")
         extlist = self.external_pl.filechooser.get_filename()
         if extlist is not None:
             fh.write("extlist=" + extlist + "\n")
@@ -1237,7 +1240,7 @@ class IDJC_Media_Player:
 
     def restore_session(self):
         try:
-            fh = open(self.session_filename, "r")
+            fh = open(PM.basedir / self.session_filename, "r")
         except:
             return
         while 1:
@@ -4320,7 +4323,7 @@ class IDJC_Media_Player:
         self.other_player_initiated = False
         self.crossfader_initiated = False
         self.music_filename = ""
-        self.session_filename = PM.basedir / (self.playername + "_session")
+        self.session_filename = self.playername + "_session"
         self.oldstatusbartext = ""
         self.pbspeedfactor = 1.0
         self.playlist_changed = True

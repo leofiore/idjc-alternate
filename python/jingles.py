@@ -16,7 +16,9 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
 import gettext
+import json
 
 import gtk
 import itertools
@@ -26,6 +28,7 @@ from .playergui import *
 from .prelims import *
 from .gtkstuff import LEDDict
 from .gtkstuff import WindowSizeTracker
+from .gtkstuff import DefaultEntry
 
 
 _ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
@@ -48,6 +51,7 @@ class Effect(gtk.HBox):
     def __init__(self, num, parent):
         self.num = num
         self.approot = parent
+        self.pathname = None
         
         gtk.HBox.__init__(self)
         self.set_border_width(2)
@@ -63,13 +67,11 @@ class Effect(gtk.HBox):
         image = gtk.image_new_from_file(FGlobs.pkgdatadir / "stop.png")
         image.set_padding(4, 4)
         self.stop = gtk.Button()
-        self.stop.set_sensitive(False)
         self.stop.set_image(image)
         self.pack_start(self.stop, False)
         
         self.trigger = gtk.Button()
         self.trigger.set_size_request(80, -1)
-        self.trigger.set_sensitive(False)
         self.pack_start(self.trigger)
 
         image = gtk.image_new_from_stock(gtk.STOCK_PROPERTIES,
@@ -77,47 +79,97 @@ class Effect(gtk.HBox):
         self.config = gtk.Button()
         self.config.set_image(image)
         self.pack_start(self.config, False)
-        self.config.connect("clicked", self._on_config, parent.window)
+        self.config.connect("clicked", self._on_config)
+
+        self.dialog = EffectConfigDialog(self, parent.window)
+        self.dialog.connect("response", self._on_dialog_response)
+        self.dialog.emit("response", gtk.RESPONSE_NO)
         
         
-    def _on_config(self, widget, window):
-        EffectConfigDialog(self, window)
+    def _on_config(self, widget):
+        if self.pathname and os.path.isfile(self.pathname):
+            self.dialog.select_filename(self.pathname)
+        self.dialog.button_entry.set_text(self.trigger.get_label() or "")
+        self.dialog.show()
         
         
-        
-class EffectConfigDialog(gtk.Dialog):
+    def _on_dialog_response(self, dialog, response_id, pathname=None):
+        if response_id in (gtk.RESPONSE_ACCEPT, gtk.RESPONSE_NO):
+            self.pathname = pathname or dialog.get_filename()
+            text = dialog.button_entry.get_text() if self.pathname else ""
+            self.trigger.set_label(text.strip())
+            
+            sens = self.pathname is not None and os.path.isfile(self.pathname)
+            self.stop.set_sensitive(sens)
+            self.trigger.set_sensitive(sens)
+            
+            
+    def marshall(self):
+        return json.dumps([self.trigger.get_label(), self.dialog.get_filename()])
+
+
+    def unmarshall(self, data):
+        label, pathname = json.loads(data)
+        self.dialog.button_entry.set_text(label)
+        if pathname is None:
+            self.dialog.unselect_all()
+        else:
+            self.dialog.set_filename(pathname)
+        self._on_dialog_response(self.dialog, gtk.RESPONSE_ACCEPT, pathname)
+
+
+
+class EffectConfigDialog(gtk.FileChooserDialog):
     """Configuration dialog for an Effect."""
+
+    file_filter = gtk.FileFilter()
+    file_filter.set_name(_('Supported media'))
+    for each in supported.media:
+        if each not in (".cue", ".txt"):
+            file_filter.add_pattern("*" + each)
+            file_filter.add_pattern("*" + each.upper())
     
     def __init__(self, effect, window):
-        gtk.Dialog.__init__(self, _('Effect %d Config') % (effect.num + 1),
+        gtk.FileChooserDialog.__init__(self, _('Effect %d Config') % (effect.num + 1),
                             window,
-                            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-                            (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
-                             gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+                            buttons=(gtk.STOCK_CLEAR, gtk.RESPONSE_NO,
+                            gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
+                            gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+        self.set_modal(True)
+
         ca = self.get_content_area()
         ca.set_spacing(5)
         vbox = gtk.VBox()
-        ca.add(vbox)
+        ca.pack_start(vbox, False)
         vbox.set_border_width(5)
         
         hbox = gtk.HBox()
         hbox.set_spacing(3)
-        label = gtk.Label(_('Text'))
-        text = gtk.Entry()
+        label = gtk.Label(_('Button text'))
+        self.button_entry = DefaultEntry(_('No Name'))
         hbox.pack_start(label, False)
-        hbox.pack_start(text)
-        
-        #fcb = gtk.FileChooserButton()
-        
-        
+        hbox.pack_start(self.button_entry)
+
         vbox.pack_start(hbox, False)
         
-        self.show_all()
+        ca.show_all()
+        self.connect("delete-event", lambda w, e: w.hide() or True)
+        self.connect("response", self._cb_response)
+        self.add_filter(self.file_filter)
+
+    def _cb_response(self, dialog, response_id):
+        dialog.hide()
+        if response_id == gtk.RESPONSE_NO:
+            dialog.unselect_all()
+            dialog.set_current_folder(os.path.expanduser("~"))
+            self.button_entry.set_text("")
+
 
 
 class EffectCluster(gtk.Frame):
     """A frame containing columns of widget."""
 
+    session_pathname = "effects_session"
 
     def __init__(self, label, qty, cols, widget, *args):
         gtk.Frame.__init__(self, label)
@@ -135,6 +187,31 @@ class EffectCluster(gtk.Frame):
                 self.widgets.append(widget(count, *args))
                 vbox.pack_start(self.widgets[-1])
                 count += 1
+
+
+    def marshall(self):
+        return json.dumps([x.marshall() for x in self.widgets])
+
+
+    def unmarshall(self, data):
+        for per_widget_data, widget in zip(json.loads(data), self.widgets):
+            widget.unmarshall(per_widget_data)
+   
+   
+    def restore_session(self):
+        try:
+            with open(PM.basedir / self.session_pathname, "r") as f:
+                self.unmarshall(f.read())
+        except IOError:
+            print "failed to read effects session file"
+
+
+    def save_session(self, where):
+        try:
+            with open((where or PM.basedir) / self.session_pathname, "w") as f:
+                f.write(self.marshall())
+        except IOError:
+            print "failed to write effects session file"
 
 
 

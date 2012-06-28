@@ -2171,10 +2171,10 @@ class MainWindow:
         print "save_session called"
 
         if where is None:
-            session_filename = self.session_filename
+            session_filename = pm.basedir / self.session_filename
         else:
-            session_filename = PathStr(where) / os.path.split(
-                                                    self.session_filename)[1]
+            where = PathStr(where)
+            session_filename = where / self.session_filename
 
         if trigger in ("atexit", "periodic") and pm.profile is None \
                                                 and pm.session_type != "L0":
@@ -2273,6 +2273,7 @@ class MainWindow:
         self.player_left.save_session(where)
         self.player_right.save_session(where)
         self.jingles.interlude.save_session(where)
+        self.jingles.effects.save_session(where)
         # JACK ports are saved at the moment of change, not here.
         
         return True  # This is also a timeout routine
@@ -3482,7 +3483,7 @@ class MainWindow:
 
         self.in_vu_timeout = False
         self.vucounter = 0
-        self.session_filename = pm.basedir / "main_session"
+        self.session_filename = "main_session"
         self.files_played = {}
         self.files_played_offline = {}
         
@@ -3574,6 +3575,7 @@ class MainWindow:
             self.player_left.restore_session()
             self.player_right.restore_session()
             self.jingles.interlude.restore_session()
+            self.jingles.effects.restore_session()
             self.restore_session()
         self.session_loaded = True
          
