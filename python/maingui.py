@@ -2560,6 +2560,8 @@ class MainWindow:
             if cons_changed:
                 self.jack.standard_save()
 
+            self.jingles.effects.update_leds(int(self.effects_playing))
+
         except Exception:
             if locking:  # Ensure unlocking occurs when there is an exception.
                 gtk.gdk.threads_leave()
@@ -3473,6 +3475,7 @@ class MainWindow:
         self.player_right.silence = SlotObject(0.0)
         self.jingles.interlude.silence = SlotObject(0.0)
         self.sample_rate = SlotObject(0)
+        self.effects_playing = SlotObject(0)
         
         self.feature_set = gtk.ToggleButton()
         self.feature_set.set_active(True)
@@ -3517,6 +3520,7 @@ class MainWindow:
             "right_silence"           : self.player_right.silence,
             "interlude_silence"       : self.jingles.interlude.silence,
             "sample_rate"             : self.sample_rate,
+            "effects_playing"         : self.effects_playing
             }
             
         for i, mic in enumerate(self.mic_meters):

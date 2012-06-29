@@ -158,6 +158,7 @@ static char *flag;
 static char *channel_mode_string;
 static char *use_jingles_vol_2;
 static char *jackport, *jackport2, *jackfilter;
+static char *effect_ix;
 static char *session_event_string, *session_commandline;
 
 /* dictionary look-up type thing used by the parse routine */
@@ -200,6 +201,7 @@ static struct kvpdict kvpdict[] = {
             { "JFIL", &jackfilter, NULL },
             { "JPRT", &jackport, NULL },
             { "JPT2", &jackport2, NULL },
+            { "EFCT", &effect_ix, NULL },
             { "ACTN", &action, NULL },                   /* Action to take */
             { "session_event", &session_event_string, NULL },
             { "session_command", &session_commandline, NULL },
@@ -1097,6 +1099,16 @@ int mixer_main()
         fflush(stdout);
         }
 
+    if (!strcmp(action, "playeffect"))
+        {
+        fprintf(stderr, "play effect placeholder for effect %s\n", effect_ix);
+        }
+
+    if (!strcmp(action, "stopeffect"))
+        {
+        fprintf(stderr, "stop effect placeholder for effect %s\n", effect_ix);
+        }
+
     if (!strcmp(action, "mic_control"))
         {
         mic_valueparse(mics[atoi(item_index)], mic_param);
@@ -1341,12 +1353,14 @@ int mixer_main()
                     "midi=%s\n"
                     "session_command=%s\n"
                     "ports_connections_changed=%d\n"
+                    "effects_playing=%d\n"
                     "end\n",
                     s.str_l_peak_db, s.str_r_peak_db,
                     s.str_l_rms_db, s.str_r_rms_db,
                     s.midi_output,
                     s.session_command,
-                    ports_diff);
+                    ports_diff,
+                    3 /* placeholder for effects playing */);
 
         if (ports_diff)
             {

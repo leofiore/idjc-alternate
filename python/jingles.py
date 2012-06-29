@@ -60,19 +60,25 @@ class Effect(gtk.HBox):
         label = gtk.Label("%02d" % (num + 1))
         self.pack_start(label, False)
         
+        self.clear = LED["clear"].copy()
+        self.green = LED["green"].copy()
+        
         self.led = gtk.Image()
-        self.led.set_from_pixbuf(LED["clear"].copy())
+        self.led.set_from_pixbuf(self.clear)
         self.pack_start(self.led, False)
+        self.old_ledval = 0
         
         image = gtk.image_new_from_file(FGlobs.pkgdatadir / "stop.png")
         image.set_padding(4, 4)
         self.stop = gtk.Button()
         self.stop.set_image(image)
         self.pack_start(self.stop, False)
+        self.stop.connect("clicked", self._on_stop)
         
         self.trigger = gtk.Button()
         self.trigger.set_size_request(80, -1)
         self.pack_start(self.trigger)
+        self.trigger.connect("clicked", self._on_trigger)
 
         image = gtk.image_new_from_stock(gtk.STOCK_PROPERTIES,
                                                             gtk.ICON_SIZE_MENU)
@@ -91,12 +97,22 @@ class Effect(gtk.HBox):
             self.dialog.select_filename(self.pathname)
         self.dialog.button_entry.set_text(self.trigger.get_label() or "")
         self.dialog.show()
-        
-        
+
+
+    def _on_trigger(self, widget):
+        self.approot.mixer_write("EFCT=%d\nPLRP=%s\nACTN=playeffect\nend\n" % (
+                                                    self.num, self.pathname))
+
+
+    def _on_stop(self, widget):
+        self.approot.mixer_write("EFCT=%d\nACTN=stopeffect\nend\n" % self.num)
+
+
     def _on_dialog_response(self, dialog, response_id, pathname=None):
         if response_id in (gtk.RESPONSE_ACCEPT, gtk.RESPONSE_NO):
             self.pathname = pathname or dialog.get_filename()
-            text = dialog.button_entry.get_text() if self.pathname else ""
+            text = dialog.button_entry.get_text() if self.pathname and \
+                                        os.path.isfile(self.pathname) else ""
             self.trigger.set_label(text.strip())
             
             sens = self.pathname is not None and os.path.isfile(self.pathname)
@@ -110,12 +126,19 @@ class Effect(gtk.HBox):
 
     def unmarshall(self, data):
         label, pathname = json.loads(data)
-        self.dialog.button_entry.set_text(label)
-        if pathname is None:
+        if pathname is None or not os.path.isfile(pathname):
             self.dialog.unselect_all()
+            label = ""
         else:
             self.dialog.set_filename(pathname)
+        self.dialog.button_entry.set_text(label)
         self._on_dialog_response(self.dialog, gtk.RESPONSE_ACCEPT, pathname)
+
+
+    def update_led(self, val):
+        if val != self.old_ledval:
+            self.led.set_from_pixbuf(self.green if val else self.clear)
+            self.old_ledval = val
 
 
 
@@ -212,6 +235,14 @@ class EffectCluster(gtk.Frame):
                 f.write(self.marshall())
         except IOError:
             print "failed to write effects session file"
+
+
+    def update_leds(self, bits):
+        bit = 0
+        effect = iter(self.widgets)
+        while bit < 24:
+            effect.next().update_led((1 << bit) & bits)
+            bit += 1
 
 
 
