@@ -73,7 +73,7 @@ typedef jack_default_audio_sample_t sample_t;
 unsigned long sr = 44100;
 
 /* values of the volume sliders in the GUI */
-static int volume, volume2, crossfade, jinglesvolume, jinglesvolume2, interludevol, mixbackvol, crosspattern;
+static int volume, volume2, crossfade, jinglesvolume, jinglesheadroom, interludevol, mixbackvol, crosspattern;
 /* back and forth status indicators re. jingles */
 static int jingles_playing;
 /* the player audio feed buttons */
@@ -983,7 +983,7 @@ void mixer_init(void)
         exit(5);
         }
     
-    if (!(players[n++] = plr_j = xlplayer_create(sr, RB_SIZE, "jingles", &g.app_shutdown, NULL, 0, NULL, NULL, 1.0f / 12.0f)))
+    if (!(players[n++] = plr_j = xlplayer_create(sr, RB_SIZE, "jingles", &g.app_shutdown, &jinglesvolume, 0, NULL, NULL, 1.0f / 12.0f)))
         {
         fprintf(stderr, "failed to create jingles player module\n");
         exit(5);
@@ -1101,11 +1101,13 @@ int mixer_main()
 
     if (!strcmp(action, "playeffect"))
         {
+        xlplayer_play(plr_j, playerpathname, 0, 0, 0.0f, atoi(effect_ix));
         fprintf(stderr, "play effect placeholder for effect %s\n", effect_ix);
         }
 
     if (!strcmp(action, "stopeffect"))
         {
+        xlplayer_eject(plr_j);
         fprintf(stderr, "stop effect placeholder for effect %s\n", effect_ix);
         }
 
@@ -1140,32 +1142,32 @@ int mixer_main()
 
     if (!strcmp(action, "playleft"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+        fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db), 0));
         fflush(stdout);
         }
     if (!strcmp(action, "playright"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+        fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db), 0));
         fflush(stdout);
         }
     if (!strcmp(action, "playinterlude"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_i, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+        fprintf(stdout, "context_id=%d\n", xlplayer_play(plr_i, playerpathname, atoi(seek_s), atoi(size), atof(rg_db), 0));
         fflush(stdout);
         }
     if (!strcmp(action, "playnoflushleft"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+        fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_l, playerpathname, atoi(seek_s), atoi(size), atof(rg_db), 0));
         fflush(stdout);
         }
     if (!strcmp(action, "playnoflushright"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+        fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_r, playerpathname, atoi(seek_s), atoi(size), atof(rg_db), 0));
         fflush(stdout);
         }
     if (!strcmp(action, "playnoflushinterlude"))
         {
-        fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_i, playerpathname, atoi(seek_s), atoi(size), atof(rg_db)));
+        fprintf(stdout, "context_id=%d\n", xlplayer_play_noflush(plr_i, playerpathname, atoi(seek_s), atoi(size), atof(rg_db), 0));
         fflush(stdout);
         }
  
@@ -1242,7 +1244,7 @@ int mixer_main()
                  ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d"
                  "%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:"
                  "%1d:%1d:%1d:",
-                 &volume, &volume2, &crossfade, &jinglesvolume, &jinglesvolume2 , &interludevol, &mixbackvol, &jingles_playing,
+                 &volume, &volume2, &crossfade, &jinglesvolume, &jinglesheadroom , &interludevol, &mixbackvol, &jingles_playing,
                  &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
                  &s.new_left_pause, &s.new_right_pause, &s.flush_left, &s.flush_right, &s.flush_jingles, &s.flush_interlude,
                  &simple_mixer, &eot_alarm_set, &mixermode, &s.fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed),
@@ -1360,7 +1362,7 @@ int mixer_main()
                     s.midi_output,
                     s.session_command,
                     ports_diff,
-                    3 /* placeholder for effects playing */);
+                    plr_j->id);
 
         if (ports_diff)
             {

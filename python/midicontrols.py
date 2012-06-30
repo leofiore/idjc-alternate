@@ -122,24 +122,16 @@ control_methods= {
     'v_pan': _('VoIP set balance'),
 
     # TC: Control method. Please keep it as Target:Action.
-    'k_fire': _('Jingle play from start'),
+    'k_fire': _('Effect play from start'),
 
     # TC: Control method. Please keep it as Target:Action.
-    'j_ps1': _('Jingles play/stop 1'),
+    'j_stop': _('Jingles stop effects all'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_ps2': _('Jingles play/stop 2'),
+    'j_vol1': _('Jingles set effects volume'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_sprev': _('Jingles select previous'),
+    'j_vol2': _('Jingles set effects headroom'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_snext': _('Jingles select next'),
-    # TC: Control method. Please keep it as Target:Action.
-    'j_sfire': _('Jingles play selected from start'),
-    # TC: Control method. Please keep it as Target:Action.
-    'j_vol1': _('Jingles set jingles volume 1'),
-    # TC: Control method. Please keep it as Target:Action.
-    'j_vol2': _('Jingles set jingles volume 2'),
-    # TC: Control method. Please keep it as Target:Action.
-    'j_ivol': _('Jingles set interlude volume'),
+    'j_ivol': _('Jingles set background volume'),
 
     # TC: Control method. Please keep it as Target:Action.
     's_on': _('Stream set connected'),
@@ -566,7 +558,7 @@ class Controls(object):
             Binding('k0.ffc7:pk_fire.9.127'),
             Binding('k0.ffc8:pk_fire.a.127'),
             Binding('k0.ffc9:pk_fire.b.127'),
-            Binding('k0.ff1b:pj_ps1.b.127'), # Esc stop jingles
+            Binding('k0.ff1b:pj_stop.b.127'), # Esc stop jingles
             Binding('k0.31:sx_fade.b.0'), # 1-2 xfader sides
             Binding('k0.32:sx_fade.b.127'),
             Binding('k0.63:px_pass.0.127'), # C, pass xfader
@@ -983,57 +975,29 @@ class Controls(object):
     #
     @action_method(Binding.MODE_PULSE)
     def k_fire(self, n, v, isd):
-        self.owner.jingles.trigger_index(n)
+        self.owner.jingles.effects.widgets[n].trigger.clicked()
 
     # Jingles player in general
     #
     @action_method(Binding.MODE_PULSE)
-    def j_ps1(self, n, v, isd):
-        if self.owner.jingles.play.get_active() or \
-                                        self.owner.jingles.play_ex.get_active():
-            self.owner.jingles.stop.clicked()
-        else:
-            self.owner.jingles.play.set_active(True)
-
-    @action_method(Binding.MODE_PULSE)
-    def j_ps2(self, n, v, isd):
-        if self.owner.jingles.play.get_active() or \
-                                        self.owner.jingles.play_ex.get_active():
-            self.owner.jingles.stop.clicked()
-        else:
-            self.owner.jingles.play_ex.set_active(True)
-
-    @action_method(Binding.MODE_PULSE)
-    def j_sprev(self, n, v, isd):
-        treeview_selectprevious(self.owner.jingles.treeview)
-
-    @action_method(Binding.MODE_PULSE)
-    def j_snext(self, n, v, isd):
-        treeview_selectnext(self.owner.jingles.treeview)
-
-    @action_method(Binding.MODE_PULSE)
-    def j_sfire(self, n, v, isd):
-        self.owner.jingles.stop.clicked()
-        self.owner.jingles.play.set_active(True)
+    def j_stop(self, n, v, isd):
+        self.owner.jingles.effects.stop()
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def j_vol1(self, n, v, isd):
-        fader= self.owner.jingles.l1
-        v= 105-v/127.0*105
+        fader= self.owner.jingles.jvol_adj
         vol= fader.get_value()+v if isd else v
         fader.set_value(vol)
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def j_vol2(self, n, v, isd):
-        fader= self.owner.jingles.l2
-        v= 105-v/127.0*105
+        fader= self.owner.jingles.jmute_adj
         vol= fader.get_value()+v if isd else v
         fader.set_value(vol)
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def j_ivol(self, n, v, isd):
-        fader= self.owner.jingles.intervol
-        v= 100-v/127.0*100
+        fader= self.owner.jingles.ivol_adj
         vol= fader.get_value()+v if isd else v
         fader.set_value(vol)
 
@@ -1252,9 +1216,9 @@ class BindingEditor(gtk.Dialog):
         # TC: binding editor, action pane, first row, toplevel menu.
         'v': _('VoIP channel'),
         # TC: binding editor, action pane, first row, toplevel menu.
-        'k': _('Single jingle'),
+        'k': _('Single effect'),
         # TC: binding editor, action pane, first row, toplevel menu.
-        'j': _('Jingle player'),
+        'j': _('Jingles players'),
         # TC: binding editor, action pane, first row, toplevel menu.
         's': _('Stream'),
         # TC: binding editor, action pane, first row, toplevel menu.

@@ -603,13 +603,14 @@ void xlplayer_destroy(struct xlplayer *self)
         }
     }
 
-int xlplayer_play(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db)
+int xlplayer_play(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db, int id)
     {
     xlplayer_eject(self);
     self->pathname = pathname;
     self->gain = pow(10.0, gain_db / 20.0);
     self->seek_s = seek_s;
     self->size = size;
+    self->id = 1 << id;
     self->loop = FALSE;
     self->usedelay = FALSE;
     self->playlistmode = FALSE;
@@ -665,7 +666,7 @@ int xlplayer_playmany(struct xlplayer *self, char *playlist, int loop_f)
     return self->initial_audio_context;
     }
 
-int xlplayer_play_noflush(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db)
+int xlplayer_play_noflush(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db, int id)
     {
     self->noflush = TRUE;
     xlplayer_eject(self);
@@ -673,6 +674,7 @@ int xlplayer_play_noflush(struct xlplayer *self, char *pathname, int seek_s, int
     self->gain = pow(10.0, gain_db / 20.0);
     self->seek_s = seek_s;
     self->size = size;
+    self->id = 1 << id;
     self->loop = FALSE;
     self->playlistmode = FALSE;
     self->command = CMD_PLAY;
@@ -854,7 +856,8 @@ size_t read_from_player(struct xlplayer *self, sample_t *left_buf, sample_t *rig
             jack_ringbuffer_read(self->right_fade, (char *)right_fbuf, ftodo * sizeof (sample_t));
             memset(right_fbuf + ftodo, 0, (nframes - ftodo) * sizeof (sample_t));
             }
-        self->have_data_f = todo > 0;
+        if (!(self->have_data_f = todo > 0) && self->command == CMD_COMPLETE && self->playmode == PM_STOPPED)
+            self->id = 0;
         }
     else
         {

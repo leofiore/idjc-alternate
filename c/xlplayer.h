@@ -150,6 +150,7 @@ struct xlplayer
     int cf_aud;                         /* apply crossfade on dj audio */
     float ls_aud, ls_str;               /* the gain adjusted audio samples */
     float rs_aud, rs_str;
+    uint32_t id;                        /* player identity e.g. player 3 = 1 << 3 */
     };
 
 /* xlplayer_create: create an instance of the player */
@@ -160,7 +161,7 @@ void xlplayer_destroy(struct xlplayer *);
 /* xlplayer_play: starts the player on a particular track immediately
 * if a track is currently playing eject is called
 * return value: a context-id for this track */
-int xlplayer_play(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db);
+int xlplayer_play(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db, int id);
 
 /* xlplayer_playmany: starts the player on a playlist
 * if a track is currently playing eject is called, also can set looping with this function
@@ -168,7 +169,7 @@ int xlplayer_play(struct xlplayer *self, char *pathname, int seek_s, int size, f
 int xlplayer_playmany(struct xlplayer *self, char *playlist, int loop_f);
 
 /* xlplayer_play_noflush: starts the player without flushing out old data from the ringbuffer */
-int xlplayer_play_noflush(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db);
+int xlplayer_play_noflush(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db, int id);
 
 /* xlplayer_cancelplaynext: cancels the automatic playing of the next track 
 * the current track is allowed to continue playing */

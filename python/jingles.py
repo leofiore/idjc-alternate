@@ -139,6 +139,7 @@ class Effect(gtk.HBox):
         if val != self.old_ledval:
             self.led.set_from_pixbuf(self.green if val else self.clear)
             self.old_ledval = val
+            self.config.set_sensitive(not val)
 
 
 
@@ -243,6 +244,12 @@ class EffectCluster(gtk.Frame):
         while bit < 24:
             effect.next().update_led((1 << bit) & bits)
             bit += 1
+            
+            
+    def stop(self):
+        for each in self.widgets:
+            if each.stop.get_sensitive():
+                each.stop.clicked()
 
 
 
