@@ -29,6 +29,7 @@ from .prelims import *
 from .gtkstuff import LEDDict
 from .gtkstuff import WindowSizeTracker
 from .gtkstuff import DefaultEntry
+from .tooltips import set_tip
 
 
 _ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
@@ -292,11 +293,14 @@ class ExtraPlayers(gtk.HBox):
         jvol = gtk.VScale(self.jvol_adj)
         jvol.set_inverted(True)
         jvol.set_draw_value(False)
+        set_tip(jvol, _('Jingles playback volume.'))
 
-        jmute_image = gtk.image_new_from_file(FGlobs.pkgdatadir / "volume2.png")
+        pb = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "headroom.png")
+        jmute_image = gtk.image_new_from_pixbuf(pb)
         jmute = gtk.VScale(self.jmute_adj)
         jmute.set_inverted(True)
         jmute.set_draw_value(False)
+        set_tip(jmute, _('Player headroom that is applied when a jingle is playing.'))
         
         for widget, expand in zip((jvol_image, jvol, jmute_image, jmute), 
                                                 itertools.cycle((False, True))):
@@ -311,6 +315,7 @@ class ExtraPlayers(gtk.HBox):
         ivol.set_inverted(True)
         ivol.set_draw_value(False)
         ilevel_vbox.pack_start(ivol, padding=2)
+        set_tip(ivol, _('Background tracks volume.'))
 
         interlude_frame = gtk.Frame(" %s " % _('Background Tracks'))
         self.pack_start(interlude_frame)
