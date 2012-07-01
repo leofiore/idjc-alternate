@@ -2208,8 +2208,6 @@ class MainWindow:
             fh.write("server=" +
                         str(int((self.server_window.window.flags() &
                         gtk.VISIBLE) != 0)) + "\n")
-            fh.write("jingles=" + str(int((self.jingles.flags() &
-                                                    gtk.VISIBLE) != 0)) + "\n")
             fh.write("prefspage=" +
                     str(self.prefs_window.notebook.get_current_page()) + "\n")
             fh.write("metadata_src=" +
@@ -2282,8 +2280,9 @@ class MainWindow:
 
     def restore_session(self):
         try:
-            fh = open(self.session_filename, "r")
-        except:
+            fh = open(pm.basedir / self.session_filename, "r")
+        except Exception as e:
+            print e
             return
         while 1:
             try:
@@ -2341,11 +2340,17 @@ class MainWindow:
             self.files_played = pickle.Unpickler(fh).load()
             fh.close()
 
-        stat = os.stat(self.session_filename + "_tracks")
+        mst = pm.basedir / (self.session_filename + "_tracks")
+        try:
+            stat = os.stat(mst)
+        except OSError as e:
+            print e
+            return
         if stat.st_ctime + 21600 > time.time():
             try:
-                fh = open(self.session_filename + "_tracks", "r")
-            except:
+                fh = open(mst, "r")
+            except Exception as e:
+                print e
                 return
             text = fh.read()
             fh.close()
