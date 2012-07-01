@@ -1140,11 +1140,15 @@ class IDJC_Media_Player:
 
         uuid_ = str(uuid.uuid4())
 
-        if artist and title:
-            meta_name = artist + u" - " + title
+        def player_row(meta_name):
             return PlayerRow(glib.markup_escape_text(meta_name), filename,
                 length, meta_name, encoding, title, artist, rg, cuesheet,
                 album, uuid_)
+
+        if artist and title and album:
+            return player_row(artist + u" - " + title + u" - (%s)" % album)
+        elif artist and title:
+            return player_row(artist + u" - " + title)
         else:
             return PlayerRow(rsmeta_name, filename, length, meta_name, encoding,
                 title_retval, artist, rg, cuesheet, album, uuid_)
@@ -1177,7 +1181,10 @@ class IDJC_Media_Player:
 
 
     def save_session(self, where=None):
-        fh = open((where or self.session_filename), "w")
+        if where is None:
+            where = PM.basedir
+       
+        fh = open(where / self.session_filename, "w")
         extlist = self.external_pl.filechooser.get_filename()
         if extlist is not None:
             fh.write("extlist=" + extlist + "\n")
@@ -1233,7 +1240,7 @@ class IDJC_Media_Player:
 
     def restore_session(self):
         try:
-            fh = open(self.session_filename, "r")
+            fh = open(PM.basedir / self.session_filename, "r")
         except:
             return
         while 1:
@@ -1714,7 +1721,7 @@ class IDJC_Media_Player:
             if self.playername == "left":
                 self.parent.passright.clicked()
                 other_player = self.parent.player_right
-            else:
+            elif self.playername == "right":
                 self.parent.passleft.clicked()
                 other_player = self.parent.player_left
             if mode_text == N_('Alternate'):
@@ -1785,7 +1792,7 @@ class IDJC_Media_Player:
             if self.playername == "left":
                 otherplayer = self.parent.player_right
                 self.parent.passright.clicked()
-            else:
+            elif self.playername == "right":
                 otherplayer = self.parent.player_left
                 self.parent.passleft.clicked()
             print "transferring to player", otherplayer.playername
@@ -1990,38 +1997,38 @@ class IDJC_Media_Player:
         pl_mode = self.pl_mode.get_active()
         
         # Calclulate whether to sound the DJ alarm (end of music notification)
-        if self.progress_current_figure == self.progress_stop_figure -10 and \
-                    self.progressadj.upper > 11 and self.alarm_cid != cid and \
-                    self.parent.prefs_window.djalarm.get_active():
-            # DJ Alarm is on and we are at the correct play position.
-            # The alarm has not sounded yet.
-            fader = "left" if self.parent.crossadj.value < 50.0 else "right"
-            
-            # The alarm does not sound for every track except in certain modes.
-            if self.playername == fader and (pl_mode in (3, 4) or
+        if self.playername in ("left", "right"):
+            if self.progress_current_figure == self.progress_stop_figure -10 \
+                    and self.progressadj.upper > 11 and self.alarm_cid != cid \
+                    and self.parent.prefs_window.djalarm.get_active():
+                # DJ Alarm is on and we are at the correct play position.
+                # The alarm has not sounded yet.
+                fader = "left" if self.parent.crossadj.value < 50.0 else "right"
+                
+                if self.playername == fader and (pl_mode in (3, 4) or
                                         (pl_mode == 0 and self.stop_inspect())):
-                gobject.timeout_add(1000, self.deferred_alarm)
-                self.alarm_cid = cid
+                    gobject.timeout_add(1000, self.deferred_alarm)
+                    self.alarm_cid = cid
 
-        # Check if the crossfade needs scheduling.
-        if pl_mode == 7 or (pl_mode == 0 and self.fade_inspect()):
-            eot_crosstime = int(self.progress_stop_figure) - \
+            # Check if the crossfade needs scheduling.
+            if pl_mode == 7 or (pl_mode == 0 and self.fade_inspect()):
+                eot_crosstime = int(self.progress_stop_figure) - \
                                     self.parent.passspeed_adj.props.value - \
                                     int(self.progress_current_figure)
-            # Start other player.
-            if not self.other_player_initiated and eot_crosstime <= 1:
-                if self.playername == "left":
-                    self.parent.player_right.play.clicked()
-                else:
-                    self.parent.player_left.play.clicked()
-                self.other_player_initiated = True
-            # Now do the crossfade
-            if not self.crossfader_initiated and eot_crosstime <= 0:
-                self.parent.passbutton.clicked()
-                self.crossfader_initiated = True
-                desired_direction = (self.playername == "left")
-                if desired_direction != self.parent.crossdirection:
+                # Start other player.
+                if not self.other_player_initiated and eot_crosstime <= 1:
+                    if self.playername == "left":
+                        self.parent.player_right.play.clicked()
+                    else:
+                        self.parent.player_left.play.clicked()
+                    self.other_player_initiated = True
+                # Now do the crossfade
+                if not self.crossfader_initiated and eot_crosstime <= 0:
                     self.parent.passbutton.clicked()
+                    self.crossfader_initiated = True
+                    desired_direction = (self.playername == "left")
+                    if desired_direction != self.parent.crossdirection:
+                        self.parent.passbutton.clicked()
 
         # Check if it is fade time.
         rem = self.progress_stop_figure - self.progress_current_figure
@@ -2218,9 +2225,11 @@ class IDJC_Media_Player:
                 if self.playername == "left":
                     # TC: File dialog title text.
                     filerqtext = _('Add music to left playlist')
-                else:
+                elif self.playername == "right":
                     # TC: File dialog title text.
                     filerqtext = _('Add music to right playlist')
+                else:
+                    filerqtext = _('Add background music')
                 self.filerq = gtk.FileChooserDialog(filerqtext + PM.title_extra,
                     None, gtk.FILE_CHOOSER_ACTION_OPEN, (gtk.STOCK_CANCEL,
                     gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
@@ -2477,6 +2486,12 @@ class IDJC_Media_Player:
         else:
             self.cb_progress(self.progressadj)
 
+    def show_replaygain_markers(self, show):
+        if show:
+            self.treeview.insert_column(self.rgtvcolumn, 0)
+        else:
+            self.treeview.remove_column(self.rgtvcolumn)
+
     def cb_event(self, widget, event, callback_data):
         # Handle click to the play progress indicator
         if callback_data == "DigitalProgressPress":
@@ -2698,26 +2713,27 @@ class IDJC_Media_Player:
                             if meta:
                                 yield meta
                                 raise GotLocation
-                    # Support namespaced pld tag for literal playlist data.
-                    # This is only used for data such as playlist controls.
-                    extensions = track.getElementsByTagName('extension')
-                    for extension in extensions:
-                        if extension.getAttribute("application") == \
-                                            "http://idjc.sourceforge.net/ns/":
-                            customtags = extension.getElementsByTagNameNS(
-                                    "http://idjc.sourceforge.net/ns/", "pld")
-                            for tag in customtags:
-                                try:
-                                    literal_entry = NOTVALID._replace(**dict((
-                                            k, type(getattr(NOTVALID, k))(
-                                            tag.attributes.get(k).nodeValue))
-                                            for k in tag.attributes.keys()))
-                                except Exception, e:
-                                    print e
-                                    pass
-                                else:
-                                    yield literal_entry
-                                    raise GotLocation
+                    if self.playername in ("left", "right"):
+                        # Support namespaced pld tag for literal playlist data.
+                        # This is only used for data such as playlist controls.
+                        extensions = track.getElementsByTagName('extension')
+                        for extension in extensions:
+                            if extension.getAttribute("application") == \
+                                                "http://idjc.sourceforge.net/ns/":
+                                customtags = extension.getElementsByTagNameNS(
+                                        "http://idjc.sourceforge.net/ns/", "pld")
+                                for tag in customtags:
+                                    try:
+                                        literal_entry = NOTVALID._replace(**dict((
+                                                k, type(getattr(NOTVALID, k))(
+                                                tag.attributes.get(k).nodeValue))
+                                                for k in tag.attributes.keys()))
+                                    except Exception, e:
+                                        print e
+                                        pass
+                                    else:
+                                        yield literal_entry
+                                        raise GotLocation
                 except GotLocation:
                     pass
             return
@@ -2904,7 +2920,6 @@ class IDJC_Media_Player:
             self.remove_this.set_sensitive(sens)
             self.remove_from_here.set_sensitive(sens)
             self.remove_to_here.set_sensitive(sens)
-            self.item_tojingles.set_sensitive(pathname != "")
             model = self.treeview.get_model()
             if model.get_iter_first() == None:
                 sens2 = False
@@ -2912,27 +2927,31 @@ class IDJC_Media_Player:
                 sens2 = True
             self.pl_menu_item.set_sensitive(sens2)
             self.playlist_save.set_sensitive(sens2)
-            self.playlist_copy.set_sensitive(sens2)
-            self.playlist_transfer.set_sensitive(sens2)
             self.playlist_empty.set_sensitive(sens2)
             if self.pl_mode.get_active() != 0:
                 self.pl_menu_control.set_sensitive(False)
             else:
                 self.pl_menu_control.set_sensitive(True)
 
-            if self.playername == "left":
-                tv = self.parent.player_right.treeview.get_selection()
-            else:
-                tv = self.parent.player_left.treeview.get_selection()
-            model, iter = tv.get_selected()
-            if iter:
-                sens3 = True
-            else:
+            if self.playername == "interlude":
                 sens3 = False
+                sens4 = False
+            else:
+                sens4 = True
+                if self.playername == "left":
+                    tv = self.parent.player_right.treeview.get_selection()
+                elif self.playername == "right":
+                    tv = self.parent.player_left.treeview.get_selection()
+                    
+                model, iter = tv.get_selected()
+                sens3 = True if iter else False
+
             self.copy_append_cursor.set_sensitive(sens3)
             self.copy_prepend_cursor.set_sensitive(sens3)
             self.transfer_append_cursor.set_sensitive(sens3)
             self.transfer_prepend_cursor.set_sensitive(sens3)
+            self.playlist_copy.set_sensitive(sens2 and sens4)
+            self.playlist_transfer.set_sensitive(sens2 and sens4)
 
             widget.popup(None, None, None, event.button, event.time)
             return True
@@ -2970,7 +2989,7 @@ class IDJC_Media_Player:
                  "Fade none"                      : ">fadenone",
                  "Jump To Top Control"       : ">jumptotop",
         }
-        if dict.has_key(text):
+        if dict.has_key(text) and self.pl_mode.get_active() == 0:
             if iter is not None:
                 iter = model.insert_after(iter)
             else:
@@ -3005,8 +3024,10 @@ class IDJC_Media_Player:
             if self.showing_pl_save_requester == False:
                 if self.playername == "left":
                     filerqtext = _('Save left playlist')
-                else:
+                elif self.playername == "right":
                     filerqtext = _('Save right playlist')
+                else:
+                    filerqtext = _('Save background playlist')
                 vbox = gtk.VBox()
                 self.expander = gtk.Expander()
                 self.expander.connect("notify::expanded", self.cb_plexpander)
@@ -3103,10 +3124,12 @@ class IDJC_Media_Player:
             model.insert_after(iter, row)
 
         if text == "Playlist Exchange":
+            assert(self.playername != "interlude")
+
             self.no_more_files = True
             if self.playername == "left":
                 opposite = self.parent.player_right
-            else:
+            elif self.playername == "right":
                 opposite = self.parent.player_left
             self.stop.clicked()
             opposite.stop.clicked()
@@ -3167,23 +3190,6 @@ class IDJC_Media_Player:
             self.stop.clicked()
             self.liststore.clear()
 
-        if text == "ToJingles":
-            sourcepathname = model.get_value(iter, 1)
-            destpathname = PM.jinglesdir / os.path.split(sourcepathname)[1]
-            try:
-                source = open(sourcepathname, "r")
-                dest = open(destpathname, "w")
-                while True:
-                    data = source.read(4096)
-                    dest.write(data)
-                    if len(data) < 4096:
-                        break;
-            except IOError:
-                print "IOError occurred"
-            source.close
-            dest.close
-            self.parent.jingles.refresh.clicked()
-
         if self.player_is_playing:
             self.reselect_please = True  # Cursor placement on current track.
 
@@ -3194,9 +3200,11 @@ class IDJC_Media_Player:
         return copy
 
     def copy_playlist(self, dest):
+        assert(self.playername != "interlude")
+        
         if self.playername == "left":
             other = self.parent.player_right
-        else:
+        elif self.playername == "right":
             other = self.parent.player_left
         i = 0
         try:
@@ -3457,6 +3465,7 @@ class IDJC_Media_Player:
         if celltext[:4] == "<b>>":
             celltext = celltext[3:-4]
         if celltext[0] == ">":
+            assert(self.playername != "interlude")
             crprop("xalign", 0.45)
             crprop("ypad", 0)
             crprop("scale", 0.75)
@@ -3476,7 +3485,7 @@ class IDJC_Media_Player:
                     if self.playername == "left":
                         # TC: Playlist control.
                         crprop("text", _('>>> Transfer across >>>'))
-                    else:
+                    elif self.playername == "right":
                         # TC: Playlist control.
                         crprop("text", _('<<< Transfer across <<<'))
                 
@@ -3484,7 +3493,7 @@ class IDJC_Media_Player:
                     if self.playername == "left":
                         # TC: Playlist control.
                         crprop("text", _('>>> Fade across >>>'))
-                    else:
+                    elif self.playername == "right":
                         # TC: Playlist control.
                         crprop("text", _('<<< Fade across <<<'))
             else:
@@ -3595,9 +3604,13 @@ class IDJC_Media_Player:
 
     def pl_mode_data_function(self, celllayout, cell, model, iter):
         cell.props.text = _(model.get_value(iter, 0))
+        if self.playername == "interlude":
+            cell.props.sensitive = model.get_path(iter)[0] in (1, 2)
+            
 
     def __init__(self, pbox, name, parent):
         self.parent = parent
+        self.playername = name
         self.exiting = False
         # A box for the Stop/Start/Pause widgets
         self.hbox1 = gtk.HBox(True, 0)
@@ -3651,10 +3664,9 @@ class IDJC_Media_Player:
         self.progressbox.show()
 
         # A frame for our playlist
-        if name == "left":
-            plframe = gtk.Frame(" %s " % _('Playlist 1'))
-        else:
-            plframe = gtk.Frame(" %s " % _('Playlist 2'))
+        plframe = gtk.Frame(" %s " % dict(left=_('Playlist 1'),
+                        right=_('Playlist 2'), interlude=('Playlist 3'))[name])
+            
         plframe.set_border_width(4)
         plframe.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         plframe.show()
@@ -3888,7 +3900,7 @@ class IDJC_Media_Player:
         self.pl_mode.append_text(N_('Alternate'))
         self.pl_mode.append_text(N_('Fade Over'))
         self.pl_mode.append_text(N_('Random Hop'))
-        self.pl_mode.set_active(0)
+        self.pl_mode.set_active(1 if self.playername == "interlude" else 0)
         self.pl_mode.connect("changed", self.cb_playlist_mode)
         set_tip(self.pl_mode, _("This sets the playlist mode which defines "
         "player behaviour after a track has finished playing.\n\n'Play All' is"
@@ -4104,13 +4116,6 @@ class IDJC_Media_Player:
         self.item_menu.append(self.item_remove)
         self.item_remove.show()
 
-        # TC: Menu Item. The selected track is copied to the jingles catalogue.
-        self.item_tojingles = gtk.MenuItem(_('Add To Jingles'))
-        self.item_tojingles.connect("activate",
-                                            self.menuitem_response, "ToJingles")
-        self.item_menu.append(self.item_tojingles)
-        self.item_tojingles.show()
-
         self.pl_menu_item.set_submenu(self.item_menu)
         self.item_menu.show()
 
@@ -4185,6 +4190,8 @@ class IDJC_Media_Player:
                                                             "Playlist Exchange")
         self.playlist_menu.append(self.playlist_exchange)
         self.playlist_exchange.show()
+        if name == "interlude":
+            self.playlist_exchange.set_sensitive(False)
 
         # TC: Submenu Item. Parent menu is Playlist.
         self.playlist_empty = gtk.MenuItem(_('Empty'))
@@ -4280,7 +4287,6 @@ class IDJC_Media_Player:
                             self.popupwindow_populate, self.popupwindow_inhibit)
 
         # Initialisations
-        self.playername = name
         self.showing_file_requester = False
         self.showing_pl_save_requester = False
 
@@ -4317,7 +4323,7 @@ class IDJC_Media_Player:
         self.other_player_initiated = False
         self.crossfader_initiated = False
         self.music_filename = ""
-        self.session_filename = PM.basedir / (self.playername + "_session")
+        self.session_filename = self.playername + "_session"
         self.oldstatusbartext = ""
         self.pbspeedfactor = 1.0
         self.playlist_changed = True

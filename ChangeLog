@@ -1,5 +1,17 @@
 * Changes in version 0.8.8 *
 
+New jingles player. Renamed as Effects.
+
+Player level smoothing and muting code moved from mixer.c into xlplayer.c.
+
+Intra player mixing code moved into xlplayer.c.
+
+Added a new interlude player which is nearly the equal of the main players. Renamed as Background Tracks.
+
+Removed the 'Fastest' player resample option from the preferences due to its inferiority. The remaining items renamed in accordance with the stream encoder names for the same modes.
+
+Fix to unhandled exceptions and bad behaviour in IRC code relating to the adding or removal of IRC servers during streaming.
+
 Replaced libmad mp3 decoder with mpg123.
 
 Added AAC and AAC Plus V2 streaming and recording support.

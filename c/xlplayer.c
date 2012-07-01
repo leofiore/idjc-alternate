@@ -24,9 +24,8 @@
 #include <math.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <jack/jack.h>
-#include <jack/ringbuffer.h>
 #include <samplerate.h>
+#include <ialloc.h>
 
 #include "xlplayer.h"
 #include "mp3dec.h"
@@ -36,6 +35,7 @@
 #include "avcodecdecode.h"
 #include "bsdcompat.h"
 #include "sig.h"
+#include "main.h"
 
 #define TRUE 1
 #define FALSE 0
@@ -460,7 +460,7 @@ static long conv_rf_read(void *cb_data, float **audiodata)
         }
     }
 
-struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, sig_atomic_t *shutdown_f)
+struct xlplayer *xlplayer_create(int samplerate, double duration, char *playername, sig_atomic_t *shutdown_f, int *vol_c, float vol_scale, int *strmute_c, int *audmute_c, float cutoff_s)
     {
     struct xlplayer *self;
     int error;
@@ -473,6 +473,7 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
         }
     self->rbsize = (int)(duration * samplerate) << 2;
     self->rbdelay = (int)(duration * 1000);
+    self->samples_cutoff = samplerate * cutoff_s;
     if (!(self->left_ch = jack_ringbuffer_create(self->rbsize)))
         {
         fprintf(stderr, "xlplayer: ringbuffer creation failure");
@@ -531,7 +532,7 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
         }
     self->playername = playername;
     self->leftbuffer = self->rightbuffer = NULL;
-    self->have_data_f = self->have_swapped_buffers_f = 0;
+    self->have_data_f = 0;
     self->pause = 0;
     self->jack_flush = self->jack_is_flushed = 0;
     self->fade_mode = 0;
@@ -559,6 +560,15 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
     self->dynamic_metadata.album = NULL;
     self->dynamic_metadata.current_audio_context = 0;
     self->dynamic_metadata.rbdelay = 0;
+    self->lcb = ialloc(32);
+    self->rcb = ialloc(32);
+    self->lcfb = ialloc(32);
+    self->rcfb = ialloc(32);
+    self->cf_l_gain = self->cf_r_gain = 1.0f;
+    self->cf_aud = 0;
+    smoothing_volume_init(&self->volume, vol_c, vol_scale);
+    smoothing_mute_init(&self->mute_str, strmute_c);
+    smoothing_mute_init(&self->mute_aud, audmute_c);
     pthread_create(&self->thread, NULL, (void *(*)(void *)) xlplayer_main, self);
     while (self->up == FALSE)
         usleep(10000);
@@ -572,6 +582,10 @@ void xlplayer_destroy(struct xlplayer *self)
         self->command = CMD_CLEANUP;
         pthread_join(self->thread, NULL);
         pthread_mutex_destroy(&(self->dynamic_metadata.meta_mutex));
+        ifree(self->lcb);
+        ifree(self->rcb);
+        ifree(self->lcfb);
+        ifree(self->rcfb);
         free(self->pbsrb_l);
         free(self->pbsrb_r);
         free(self->pbsrb_lf);
@@ -590,13 +604,14 @@ void xlplayer_destroy(struct xlplayer *self)
         }
     }
 
-int xlplayer_play(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db)
+int xlplayer_play(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db, int id)
     {
     xlplayer_eject(self);
     self->pathname = pathname;
     self->gain = pow(10.0, gain_db / 20.0);
     self->seek_s = seek_s;
     self->size = size;
+    self->id = 1 << id;
     self->loop = FALSE;
     self->usedelay = FALSE;
     self->playlistmode = FALSE;
@@ -652,7 +667,7 @@ int xlplayer_playmany(struct xlplayer *self, char *playlist, int loop_f)
     return self->initial_audio_context;
     }
 
-int xlplayer_play_noflush(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db)
+int xlplayer_play_noflush(struct xlplayer *self, char *pathname, int seek_s, int size, float gain_db, int id)
     {
     self->noflush = TRUE;
     xlplayer_eject(self);
@@ -660,6 +675,7 @@ int xlplayer_play_noflush(struct xlplayer *self, char *pathname, int seek_s, int
     self->gain = pow(10.0, gain_db / 20.0);
     self->seek_s = seek_s;
     self->size = size;
+    self->id = 1 << id;
     self->loop = FALSE;
     self->playlistmode = FALSE;
     self->command = CMD_PLAY;
@@ -709,7 +725,6 @@ size_t read_from_player_sv(struct xlplayer *self, sample_t *left_buf, sample_t *
     float *pbsrb_swap;
     size_t todo = 0, ftodo = 0;
 
-    self->have_swapped_buffers_f = FALSE;
     if (self->jack_flush)
         {
         if (self->noflush == FALSE)
@@ -741,7 +756,6 @@ size_t read_from_player_sv(struct xlplayer *self, sample_t *left_buf, sample_t *
                 self->right_fade = swap;
                 /* initialisations for fade */
                 fade_set(self->fadeout, FADE_SET_HIGH, -1.0f, FADE_OUT);
-                self->have_swapped_buffers_f = TRUE;
                 }
             /* buffer flushing */
             src_reset(self->pbspeed_conv_l);
@@ -802,7 +816,6 @@ size_t read_from_player(struct xlplayer *self, sample_t *left_buf, sample_t *rig
     jack_ringbuffer_t *swap;
     size_t todo, favail, ftodo;
     
-    self->have_swapped_buffers_f = FALSE;
     if (self->jack_flush)
         {
         if (self->noflush == FALSE)
@@ -816,7 +829,6 @@ size_t read_from_player(struct xlplayer *self, sample_t *left_buf, sample_t *rig
                 self->right_ch = self->right_fade;
                 self->right_fade = swap;
                 fade_set(self->fadeout, FADE_SET_HIGH, -1.0f, FADE_OUT);
-                self->have_swapped_buffers_f = TRUE;
                 }
             jack_ringbuffer_reset(self->left_ch);
             jack_ringbuffer_reset(self->right_ch);
@@ -845,7 +857,8 @@ size_t read_from_player(struct xlplayer *self, sample_t *left_buf, sample_t *rig
             jack_ringbuffer_read(self->right_fade, (char *)right_fbuf, ftodo * sizeof (sample_t));
             memset(right_fbuf + ftodo, 0, (nframes - ftodo) * sizeof (sample_t));
             }
-        self->have_data_f = todo > 0;
+        if (!(self->have_data_f = todo > 0) && self->command == CMD_COMPLETE && self->playmode == PM_STOPPED)
+            self->id = 0;
         }
     else
         {
@@ -886,3 +899,110 @@ void xlplayer_set_dynamic_metadata(struct xlplayer *xlplayer, enum metadata_t ty
     pthread_mutex_unlock(&(dm->meta_mutex));
     }
 
+size_t xlplayer_read_start(struct xlplayer *self, jack_nframes_t nframes)
+    {
+    size_t samples_read;
+        
+    self->lcp = self->lcb = irealloc(self->lcb, nframes);
+    self->rcp = self->rcb = irealloc(self->rcb, nframes);
+    self->lcfp = self->lcfb = irealloc(self->lcfb, nframes);
+    self->rcfp = self->rcfb = irealloc(self->rcfb, nframes);
+
+    if (self->use_sv)
+        samples_read = read_from_player_sv(self, self->lcb, self->rcb, self->lcfb, self->rcfb, nframes);
+    else
+        samples_read = read_from_player(self, self->lcb, self->rcb, self->lcfb, self->rcfb, nframes);
+    
+    return samples_read;
+    }
+
+void xlplayer_read_start_all(struct xlplayer **list, jack_nframes_t nframes)
+    {
+    while (*list)
+        xlplayer_read_start(*list++, nframes);
+    }
+
+void xlplayer_read_next(struct xlplayer *self)
+    {
+    float fade_level = fade_get(self->fadeout);
+    float abs;
+
+    if ((abs = fabsf(*self->lcp)) > self->peak)
+        self->peak = abs;
+    if ((abs = fabsf(*self->rcp)) > self->peak)
+        self->peak = abs;
+        
+    self->ls = *self->lcp++ + *self->lcfp++ * fade_level;
+    self->rs = *self->rcp++ + *self->rcfp++ * fade_level;
+    
+    self->ls_aud = self->ls * self->volume.level * self->mute_aud.level * (self->cf_aud ? self->cf_l_gain : 1.0f);
+    self->rs_aud = self->rs * self->volume.level * self->mute_aud.level * (self->cf_aud ? self->cf_r_gain : 1.0f);
+    self->ls_str = self->ls * self->volume.level * self->mute_str.level * self->cf_l_gain;
+    self->rs_str = self->rs * self->volume.level * self->mute_str.level * self->cf_r_gain;
+    }
+
+void xlplayer_read_next_all(struct xlplayer **list)
+    {
+    while (*list)
+        xlplayer_read_next(*list++);
+    }
+
+void xlplayer_smoothing_process(struct xlplayer *self)
+    {
+    smoothing_volume_process(&self->volume);
+    smoothing_mute_process(&self->mute_str);
+    smoothing_mute_process(&self->mute_aud);
+    }
+    
+void xlplayer_smoothing_process_all(struct xlplayer **list)
+    {
+    while (*list)
+        xlplayer_smoothing_process(*list++);
+    }
+
+void xlplayer_stats(struct xlplayer *self)
+    {
+    char prefix[20];
+    struct xlp_dynamic_metadata *dm = &self->dynamic_metadata;
+    
+    snprintf(prefix, 20, "%s_", self->playername);
+    #define PREFIX() fputs(prefix, g.out)
+
+    PREFIX();
+    fprintf(g.out, "elapsed=%d\n", self->play_progress_ms / 1000);
+    PREFIX();
+    fprintf(g.out, "playing=%d\n", self->have_data_f | (self->current_audio_context & 0x1));
+    PREFIX();
+    fprintf(g.out, "signal=%d\n", self->peak > 0.001F || self->peak < 0.0F || self->pause);
+    PREFIX();
+    fprintf(g.out, "cid=%d\n", self->current_audio_context);
+    PREFIX();
+    fprintf(g.out, "audio_runout=%d\n", self->avail < self->samples_cutoff && (!(self->current_audio_context & 0x1)));
+    PREFIX();
+    fprintf(g.out, "silence=%f\n", self->silence);
+
+    if (dm->data_type)
+        {
+        pthread_mutex_lock(&(dm->meta_mutex));
+        fprintf(stderr, "new dynamic metadata\n");
+        if (dm->data_type != DM_JOINED_UC)
+            {
+            PREFIX();
+            fprintf(g.out, "new_metadata=d%d:%dd%d:%sd%d:%sd%d:%sd9:%09dd9:%09dx\n", (int)log10(dm->data_type) + 1, dm->data_type, (int)strlen(dm->artist), dm->artist, (int)strlen(dm->title), dm->title, (int)strlen(dm->album), dm->album, dm->current_audio_context, dm->rbdelay);
+            }
+        else
+            {
+            fprintf(stderr, "send_metadata_update: utf16 chapter info not supported\n");
+            }
+        dm->data_type = DM_NONE_NEW;
+        pthread_mutex_unlock(&(dm->meta_mutex));
+        }
+    
+    #undef PREFIX
+    }
+
+void xlplayer_stats_all(struct xlplayer **list)
+    {
+    while (*list)
+        xlplayer_stats(*list++);
+    }

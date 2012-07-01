@@ -20,8 +20,7 @@ idjc_la_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecd
 			\
 				speextag.h streamer.c streamer.h xlplayer.c xlplayer.h live_mp2_encoder.c live_mp2_encoder.h \
 			\
-				avcodec_encoder.c avcodec_encoder.h
-				
+				avcodec_encoder.c avcodec_encoder.h smoothing.c smoothing.h
 
 idjc_la_CFLAGS = ${GLIB_CFLAGS} ${LIBAVCODEC_CFLAGS} ${LIBAVFORMAT_CFLAGS} ${LIBAVUTIL_CFLAGS} ${LIBFLAC_CFLAGS}		\
 			\

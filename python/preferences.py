@@ -751,16 +751,11 @@ class mixprefs:
                         _('The volume control shared by both music players.'))
 
     def cb_rg_indicate(self, widget):
-        left = self.parent.player_left
-        right = self.parent.player_right
-        
-        if widget.get_active():
-            left.treeview.insert_column(left.rgtvcolumn, 0)
-            right.treeview.insert_column(right.rgtvcolumn, 0)
-        else:           
-            left.treeview.remove_column(left.rgtvcolumn)
-            right.treeview.remove_column(right.rgtvcolumn)
-                    
+        show = widget.get_active()
+        for each in (self.parent.player_left, self.parent.player_right,
+                                                self.parent.jingles.interlude):
+            each.show_replaygain_markers(show)
+
     def cb_realize(self, window):
         self.wst.apply()
             
@@ -1110,9 +1105,8 @@ class mixprefs:
         'used whenever the sample rate of the music file currently playing does'
         ' not match the sample rate of the JACK sound server. Highest mode '
         'offers the best sound quality but also uses the most CPU (not '
-        'recommended for systems built before 2006). Fastest mode while it '
-        'uses by far the least amount of CPU should be avoided '
-        'if at all possible.'))
+        'recommended for systems built before 2006). All these modes provide '
+        'adequate sound quality.'))
         frame.add(hbox)
         hbox.show()
         self.best_quality_resample = gtk.RadioButton(None, _('Highest'))
@@ -1124,7 +1118,7 @@ class mixprefs:
         hbox.add(rsbox)
         self.best_quality_resample.show()
         self.good_quality_resample = gtk.RadioButton(
-                                        self.best_quality_resample, _('Good'))
+                                        self.best_quality_resample, _('Medium'))
         self.good_quality_resample.connect(
                                         "toggled", self.cb_resample_quality, 1) 
         rsbox = gtk.HBox()
@@ -1133,21 +1127,14 @@ class mixprefs:
         hbox.add(rsbox)
         self.good_quality_resample.show()
         self.fast_resample = gtk.RadioButton(
-                                        self.good_quality_resample, _('Fast'))
+                                        self.good_quality_resample, _('Lowest'))
         self.fast_resample.connect("toggled", self.cb_resample_quality, 2) 
         rsbox = gtk.HBox()
         rsbox.pack_start(self.fast_resample, True, False, 0)
         rsbox.show()
         hbox.add(rsbox)
         self.fast_resample.show()
-        self.fastest_resample = gtk.RadioButton(
-                                            self.fast_resample, _('Fastest'))
-        self.fastest_resample.connect("toggled", self.cb_resample_quality, 4) 
-        rsbox = gtk.HBox()
-        rsbox.pack_start(self.fastest_resample, True, False, 0)
-        rsbox.show()
-        hbox.add(rsbox)
-        self.fastest_resample.show()
+
         aud_rs_hbox.pack_start(frame, True, True, 0)
         frame.show()
         
@@ -1426,7 +1413,6 @@ class mixprefs:
             "best_rs"       : self.best_quality_resample,
             "good_rs"       : self.good_quality_resample,
             "fast_rs"       : self.fast_resample,
-            "fastest_rs"    : self.fastest_resample,
             "speed_var"     : self.speed_variance,
             "dual_volume"   : self.dual_volume,
             "showtips"      : self.enable_tooltips,
@@ -1445,11 +1431,13 @@ class mixprefs:
             self.activedict.update(each.activedict)
 
         self.valuesdict = {  # These widgets all have the get_value method.
-            "interval_vol": self.parent.jingles.interadj,
-            "passspeed"   : self.parent.passspeed_adj,
-            "djvolume"    : self.dj_aud_adj,
-            "rg_default"  : self.rg_defaultgain,
-            "rg_boost"    : self.rg_boost,
+            "jingle_vol"    : self.parent.jingles.jvol_adj,
+            "jingle_muting" : self.parent.jingles.jmute_adj,
+            "interlude_vol" : self.parent.jingles.ivol_adj,
+            "passspeed"     : self.parent.passspeed_adj,
+            "djvolume"      : self.dj_aud_adj,
+            "rg_default"    : self.rg_defaultgain,
+            "rg_boost"      : self.rg_boost,
             }
 
         for each in itertools.chain(mic_controls, (opener_settings,)):
@@ -1464,7 +1452,6 @@ class mixprefs:
             "rtfilerqdir"   : self.parent.player_right.file_requester_start_dir,
             "main_full_wst" : self.parent.full_wst,
             "main_min_wst"  : self.parent.min_wst,
-            "jingles_wst"   : self.parent.jingles.wst,
             "prefs_wst"   : self.wst,
             }
 

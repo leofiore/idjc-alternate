@@ -1664,8 +1664,8 @@ class MessageHandler(gobject.GObject):
                 self.on_stream_active()
             else:
                 self.on_stream_inactive()
-                
-        
+
+
     def on_stream_active(self):
         pass
         
@@ -1761,12 +1761,21 @@ class MessageHandlerForType_3(MessageHandler):
 
 
 class MessageHandlerForType_5(MessageHandler):
+    def __init__(self, *args, **kwargs):
+        self._timeout_id = None
+        MessageHandler.__init__(self, *args, **kwargs)
+        if self.stream_active:
+            self.on_stream_active()
+            
+            
     def on_stream_active(self):
         self._timeout_id = gobject.timeout_add(500, self._timeout)
         
         
     def on_stream_inactive(self):
-        gobject.source_remove(self._timeout_id)
+        if self._timeout_id is not None:
+            gobject.source_remove(self._timeout_id)
+            self._timeout_id = None
         
         
     @threadslock
@@ -1786,7 +1795,7 @@ class MessageHandlerForType_5(MessageHandler):
             
             
     def cleanup(self):
-        if self.stream_active:
+        if self._timeout_id is not None:
             gobject.source_remove(self._timeout_id)
 
 

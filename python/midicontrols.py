@@ -122,24 +122,16 @@ control_methods= {
     'v_pan': _('VoIP set balance'),
 
     # TC: Control method. Please keep it as Target:Action.
-    'k_fire': _('Jingle play from start'),
+    'k_fire': _('Effect play from start'),
 
     # TC: Control method. Please keep it as Target:Action.
-    'j_ps1': _('Jingles play/stop 1'),
+    'j_stop': _('Jingles stop effects all'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_ps2': _('Jingles play/stop 2'),
+    'j_vol1': _('Jingles set effects volume'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_sprev': _('Jingles select previous'),
+    'j_vol2': _('Jingles set effects headroom'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_snext': _('Jingles select next'),
-    # TC: Control method. Please keep it as Target:Action.
-    'j_sfire': _('Jingles play selected from start'),
-    # TC: Control method. Please keep it as Target:Action.
-    'j_vol1': _('Jingles set jingles volume 1'),
-    # TC: Control method. Please keep it as Target:Action.
-    'j_vol2': _('Jingles set jingles volume 2'),
-    # TC: Control method. Please keep it as Target:Action.
-    'j_ivol': _('Jingles set interlude volume'),
+    'j_ivol': _('Jingles set background volume'),
 
     # TC: Control method. Please keep it as Target:Action.
     's_on': _('Stream set connected'),
@@ -161,6 +153,7 @@ control_targets= {
 control_targets_players= (
     _('Left player'),
     _('Right player'),
+    _('Background player'),
     _('Focused player'),
     _('Fadered player'),
 )
@@ -565,21 +558,21 @@ class Controls(object):
             Binding('k0.ffc7:pk_fire.9.127'),
             Binding('k0.ffc8:pk_fire.a.127'),
             Binding('k0.ffc9:pk_fire.b.127'),
-            Binding('k0.ff1b:pj_ps1.b.127'), # Esc stop jingles
+            Binding('k0.ff1b:pj_stop.b.127'), # Esc stop jingles
             Binding('k0.31:sx_fade.b.0'), # 1-2 xfader sides
             Binding('k0.32:sx_fade.b.127'),
             Binding('k0.63:px_pass.0.127'), # C, pass xfader
             Binding('k0.6d:pm_on.0.127'), # M, first channel toggle
             Binding('k0.76:pv_on.0.127'), # V, VoIP toggle
             Binding('k0.70:pv_prep.0.127'), # P, VoIP prefade
-            Binding('k0.ff08:pp_stop.2.127'), # backspace, stop focused player
-            Binding('k0.2f:pp_advance.3.127'), # slash, advance xfaded player
-            Binding('k0.74:pp_tag.2.127'), # playlist editing keys
-            Binding('k0.73:pp_istop.2.127'),
-            Binding('k0.75:pp_ianno.2.127'),
-            Binding('k0.61:pp_itrans.2.127'),
-            Binding('k0.66:pp_ifade.2.127'),
-            Binding('k0.6e:pp_ipitch.2.127'),
+            Binding('k0.ff08:pp_stop.3.127'), # backspace, stop focused player
+            Binding('k0.2f:pp_advance.4.127'), # slash, advance xfaded player
+            Binding('k0.74:pp_tag.3.127'), # playlist editing keys
+            Binding('k0.73:pp_istop.3.127'),
+            Binding('k0.75:pp_ianno.3.127'),
+            Binding('k0.61:pp_itrans.3.127'),
+            Binding('k0.66:pp_ifade.3.127'),
+            Binding('k0.6e:pp_ipitch.3.127'),
             Binding('k4.72:pr_on.0.127'),
             Binding('k4.73:ps_on.0.127'),
             Binding('k0.69:pc_tips.0.127'), # Tooltips shown
@@ -675,19 +668,27 @@ class Controls(object):
     # Utility for p_ control methods
     #
     def _get_player(self, n):
-        if n==2:
-            if self.owner.player_left.treeview.is_focus():
+        main = self.owner
+
+        if n==3:
+            if main.player_nb.get_current_page() == 1:
+                if main.jingles.interlude.treeview.is_focus():
+                    n = 2
+                else:
+                    return None
+            elif main.player_left.treeview.is_focus():
                 n= 0
-            elif self.owner.player_right.treeview.is_focus():
+            elif main.player_right.treeview.is_focus():
                 n=1
             else:
                 return None
-        elif n==3:
-            if self.owner.crossfade.get_value()<50:
+        elif n==4:
+            if main.crossfade.get_value()<50:
                 n= 0
             else:
                 n= 1
-        return self.owner.player_left if n==0 else self.owner.player_right
+
+        return (main.player_left, main.player_right, main.jingles.interlude)[n]
 
     # Control implementations. The @action_method decorator records all control
     # methods in order, so the order they are defined in this code dictates the
@@ -800,7 +801,6 @@ class Controls(object):
         if player is None: return
         deckadj= self.owner.deck2adj if player is self.owner.player_right \
                                                         else self.owner.deckadj
-        v= v/127.0*100
         cross= deckadj.get_value()+v if isd else v
         deckadj.set_value(cross)
 
@@ -975,57 +975,29 @@ class Controls(object):
     #
     @action_method(Binding.MODE_PULSE)
     def k_fire(self, n, v, isd):
-        self.owner.jingles.trigger_index(n)
+        self.owner.jingles.effects.widgets[n].trigger.clicked()
 
     # Jingles player in general
     #
     @action_method(Binding.MODE_PULSE)
-    def j_ps1(self, n, v, isd):
-        if self.owner.jingles.play.get_active() or \
-                                        self.owner.jingles.play_ex.get_active():
-            self.owner.jingles.stop.clicked()
-        else:
-            self.owner.jingles.play.set_active(True)
-
-    @action_method(Binding.MODE_PULSE)
-    def j_ps2(self, n, v, isd):
-        if self.owner.jingles.play.get_active() or \
-                                        self.owner.jingles.play_ex.get_active():
-            self.owner.jingles.stop.clicked()
-        else:
-            self.owner.jingles.play_ex.set_active(True)
-
-    @action_method(Binding.MODE_PULSE)
-    def j_sprev(self, n, v, isd):
-        treeview_selectprevious(self.owner.jingles.treeview)
-
-    @action_method(Binding.MODE_PULSE)
-    def j_snext(self, n, v, isd):
-        treeview_selectnext(self.owner.jingles.treeview)
-
-    @action_method(Binding.MODE_PULSE)
-    def j_sfire(self, n, v, isd):
-        self.owner.jingles.stop.clicked()
-        self.owner.jingles.play.set_active(True)
+    def j_stop(self, n, v, isd):
+        self.owner.jingles.effects.stop()
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def j_vol1(self, n, v, isd):
-        fader= self.owner.jingles.l1
-        v= 105-v/127.0*105
+        fader= self.owner.jingles.jvol_adj
         vol= fader.get_value()+v if isd else v
         fader.set_value(vol)
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def j_vol2(self, n, v, isd):
-        fader= self.owner.jingles.l2
-        v= 105-v/127.0*105
+        fader= self.owner.jingles.jmute_adj
         vol= fader.get_value()+v if isd else v
         fader.set_value(vol)
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def j_ivol(self, n, v, isd):
-        fader= self.owner.jingles.intervol
-        v= 100-v/127.0*100
+        fader= self.owner.jingles.ivol_adj
         vol= fader.get_value()+v if isd else v
         fader.set_value(vol)
 
@@ -1244,9 +1216,9 @@ class BindingEditor(gtk.Dialog):
         # TC: binding editor, action pane, first row, toplevel menu.
         'v': _('VoIP channel'),
         # TC: binding editor, action pane, first row, toplevel menu.
-        'k': _('Single jingle'),
+        'k': _('Single effect'),
         # TC: binding editor, action pane, first row, toplevel menu.
-        'j': _('Jingle player'),
+        'j': _('Jingles players'),
         # TC: binding editor, action pane, first row, toplevel menu.
         's': _('Stream'),
         # TC: binding editor, action pane, first row, toplevel menu.
@@ -1664,11 +1636,11 @@ class KeyAdjustment(CustomAdjustment):
 
 class PlayerAdjustment(CustomAdjustment):
     def __init__(self, value= 0):
-        CustomAdjustment.__init__(self, value, 0, 3, 1)
+        CustomAdjustment.__init__(self, value, 0, 4, 1)
     def read_input(self, text):
         return control_targets_players.index(text)
     def write_output(self, value):
-        return control_targets_players[max(min(int(value), 3), 0)]
+        return control_targets_players[max(min(int(value), 4), 0)]
 class TargetAdjustment(CustomAdjustment):
     def __init__(self, group, value= 0):
         CustomAdjustment.__init__(self, value, 0, {
