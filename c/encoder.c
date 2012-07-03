@@ -244,6 +244,7 @@ static long encoder_resampler_get_data(void *cb_data, float **data)
         n_samples = encoder_input_rb_mono_downmix(encoder->input_rb, encoder->rs_input[0], RS_INPUT_SAMPLES);
         *data = encoder->rs_input[0];
         }
+
     return (long)n_samples;
     }
 
@@ -261,6 +262,7 @@ static void encoder_apply_pregain(struct encoder_ip_data *id, float gain)
 struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, size_t min_samples_needed, size_t max_samples, float **caller_supplied_buffer)
     {
     struct encoder_ip_data *id;
+    ssize_t n_samples;
     size_t samples_available;
     int i;
     
@@ -302,7 +304,8 @@ struct encoder_ip_data *encoder_get_input_data(struct encoder *encoder, size_t m
     else
         {                 /* handle the resampling condition */
         /* note 128 samples are held back to make sure the resampler gives the full number of samples on both reads */
-        samples_available = (int)(jack_ringbuffer_read_space(encoder->input_rb[1]) / sizeof (sample_t)) * encoder->sr_conv_ratio - 128.0;
+        n_samples = (ssize_t)(jack_ringbuffer_read_space(encoder->input_rb[1]) / sizeof (sample_t) * encoder->sr_conv_ratio) - 128;
+        samples_available = (n_samples > 0) ? n_samples : 0;
         if (samples_available > max_samples)
             samples_available = max_samples;
         if (samples_available < min_samples_needed)
