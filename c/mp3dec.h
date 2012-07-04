@@ -30,6 +30,7 @@ struct mp3decode_vars
    mpg123_handle *mh;
    struct mp3taginfo taginfo;
    struct chapter *current_chapter;
+   int resample;
    };
 
 int mp3decode_reg(struct xlplayer *xlplayer);
