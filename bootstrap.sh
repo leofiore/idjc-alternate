@@ -1,13 +1,13 @@
 #!/bin/sh
 
-function missing {
+missing() {
 	echo "$1, is missing - please install it and try again"
 	exit 1
 }
 
-function check {
+check() {
 	for i in $* ; do
-		which $i > /dev/null || missing $i
+		which $i 1>/dev/null 2>/dev/null || missing $i
 	done
 }
 

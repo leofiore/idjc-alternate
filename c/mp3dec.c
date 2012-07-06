@@ -194,11 +194,13 @@ int mp3decode_reg(struct xlplayer *xlplayer)
         goto rej_;
         }
 
+#ifdef MPG123_AUTO_RESAMPLE
     if (mpg123_param(self->mh, MPG123_REMOVE_FLAGS, MPG123_AUTO_RESAMPLE, 0.0) != MPG123_OK)
         {
         fprintf(stderr, "mpgdecode_reg: failed to turn off auto resampling\n");
         goto rej_;
         }
+#endif
 
     if (mpg123_param(self->mh, MPG123_ADD_FLAGS, MPG123_FORCE_STEREO | MPG123_FUZZY, 0.0) != MPG123_OK)
         {
