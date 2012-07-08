@@ -562,7 +562,9 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
                             break;
                         case ENCODER_CODEC_AAC:
                         case ENCODER_CODEC_AACPLUSV2:
+#if defined(AVCODEC) && defined(AVFORMAT) && defined(AVUTIL)
                             encoder_init = live_avcodec_encoder_init;
+#endif
                             break;
                         case ENCODER_CODEC_UNHANDLED:
                         default:
@@ -575,10 +577,14 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
                             encoder_init = live_ogg_encoder_init;
                             break;
                         case ENCODER_CODEC_FLAC:
+#ifdef HAVE_OGGFLAC
                             encoder_init = live_oggflac_encoder_init;
+#endif
                             break;
                         case ENCODER_CODEC_SPEEX:
+#ifdef HAVE_SPEEX
                             encoder_init = live_oggspeex_encoder_init;
+#endif
                             break;
                         case ENCODER_CODEC_UNHANDLED:
                         default:

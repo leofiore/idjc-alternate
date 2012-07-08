@@ -145,6 +145,7 @@ if test $makeflac != "no" ; then
                    AC_MSG_WARN([your version of libFLAC lacks oggflac support])])],
 
             [AC_SUBST([HAVE_FLAC],[0])
+            AC_SUBST([HAVE_OGGFLAC],[0])
 
             if test $makeflac = "yes" ; then
                AC_MSG_ERROR([libFLAC not detected but specifically requested in configure options])

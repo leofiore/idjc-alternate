@@ -21,33 +21,47 @@
 #include <unistd.h>
 #include <jack/jack.h>
 #include <stdio.h>
+#include <assert.h>
 
 typedef jack_default_audio_sample_t sample_t;
 
-sample_t *ialloc(jack_nframes_t size)
+static inline jack_nframes_t isize(sample_t *data)
     {
-    sample_t *memblock;
-    
-    memblock = malloc(sizeof (jack_nframes_t) + sizeof (sample_t) * size);
-    *(jack_nframes_t *)memblock++ = size;
-    return memblock;
-    }
-  
-void ifree(sample_t *memblock)
-    {
-    free(((jack_nframes_t *)memblock) - 1);
+    return ((jack_nframes_t *)data)[-1];
     }
 
-sample_t *irealloc(sample_t *orig, jack_nframes_t newsize)
+sample_t *ialloc(jack_nframes_t size)
     {
-    jack_nframes_t *oldbuf;
+    jack_nframes_t *base;
     
-    oldbuf = ((jack_nframes_t *)orig) - 1;
-    if (newsize > *oldbuf)
+    if (size)
         {
-        free(oldbuf);
+        base = malloc(sizeof (jack_nframes_t) + sizeof (sample_t) * size);
+        *base = size;
+        return (sample_t *)(base + 1);
+        }
+    else
+        return NULL;
+    }
+  
+void ifree(sample_t *data)
+    {
+    if (!data)
+        return;
+
+    free((jack_nframes_t *)data - 1);
+    }
+
+sample_t *irealloc(sample_t *data, jack_nframes_t newsize)
+    {
+    if (!data)    
+        return ialloc(newsize);
+        
+    if (newsize > isize(data))
+        {
+        ifree(data);
         return ialloc(newsize);
         }
     else
-        return orig;
+        return data;
     }
