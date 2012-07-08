@@ -33,12 +33,6 @@
 #include <FLAC/all.h>
 #endif
 
-#ifdef DYN_MAD
-#include "mad.h"
-#else
-#include <mad.h>
-#endif /* DYN_MAD */
-
 #include "fade.h"
 #include "smoothing.h"
 
