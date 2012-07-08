@@ -25,8 +25,8 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <samplerate.h>
-#include <ialloc.h>
 
+#include "ialloc.h"
 #include "xlplayer.h"
 #include "mp3dec.h"
 #include "oggdec.h"
@@ -560,10 +560,10 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
     self->dynamic_metadata.album = NULL;
     self->dynamic_metadata.current_audio_context = 0;
     self->dynamic_metadata.rbdelay = 0;
-    self->lcb = ialloc(32);
-    self->rcb = ialloc(32);
-    self->lcfb = ialloc(32);
-    self->rcfb = ialloc(32);
+    self->lcb = NULL;
+    self->rcb = NULL;
+    self->lcfb = NULL;
+    self->rcfb = NULL;
     self->cf_l_gain = self->cf_r_gain = 1.0f;
     self->cf_aud = 0;
     smoothing_volume_init(&self->volume, vol_c, vol_scale);
@@ -899,15 +899,29 @@ void xlplayer_set_dynamic_metadata(struct xlplayer *xlplayer, enum metadata_t ty
     pthread_mutex_unlock(&(dm->meta_mutex));
     }
 
+void xlplayer_buffer_alloc(struct xlplayer *self, jack_nframes_t nframes)
+    {
+    self->lcb = irealloc(self->lcb, nframes);
+    self->rcb = irealloc(self->rcb, nframes);
+    self->lcfb = irealloc(self->lcfb, nframes);
+    self->rcfb = irealloc(self->rcfb, nframes);
+    }
+
+void xlplayer_buffer_alloc_all(struct xlplayer **list, jack_nframes_t nframes)
+    {
+    while (*list)
+        xlplayer_buffer_alloc(*list++, nframes);
+    }
+
 size_t xlplayer_read_start(struct xlplayer *self, jack_nframes_t nframes)
     {
     size_t samples_read;
         
-    self->lcp = self->lcb = irealloc(self->lcb, nframes);
-    self->rcp = self->rcb = irealloc(self->rcb, nframes);
-    self->lcfp = self->lcfb = irealloc(self->lcfb, nframes);
-    self->rcfp = self->rcfb = irealloc(self->rcfb, nframes);
-
+    self->lcp = self->lcb;
+    self->rcp = self->rcb;
+    self->lcfp = self->lcfb;
+    self->rcfp = self->rcfb;
+        
     if (self->use_sv)
         samples_read = read_from_player_sv(self, self->lcb, self->rcb, self->lcfb, self->rcfb, nframes);
     else

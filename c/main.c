@@ -99,6 +99,11 @@ static void session_callback(jack_session_event_t *event, void *arg)
         }
     }
     
+static int buffer_size_callback(jack_nframes_t n_frames, void *arg)
+    {
+    return mixer_new_buffer_size(n_frames);
+    }
+    
 static void cleanup_jack()
     {
     if (g.client)
@@ -188,6 +193,7 @@ static int backend_main()
 
     jack_set_session_callback(g.client, session_callback, NULL);
     jack_set_process_callback(g.client, main_process_audio, NULL);
+    jack_set_buffer_size_callback(g.client, buffer_size_callback, NULL);
 
     /* Registration of JACK ports. */
     #define MK_AUDIO_INPUT(var, name) var = jack_port_register(g.client, name, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);

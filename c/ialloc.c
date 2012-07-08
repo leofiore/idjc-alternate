@@ -25,43 +25,32 @@
 
 typedef jack_default_audio_sample_t sample_t;
 
-static inline jack_nframes_t isize(sample_t *data)
-    {
-    return ((jack_nframes_t *)data)[-1];
-    }
-
 sample_t *ialloc(jack_nframes_t size)
     {
-    jack_nframes_t *base;
+    sample_t *buf;
     
-    if (size)
+    if (!(buf = malloc(sizeof (sample_t) * size)))
         {
-        base = malloc(sizeof (jack_nframes_t) + sizeof (sample_t) * size);
-        *base = size;
-        return (sample_t *)(base + 1);
+        fprintf(stderr, "ialloc: malloc failure\n");
+        exit(5);
         }
-    else
-        return NULL;
+
+    return buf;
     }
   
-void ifree(sample_t *data)
+void ifree(sample_t *buf)
     {
-    if (!data)
-        return;
-
-    free((jack_nframes_t *)data - 1);
+    if (buf)
+        free(buf);
     }
 
 sample_t *irealloc(sample_t *data, jack_nframes_t newsize)
     {
     if (!data)    
         return ialloc(newsize);
-        
-    if (newsize > isize(data))
+    else
         {
-        ifree(data);
+        free(data);
         return ialloc(newsize);
         }
-    else
-        return data;
     }

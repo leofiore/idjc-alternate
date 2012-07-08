@@ -43,7 +43,6 @@
 #include "compressor.h"
 #include "xlplayer.h"
 #include "mp3dec.h"
-#include "ialloc.h"
 #include "speextag.h"
 #include "sndfileinfo.h"
 #include "avcodecdecode.h"
@@ -974,6 +973,13 @@ static void mixer_cleanup()
     xlplayer_destroy(plr_r);
     xlplayer_destroy(plr_j);
     xlplayer_destroy(plr_i);
+    }
+
+int mixer_new_buffer_size(jack_nframes_t n_frames)
+    {
+    fprintf(stderr, "player read buffer allocated for %ld frames\n", (long)n_frames);
+    xlplayer_buffer_alloc_all(players, n_frames);
+    return 0;
     }
 
 void mixer_init(void)
