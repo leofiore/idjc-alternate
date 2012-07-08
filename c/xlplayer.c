@@ -466,7 +466,7 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
     int error;
     const float minlevel = 1.0f/10000.0f;
     
-    if (!(self = malloc(sizeof (struct xlplayer))))
+    if (!(self = calloc(1, sizeof (struct xlplayer))))
         {
         fprintf(stderr, "xlplayer: malloc failure");
         exit(5);
@@ -531,41 +531,12 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
         exit(5);
         }
     self->playername = playername;
-    self->leftbuffer = self->rightbuffer = NULL;
-    self->have_data_f = 0;
-    self->pause = 0;
-    self->jack_flush = self->jack_is_flushed = 0;
-    self->fade_mode = 0;
-    self->fadeout_f = 0;
-    self->dither = 0;
     self->seed = 17234;
     self->samplerate = samplerate;
-    self->current_audio_context = 0;
-    self->playlist = NULL;
-    self->noflush = FALSE;
     self->jack_shutdown_f = shutdown_f;
-    self->watchdog_timer = 0;
     self->command = CMD_COMPLETE;
     self->playmode = PM_STOPPED;
-    self->up = FALSE;
-    self->pbspeed = 1.0F;
-    self->pbs_exchange = 0;
-    self->samples_written = 0;
-    self->seek_s = 0;
-    self->play_progress_ms = 0;
-    self->silence = 0.0f;
     self->dynamic_metadata.data_type = DM_NONE_NEW;
-    self->dynamic_metadata.artist = NULL;
-    self->dynamic_metadata.title = NULL;
-    self->dynamic_metadata.album = NULL;
-    self->dynamic_metadata.current_audio_context = 0;
-    self->dynamic_metadata.rbdelay = 0;
-    self->lcb = NULL;
-    self->rcb = NULL;
-    self->lcfb = NULL;
-    self->rcfb = NULL;
-    self->cf_l_gain = self->cf_r_gain = 1.0f;
-    self->cf_aud = 0;
     smoothing_volume_init(&self->volume, vol_c, vol_scale);
     smoothing_mute_init(&self->mute_str, strmute_c);
     smoothing_mute_init(&self->mute_aud, audmute_c);
