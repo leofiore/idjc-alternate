@@ -227,7 +227,7 @@ static void update_smoothed_volumes()
     {
     static sample_t cross_left = 1.0F, cross_right = 0.0F;
     sample_t mic_target, diff;
-    static float interlude_autovol = -128.0F, old_autovol = -128.0F;
+    static float interlude_autovol = -128.0F;
     float vol;
     float xprop, yprop;
     const float bias = 0.35386f;
@@ -316,7 +316,6 @@ static void update_smoothed_volumes()
     /* interlude_autovol rises and falls as and when no media players are playing */
     /* it indicates the playback volume in dB in addition to the one specified by the user */
     
-    old_autovol = interlude_autovol;
     if (main_play == TRUE)
         {
         if (interlude_autovol > -128.0F)
