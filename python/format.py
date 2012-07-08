@@ -990,8 +990,8 @@ class FormatCodecXiphOgg(FormatDropdown):
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Codec'), "codec", (
             dict(display_text=_('Vorbis'), value="vorbis", chain="FormatCodecVorbisMode"),
-            dict(display_text=_('FLAC'), value="flac", chain="FormatCodecFLACMode"),
-            dict(display_text=_('Speex'), value="speex", chain="FormatCodecSpeexMode")), 0,
+            dict(display_text=_('FLAC'), value="flac", chain="FormatCodecFLACMode", sensitive=FGlobs.oggflacenabled),
+            dict(display_text=_('Speex'), value="speex", chain="FormatCodecSpeexMode", sensitive=FGlobs.speexenabled)), 0,
             _('Codecs of the Ogg container.'))
 
 

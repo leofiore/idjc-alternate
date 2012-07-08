@@ -562,7 +562,7 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
                             break;
                         case ENCODER_CODEC_AAC:
                         case ENCODER_CODEC_AACPLUSV2:
-#if defined(AVCODEC) && defined(AVFORMAT) && defined(AVUTIL)
+#if defined(HAVE_AVCODEC) && defined(HAVE_AVFORMAT) && defined(HAVE_AVUTIL)
                             encoder_init = live_avcodec_encoder_init;
 #endif
                             break;
@@ -629,7 +629,7 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
     else
         fprintf(stderr, "encoder_start: resampler will not be used\n");
         
-    if (encoder_init(self, ev))
+    if (encoder_init && encoder_init(self, ev))
         {
         if (self->data_format.source == ENCODER_SOURCE_JACK)
             {

@@ -2018,19 +2018,19 @@ class RecordTab(Tab):
 
 
         def cb_source_combo(self, widget):
+            sens = self.parentobject.record_buttons.record_button.set_sensitive
+            
             if widget.get_active() > 0:
                 self.streamtab = self.streamtabs[widget.get_active() - 1]
+                sens(self.cansave and self.streamtab.format_control.props.cap_recordable)
             else:
                 self.streamtab = None
-            self.parentobject.record_buttons.record_button.set_sensitive(
-                self.cansave and (self.streamtab is None or 
-                self.streamtab.format_control.props.cap_recordable))
-
+                sens(self.source_store[self.source_combo.get_active()][1])
 
         def populate_stream_selector(self, text, tabs):
             self.streamtabs = tabs
             for index in range(len(tabs)):
-                self.source_combo.append_text(" ".join((text, str(index + 1))))
+                self.source_store.append((" ".join((text, str(index + 1))), 1))
             self.source_combo.connect("changed", self.cb_source_combo)
             self.source_combo.set_active(0)
             for tab in tabs:
@@ -2048,8 +2048,13 @@ class RecordTab(Tab):
             CategoryFrame.__init__(self)
             hbox = gtk.HBox()
             hbox.set_spacing(6)
-            self.source_combo = gtk.combo_box_new_text()
-            self.source_combo.append_text(" FLAC+CUE")
+            
+            self.source_store = gtk.ListStore(str, int)
+            self.source_combo = gtk.ComboBox(self.source_store)
+            rend = gtk.CellRendererText()
+            self.source_combo.pack_start(rend)
+            self.source_combo.set_attributes(rend, text=0, sensitive=1)
+            self.source_store.append((" FLAC+CUE", FGlobs.flacenabled))
             hbox.pack_start(self.source_combo, False, False, 0)
             self.source_combo.show()
             arrow = gtk.Arrow(gtk.ARROW_RIGHT, gtk.SHADOW_IN)
