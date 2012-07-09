@@ -531,13 +531,6 @@ class ProfileManager(object):
 
 
     @property
-    def jinglesdir(self):
-        """The directory for jingles storage."""
-
-        return self.basedir / "jingles"
-
-
-    @property
     def session_type(self):
         """Session mode: L0 for none, L1 for Ladish L1 mode."""
 
@@ -905,9 +898,9 @@ class ProfileManager(object):
                                             print e
 
                         try:
-                            shutil.copytree(tdir / "jingles", tmp / "jingles")
+                            shutil.copytree(tdir / "links", tmp / "links")
                         except EnvironmentError:
-                            # Jingles directory might not exist.
+                            # Links directory might not exist.
                             pass
                     else:
                         raise ProfileError(

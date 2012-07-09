@@ -19,6 +19,7 @@
 import os
 import gettext
 import json
+import uuid
 
 import gtk
 import itertools
@@ -30,15 +31,16 @@ from .gtkstuff import LEDDict
 from .gtkstuff import WindowSizeTracker
 from .gtkstuff import DefaultEntry
 from .tooltips import set_tip
-
+from .utils import LinkUUIDRegistry
 
 _ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
                                                         fallback=True).gettext
 
 PM = ProfileManager()
+link_uuid_reg = LinkUUIDRegistry()
 
 # Pixbufs for LED's of the specified size.
-LED = LEDDict(6)
+LED = LEDDict(9)
 
 
 
@@ -53,6 +55,7 @@ class Effect(gtk.HBox):
         self.num = num
         self.approot = parent
         self.pathname = None
+        self.uuid = str(uuid.uuid4())
         
         gtk.HBox.__init__(self)
         self.set_border_width(2)
@@ -91,7 +94,7 @@ class Effect(gtk.HBox):
         self.dialog = EffectConfigDialog(self, parent.window)
         self.dialog.connect("response", self._on_dialog_response)
         self.dialog.emit("response", gtk.RESPONSE_NO)
-        
+
         
     def _on_config(self, widget):
         if self.pathname and os.path.isfile(self.pathname):
@@ -119,14 +122,26 @@ class Effect(gtk.HBox):
             sens = self.pathname is not None and os.path.isfile(self.pathname)
             self.stop.set_sensitive(sens)
             self.trigger.set_sensitive(sens)
+            if response_id == gtk.RESPONSE_ACCEPT and pathname is not None:
+                self.uuid = str(uuid.uuid4())
             
             
     def marshall(self):
-        return json.dumps([self.trigger.get_label(), self.dialog.get_filename()])
+        link = link_uuid_reg.get_link_filename(self.uuid)
+        if link is not None:
+            # Replace orig file abspath with alternate path to a hard link
+            # except when link is None as happens when a hard link fails.
+            link = PathStr("links") / link
+            self.pathname = PM.basedir / link
+            if not self.dialog.get_visible():
+                self.dialog.set_filename(self.pathname)
+        return json.dumps([self.trigger.get_label(), link or self.pathname, self.uuid])
 
 
     def unmarshall(self, data):
-        label, pathname = json.loads(data)
+        label, pathname, self.uuid = json.loads(data)
+        if pathname is not None and not pathname.startswith(os.path.sep):
+            pathname = PM.basedir / pathname
         if pathname is None or not os.path.isfile(pathname):
             self.dialog.unselect_all()
             label = ""
@@ -134,6 +149,7 @@ class Effect(gtk.HBox):
             self.dialog.set_filename(pathname)
         self.dialog.button_entry.set_text(label)
         self._on_dialog_response(self.dialog, gtk.RESPONSE_ACCEPT, pathname)
+        self.pathname = pathname
 
 
     def update_led(self, val):
@@ -251,6 +267,14 @@ class EffectCluster(gtk.Frame):
         for each in self.widgets:
             if each.stop.get_sensitive():
                 each.stop.clicked()
+                
+                
+    def uuids(self):
+        return (x.uuid for x in self.widgets)
+        
+        
+    def pathnames(self):
+        return (x.pathname for x in self.widgets)
 
 
 

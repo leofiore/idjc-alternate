@@ -1146,7 +1146,10 @@ class IDJC_Media_Player:
                 album, uuid_)
 
         if artist and title and album:
-            return player_row(artist + u" - " + title + u" - (%s)" % album)
+            if "(" in album:
+                return player_row(artist + u" - " + title + u" - [%s]" % album)
+            else:
+                return player_row(artist + u" - " + title + u" - (%s)" % album)
         elif artist and title:
             return player_row(artist + u" - " + title)
         else:
@@ -3548,7 +3551,10 @@ class IDJC_Media_Player:
 
         trackscount = 0
         tracknum = 0
-        tracktitle = self.songname
+        if self.artist and self.title and self.album:
+            tracktitle = "%s - %s" % (self.artist, self.title)
+        else:
+            tracktitle = self.songname
         duration = 0
         for each in self.liststore:
             if each[2] > 0:

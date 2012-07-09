@@ -2267,6 +2267,12 @@ class MainWindow:
                     pass
                 else:
                     link_uuid_reg.add(uuid_, row[1])
+
+            effects = self.jingles.effects
+            for uuid_, pathname in zip(effects.uuids(), effects.pathnames()):
+                if pathname is not None:
+                    link_uuid_reg.add(str(uuid_), pathname)
+
             link_uuid_reg.update(PathStr(where or pm.basedir) / "links")
 
         self.player_left.save_session(where)
