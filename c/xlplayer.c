@@ -531,6 +531,7 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
         exit(5);
         }
     self->playername = playername;
+    self->cf_l_gain = self->cf_r_gain = 1.0f;
     self->seed = 17234;
     self->samplerate = samplerate;
     self->jack_shutdown_f = shutdown_f;
