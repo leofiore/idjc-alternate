@@ -317,14 +317,14 @@ class ExtraPlayers(gtk.HBox):
         jvol = gtk.VScale(self.jvol_adj)
         jvol.set_inverted(True)
         jvol.set_draw_value(False)
-        set_tip(jvol, _('Jingles playback volume.'))
+        set_tip(jvol, _('Effects volume.'))
 
         pb = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "headroom.png")
         jmute_image = gtk.image_new_from_pixbuf(pb)
         jmute = gtk.VScale(self.jmute_adj)
         jmute.set_inverted(True)
         jmute.set_draw_value(False)
-        set_tip(jmute, _('Player headroom that is applied when a jingle is playing.'))
+        set_tip(jmute, _('Player headroom that is applied when an effect is playing.'))
         
         for widget, expand in zip((jvol_image, jvol, jmute_image, jmute), 
                                                 itertools.cycle((False, True))):
@@ -339,7 +339,7 @@ class ExtraPlayers(gtk.HBox):
         ivol.set_inverted(True)
         ivol.set_draw_value(False)
         ilevel_vbox.pack_start(ivol, padding=2)
-        set_tip(ivol, _('Background tracks volume.'))
+        set_tip(ivol, _('Background Tracks volume.'))
 
         interlude_frame = gtk.Frame(" %s " % _('Background Tracks'))
         self.pack_start(interlude_frame)
