@@ -2,15 +2,9 @@
 ui('Tour: Jingles', 'tour-jingles-nav')
 </script>
 
-<a href="jingles-window.hq.png"><img class="clickthrough-left" src="jingles-window.png" alt="Jingles Window Screenshot" title="Click for full size version" /></a>
+<div class="centered-contents">
+<a href="jingles-window.hq.png"><img class="clickthrough" src="jingles-window.png" alt="Jingles Window Screenshot" title="Click for full size version" /></a>
+</div>
 
-<p>The Jingles window houses the Jingles player, a basic player that indicates by number the function key
-(F-Key on your keyboard) that when pressed will trigger the jingle.</p>
-
-<p>You can also string jingles together by entering the corresponding numbers (comma separated) into the sequence
-box and trigger them with the <i>Esc</i> key or with one of the play buttons.</p>
-
-<p>There are two play buttons in order to facilitate two audio profiles for Jingles in general.</p>
-
-<p>The button with the microphone and musical note icon is for activating the interlude player that is audible
-between tracks and plays in a continuous loop. This can be used to create an audio bed under the DJ's voice.</p>
+<p>The Jingles tab contains two separate players. Effects, which is for sound effects and brief jingles, and Background Tracks
+which is intended to provide background audio as the DJ speaks. The Background Tracks player audio fades in and out automatically depending the main players.</p>

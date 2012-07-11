@@ -21,12 +21,12 @@ pcm.idjcvoip {
    slave.pcm {
       type jack
       playback_ports {
-         0 idjc-mx_default:voip_in_l
-         1 idjc-mx_default:voip_in_r
+         0 idjc_default:voip_in_l
+         1 idjc_default:voip_in_r
       }
       capture_ports {
-         0 idjc-mx_default:voip_out_l
-         1 idjc-mx_default:voip_out_r
+         0 idjc_default:voip_out_l
+         1 idjc_default:voip_out_r
       }
    }
 }</pre>

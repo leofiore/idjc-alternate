@@ -27,4 +27,4 @@ VoIP callers, auxiliary audio sources, a number of microphones. Here there are t
 separate opener buttons buttons one of which is helpfully labelled DJ by default. Conveniently
 alongside the mic buttons, a playlist advance button with play/skip-to-the-next-track-and-stop functionality.</p>
 
-<p>On the bottom left a menu button for opening the windows discussed in the remainder of this section.</p>
+<p>On the bottom left a button to toggle the routing of the stream audio mix through an external program.</p>

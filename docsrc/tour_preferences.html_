@@ -29,21 +29,7 @@ it's all done in software. That said, a good microphone is still advised for the
 
 <br class="division" />
 
-<a href="prefs-jack-ports.hq.png"><img class="clickthrough-left" src="prefs-jack-ports.png" alt="Preferences Window Screenshot (JACK ports)" title="Click for full size version" /></a>
-
-<h4>JACK port bindings</h4>
-
-<p>IDJC is built on the technology of <a href="http://www.jackaudio.org/">Jack Audio Connection Kit</a>.
-As the name implies it facilitates audio connections and IDJC makes audio available on a number of such ports.</p>
-
-<p>Microphone and auxiliary audio is collected from the sources specified in this window and there is an interface that
-allows the stream audio to be sent for processing by external applications.</p>
-
-<p>The set and save buttons allow temporary or permanent audio pathways to be configured.</p>
-
-<br class="division" />
-
-<a href="prefs-bindings.hq.png"><img class="clickthrough-right" src="prefs-bindings.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
+<a href="prefs-bindings.hq.png"><img class="clickthrough-left" src="prefs-bindings.png" alt="Preferences Window Screenshot (microphones)" title="Click for full size version" /></a>
 
 <h4>Key and MIDI bindings</h4>
 

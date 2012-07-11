@@ -40,11 +40,11 @@
   margin:0px;
   padding:6px;
   border:1px inset;
-  width:672px;
+  width:772px;
   overflow-x:auto;
  }
  pre.reduced{
-  width:90%;
+  width:92%;
  }
  pre.big-code{
  height:300px;
@@ -150,7 +150,7 @@
   color:#F70;
  }
  #right-table{
-  width:696px;
+  width:796px;
   padding-bottom:6px;
  }
  #top-titlebar{
