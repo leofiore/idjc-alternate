@@ -27,7 +27,10 @@ which you typically want the library development packages whose names carry the 
       <th>Project name</th><th>Version</th><th>Comment</th>
    </tr>
    <tr>
-      <td><a href="http://www.python.org/">Python</a></td><td>2.6+,&nbsp;not&nbsp;3</td><td>Required&#8212;probably installed already</td>
+      <td><a href="http://sourceforge.net/projects/idjc/files/libshout-idjc/libshout-idjc-2.3.0.tar.gz/download/">libshout-idjc</a></td><td>2.3.0</td><td>Required&#8212;A specially modified version of libshout.</td>
+   </tr>
+   <tr>
+      <td><a href="http://www.python.org/">Python</a></td><td>2.7+,&nbsp;not&nbsp;3</td><td>Required&#8212;probably installed already</td>
    </tr>
    <tr>
       <td><a href="http://code.google.com/p/mutagen/">mutagen</a></td><td>1.18+</td><td>Required</td>
@@ -60,7 +63,7 @@ which you typically want the library development packages whose names carry the 
       <td><a href="http://lame.sourceforge.net/">Lame</a></td><td>3.97+</td><td>Recommended&#8212;provides support for streaming/recording in the mp3 format</td>
    </tr>
    <tr>
-      <td><a href="http://www.ffmpeg.org/">FFmpeg</a>/<a href="http://libav.org">libav</a></td><td>0.10/0.8+</td><td>Recommended&#8212;provides support for mp4/m4a,ape,mpc playback and aac(+) streaming</td>
+      <td><a href="http://www.ffmpeg.org/">FFmpeg's libav&hellip;</a></td><td>0.10/0.8+</td><td>Recommended&#8212;provides support for mp4/m4a,ape,mpc playback and aac(+) streaming</td>
    </tr>
    <tr>
       <td><a href="http://flac.sourceforge.net/">FLAC</a></td><td>1.1.3+</td><td>Recommended&#8212;provides support for FLAC playback, recording, and streaming</td>
@@ -69,7 +72,7 @@ which you typically want the library development packages whose names carry the 
       <td><a href="http://www.speex.org/">speex</a></td><td>1.2rc1+</td><td>Recommended&#8212;provides support for speex playback and streaming</td>
    </tr>
 </table>
-<p>For Ubuntu users, this command should be enough to satisfy all of the above.</p>
+<p>For Ubuntu users, this command should be enough to satisfy nearly all of the above.</p>
 <pre class="ie6-one-line-pre">$ sudo apt-get install build-essential libc6-dev libglib2.0-dev libjack-dev jackd libvorbis-dev libsamplerate0-dev libsndfile1-dev python-gtk2-dev libmpg123-dev libavcodec-dev libavformat-dev libtwolame-dev libmp3lame-dev libflac-dev python-mutagen libspeex-dev</pre>
 <p>If during the execution of the above command you are asked whether to configure your system for JACK/realtime the sensible choice is yes.</p>
 
@@ -77,24 +80,38 @@ which you typically want the library development packages whose names carry the 
 <p>There are two options available to you. One is to get the official release (recommended), the other is to
 obtain the development sources, which are only casually tested.</p>
 
-<h5>Option 1: Obtaining the latest official release</h5>
+<h5>Option 1: Build the latest official release</h5>
+<p>Click the relevant link above to download libshout-idjc.</p>
+<pre>$ cd <span style="color:red" title="This could be correct. If not you need to specify the directory where the downloaded file currently resides.">Downloads</span>
+$ tar xzvf libshout-idjc-2.3.0.tar.gz
+$ cd libshout-idjc-2.3.0/
+$ ./configure CFLAGS="-O2"
+$ make
+$ sudo make install</pre>
+
 <p>Navigate to <a href="http://sourceforge.net/projects/idjc/">http://sourceforge.net/projects/idjc/</a>.</p>
 <p>Hit the big green <i>Download</i> button and wait for the download to finish. Make a note of the version number.</p>
 <pre>$ cd <span style="color:red" title="This could be correct. If not you need to specify the directory where the downloaded file currently resides.">Downloads</span>
 $ tar xzvf idjc-<span style="color:red;" title="Replace with the actual version number.">[version]</span>.tar.gz
-$ cd idjc-<span style="color:red;" title="Replace with the actual version number.">[version]</span>/</pre>
+$ cd idjc-<span style="color:red;" title="Replace with the actual version number.">[version]</span>/
+$ ./configure CFLAGS="-O2"
+$ make
+$ sudo make install</pre>
 
-<h5>Option 2: Obtaining the development sources</h5>
+<h5>Option 2: Build from the development sources</h5>
 <pre>$ sudo apt-get install git-core autoconf libtool autopoint imagemagick
 $ git clone git://idjc.git.sourceforge.net/gitroot/idjc/idjc
 $ cd idjc/
-$ ./env-up</pre>
-<p>Note the Ubuntu specific command for installing <a href="http://git-scm.com/">Git</a>, which you will need to have installed.</p>
-
-<h4>The build process</h4>
-<pre>$ ./configure CFLAGS="-O2"
+$ ./bootstrap.sh
+$ cd libshout-idjc
+$ ./configure CFLAGS="-O2"
 $ make
-$ sudo make install</pre>
+$ sudo make install
+$ cd ..
+$ ./configure CFLAGS="-O2"
+$ make
+$ sudo make install
+</pre>
 
 <p>For systems that don't have <i>sudo</i> configured, use the following form instead.</p>
 <pre>su -c "make install"</pre>
