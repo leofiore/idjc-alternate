@@ -1129,7 +1129,8 @@ int mixer_main()
 
     if (!strcmp(action, "stopeffect"))
         {
-        xlplayer_eject(plr_j);
+        if (1 << atoi(effect_ix) == plr_j->id)
+            xlplayer_eject(plr_j);
         }
 
     if (!strcmp(action, "mic_control"))

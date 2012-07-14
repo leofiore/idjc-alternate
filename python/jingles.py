@@ -51,8 +51,13 @@ class Effect(gtk.HBox):
     L.E.D., stop, and config button.
     """
 
-    def __init__(self, num, parent):
+
+    dndtargets = [("IDJC_EFFECT_BUTTON", gtk.TARGET_SAME_APP, 6)]
+
+
+    def __init__(self, num, others, parent):
         self.num = num
+        self.others = others
         self.approot = parent
         self.pathname = None
         self.uuid = str(uuid.uuid4())
@@ -83,6 +88,9 @@ class Effect(gtk.HBox):
         self.trigger.set_size_request(80, -1)
         self.pack_start(self.trigger)
         self.trigger.connect("clicked", self._on_trigger)
+        self.trigger.drag_dest_set(gtk.DEST_DEFAULT_ALL,
+            self.dndtargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_MOVE)
+        self.trigger.connect("drag-data-received", self._drag_data_received)
 
         image = gtk.image_new_from_stock(gtk.STOCK_PROPERTIES,
                                                             gtk.ICON_SIZE_MENU)
@@ -90,13 +98,53 @@ class Effect(gtk.HBox):
         self.config.set_image(image)
         self.pack_start(self.config, False)
         self.config.connect("clicked", self._on_config)
+        self.config.drag_source_set(gtk.gdk.BUTTON1_MASK,
+            self.dndtargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_MOVE)
+        self.config.connect("drag-data-get", self._drag_get_data)
 
         self.dialog = EffectConfigDialog(self, parent.window)
         self.dialog.connect("response", self._on_dialog_response)
         self.dialog.emit("response", gtk.RESPONSE_NO)
 
+
+    def _drag_get_data(self, widget, context, selection, target_id, etime):
+        selection.set(selection.target, 8, str(self.num))
+        return True
+
+
+    def _drag_data_received(self, widget, context, x, y, dragged, info, etime):
+        other = self.others[int(dragged.data)]
+        if context.action == gtk.gdk.ACTION_MOVE:
+            if other == self:
+                context.finish(False, False, etime)
+            else:
+                self.stop.clicked()
+                other.stop.clicked()
+                context.finish(True, False, etime)
+                self._swap(other)
+        return True
+        
+        
+    def _swap(self, other):
+        new_pathname = other.pathname
+        new_text = other.trigger.get_label() or ""
+
+        other._set(self.pathname, self.trigger.get_label() or "")
+        self._set(new_pathname, new_text)
+        
+        
+    def _set(self, pathname, button_text):
+        try:
+            self.dialog.set_filename(pathname)
+        except:
+            self.dialog.set_current_folder(os.path.expanduser("~"))
+
+        self.dialog.button_entry.set_text(button_text)
+        self._on_dialog_response(self.dialog, gtk.RESPONSE_ACCEPT, pathname)
+
         
     def _on_config(self, widget):
+        self.stop.clicked()
         if self.pathname and os.path.isfile(self.pathname):
             self.dialog.select_filename(self.pathname)
         self.dialog.button_entry.set_text(self.trigger.get_label() or "")
@@ -104,8 +152,10 @@ class Effect(gtk.HBox):
 
 
     def _on_trigger(self, widget):
-        self.approot.mixer_write("EFCT=%d\nPLRP=%s\nACTN=playeffect\nend\n" % (
-                                                    self.num, self.pathname))
+        if self.pathname:
+            self.approot.mixer_write(
+                            "EFCT=%d\nPLRP=%s\nACTN=playeffect\nend\n" % (
+                            self.num, self.pathname))
 
 
     def _on_stop(self, widget):
@@ -120,8 +170,6 @@ class Effect(gtk.HBox):
             self.trigger.set_label(text.strip())
             
             sens = self.pathname is not None and os.path.isfile(self.pathname)
-            self.stop.set_sensitive(sens)
-            self.trigger.set_sensitive(sens)
             if response_id == gtk.RESPONSE_ACCEPT and pathname is not None:
                 self.uuid = str(uuid.uuid4())
             
@@ -156,7 +204,6 @@ class Effect(gtk.HBox):
         if val != self.old_ledval:
             self.led.set_from_pixbuf(self.green if val else self.clear)
             self.old_ledval = val
-            self.config.set_sensitive(not val)
 
 
 
@@ -221,11 +268,11 @@ class EffectCluster(gtk.Frame):
         
         rows = (qty + cols - 1) // cols
         for col in range(cols):
-            vbox = gtk.VBox()
+            vbox = gtk.VBox(True)
             hbox.pack_start(vbox)
             
             for row in range(rows):
-                self.widgets.append(widget(count, *args))
+                self.widgets.append(widget(count, self.widgets, *args))
                 vbox.pack_start(self.widgets[-1])
                 count += 1
 
@@ -265,8 +312,7 @@ class EffectCluster(gtk.Frame):
             
     def stop(self):
         for each in self.widgets:
-            if each.stop.get_sensitive():
-                each.stop.clicked()
+            each.stop.clicked()
                 
                 
     def uuids(self):
