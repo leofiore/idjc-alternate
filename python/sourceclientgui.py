@@ -1594,7 +1594,7 @@ class StreamTab(Tab):
         self.server_connect.show()
         
         # TC: Kick whoever is on the server.
-        self.kick_incumbent = gtk.Button(_('Kick Incumbent'))
+        self.kick_incumbent = gtk.Button(_('Kick Source'))
         self.kick_incumbent.connect("clicked", self.cb_kick_incumbent)
         set_tip(self.kick_incumbent, _('This will disconnect whoever is '
                 'currently using the server, freeing it up for personal use.'))
@@ -2231,7 +2231,7 @@ class StreamTabFrame(TabFrame):
         self.disconnect_group.set_sensitive(False)
         ihbox.add(self.disconnect_group)
         self.disconnect_group.show()
-        self.kick_group = gtk.Button(_("Kick Incumbents"))
+        self.kick_group = gtk.Button(_("Kick Sources"))
         self.kick_group.connect("clicked", self.forall, self.cb_kick_group)
         self.kick_group.connect("clicked",
                                 lambda x: self.group_safety.set_active(False))

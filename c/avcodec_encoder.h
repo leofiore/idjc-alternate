@@ -21,11 +21,7 @@
 
 #ifdef HAVE_AVCODEC
 
-#ifdef FFMPEG_AVCODEC
-#include <ffmpeg/avcodec.h>
-#else
 #include <libavcodec/avcodec.h>
-#endif
 
 #include "sourceclient.h"
 

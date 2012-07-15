@@ -40,28 +40,6 @@ AC_ARG_ENABLE([libav],
 if test $makelibav != "no" ; then
     PKG_CHECK_MODULES([LIBAVCODEC], [libavcodec], [AC_DEFINE(HAVE_AVCODEC, 1, [Set if libavcodec was found])
             AC_SUBST(HAVE_AVCODEC, 1)
-
-            AC_MSG_CHECKING([for avcodec.h in ffmpeg directory])
-            AC_TRY_LINK([#include <ffmpeg/avcodec.h>],
-            [int main(void)]
-            [    {]
-            [    static const int v = LIBAVCODEC_VERSION_INT;]
-            [    return 0;]
-            [    }],
-            [AC_DEFINE(FFMPEG_AVCODEC, 1, [if set use legacy include file location]) AC_MSG_RESULT([yes])],
-            [AC_MSG_RESULT([no])]
-            AC_MSG_CHECKING([for avcodec.h in libavcodec directory])
-            AC_TRY_LINK([#include <libavcodec/avcodec.h>],
-            [int main(void)]
-            [    {]
-            [    static const int v = LIBAVCODEC_VERSION_INT;]
-            [    return 0;]
-            [    }],
-            [AC_MSG_RESULT([yes])],
-            [AC_MSG_RESULT([no])]
-            [AC_MSG_ERROR(["necessary header files not found"])]
-            ))
-
             AC_CHECK_LIB([avcodec],[avcodec_decode_audio4], :, AC_MSG_ERROR("configure with --disable-libav or update ffmpeg/libav"))
             ],
             AC_SUBST(HAVE_AVCODEC, 0)

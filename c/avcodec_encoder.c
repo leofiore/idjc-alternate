@@ -272,13 +272,26 @@ static void live_avcodec_encoder_main(struct encoder *encoder)
     }
 }
 
-static const char *aac = "libfaac";
-static const char *aacpv2 = "libaacplus";
+static AVCodec *aac_codec()
+{
+    AVCodec *codec;
+    char *names[] = {"libfaac", "adts", NULL };
+
+    for (char **name = names; *name; ++name)
+        if ((codec = avcodec_find_encoder_by_name(*name)))
+            return codec;
+
+    return avcodec_find_encoder(CODEC_ID_AAC);
+}
+
+static AVCodec *aacplus_codec()
+{
+    return avcodec_find_encoder_by_name("libaacplus");
+}
 
 int live_avcodec_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
 {
     struct avenc_data * const s = calloc(1, sizeof (struct avenc_data));
-    const char *codecname;
 
     if (!s)
         {
@@ -287,12 +300,12 @@ int live_avcodec_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         }
 
     if (!strcmp(ev->codec, "aac")) {
-        codecname = aac;
+        s->codec = aac_codec();
         s->pkt_flags = PF_AAC;
         }
     else {
         if (!strcmp(ev->codec, "aacpv2")) {
-            codecname = aacpv2;
+            s->codec = aacplus_codec();
             s->pkt_flags = PF_AACP2;
         } else {
             fprintf(stderr, "avcodec_encoder: unsupported codec\n");
@@ -300,8 +313,8 @@ int live_avcodec_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         }
     }
 
-    if (!(s->codec = avcodec_find_encoder_by_name(codecname))) {
-        fprintf(stderr, "live_avcodec_encoder_init: codec not found: %s\n", codecname);
+    if (!s->codec) {
+        fprintf(stderr, "live_avcodec_encoder_init: codec not found\n");
         goto clean1;
     }
 
@@ -319,10 +332,8 @@ clean1:
 
 int live_avcodec_encoder_aac_functionality()
 {
-    //int aac_f = avcodec_find_encoder_by_name(aac) ? 1 : 0;
-    //int aacpv2_f = avcodec_find_encoder_by_name(aacpv2) ? 1 : 0;
-    int aac_f = 1;
-    int aacpv2_f = 1;
+    int aac_f = aac_codec() ? 1 : 0;
+    int aacpv2_f = aacplus_codec() ? 1 : 0;
     
     fprintf(g.out, "idjcsc: aac_functionality=%d:%d\n", aac_f, aacpv2_f);
     fflush(g.out);
