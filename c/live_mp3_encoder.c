@@ -128,8 +128,8 @@ static void live_mp3_encoder_main(struct encoder *encoder)
             if ((id = encoder_get_input_data(encoder, 1024, 8192, NULL)))
                 {
                 mp3bytes = lame_encode_buffer_float(s->gfp, id->buffer[0], id->buffer[1], id->qty_samples, s->mp3buf, s->mp3bufsize);
-                encoder_ip_data_free(id);
                 s->lame_samples += id->qty_samples;
+                encoder_ip_data_free(id);
                 live_mp3_write_packet(encoder, s, s->mp3buf, mp3bytes, PF_MP3 | s->packetflags);
                 s->packetflags = PF_UNSET;
                 }
@@ -137,8 +137,7 @@ static void live_mp3_encoder_main(struct encoder *encoder)
                 {
                 live_mp3_packetize_metadata(encoder, s);
                 if (s->metadata)
-                    live_mp3_write_packet(encoder, s, (unsigned char *)s->metadata, strlen(s->metadata) + 1, PF_METADATA | s->packetflags);
-                s->packetflags = PF_UNSET;
+                    live_mp3_write_packet(encoder, s, (unsigned char *)s->metadata, strlen(s->metadata) + 1, PF_METADATA);
                 }
             }
         return;
