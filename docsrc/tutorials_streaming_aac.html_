@@ -1,0 +1,37 @@
+<script type="text/javascript">
+ui('Tutorials: How to unlock the AAC streaming capability', 'tutorials-streamingaac-nav')
+</script>
+
+<h4>I can't choose one or both of the the AAC options. Why?</h4>
+
+<p>Put simply IDJC calls on libavcodec from the ffmpeg project to do the encoding and due to legal considerations it's unlikely your distribution's libavcodec has either the <i>libfaac</i> or <i>libaacplus</i> encoders built in.</p>
+
+<p>Checking for support is easy enough in a terminal.</p>
+
+<pre>$ ffmpeg -codecs 2>/dev/null | grep aac 
+ DEA D  aac             Advanced Audio Coding
+ D A D  aac_latm        AAC LATM (Advanced Audio Codec LATM syntax)
+  EA    libaacplus      libaacplus AAC+ (Advanced Audio Codec with SBR+PS)
+  EA    libfaac         libfaac AAC (Advanced Audio Codec)
+  EA    libvo_aacenc    Android VisualOn AAC
+</pre>
+
+<p>In this example both encoders are listed so both AAC options would be available in IDJC.</p>
+
+<h4>What can I do?</h4>
+
+<p>Gentoo users need to set the <i>faac</i> and <i>aacplus</i> USE flags before rebuilding ffmpeg.</p>
+
+<p>Users of binary distributions should track down the source package (source rpm, deb) and rebuild it with the required option.</p>
+
+<p>Where no such option exists building ffmpeg's libraries from source remains the last option.</p>
+
+<h4>Is it worth it?</h4>
+
+<p>Not really, no. Not unless you absolutely positively must stream AAC.</p>
+
+<p>The faac encoder doesn't support constant bit rate which is a problem for streaming and it hasn't received a fraction of the developer attention that LAME has so it fails on the sound quality front.</p>
+
+<h4>Does this mean AAC support on Linux is generally bad?</h4>
+
+<p>There is a closed source encoder neroAacEnc which has good sound quality and CBR but has been designed with no thought to streaming.</p>
