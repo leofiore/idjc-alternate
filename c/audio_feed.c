@@ -51,14 +51,11 @@ int audio_feed_process_audio(jack_nframes_t n_frames, void *arg)
             case JD_OFF:
                 break;
             case JD_ON:
-                if (jack_ringbuffer_write_space(e->input_rb[1]) >= n_frames * sizeof (sample_t))
-                    {
-                    jack_ringbuffer_write(e->input_rb[0], (char *)input_port_buffer[0], n_frames * sizeof (sample_t));
-                    jack_ringbuffer_write(e->input_rb[1], (char *)input_port_buffer[1], n_frames * sizeof (sample_t));
-                    }
-                else
-                    /* normally this happens when the CPU is overloaded */
-                    e->performance_warning_indicator = PW_AUDIO_DATA_DROPPED;
+                while (jack_ringbuffer_write_space(e->input_rb[1]) < n_frames * sizeof (sample_t))
+                    nanosleep(&(struct timespec){0, 10000000}, NULL);
+                    
+                jack_ringbuffer_write(e->input_rb[0], (char *)input_port_buffer[0], n_frames * sizeof (sample_t));
+                jack_ringbuffer_write(e->input_rb[1], (char *)input_port_buffer[1], n_frames * sizeof (sample_t));
                 break;
             case JD_FLUSH:
                 jack_ringbuffer_reset(e->input_rb[0]);
@@ -78,14 +75,11 @@ int audio_feed_process_audio(jack_nframes_t n_frames, void *arg)
             case JD_OFF:
                 break;
             case JD_ON:
-                if (jack_ringbuffer_write_space(r->input_rb[1]) >= n_frames * sizeof (sample_t))
-                    {
-                    jack_ringbuffer_write(r->input_rb[0], (char *)input_port_buffer[0], n_frames * sizeof (sample_t));
-                    jack_ringbuffer_write(r->input_rb[1], (char *)input_port_buffer[1], n_frames * sizeof (sample_t));
-                    }
-                else
-                    /* normally this happens when the CPU is overloaded */
-                    r->performance_warning_indicator = PW_AUDIO_DATA_DROPPED;
+                while (jack_ringbuffer_write_space(r->input_rb[1]) < n_frames * sizeof (sample_t))
+                    nanosleep(&(struct timespec){0, 10000000}, NULL);                
+
+                jack_ringbuffer_write(r->input_rb[0], (char *)input_port_buffer[0], n_frames * sizeof (sample_t));
+                jack_ringbuffer_write(r->input_rb[1], (char *)input_port_buffer[1], n_frames * sizeof (sample_t));
                 break;
             case JD_FLUSH:
                 jack_ringbuffer_reset(r->input_rb[0]);
