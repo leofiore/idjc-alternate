@@ -773,7 +773,7 @@ struct encoder *encoder_init(struct threads_info *ti, int numeric_id)
     self->artist = strdup("");
     self->title = strdup("");
     self->album = strdup("");
-    self->custom_meta = strdup("%s");
+    self->custom_meta = strdup("");
     while ((self->oggserial = rand()) + 20000 < 0 || self->oggserial < 100);
     pthread_mutex_init(&self->mutex, NULL);
     pthread_mutex_init(&self->metadata_mutex, NULL);
