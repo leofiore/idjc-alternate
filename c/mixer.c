@@ -1080,6 +1080,12 @@ int mixer_main()
     if (!strcmp(action, "freewheel_toggle"))
         jack_set_freewheel(g.client, !g.freewheel);
 
+    if (!strcmp(action, "freewheel_on"))
+        jack_set_freewheel(g.client, 1);
+
+    if (!strcmp(action, "freewheel_off"))
+        jack_set_freewheel(g.client, 0);
+
     void dis_connect(char *str, int (*fn)(jack_client_t *, const char *, const char *))
         {
         const char **jackports, **jp;

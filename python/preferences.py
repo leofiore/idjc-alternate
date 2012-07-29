@@ -1048,7 +1048,8 @@ class mixprefs:
         self.djalarm.show()
         set_tip(self.djalarm, _('An alarm tone alerting the DJ that dead-air is'
         ' just nine seconds away. This also works when monitoring stream audio '
-        'but the alarm tone is not sent to the stream.'))
+        'but the alarm tone is not sent to the stream.\n\n'
+        'JACK freewheel mode will also be automatically disengaged.'))
         
         freewheel_show = self.parent.freewheel_button.enabler
         vbox.pack_start(freewheel_show, False, False, 0)
@@ -1381,6 +1382,7 @@ class mixprefs:
         t.headroom.set_value(3)
         t.has_reminder_flash.set_active(True)
         t.is_microphone.set_active(True)
+        t.freewheel_cancel.set_active(True)
         for cb, state in zip(t.open_triggers.itervalues(), (1, 1, 0, 1)):
             cb.set_active(state)
         if len(mic_controls) >= 4:

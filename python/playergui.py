@@ -2001,7 +2001,7 @@ class IDJC_Media_Player:
         
         # Calclulate whether to sound the DJ alarm (end of music notification)
         if self.playername in ("left", "right"):
-            if self.progress_current_figure == self.progress_stop_figure -10 \
+            if self.progress_current_figure >= self.progress_stop_figure -10 \
                     and self.progressadj.upper > 11 and self.alarm_cid != cid \
                     and self.parent.prefs_window.djalarm.get_active():
                 # DJ Alarm is on and we are at the correct play position.
@@ -2010,6 +2010,7 @@ class IDJC_Media_Player:
                 
                 if self.playername == fader and (pl_mode in (3, 4) or
                                         (pl_mode == 0 and self.stop_inspect())):
+                    self.parent.freewheel_button.set_active(False)
                     gobject.timeout_add(1000, self.deferred_alarm)
                     self.alarm_cid = cid
 

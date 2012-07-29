@@ -71,23 +71,35 @@ class FreewheelButton(gtk.Button):
     
     def __init__(self, mixer_write):
         gtk.Button.__init__(self)
-        vbox = gtk.VBox()
+        hbox = gtk.HBox()
         self._indicator = gtk.Image()
-        vbox.pack_start(self._indicator, False)
+        self._indicator.set_alignment(0.0, 0.0)
+        hbox.pack_start(self._indicator, False)
         self._indicator.show()
-        self.add(vbox)
-        vbox.show()
+        label = gtk.Label()
+        label.set_padding(2, 0)
+        label.set_alignment(1.0, 0.5)
+        label.set_markup(u"<span size='15000'>\u2699</span>")
+        hbox.pack_start(label, False)
+        label.show()
+        self.add(hbox)
+        hbox.show()
         self._mixer_write = mixer_write
         self.connect("clicked", lambda w: self._cb_toggle())
-        self._enabler = gtk.CheckButton(_('Show JACK freewheel control on main panel'))
+        self._enabler = gtk.CheckButton(_('Show a JACK freewheel control on the main panel'))
         self._enabler.connect("toggled", self._cb_enabler)
-        set_tip(self, _('Toggle JACK freewheel mode. Do not use freewheel mode when streaming.'))
+        set_tip(self, _('Toggle JACK freewheel mode.'))
         self._active = None
         self.set_meter_value(False)
 
     
     def _cb_toggle(self):
         self._mixer_write("ACTN=freewheel_toggle\nend\n")
+        
+        
+    def set_active(self, active):
+        self._mixer_write(
+                        "ACTN=freewheel_%s\nend\n" % ("on" if active else "off"))
 
 
     def _cb_enabler(self, widget):
@@ -669,6 +681,12 @@ class OpenerTab(gtk.VBox):
         self.is_microphone.connect("toggled", lambda w: self.emit("changed"))
         self.pack_start(self.is_microphone, False)
         
+        self.freewheel_cancel = gtk.CheckButton(
+                    'This button will automatically cancel JACK freewheel mode')
+        self.pack_start(self.freewheel_cancel, False)
+        set_tip(self.freewheel_cancel, _('This should be set for all buttons'
+                ' that control input from a live sound source or device.'))
+        
         frame = gtk.Frame(" %s " % _('Button Open Triggers'))
         self.pack_start(frame, False, padding=3)
         self.open_triggers = collections.OrderedDict()
@@ -729,6 +747,7 @@ class OpenerTab(gtk.VBox):
         self.activedict.update({
             "reminderflash" : self.has_reminder_flash,
             "isamicrophone" : self.is_microphone,
+            "cancelsfreewheel" : self.freewheel_cancel
         })
         
         self.valuesdict = {
@@ -866,8 +885,10 @@ class MicOpener(gtk.HBox):
     def any_mic_selected(self):
         return self._any_mic_selected
     
-    def notify_others(self):
+    def notify_others(self, freewheel_cancel=False):
         r = self.approot
+        if freewheel_cancel:
+            r.freewheel_button.set_active(False)
         # Player headroom for mic-audio toggle.
         r.mixer_write("ACTN=anymic\nFLAG=%d\nend\n" % self.any_mic_selected)
         r.mixer_write("HEAD=%f\nACTN=headroom\nend\n" % self._headroom)
@@ -875,8 +896,10 @@ class MicOpener(gtk.HBox):
 
     def cb_mictoggle(self, button, mics):
         self._flashing_timer = 0
+        fwc = False
 
         if button.get_active():
+            fwc = button.opener_tab.freewheel_cancel.get_active()
             cmd = button.opener_tab.shell_on_open.get_text().strip()
             closers = button.opener_tab.closer_hbox.get_children()
             for i, closer in enumerate(closers, start=1):
@@ -904,7 +927,7 @@ class MicOpener(gtk.HBox):
         except ValueError:
             self._headroom = 0.0
 
-        self.notify_others()
+        self.notify_others(freewheel_cancel=fwc)
 
     def cb_reconfigure(self, widget, trigger=None):
         self.new_button_set()
@@ -2418,6 +2441,7 @@ class MainWindow:
 
     def destroy_hard(self, widget=None, data=None):
         if self.session_loaded:
+            self.freewheel_button.set_active(False)
             self.save_session("atexit")
         try:
             gtk.main_quit()
@@ -2429,6 +2453,7 @@ class MainWindow:
 
 
     def destroy(self, widget=None, data=None):
+        self.freewheel_button.set_active(False)
         self.save_session("atexit")
         if self.crosspass:
             gobject.source_remove(self.crosspass)
