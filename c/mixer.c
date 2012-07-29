@@ -1076,6 +1076,9 @@ int mixer_main()
 
     if (!strcmp(action, "jackportread"))
         jackportread(jackport, jackfilter);
+        
+    if (!strcmp(action, "freewheel_toggle"))
+        jack_set_freewheel(g.client, !g.freewheel);
 
     void dis_connect(char *str, int (*fn)(jack_client_t *, const char *, const char *))
         {
@@ -1378,13 +1381,16 @@ int mixer_main()
                     "session_command=%s\n"
                     "ports_connections_changed=%d\n"
                     "effects_playing=%d\n"
+                    "freewheel_mode=%d\n"
                     "end\n",
                     s.str_l_peak_db, s.str_r_peak_db,
                     s.str_l_rms_db, s.str_r_rms_db,
                     s.midi_output,
                     s.session_command,
                     ports_diff,
-                    plr_j->id);
+                    plr_j->id,
+                    g.freewheel
+                    );
 
         if (ports_diff)
             {

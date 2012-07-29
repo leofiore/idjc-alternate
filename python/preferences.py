@@ -1050,6 +1050,10 @@ class mixprefs:
         ' just nine seconds away. This also works when monitoring stream audio '
         'but the alarm tone is not sent to the stream.'))
         
+        freewheel_show = self.parent.freewheel_button.enabler
+        vbox.pack_start(freewheel_show, False, False, 0)
+        freewheel_show.show()
+        
         self.dither = gtk.CheckButton(
                                     _('Apply dither to 16 bit PCM playback'))
         vbox.pack_start(self.dither, False, False, 0)
@@ -1426,8 +1430,9 @@ class mixprefs:
             "players_visible"    : self.parent.menu.playersmenu_i,
             }
             
-        for each in itertools.chain(mic_controls,
-                            (self.lpconfig, self.rpconfig, opener_settings)):
+        for each in itertools.chain(mic_controls, 
+                            (self.parent.freewheel_button,
+                            self.lpconfig, self.rpconfig, opener_settings)):
             self.activedict.update(each.activedict)
 
         self.valuesdict = {  # These widgets all have the get_value method.

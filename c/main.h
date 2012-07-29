@@ -74,6 +74,7 @@ struct globs
     pthread_mutex_t avc_mutex;   /* lock for avcodec */
     FILE *in;                   /* comms stream with user interface */
     FILE *out;
+    int freewheel;
     };
 
 extern struct globs g;

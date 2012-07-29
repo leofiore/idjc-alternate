@@ -49,7 +49,7 @@ from .utils import SlotObject
 from .utils import LinkUUIDRegistry
 from .utils import PathStr
 from .gtkstuff import threadslock, WindowSizeTracker
-from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog
+from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog, LEDDict
 from . import midicontrols
 from .tooltips import set_tip
 from . import p3db
@@ -64,6 +64,57 @@ pm = ProfileManager()
 link_uuid_reg = LinkUUIDRegistry()
 
 METER_TEXT_SIZE = 8000
+
+
+class FreewheelButton(gtk.Button):
+    LED = LEDDict(9)
+    
+    def __init__(self, mixer_write):
+        gtk.Button.__init__(self)
+        vbox = gtk.VBox()
+        self._indicator = gtk.Image()
+        vbox.pack_start(self._indicator, False)
+        self._indicator.show()
+        self.add(vbox)
+        vbox.show()
+        self._mixer_write = mixer_write
+        self.connect("clicked", lambda w: self._cb_toggle())
+        self._enabler = gtk.CheckButton(_('Show JACK freewheel control on main panel'))
+        self._enabler.connect("toggled", self._cb_enabler)
+        set_tip(self, _('Toggle JACK freewheel mode. Do not use freewheel mode when streaming.'))
+        self._active = None
+        self.set_meter_value(False)
+
+    
+    def _cb_toggle(self):
+        self._mixer_write("ACTN=freewheel_toggle\nend\n")
+
+
+    def _cb_enabler(self, widget):
+        self.set_visible(widget.get_active())
+
+
+    @property
+    def enabler(self):
+        """This button has a show/hide control in prefs."""
+        
+        return self._enabler
+
+
+    @property
+    def activedict(self):
+        """Info for save/restore."""
+        
+        return {"freewheel_button_enable": self._enabler}
+
+
+    def set_meter_value(self, active):
+        """Indicator of freewheel mode to be set using this method."""
+        
+        if active != self._active:
+            self._active = active
+            self._indicator.set_from_pixbuf(self.LED["red" if active else "clear"])
+
 
 
 class MenuMixin(object):
@@ -2848,6 +2899,9 @@ class MainWindow:
         # show box 8 now that it's finished
         self.vbox8.show()               
 
+        self.freewheel_button = FreewheelButton(self.mixer_write)
+        self.hbox10.pack_start(self.freewheel_button, False)
+
         self.dsp_button = gtk.ToggleButton()
         label = gtk.Label()
         label.set_markup("<span weight='bold' size='9000' "
@@ -3549,7 +3603,8 @@ class MainWindow:
             "right_silence"           : self.player_right.silence,
             "interlude_silence"       : self.jingles.interlude.silence,
             "sample_rate"             : self.sample_rate,
-            "effects_playing"         : self.effects_playing
+            "effects_playing"         : self.effects_playing,
+            "freewheel_mode"          : self.freewheel_button
             }
             
         for i, mic in enumerate(self.mic_meters):

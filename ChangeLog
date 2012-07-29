@@ -1,5 +1,11 @@
 * Changes in version 0.8.8 *
 
+New JACK freewheel mode front panel trigger button and matching preferences option to show this.
+
+Recorder now compatible with JACK freewheel mode.
+
+Fix to mp3 encoder which was dereferencing recently freed memory.
+
 New jingles player. Renamed as Effects.
 
 Player level smoothing and muting code moved from mixer.c into xlplayer.c.
