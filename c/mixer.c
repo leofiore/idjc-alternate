@@ -166,7 +166,7 @@ static int jingles_headroom_control;
 /* dictionary look-up type thing used by the parse routine */
 static struct kvpdict kvpdict[] = {
             { "PLRP", &playerpathname, NULL },   /* The media-file pathname for playback */
-            { "RGDB", &rg_db, NULL },            /* Replay Gain volume level controlled at the player end */
+            { "RGDB", &rg_db, NULL },            /* ReplayGain volume level controlled at the player end */
             { "SEEK", &seek_s, NULL },           /* Playback initial seek time in seconds */
             { "SIZE", &size, NULL },             /* Size of the file in seconds */
             { "PLPL", &playerplaylist, NULL },   /* A playlist for the media players */

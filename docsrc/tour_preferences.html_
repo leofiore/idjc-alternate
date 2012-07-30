@@ -12,7 +12,7 @@ ui('Tour: Preferences', 'tour-preferences-nav')
 with an absolute minimum CPU load as well as reducing the amount of screen space that is occupied.</p>
 
 <p>It's possible to toggle the meters that are visible, configure
-<a href="http://en.wikipedia.org/wiki/Replay_Gain">Replay Gain</a> and much more.</p>
+<a href="http://en.wikipedia.org/wiki/Replay_Gain">ReplayGain</a> and much more.</p>
 
 <br class="division" />
 

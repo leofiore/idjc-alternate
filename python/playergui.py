@@ -87,7 +87,7 @@ class PlayerRow(namedtuple("PlayerRow",
 # Playlist value indicating a file isn't valid.
 NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None, "", "")
 
-# Replay Gain value to indicate default.
+# ReplayGain value to indicate default.
 RGDEF = 100.0
 
 # Delay in milliseconds between progress bar updates.
@@ -1068,7 +1068,7 @@ class IDJC_Media_Player:
                     except:
                         pass
                 elif isinstance(audio, MP3):
-                    # The LAME tag is the last port of call for Replay Gain info
+                    # The LAME tag is the last port of call for ReplayGain info
                     # due to it frequently being based on the source audio.
                     if rg == RGDEF:
                         try:

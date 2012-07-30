@@ -930,9 +930,9 @@ class mixprefs:
         outervbox.pack_start(frame, False, False, 0)
         frame.show()
         
-        # Replay Gain controls
+        # ReplayGain controls
         
-        frame = gtk.Frame(" %s " % _('Replay Gain'))
+        frame = gtk.Frame(" %s " % _('ReplayGain'))
         frame.set_border_width(3)
         outervbox.pack_start(frame, False, False, 0)
         vbox = gtk.VBox()
@@ -943,7 +943,7 @@ class mixprefs:
         vbox.show()
         
         self.rg_indicate = gtk.CheckButton(
-                            _('Indicate which tracks have Replay Gain values'))
+                            _('Indicate which tracks have ReplayGain values'))
         set_tip(self.rg_indicate,
                         _('Show a marker in the playlists next to each track.'))
         self.rg_indicate.connect("toggled", self.cb_rg_indicate)
