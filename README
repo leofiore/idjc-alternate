@@ -1,11 +1,19 @@
 Internet DJ Console README.
 
-A full set of documentation can be found in the doc directory of
-the source tree in HTML format and on the project homepage at
-http://idjc.sourceforge.net.
+A full set of documentation for this particular version can be
+found in the doc directory of the source tree and possibly installed
+in /usr/share/doc/idjc.../ in HTML format. Look for index.html.
 
-If you obtained this code from the git repository please run the
-bootstrap script to re-create the build environment.
+The documentation on the project homepage at
+http://idjc.sourceforge.net relates to the most recently released
+source code tarball. It's advice may not be relevant to the version
+you are trying to use.
 
-Before making IDJC you should install libshout-idjc from the
-subdirectory.
+If you obtained this code from the git repository the doc directory
+won't exist yet. Please run the bootstrap script to re-create the
+build environment and doc directory which is where to look for
+further build instructions.
+
+Before making IDJC itself you should install libshout-idjc from the
+subdirectory of the git sources or separate download for the
+released version. This probably only ever needs to be done once.
