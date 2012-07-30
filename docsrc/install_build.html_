@@ -85,16 +85,17 @@ obtain the development sources, which are only casually tested.</p>
 <pre>$ cd <span style="color:red" title="This could be correct. If not you need to specify the directory where the downloaded file currently resides.">Downloads</span>
 $ tar xzvf libshout-idjc-2.3.0.tar.gz
 $ cd libshout-idjc-2.3.0/
-$ ./configure CFLAGS="-O2"
+$ ./configure CFLAGS="-O2" --prefix=/usr
 $ make
-$ sudo make install</pre>
+$ sudo make install
+$ sudo ldconfig</pre>
 
 <p>Navigate to <a href="http://sourceforge.net/projects/idjc/">http://sourceforge.net/projects/idjc/</a>.</p>
 <p>Hit the big green <i>Download</i> button and wait for the download to finish. Make a note of the version number.</p>
 <pre>$ cd <span style="color:red" title="This could be correct. If not you need to specify the directory where the downloaded file currently resides.">Downloads</span>
 $ tar xzvf idjc-<span style="color:red;" title="Replace with the actual version number.">[version]</span>.tar.gz
 $ cd idjc-<span style="color:red;" title="Replace with the actual version number.">[version]</span>/
-$ ./configure CFLAGS="-O2"
+$ ./configure CFLAGS="-O2" --prefix=/usr
 $ make
 $ sudo make install</pre>
 
@@ -104,11 +105,12 @@ $ git clone git://idjc.git.sourceforge.net/gitroot/idjc/idjc
 $ cd idjc/
 $ ./bootstrap
 $ cd libshout-idjc
-$ ./configure CFLAGS="-O2"
+$ ./configure CFLAGS="-O2" --prefix=/usr
 $ make
 $ sudo make install
+$ sudo ldconfig
 $ cd ..
-$ ./configure CFLAGS="-O2"
+$ ./configure CFLAGS="-O2" --prefix=/usr
 $ make
 $ sudo make install
 </pre>
