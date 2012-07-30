@@ -102,7 +102,7 @@ $ sudo make install</pre>
 <pre>$ sudo apt-get install git-core autoconf libtool autopoint imagemagick
 $ git clone git://idjc.git.sourceforge.net/gitroot/idjc/idjc
 $ cd idjc/
-$ ./bootstrap.sh
+$ ./bootstrap
 $ cd libshout-idjc
 $ ./configure CFLAGS="-O2"
 $ make

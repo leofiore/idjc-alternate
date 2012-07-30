@@ -5,7 +5,7 @@ the source tree in HTML format and on the project homepage at
 http://idjc.sourceforge.net.
 
 If you obtained this code from the git repository please run the
-bootstrap.sh script to re-create the build environment.
+bootstrap script to re-create the build environment.
 
 Before making IDJC you should install libshout-idjc from the
 subdirectory.

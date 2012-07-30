@@ -1,5 +1,7 @@
 * Changes in version 0.8.8 *
 
+The bootstrapping script env-up renamed to bootstrap.
+
 New JACK freewheel mode front panel trigger button and matching preferences option to show this.
 
 Recorder now compatible with JACK freewheel mode.
