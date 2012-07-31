@@ -125,13 +125,13 @@ control_methods= {
     'k_fire': _('Effect play from start'),
 
     # TC: Control method. Please keep it as Target:Action.
-    'j_stop': _('Jingles stop effects all'),
+    'j_stop': _('Effects stop all'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_vol1': _('Jingles set effects volume'),
+    'j_vol1': _('Effects set volume'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_vol2': _('Jingles set effects headroom'),
+    'j_vol2': _('Effects set headroom'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_ivol': _('Jingles set background volume'),
+    'j_ivol': _('Background tracks set volume'),
 
     # TC: Control method. Please keep it as Target:Action.
     's_on': _('Stream set connected'),
@@ -144,7 +144,7 @@ control_methods= {
 control_targets= {
     'p': _('Player'),
     'm': _('Channel'),
-    'k': _('Jingle'),
+    'k': _('Effect'),
     's': _('Stream'),
     'r': _('Recorder')
 }
@@ -546,7 +546,7 @@ class Controls(object):
         # This matches the hotkeys previously built into IDJC
         #
         self.bindings= [
-            Binding('k0.ffbe:pk_fire.0.127'), # F-key jingles
+            Binding('k0.ffbe:pk_fire.0.127'), # F-key effects
             Binding('k0.ffbf:pk_fire.1.127'),
             Binding('k0.ffc0:pk_fire.2.127'),
             Binding('k0.ffc1:pk_fire.3.127'),
@@ -558,7 +558,7 @@ class Controls(object):
             Binding('k0.ffc7:pk_fire.9.127'),
             Binding('k0.ffc8:pk_fire.a.127'),
             Binding('k0.ffc9:pk_fire.b.127'),
-            Binding('k0.ff1b:pj_stop.b.127'), # Esc stop jingles
+            Binding('k0.ff1b:pj_stop.b.127'), # Esc stop effects
             Binding('k0.31:sx_fade.b.0'), # 1-2 xfader sides
             Binding('k0.32:sx_fade.b.127'),
             Binding('k0.63:px_pass.0.127'), # C, pass xfader
@@ -1644,7 +1644,7 @@ class PlayerAdjustment(CustomAdjustment):
 class TargetAdjustment(CustomAdjustment):
     def __init__(self, group, value= 0):
         CustomAdjustment.__init__(self, value, 0, {
-                        'p': 3, 'm': 11, 'k': 99, 's': 8, 'r': 3}[group], 1)
+                        'p': 3, 'm': 11, 'k': 23, 's': 8, 'r': 3}[group], 1)
         self._group= group
     def read_input(self, text):
         return int(text.rsplit(' ', 1)[-1])-1
