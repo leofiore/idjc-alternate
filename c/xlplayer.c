@@ -967,6 +967,8 @@ void xlplayer_stats(struct xlplayer *self)
     PREFIX();
     fprintf(g.out, "silence=%f\n", self->silence);
 
+    self->peak = 0.0f;
+
     if (dm->data_type)
         {
         pthread_mutex_lock(&(dm->meta_mutex));
