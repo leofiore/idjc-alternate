@@ -133,13 +133,14 @@ class Effect(gtk.HBox):
         self._set(new_pathname, new_text)
         
         
-    def _set(self, pathname, button_text):
+    def _set(self, pathname, button_text, level):
         try:
             self.dialog.set_filename(pathname)
         except:
             self.dialog.set_current_folder(os.path.expanduser("~"))
 
         self.dialog.button_entry.set_text(button_text)
+        self.dialog.gain_adj.set_value(level)
         self._on_dialog_response(self.dialog, gtk.RESPONSE_ACCEPT, pathname)
 
         
@@ -148,14 +149,15 @@ class Effect(gtk.HBox):
         if self.pathname and os.path.isfile(self.pathname):
             self.dialog.select_filename(self.pathname)
         self.dialog.button_entry.set_text(self.trigger.get_label() or "")
+        self.dialog.gain_adj.set_value(self.level)
         self.dialog.show()
 
 
     def _on_trigger(self, widget):
         if self.pathname:
             self.approot.mixer_write(
-                            "EFCT=%d\nPLRP=%s\nACTN=playeffect\nend\n" % (
-                            self.num, self.pathname))
+                            "EFCT=%d\nPLRP=%s\nRGDB=%f\nACTN=playeffect\nend\n" % (
+                            self.num, self.pathname, self.level))
 
 
     def _on_stop(self, widget):
@@ -168,6 +170,7 @@ class Effect(gtk.HBox):
             text = dialog.button_entry.get_text() if self.pathname and \
                                         os.path.isfile(self.pathname) else ""
             self.trigger.set_label(text.strip())
+            self.level = dialog.gain_adj.get_value()
             
             sens = self.pathname is not None and os.path.isfile(self.pathname)
             if response_id == gtk.RESPONSE_ACCEPT and pathname is not None:
@@ -183,11 +186,17 @@ class Effect(gtk.HBox):
             self.pathname = PM.basedir / link
             if not self.dialog.get_visible():
                 self.dialog.set_filename(self.pathname)
-        return json.dumps([self.trigger.get_label(), link or self.pathname, self.uuid])
+        return json.dumps([self.trigger.get_label(), (link or self.pathname), self.level, self.uuid])
 
 
     def unmarshall(self, data):
-        label, pathname, self.uuid = json.loads(data)
+        try:
+            label, pathname, level, self.uuid = json.loads(data)
+        except ValueError:
+            label = ""
+            pathname = None
+            level = 0.0
+
         if pathname is not None and not pathname.startswith(os.path.sep):
             pathname = PM.basedir / pathname
         if pathname is None or not os.path.isfile(pathname):
@@ -196,6 +205,7 @@ class Effect(gtk.HBox):
         else:
             self.dialog.set_filename(pathname)
         self.dialog.button_entry.set_text(label)
+        self.dialog.gain_adj.set_value(level)
         self._on_dialog_response(self.dialog, gtk.RESPONSE_ACCEPT, pathname)
         self.pathname = pathname
 
@@ -233,10 +243,19 @@ class EffectConfigDialog(gtk.FileChooserDialog):
         
         hbox = gtk.HBox()
         hbox.set_spacing(3)
-        label = gtk.Label(_('Button text'))
+        label = gtk.Label(_('Trigger text'))
         self.button_entry = DefaultEntry(_('No Name'))
         hbox.pack_start(label, False)
-        hbox.pack_start(self.button_entry)
+        hbox.pack_start(self.button_entry, False)
+        
+        spc = gtk.HBox()
+        hbox.pack_start(spc, False, padding=3)
+        
+        label = gtk.Label(_('Level adjustment (dB)'))
+        self.gain_adj = gtk.Adjustment(0.0, -10.0, 10.0, 0.5)
+        gain = gtk.SpinButton(self.gain_adj, 1.0, 1)
+        hbox.pack_start(label, False)
+        hbox.pack_start(gain, False)
 
         vbox.pack_start(hbox, False)
         

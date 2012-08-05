@@ -1133,7 +1133,7 @@ int mixer_main()
 
     if (!strcmp(action, "playeffect"))
         {
-        xlplayer_play(plr_j, playerpathname, 0, 0, 0.0f, atoi(effect_ix));
+        xlplayer_play(plr_j, playerpathname, 0, 0, atoi(rg_db), atoi(effect_ix));
         }
 
     if (!strcmp(action, "stopeffect"))
