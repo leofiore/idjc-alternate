@@ -48,7 +48,7 @@ from .jingles import ExtraPlayers
 from .utils import SlotObject
 from .utils import LinkUUIDRegistry
 from .utils import PathStr
-from .gtkstuff import threadslock, WindowSizeTracker
+from .gtkstuff import threadslock, WindowSizeTracker, ConfirmationDialog
 from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog, LEDDict
 from . import midicontrols
 from .tooltips import set_tip
@@ -212,7 +212,8 @@ class JackMenu(MenuMixin):
         #
         # member really exists, was created by setattr
 
-        self.build(menu.jackmenu)(zip(
+        mkitems = self.build(menu.jackmenu)
+        mkitems(zip(
                     "channels players voip dsp mix midi output".split(), (
                     _('Channels'), _('Players'),
                     _('VoIP'), _('DSP'), _('Mix'), _('MIDI'), _('Output'))))
@@ -250,6 +251,28 @@ class JackMenu(MenuMixin):
             self.add_port(self.outputmenu, "".join(each))
             
         self._port_data = []
+        
+        self.sep(menu.jackmenu)
+        mkitems((("reset", _('Reset')),))
+        self.resetmenu_i.connect("activate", self._reset_confirm_dialog)
+        set_tip(self.resetmenu_i,
+                _('Reset the JACK port connections to the default settings.'))
+        
+        
+    def _reset_confirm_dialog(self, menuitem):
+        dialog = ConfirmationDialog("", _('<span size="12000" weight="bold">Reset all JACK port connections?</span>\n\n'
+                        'All currently established connections will be lost\n'
+                        'and replaced with defaults.'),
+                        markup=True, action=gtk.STOCK_YES, inaction=gtk.STOCK_NO)
+        dialog.set_transient_for(self.menu.get_toplevel())
+        dialog.ok.connect("clicked", lambda w: self._reset_port_connections())
+        dialog.show_all()
+
+
+    def _reset_port_connections(self):
+        for port in self.ports:
+            self.write("disconnect", "JPRT=%s\nJPT2=\nend\n" % port)
+        self.load(where="")
 
 
     def add_port(self, menu, port):
@@ -364,10 +387,12 @@ class JackMenu(MenuMixin):
 
     def load(self, where=None , startup=False):
         try:
-            with open(where or self.pathname) as f:
+            where = self.pathname if where is None else where
+            with open(where) as f:
                 cons = json.load(f)
         except Exception:
-            print "problem reading", self.pathname
+            if where:
+                print "problem reading JACK connections files,", where
             if args.no_default_jack_connections:
                 cons = []
             else:

@@ -537,7 +537,7 @@ class FormatSpin(gtk.VBox):
 
 
 class FormatPregain(FormatDropdown):
-    """Prescale audio before hitting the codec."""
+    """Level adjustment for audio before hitting the codec."""
     
     def __init__(self, prev_object):
         codec = format_collate(prev_object)["codec"]
@@ -550,7 +550,8 @@ class FormatPregain(FormatDropdown):
             dict(display_text=_('-2.0 dB'), value="0.794", default=(codec in ("mp2", "mp3"))),
             dict(display_text=_('-2.5 dB'), value="0.750"),
             dict(display_text=_('-3.0 dB'), value="0.708", default=(codec == "speex"))), 1,
-            _("Older lossy codecs like mp3 don't handle loud audio as well as others. This control prevents them from being overdriven."))
+            _("A blanket gain reduction to promote audio quality when using long established lossy audio codecs like mp3 with loud audio material.\n\n"
+            "ReplayGain makes this feature generally unnecessary and the correct setting in that case is 0 dB."))
 
 
 

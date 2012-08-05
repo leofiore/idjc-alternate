@@ -142,14 +142,14 @@ class ConfirmationDialog(StandardDialog):
     """This needs to be pulled out since it's generic."""
     
     def __init__(self, title, message, label_width=300, modal=True,
-                                                                markup=False):
+            markup=False, action=gtk.STOCK_DELETE, inaction=gtk.STOCK_CANCEL):
         StandardDialog.__init__(self, title, message,
                         gtk.STOCK_DIALOG_WARNING, label_width, modal, markup)
         aa = self.get_action_area()
-        cancel = gtk.Button(stock=gtk.STOCK_CANCEL)
+        cancel = gtk.Button(stock=inaction)
         cancel.connect("clicked", lambda w: self.destroy())
         aa.pack_start(cancel)
-        self.ok = gtk.Button(stock=gtk.STOCK_DELETE)
+        self.ok = gtk.Button(stock=action)
         self.ok.connect_after("clicked", lambda w: self.destroy())
         aa.pack_start(self.ok)
 
