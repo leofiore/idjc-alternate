@@ -260,10 +260,11 @@ class JackMenu(MenuMixin):
         
         
     def _reset_confirm_dialog(self, menuitem):
-        dialog = ConfirmationDialog("", _('<span size="12000" weight="bold">Reset all JACK port connections?</span>\n\n'
-                        'All currently established connections will be lost\n'
-                        'and replaced with defaults.'),
-                        markup=True, action=gtk.STOCK_YES, inaction=gtk.STOCK_NO)
+        dialog = ConfirmationDialog("",
+            _('<span size="12000" weight="bold">Reset all JACK port connections?</span>\n\n'
+            'All currently established connections will be lost\n'
+            'and replaced with defaults.'),
+            markup=True, action=gtk.STOCK_YES, inaction=gtk.STOCK_NO)
         dialog.set_transient_for(self.menu.get_toplevel())
         dialog.ok.connect("clicked", lambda w: self._reset_port_connections())
         dialog.show_all()

@@ -540,6 +540,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 plr_i->rs = *piirp; \
                 plr_j->ls = *pjilp; \
                 plr_j->rs = *pjirp; \
+                xlplayer_levels_all(players);\
                 } while(0)
                 
             COMMON_MIX();
