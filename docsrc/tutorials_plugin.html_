@@ -1,0 +1,130 @@
+<script type="text/javascript">
+ui('Plugin', 'tutorials-plugin-nav')
+</script>
+
+<p>With a little work this could be made to interface with your station's web page or with cloud services.<p>
+
+<pre>
+#!/usr/bin/python
+
+# IDJC DBus monitoring skeleton code.
+# Can be started before or after IDJC and gracefully handles IDJC restarts.
+
+# usage:
+# for the default profile: ./plugin.py
+# alternatively:
+# ./plugin.py [profilename]
+# ./plugin.py session.[sessionname]
+
+import time
+import sys
+
+import dbus
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
+
+import gobject
+import glib
+
+
+
+class Plugin(object):
+    def __init__(self, profile):
+        self.profile = profile
+        self.bus = dbus.SessionBus()
+        self.running_timeout_id = None
+        self.quit_handler()
+
+
+    def main(self):
+        glib.MainLoop().run()
+
+
+    def idjc_started_probe(self):
+        """Check for a newly started IDJC instance of the correct profile."""
+        
+        try:
+            main = self.bus.get_object("net.sf.idjc." + self.profile,
+                                                        "/net/sf/idjc/main")
+            main.connect_to_signal("track_metadata_changed",
+                                                        self.new_metadata)
+            main.connect_to_signal("quitting", self.quit_handler)
+            main_iface = dbus.Interface(main, 'net.sf.idjc')
+            self.running_timeout_id = glib.timeout_add_seconds(
+                                    5, self.idjc_running_probe, main_iface)
+                                            
+            output = self.bus.get_object("net.sf.idjc." + self.profile,
+                                                        "/net/sf/idjc/output")
+            output.connect_to_signal("streamstate_changed", self.new_streamstate)
+
+            self.streams = {}
+            output_iface = dbus.Interface(output, "net.sf.idjc")
+            # Tell IDJC to initialize as empty its cache of sent data.
+            # This yields a dump of server related info.
+            output_iface.new_plugin_started()
+
+        except dbus.exceptions.DBusException:
+            # Keep searching periodically.
+            return True
+        else:
+            return False
+
+
+    def idjc_running_probe(self, iface):
+        """Ping IDJC every few seconds.
+        
+        If IDJC was killed so that no quitting signal was emitted
+        then this timeout will clean up."""
+        
+        try:
+            iface.ping()
+        except dbus.exceptions.DBusException:
+            # Somehow the qutting signal was missed.
+            self.quit_handler()
+            return False
+        
+        return True
+
+
+    def quit_handler(self):
+        """Start scanning for a new bus object."""
+
+        if self.running_timeout_id is not None:
+            glib.source_remove(self.running_timeout_id)
+        glib.timeout_add_seconds(2, self.idjc_started_probe)
+
+
+    def new_metadata(self, artist, title, album, songname):
+        """We got some new metadata.
+        
+        We must notify Twitter or something similar."""
+
+        print "New metadata: %s, %s, %s" % (artist, title, album)
+        if 0 in self.streams and self.streams[0][0]:
+            stream = self.streams[0][1]
+            print "Maybe would update Twitter account for this stream:", stream
+            # ToDo: Potential Twitter update stuff.
+
+        
+    def new_streamstate(self, numeric_id, connected, where):
+        print "New streamstate: %d %d %s" % (numeric_id ,connected, where)
+
+        self.streams[numeric_id] = (connected, where)
+
+
+
+def main():
+    argv = sys.argv
+    if len(argv) &lt;= 1:
+        profile = "default"
+    else:
+        profile = argv[1]
+
+    plugin = Plugin(profile)
+    plugin.main()
+    
+    
+
+if __name__ == "__main__":
+    main()
+</pre>

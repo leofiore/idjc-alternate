@@ -34,6 +34,8 @@ import json
 import uuid
 import ctypes
 
+import dbus
+import dbus.service
 import glib
 import gobject
 import gtk
@@ -1888,7 +1890,7 @@ class idjc_shutdown_dialog:
         dialog.show_all()
 
 
-class MainWindow:
+class MainWindow(dbus.service.Object):
     def send_new_mixer_stats(self):
 
         deckadj = deck2adj = self.deckadj.get_value()
@@ -2012,11 +2014,25 @@ class MainWindow:
                         print "unable to append to file \"history.log\""
                     file.close()
 
-                self.server_window.new_metadata(self.artist, self.title,
+                self._track_metadata_changed(self.artist, self.title,
                                                     self.album, self.songname)
             else:
                 self.window.set_title(self.appname + pm.title_extra)
 
+    def _track_metadata_changed(self, *args):
+        if self._old_metadata_2 == args:
+            return
+
+        self._old_metadata_2 = args
+        self.track_metadata_changed(*args)
+        self.server_window.new_metadata(*args)
+
+    @dbus.service.signal(dbus_interface=PGlobs.dbus_bus_basename,
+                                                            signature="ssss")
+    def track_metadata_changed(self, artist, title, album, songname):
+        """DBus signal for plugins to attach to for metadata updates."""
+    
+        print "track_metadata_changed called and signal emitted"
 
     def songname_decode(self, data):
         i = 1
@@ -2101,7 +2117,7 @@ class MainWindow:
             print "context mismatch, player context id =", player.player_cid,\
                         "metadata update carries context id =", player_context
         return False
-
+        
     def ui_detail_leveller(self, level):
         def inner(widget):
             try:
@@ -2469,6 +2485,7 @@ class MainWindow:
         if self.session_loaded:
             self.freewheel_button.set_active(False)
             self.save_session("atexit")
+            self.quitting()
         try:
             gtk.main_quit()
         except:
@@ -2495,12 +2512,24 @@ class MainWindow:
         gobject.source_remove(self.vutimeout)
         gobject.source_remove(self.savetimeout)
         self._mixer_ctrl.close()
+        self.quitting()
         if gtk.main_level():
             gtk.main_quit()
         time.sleep(0.3) # Allow time for all subthreads/programs time to exit 
         gtk.gdk.threads_leave()
         sys.exit(0)
 
+    @dbus.service.signal(dbus_interface=PGlobs.dbus_bus_basename, signature="")
+    def quitting(self):
+        """Called to notify plugins that this session is closing."""
+
+        pass
+
+    @dbus.service.method(dbus_interface=PGlobs.dbus_bus_basename, out_signature="u")
+    def ping(self):
+        """Called to notify plugins that this session is closing."""
+
+        return int(time.time())
 
     def delete_event(self, widget, event, data=None):
         qm = ["<span size='12000' weight='bold'>%s</span>" %
@@ -3560,6 +3589,7 @@ class MainWindow:
         self.showing_left_file_requester = False
         self.showing_right_file_requester = False
         self.old_metadata = ("",) * 4
+        self._old_metadata_2 = None
         self.simplemixer = False
         self.crosspass = 0
 
@@ -3741,6 +3771,10 @@ class MainWindow:
         
         self.player_left.treeview.emit("cursor-changed")
         self.player_right.treeview.emit("cursor-changed")
+        
+        # DBus object initialization
+        dbus.service.Object.__init__(self,
+                    pm.dbus_bus_name, PGlobs.dbus_objects_basename + "/main")
 
         if args.channels is not None:
             for each in args.channels:

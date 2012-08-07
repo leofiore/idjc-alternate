@@ -503,6 +503,15 @@ class ProfileManager(object):
                                                                 verbose=True)
             if self._profile is None:
                 ap.error(_("no profile is set"))
+                
+        else:
+            claim = "session." + self._session_name
+            try:
+                self._dbus_bus_name = self._grab_bus_name_for_profile(claim)
+            except Exception:
+                ap.error(_("failed to grab bus name -- "
+                    "another session by the same name appears to be running"))
+
 
 
     @property

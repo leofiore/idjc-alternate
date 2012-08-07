@@ -64,6 +64,7 @@ function ui(title, menu) {
                       <li><a href="tutorials_shoutcast.html" id="tutorials-shoutcast-nav">Shoutcast</a></li>
                       <li><a href="tutorials_voip.html" id="tutorials-voip-nav">VoIP</a></li>
                       <li><a href="tutorials_streaming_aac.html" id="tutorials-streamingaac-nav">AAC</a></li>
+                      <li><a href="tutorials_plugin.html" id="tutorials-plugin-nav">Plugin</a></li>
                      </ul>
                     </li>
                     <li><a href="contact.html" id="contact-nav">Contact</a></li>

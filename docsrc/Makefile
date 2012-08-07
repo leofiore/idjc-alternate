@@ -1,5 +1,5 @@
 # HTML that will be wrapped by $(TEMPLATES)
-HTML = index.html tour.html tour_main.html tour_jingles.html tour_output.html tour_preferences.html install.html install_standard.html install_build.html install_first_run.html tutorials.html tutorials_icecast.html tutorials_shoutcast.html tutorials_voip.html tutorials_streaming_aac.html contact.html
+HTML = index.html tour.html tour_main.html tour_jingles.html tour_output.html tour_preferences.html install.html install_standard.html install_build.html install_first_run.html tutorials.html tutorials_icecast.html tutorials_shoutcast.html tutorials_voip.html tutorials_streaming_aac.html tutorials_plugin.html contact.html
 # Wrappers for $(HTML)
 TEMPLATES = template_head.html__ template_tail.html__
 # Images that will to be compressed.

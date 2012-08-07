@@ -34,6 +34,7 @@ import ctypes
 from collections import namedtuple
 from threading import Thread
 
+import dbus
 import pango
 import gtk
 import gobject
@@ -2285,8 +2286,13 @@ class StreamTabFrame(TabFrame):
         hbox.show()
         
 
-class SourceClientGui:
+class SourceClientGui(dbus.service.Object):
     unexpected_reply = "unexpected reply from idjcsourceclient"
+
+    @dbus.service.method(dbus_interface=PGlobs.dbus_bus_basename)
+    def new_plugin_started(self):
+        print "streamstate_cache purge"
+        self._streamstate_cache = {}
 
     @threadslock
     def monitor(self):
@@ -2326,6 +2332,8 @@ class SourceClientGui:
                     streamer_state, stream_sendbuffer_pc, brand_new = \
                                                     reply.split("=")[1].split(":")
                     state = int(streamer_state)
+                    self._handle_streamstate(streamtab.numeric_id,
+                                            int(state > 1), streamtab)
                     streamtab.show_indicator(
                                     ("clear", "amber", "green", "clear")[state])
                     streamtab.ircpane.connections_controller.set_stream_active(
@@ -2392,6 +2400,19 @@ class SourceClientGui:
         if update_listeners:
             self.parent.listener_indicator.set_text(str(l_count))
         return True
+
+    def _handle_streamstate(self, numeric_id, connected, streamtab):
+        cache = self._streamstate_cache
+        
+        if cache is not None and (numeric_id not in cache or cache[numeric_id] != connected):
+            cache[numeric_id] = connected
+            self.streamstate_changed(numeric_id, connected,
+                                    streamtab.server_connect_label.get_text())
+
+    @dbus.service.signal(dbus_interface=PGlobs.dbus_bus_basename, signature="uus")
+    def streamstate_changed(self, numeric_id, state, where):
+        pass
+        
     def stop_streaming_all(self):
         for streamtab in self.streamtabframe.tabs:
             streamtab.server_connect.set_active(False)
@@ -2888,6 +2909,7 @@ class SourceClientGui:
         self.last_message_time = 0
         self.connection_string = None
         self.is_shoutcast = False
+        self._streamstate_cache = None
 
         self.dialog_group = dialog_group()
         self.disconnected_dialog = disconnection_notification_dialog(
@@ -2902,3 +2924,7 @@ class SourceClientGui:
         
         self.monitor_source_id = gobject.timeout_add(250, self.monitor)
         self.window.realize()   # Prevent a rendering bug.
+        
+        dbus.service.Object.__init__(self,
+                    pm.dbus_bus_name, PGlobs.dbus_objects_basename + "/output")
+        
