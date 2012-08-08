@@ -2294,7 +2294,6 @@ class SourceClientGui(dbus.service.Object):
         print "streamstate_cache purge"
         self._streamstate_cache = {}
 
-    @threadslock
     def monitor(self):
         self.led_alternate = not self.led_alternate
         streaming = recording = False
@@ -2427,6 +2426,7 @@ class SourceClientGui(dbus.service.Object):
         self.stop_streaming_all()
         self.stop_irc_all()
         gobject.source_remove(self.monitor_source_id)
+        self.monitor()
     def app_exit(self):
         if self.parent.session_loaded:
             self.parent.destroy()
@@ -2922,7 +2922,7 @@ class SourceClientGui(dbus.service.Object):
             _('<span weight="bold" size="12000">A scheduled stream'
             ' disconnection has occurred.</span>'))
         
-        self.monitor_source_id = gobject.timeout_add(250, self.monitor)
+        self.monitor_source_id = gobject.timeout_add(250, threadslock(self.monitor))
         self.window.realize()   # Prevent a rendering bug.
         
         dbus.service.Object.__init__(self,

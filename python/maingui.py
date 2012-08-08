@@ -2525,11 +2525,17 @@ class MainWindow(dbus.service.Object):
 
         pass
 
-    @dbus.service.method(dbus_interface=PGlobs.dbus_bus_basename, out_signature="u")
-    def ping(self):
-        """Called to notify plugins that this session is closing."""
+    @dbus.service.signal(dbus_interface=PGlobs.dbus_bus_basename, signature="")
+    def heartbeat(self):
+        """Called to notify plugins that this session is healthy."""
 
-        return int(time.time())
+        pass
+
+    @dbus.service.method(dbus_interface=PGlobs.dbus_bus_basename, out_signature="u")
+    def pid(self):
+        """Reply with the process ID."""
+
+        return int(os.getpid())
 
     def delete_event(self, widget, event, data=None):
         qm = ["<span size='12000' weight='bold'>%s</span>" %
@@ -2628,6 +2634,10 @@ class MainWindow(dbus.service.Object):
         if locking:
             gtk.gdk.threads_enter()
         try:
+            self.vu_update_counter += 1
+            if self.vu_update_counter % 20 == 0:
+                self.heartbeat()
+
             session_ns = {}
             player_metadata = []
             
@@ -3602,6 +3612,7 @@ class MainWindow(dbus.service.Object):
         self.METADATA_NONE = 4
         self.metadata_src = self.METADATA_CROSSFADER
 
+        self.vu_update_counter = 0
         self.alarm = False
         self.NO_PHONE = 0
         self.PUBLIC_PHONE = 1
