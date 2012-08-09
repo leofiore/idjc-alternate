@@ -1,0 +1,275 @@
+<script type="text/javascript">
+ui('Code: An IDJC monitoring class', 'code-idjcmon-nav')
+</script>
+
+<p>With a little work this could be made to interface with your station's web page or with cloud services.</p>
+
+<pre>
+#! /usr/bin/env python
+
+# idjcmon.py (C) 2012 Stephen Fairchild
+# Released under the GNU Lesser General Public License version 2.0 (or greater).
+
+"""A monitoring class that keeps an eye on IDJC.
+
+As a standalone:
+for the default profile: ./idjcmonitor.py
+alternatively:
+./idjcmonitor.py [profilename]
+./idjcmonitor.py session.[sessionname]
+
+Used as a class it can be used for system admin purposes, maybe issue
+e-mail alerts if IDJC freezes or to perform Twitter updates when the
+music changes.
+
+Requires IDJC 0.8.8 or higher.
+"""
+
+import time
+import sys
+
+import dbus
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
+
+import gobject
+import glib
+import psutil
+
+
+class IDJCMonitor(gobject.GObject):
+    """Monitor IDJC internals relating to a specific profile or session.
+    
+    Can obtain information about where streaming to or the music metadata.
+    This info can then be published whereever without having to touch
+    the IDJC source code and is therefore easy to maintain.
+    """
+    
+    __gsignals__ = {
+        'launch' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                                    (gobject.TYPE_STRING, gobject.TYPE_UINT)),
+        'quit' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                                    (gobject.TYPE_STRING, gobject.TYPE_UINT)),
+        'streamstate-changed' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                (gobject.TYPE_INT, gobject.TYPE_BOOLEAN, gobject.TYPE_STRING)),
+        
+        'metadata-changed' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                                                    (gobject.TYPE_STRING,) * 4),
+        'frozen' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                (gobject.TYPE_STRING, gobject.TYPE_UINT, gobject.TYPE_BOOLEAN))
+    }
+    
+    __gproperties__ = {
+        'artist' : (gobject.TYPE_STRING, 'artist', 'artist from track metadata',
+                                                    "", gobject.PARAM_READABLE),
+        'title' : (gobject.TYPE_STRING, 'title', 'title from track metadata',
+                                                    "", gobject.PARAM_READABLE),
+        'album' : (gobject.TYPE_STRING, 'album', 'album from track metadata',
+                                                    "", gobject.PARAM_READABLE),
+        'songname' : (gobject.TYPE_STRING, 'songname',
+                            'the song name from metadata tags when available'
+                            ' and from the filenmame when not',
+                            "", gobject.PARAM_READABLE),
+        'streaminfo' : (gobject.TYPE_PYOBJECT, 'streaminfo',
+                'information about the streams', gobject.PARAM_READABLE)
+    }
+    
+    
+    def __init__(self, profile):
+        """Takes the profile parameter e.g. "default".
+        
+        Can also handle sessions with "session.sessionname"
+        """
+        
+        gobject.GObject.__init__(self)
+        self.__profile = profile
+        self.__bus = dbus.SessionBus()
+        self.__artist = self.__title = self.__album = self.__songname = ""
+        self._start_probing()
+
+
+    def _start_probing(self):
+        self.__watchdog_id = None
+        self.__watchdog_notice = False
+        self.__pid = 0
+        self.__frozen = False
+        glib.timeout_add_seconds(2, self._idjc_started_probe)
+
+
+    def _idjc_started_probe(self):
+        """Check for a newly started IDJC instance of the correct profile."""
+        
+        try:
+            self.__main = self.__bus.get_object("net.sf.idjc." + self.__profile,
+                                                        "/net/sf/idjc/main")
+            self.__output = self.__bus.get_object("net.sf.idjc." + self.__profile,
+                                                        "/net/sf/idjc/output")
+            main_iface = dbus.Interface(self.__main, "net.sf.idjc")
+            main_iface.pid(reply_handler=self._pid_reply_handler,
+                            error_handler=self._pid_error_handler)
+        except dbus.exceptions.DBusException:
+            # Keep searching periodically.
+            return True
+        else:
+            return False
+
+
+    def _pid_reply_handler(self, value):
+        self.__pid = value
+        try:
+            self.__main.connect_to_signal("track_metadata_changed",
+                                                        self._metadata_handler)
+            self.__main.connect_to_signal("quitting", self._quit_handler)
+            self.__main.connect_to_signal("heartbeat", self._heartbeat_handler)
+            self.__output.connect_to_signal("streamstate_changed",
+                                                    self._streamstate_handler)
+
+            # Start watchdog thread.
+            self.__watchdog_id = glib.timeout_add_seconds(
+                                                    3, self._watchdog)
+
+            self.__streams = {n : (False, "unknown") for n in xrange(10)}
+            output_iface = dbus.Interface(self.__output, "net.sf.idjc")
+            
+            self.emit("launch", self.__profile, self.__pid)
+            
+            # Tell IDJC to initialize as empty its cache of sent data.
+            # This yields a dump of server related info.
+            output_iface.new_plugin_started()
+        except dbus.exceptions.DBusException:
+            self._start_probing()
+
+
+    def _pid_error_handler(self, error):
+        self._start_probing()
+
+
+    def _watchdog(self):
+        if self.__watchdog_notice:
+            if psutil.pid_exists(self.__pid):
+                if not self.__frozen:
+                    self.__frozen = True
+                    self.emit("frozen", self.__profile, self.__pid, True)
+                return True
+            else:
+                for id_, (conn, where) in self.__streams.iteritems():
+                    if conn:
+                        self._streamstate_handler(id_, 0, where)
+                self._quit_handler()
+                return False
+        elif self.__frozen:
+            self.__frozen = False
+            self.emit("frozen", self.__profile, self.__pid, False)
+
+        self.__watchdog_notice = True
+        return True
+
+
+    def _heartbeat_handler(self):
+        self.__watchdog_notice = False
+
+
+    def _quit_handler(self):
+        """Start scanning for a new bus object."""
+
+        if self.__watchdog_id is not None:
+            glib.source_remove(self.__watchdog_id)
+            self.emit("quit", self.__profile, self.__pid)
+        self._start_probing()
+        
+        
+    def _streamstate_handler(self, numeric_id, connected, where):
+        numeric_id = int(numeric_id)
+        connected = bool(connected)
+        where = where.encode("utf-8")
+        self.__streams[numeric_id] = (connected, where)
+        self.notify("streaminfo")
+        self.emit("streamstate-changed", numeric_id, connected, where)
+
+
+    def _metadata_handler(self, artist, title, album, songname):
+        oldartist = self.__artist
+        oldtitle = self.__title
+        oldalbum = self.__album
+        oldsongname = self.__songname
+        self.__artist = artist.encode("utf-8")
+        self.__title = title.encode("utf-8")
+        self.__album = album.encode("utf-8")
+        self.__songname = songname.encode("utf-8")
+        if self.__artist != oldartist:
+            self.notify("artist")
+        if self.__title != oldtitle:
+            self.notify("title")
+        if self.__album != oldalbum:
+            self.notify("album")
+        if self.__songname != oldsongname:
+            self.notify("songname")
+        self.emit("metadata-changed", self.__artist, self.__title,
+                                                self.__album, self.__songname)
+
+
+    def do_get_property(self, prop):
+        name = prop.name
+        
+        if name in ("artist", "title", "album", "songname"):
+            return getattr(self, "_IDJCMonitor__" + name)
+        if name == "streaminfo":
+            return tuple(self.__streams[n] for n in xrange(10))
+        else:
+            raise AttributeError("Unknown attribute %s in %s" % (
+                                                            name, repr(self)))
+
+
+
+##############################################################################
+
+
+
+if __name__ == "__main__":
+    def launch_handler(monitor, profile, pid):
+        print "Hello to IDJC '%s' with process ID %d." % (profile, pid)
+
+
+    def quit_handler(monitor, profile, pid):
+        print "Goodbye to IDJC '%s' with process ID %d." % (profile, pid)
+
+
+    def streamstate_handler(monitor, which, state, where):
+        print "Stream %d is %s on connection %s." % (
+                                        which, ("down", "up")[state], where)
+
+
+    def metadata_handler(monitor, artist, title, album, songname):
+        print "Metadata is: artist: %s, title: %s, album: %s" % (
+                                                    artist, title, album)
+
+
+    def frozen_handler(monitor, profile, pid, frozen):
+        print "IDJC '%s' with process ID %d is %s" % (
+                        profile, pid, ("no longer frozen", "frozen")[frozen])
+
+
+    def value_changed(monitor, prop):
+        print prop.name, "changed and is now", monitor.get_property(prop.name)
+
+
+    def main():
+        argv = sys.argv
+        if len(argv) &lt;= 1:
+            profile = "default"
+        else:
+            profile = argv[1]
+
+        plugin = IDJCMonitor(profile)
+        plugin.connect("launch", launch_handler)
+        plugin.connect("quit", quit_handler)
+        plugin.connect("streamstate-changed", streamstate_handler)
+        plugin.connect("metadata-changed", metadata_handler)
+        plugin.connect("frozen", frozen_handler)
+        plugin.connect("notify::artist", value_changed)
+        
+        glib.MainLoop().run()
+        
+        
+    main()
+</pre>

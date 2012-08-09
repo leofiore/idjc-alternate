@@ -1,0 +1,5 @@
+<script type="text/javascript">
+ui('Code', 'code-nav')
+</script>
+
+<p>Useful code snippets.</p>
