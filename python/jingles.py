@@ -128,9 +128,10 @@ class Effect(gtk.HBox):
     def _swap(self, other):
         new_pathname = other.pathname
         new_text = other.trigger.get_label() or ""
+        new_level = other.level
 
-        other._set(self.pathname, self.trigger.get_label() or "")
-        self._set(new_pathname, new_text)
+        other._set(self.pathname, self.trigger.get_label() or "", self.level)
+        self._set(new_pathname, new_text, new_level)
         
         
     def _set(self, pathname, button_text, level):
@@ -270,6 +271,7 @@ class EffectConfigDialog(gtk.FileChooserDialog):
             dialog.unselect_all()
             dialog.set_current_folder(os.path.expanduser("~"))
             self.button_entry.set_text("")
+            self.gain_adj.set_value(0.0)
 
 
 
