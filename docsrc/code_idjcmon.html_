@@ -1,5 +1,5 @@
 <script type="text/javascript">
-ui('Code: An IDJC monitoring class', 'code-idjcmon-nav')
+ui('Extra code: An IDJC monitoring class', 'code-idjcmon-nav')
 </script>
 
 <p>With a little work this could be made to interface with your station's web page or with cloud services.</p>
@@ -8,21 +8,21 @@ ui('Code: An IDJC monitoring class', 'code-idjcmon-nav')
 #! /usr/bin/env python
 
 # idjcmon.py (C) 2012 Stephen Fairchild
-# Released under the GNU Lesser General Public License version 2.0 (or greater).
+# Released under the GNU Lesser General Public License version 2.0 (or
+# at your option, any later version).
 
 """A monitoring class that keeps an eye on IDJC.
 
-As a standalone:
-for the default profile: ./idjcmonitor.py
-alternatively:
-./idjcmonitor.py [profilename]
-./idjcmonitor.py session.[sessionname]
-
-Used as a class it can be used for system admin purposes, maybe issue
-e-mail alerts if IDJC freezes or to perform Twitter updates when the
-music changes.
+It can be extended to issue e-mail alerts if IDJC freezes or perform Twitter
+updates when the music changes.
 
 Requires IDJC 0.8.8 or higher.
+
+As a standalone (essentially demo code):
+for the default profile: ./idjcmon.py
+alternatively:
+./idjcmon.py [profilename]
+./idjcmon.py session.[sessionname]
 """
 
 import time
@@ -35,6 +35,10 @@ DBusGMainLoop(set_as_default=True)
 import gobject
 import glib
 import psutil
+
+
+__all__ = ["IDJCMonitor"]
+
 
 
 class IDJCMonitor(gobject.GObject):
@@ -85,15 +89,26 @@ class IDJCMonitor(gobject.GObject):
         self.__profile = profile
         self.__bus = dbus.SessionBus()
         self.__artist = self.__title = self.__album = self.__songname = ""
+        self.__shutdown = False
         self._start_probing()
+        
+        
+    def shutdown(self):
+        """Block both signal emission and property reads."""
+        
+        self.__shutdown = True
 
 
     def _start_probing(self):
         self.__watchdog_id = None
+        self.__probe_id = None
         self.__watchdog_notice = False
         self.__pid = 0
         self.__frozen = False
-        glib.timeout_add_seconds(2, self._idjc_started_probe)
+        self.__main = self.__output = None
+        if not self.__shutdown:
+            self.__probe_id = glib.timeout_add_seconds(
+                                                2, self._idjc_started_probe)
 
 
     def _idjc_started_probe(self):
@@ -102,14 +117,14 @@ class IDJCMonitor(gobject.GObject):
         try:
             self.__main = self.__bus.get_object("net.sf.idjc." + self.__profile,
                                                         "/net/sf/idjc/main")
-            self.__output = self.__bus.get_object("net.sf.idjc." + self.__profile,
-                                                        "/net/sf/idjc/output")
+            self.__output = self.__bus.get_object("net.sf.idjc." +
+                                        self.__profile, "/net/sf/idjc/output")
             main_iface = dbus.Interface(self.__main, "net.sf.idjc")
             main_iface.pid(reply_handler=self._pid_reply_handler,
                             error_handler=self._pid_error_handler)
         except dbus.exceptions.DBusException:
             # Keep searching periodically.
-            return True
+            return not self.__shutdown
         else:
             return False
 
@@ -162,7 +177,7 @@ class IDJCMonitor(gobject.GObject):
             self.emit("frozen", self.__profile, self.__pid, False)
 
         self.__watchdog_notice = True
-        return True
+        return not self.__shutdown
 
 
     def _heartbeat_handler(self):
@@ -188,27 +203,27 @@ class IDJCMonitor(gobject.GObject):
 
 
     def _metadata_handler(self, artist, title, album, songname):
-        oldartist = self.__artist
-        oldtitle = self.__title
-        oldalbum = self.__album
-        oldsongname = self.__songname
-        self.__artist = artist.encode("utf-8")
-        self.__title = title.encode("utf-8")
-        self.__album = album.encode("utf-8")
-        self.__songname = songname.encode("utf-8")
-        if self.__artist != oldartist:
-            self.notify("artist")
-        if self.__title != oldtitle:
-            self.notify("title")
-        if self.__album != oldalbum:
-            self.notify("album")
-        if self.__songname != oldsongname:
-            self.notify("songname")
+
+        def update_property(name, value):
+            oldvalue = getattr(self, "_IDJCMonitor__" + name)
+            newvalue = value.encode("utf-8")
+            if newvalue != oldvalue:
+                setattr(self, "_IDJCMonitor__" + name, newvalue)
+                self.notify(name)
+
+        for name, value in zip("artist title album songname".split(),
+                                        (artist, title, album, songname)):
+            update_property(name, value)
+
         self.emit("metadata-changed", self.__artist, self.__title,
                                                 self.__album, self.__songname)
 
 
     def do_get_property(self, prop):
+        if self.__shutdown:
+            raise AttributeError(
+                        "Attempt to read property after shutdown was called.")
+        
         name = prop.name
         
         if name in ("artist", "title", "album", "songname"):
@@ -216,8 +231,18 @@ class IDJCMonitor(gobject.GObject):
         if name == "streaminfo":
             return tuple(self.__streams[n] for n in xrange(10))
         else:
-            raise AttributeError("Unknown attribute %s in %s" % (
+            raise AttributeError("Unknown property %s in %s" % (
                                                             name, repr(self)))
+
+
+    def notify(self, property_name):
+        if not self.__shutdown:
+            gobject.GObject.notify(self, property_name)
+            
+            
+    def emit(self, *args, **kwargs):
+        if not self.__shutdown:
+            gobject.GObject.emit(self, *args, **kwargs)
 
 
 
@@ -249,10 +274,6 @@ if __name__ == "__main__":
                         profile, pid, ("no longer frozen", "frozen")[frozen])
 
 
-    def value_changed(monitor, prop):
-        print prop.name, "changed and is now", monitor.get_property(prop.name)
-
-
     def main():
         argv = sys.argv
         if len(argv) &lt;= 1:
@@ -260,13 +281,12 @@ if __name__ == "__main__":
         else:
             profile = argv[1]
 
-        plugin = IDJCMonitor(profile)
-        plugin.connect("launch", launch_handler)
-        plugin.connect("quit", quit_handler)
-        plugin.connect("streamstate-changed", streamstate_handler)
-        plugin.connect("metadata-changed", metadata_handler)
-        plugin.connect("frozen", frozen_handler)
-        plugin.connect("notify::artist", value_changed)
+        monitor = IDJCMonitor(profile)
+        monitor.connect("launch", launch_handler)
+        monitor.connect("quit", quit_handler)
+        monitor.connect("streamstate-changed", streamstate_handler)
+        monitor.connect("metadata-changed", metadata_handler)
+        monitor.connect("frozen", frozen_handler)
         
         glib.MainLoop().run()
         

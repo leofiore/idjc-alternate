@@ -1,5 +1,5 @@
 <script type="text/javascript">
-ui('Code', 'code-nav')
+ui('Extra code', 'code-nav')
 </script>
 
-<p>Useful code snippets.</p>
+<p>Some relevant code modules.</p>

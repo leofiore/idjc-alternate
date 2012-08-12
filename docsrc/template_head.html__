@@ -66,7 +66,7 @@ function ui(title, menu) {
                       <li><a href="tutorials_streaming_aac.html" id="tutorials-streamingaac-nav">AAC</a></li>
                      </ul>
                     </li>
-                    <li><a href="code.html" id="code-nav">Code</a></li>
+                    <li><a href="code.html" id="code-nav">Extra code</a></li>
                     <li>
                      <ul>
                       <li><a href="code_idjcmon.html" id="code-idjcmon-nav">idjcmon.py</a></li>
