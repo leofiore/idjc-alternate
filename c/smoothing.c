@@ -56,7 +56,7 @@ void smoothing_volume_init(struct smoothing_volume *self, int *control, float sc
         
     /* default values */
     self->control = control ? control : &nullcontrol;
-    self->scale = scale ? scale : 0.0142f;
+    self->scale = scale ? scale : 0.01775f;
     /* initial state */
     self->tracking = 127;
     self->level = 1.0f;

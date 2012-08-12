@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: putidjcinthesubjectline@bethere.co.uk\n"
-"POT-Creation-Date: 2012-07-30 13:33+0100\n"
+"POT-Creation-Date: 2012-08-12 15:04+0100\n"
 "PO-Revision-Date: 2011-12-16 15:46+0100\n"
 "Last-Translator: rmorelli\n"
 "Language-Team: American English <kde-i18n-doc@kde.org>\n"
@@ -266,7 +266,7 @@ msgstr "il nome profilo non è valido"
 msgid "profile name is bad"
 msgstr "nome_profilo"
 
-#: python/prelims/__init__.py:471 python/prelims/__init__.py:730
+#: python/prelims/__init__.py:471 python/prelims/__init__.py:739
 #, fuzzy, python-format
 msgid "profile %s does not exist"
 msgstr "il profilo del modello '%s' non esiste"
@@ -292,50 +292,56 @@ msgstr ""
 msgid "no profile is set"
 msgstr "nessun profilo impostato"
 
+#: python/prelims/__init__.py:512
+msgid ""
+"failed to grab bus name -- another session by the same name appears to be "
+"running"
+msgstr ""
+
 #. TC: text appears in the title bar when in session mode.
-#: python/prelims/__init__.py:576
+#: python/prelims/__init__.py:585
 msgid "session={type}:{name}"
 msgstr ""
 
-#: python/prelims/__init__.py:616
+#: python/prelims/__init__.py:625
 #, fuzzy, python-format
 msgid "specified profile is not valid %s"
 msgstr "il nome profilo non è valido"
 
-#: python/prelims/__init__.py:619
+#: python/prelims/__init__.py:628
 #, fuzzy, python-format
 msgid "specified profile does not exist: %s"
 msgstr "il profilo del modello '%s' non esiste"
 
-#: python/prelims/__init__.py:650
+#: python/prelims/__init__.py:659
 #, python-format
 msgid "unknown session type: %s: must be one of %s"
 msgstr ""
 
-#: python/prelims/__init__.py:663
+#: python/prelims/__init__.py:672
 #, fuzzy, python-format
 msgid "directory does not exist: %s"
 msgstr "il profilo del modello '%s' non esiste"
 
-#: python/prelims/__init__.py:694
+#: python/prelims/__init__.py:703
 #, python-format
 msgid "problem with specified session directory: %s"
 msgstr ""
 
-#: python/prelims/__init__.py:767
+#: python/prelims/__init__.py:776
 #, python-format
 msgid "Profile %s is active."
 msgstr "Il profilo %s è attivo."
 
-#: python/prelims/__init__.py:777
+#: python/prelims/__init__.py:786
 msgid "Cannot rename profile {0} to {1}, {1} currently exists."
 msgstr "Non posso rinominare il profilo {0} in {1}, {1} è già presente."
 
-#: python/prelims/__init__.py:781
+#: python/prelims/__init__.py:790
 msgid "Error during attempt to rename {0} to {1}."
 msgstr "Errore nel tentativo di rinominare {0} in {1}."
 
-#: python/prelims/__init__.py:791
+#: python/prelims/__init__.py:800
 msgid ""
 "<span weight='bold' size='12000'>Error while editing profile: {0}.</span>\n"
 "\n"
@@ -346,105 +352,105 @@ msgstr ""
 "\n"
 "{1}"
 
-#: python/prelims/__init__.py:810
+#: python/prelims/__init__.py:819
 msgid "could not get a lock on profile {0}: {1}"
 msgstr ""
 
-#: python/prelims/__init__.py:815
+#: python/prelims/__init__.py:824
 #, fuzzy
 msgid "profile does not exist"
 msgstr "il profilo del modello '%s' non esiste"
 
-#: python/prelims/__init__.py:836
+#: python/prelims/__init__.py:845
 #, python-format
 msgid "the profile '%s' is in use"
 msgstr "il profilo '%s' è in uso"
 
-#: python/prelims/__init__.py:858
+#: python/prelims/__init__.py:867
 #, python-format
 msgid "the profile length is too long (max %d characters)"
 msgstr "la lunghezza del profilo è eccessiva (max %d caratteri)"
 
-#: python/prelims/__init__.py:860
+#: python/prelims/__init__.py:869
 #, python-format
 msgid "The profile length is too long (max %d characters)."
 msgstr "La lunghezza del profilo è eccessiva (max %d caratteri)"
 
-#: python/prelims/__init__.py:864
+#: python/prelims/__init__.py:873
 msgid "the new profile name is not valid"
 msgstr "il nuovo nome profilo non è valido"
 
-#: python/prelims/__init__.py:865
+#: python/prelims/__init__.py:874
 msgid "The new profile name is not valid."
 msgstr "Il nuovo nome profilo non è valido."
 
-#: python/prelims/__init__.py:870
+#: python/prelims/__init__.py:879
 msgid "the chosen profile is currently running"
 msgstr "il profilo scelto è attualmente in uso"
 
-#: python/prelims/__init__.py:871
+#: python/prelims/__init__.py:880
 msgid "The chosen profile is currently running."
 msgstr "Il profilo scelto è attualmente in uso."
 
-#: python/prelims/__init__.py:876
+#: python/prelims/__init__.py:885
 msgid "temporary directory creation failed"
 msgstr "creazione della cartella temporanea fallita"
 
-#: python/prelims/__init__.py:877
+#: python/prelims/__init__.py:886
 msgid "Temporary directory creation failed."
 msgstr "Creazione della cartella temporanea fallita."
 
-#: python/prelims/__init__.py:883
+#: python/prelims/__init__.py:892
 #, python-format
 msgid "the specified template '%s' is not valid"
 msgstr "il modello '%s' non è valido"
 
-#: python/prelims/__init__.py:885
+#: python/prelims/__init__.py:894
 #, python-format
 msgid "The specified template '%s' is not valid."
 msgstr "Il modello '%s' non è valido."
 
-#: python/prelims/__init__.py:907
+#: python/prelims/__init__.py:916
 #, python-format
 msgid "the template profile '%s' does not exist"
 msgstr "il profilo del modello '%s' non esiste"
 
-#: python/prelims/__init__.py:909
+#: python/prelims/__init__.py:918
 #, python-format
 msgid "The template profile '%s' does not exist."
 msgstr "Il profilo del modello '%s' non esiste."
 
-#: python/prelims/__init__.py:919
+#: python/prelims/__init__.py:928
 #, python-format
 msgid "could not write file %s"
 msgstr "non posso scrivere il file %s"
 
-#: python/prelims/__init__.py:920
+#: python/prelims/__init__.py:929
 #, python-format
 msgid "Could not write file %s."
 msgstr "Non posso scrivere il file %s."
 
-#: python/prelims/__init__.py:928
+#: python/prelims/__init__.py:937
 #, python-format
 msgid "the profile directory '%s' already exists"
 msgstr "la directory del profilo '%s' esiste già"
 
-#: python/prelims/__init__.py:930
+#: python/prelims/__init__.py:939
 #, python-format
 msgid "The profile directory '%s' already exists."
 msgstr "La directory del profilo '%s' esiste già."
 
-#: python/prelims/__init__.py:933
+#: python/prelims/__init__.py:942
 #, python-format
 msgid "a non directory path exists at: '%s'"
 msgstr "non c'è il percorso ad una directory: '%s'"
 
-#: python/prelims/__init__.py:934
+#: python/prelims/__init__.py:943
 #, python-format
 msgid "A Non directory path exists at: '%s'."
 msgstr "Non c'è il percorso ad una directory: '%s'"
 
-#: python/prelims/__init__.py:945
+#: python/prelims/__init__.py:954
 msgid "The default profile"
 msgstr "Il profilo base"
 
@@ -483,7 +489,7 @@ msgstr "Nickname"
 #. TC: column heading.
 #. TC: Station description.
 #: python/prelims/profiledialog.py:287 python/irc.py:93
-#: python/playergui.py:259 python/sourceclientgui.py:1782
+#: python/playergui.py:259 python/sourceclientgui.py:1783
 msgid "Description"
 msgstr "Descrizione"
 
@@ -572,30 +578,30 @@ msgid "On stream down"
 msgstr "Se il flusso non è attivo"
 
 #: python/irc.py:92 python/mutagentagger.py:375 python/p3db.py:387
-#: python/p3db.py:475 python/sourceclientgui.py:92
+#: python/p3db.py:475 python/sourceclientgui.py:93
 msgid "Artist"
 msgstr "Artista"
 
 #: python/irc.py:92 python/mutagentagger.py:375 python/p3db.py:387
-#: python/p3db.py:478 python/sourceclientgui.py:92
+#: python/p3db.py:478 python/sourceclientgui.py:93
 msgid "Title"
 msgstr "Titolo"
 
 #: python/irc.py:92 python/mutagentagger.py:376 python/p3db.py:387
-#: python/p3db.py:476 python/sourceclientgui.py:92
+#: python/p3db.py:476 python/sourceclientgui.py:93
 msgid "Album"
 msgstr "Album"
 
-#: python/irc.py:92 python/sourceclientgui.py:93
+#: python/irc.py:92 python/sourceclientgui.py:94
 msgid "Song name"
 msgstr "Canzone"
 
 #. TC: The DJ or Stream name.
-#: python/irc.py:93 python/sourceclientgui.py:1779
+#: python/irc.py:93 python/sourceclientgui.py:1780
 msgid "DJ name"
 msgstr "Nome DJ"
 
-#: python/irc.py:93 python/sourceclientgui.py:1780
+#: python/irc.py:93 python/sourceclientgui.py:1781
 msgid "Listen URL"
 msgstr "Indirizzo di ascolto (URL)"
 
@@ -656,13 +662,13 @@ msgid "Network"
 msgstr "Rete"
 
 #. TC: label for hostname entry.
-#: python/irc.py:484 python/p3db.py:594 python/sourceclientgui.py:211
+#: python/irc.py:484 python/p3db.py:594 python/sourceclientgui.py:212
 msgid "Hostname"
 msgstr "Nome host"
 
 #. TC: TCP/IP port number label.
 #. TC: TCP port number.
-#: python/irc.py:486 python/sourceclientgui.py:683
+#: python/irc.py:486 python/sourceclientgui.py:684
 msgid "Port"
 msgstr "Porta"
 
@@ -670,7 +676,7 @@ msgstr "Porta"
 msgid "User name"
 msgstr "Nome utente"
 
-#: python/irc.py:488 python/p3db.py:614 python/sourceclientgui.py:212
+#: python/irc.py:488 python/p3db.py:614 python/sourceclientgui.py:213
 msgid "Password"
 msgstr "Password"
 
@@ -878,167 +884,188 @@ msgstr "Messaggio di in onda di IRC"
 msgid "IRC stream down message"
 msgstr "Messaggio di fuori onda IRC"
 
-#: python/jingles.py:214 python/playergui.py:3764
+#: python/jingles.py:225 python/playergui.py:3764
 msgid "Supported media"
 msgstr "Media supportati"
 
-#: python/jingles.py:221
+#: python/jingles.py:232
 #, python-format
 msgid "Effect %d Config"
 msgstr ""
 
-#: python/jingles.py:236
-msgid "Button text"
+#: python/jingles.py:247
+msgid "Trigger text"
 msgstr ""
 
-#: python/jingles.py:237
+#: python/jingles.py:248
 msgid "No Name"
 msgstr ""
 
-#: python/jingles.py:345
+#: python/jingles.py:255
+msgid "Level adjustment (dB)"
+msgstr ""
+
+#: python/jingles.py:366
 #, fuzzy
 msgid "Effects"
 msgstr "Effetto"
 
-#: python/jingles.py:366
+#: python/jingles.py:387
 #, fuzzy
 msgid "Effects volume."
 msgstr "VoIP imposta volume"
 
-#: python/jingles.py:373
+#: python/jingles.py:394
 msgid "Player headroom that is applied when an effect is playing."
 msgstr ""
 
-#: python/jingles.py:388
+#: python/jingles.py:409
 msgid "Background Tracks volume."
 msgstr ""
 
-#: python/jingles.py:390
+#: python/jingles.py:411
 msgid "Background Tracks"
 msgstr ""
 
-#: python/maingui.py:89
+#: python/maingui.py:91
 msgid "Show a JACK freewheel control on the main panel"
 msgstr ""
 
-#: python/maingui.py:91
+#: python/maingui.py:93
 msgid "Toggle JACK freewheel mode."
 msgstr ""
 
-#: python/maingui.py:172
+#: python/maingui.py:174
 #, fuzzy
 msgid "File"
 msgstr "Nome file"
 
-#: python/maingui.py:172
+#: python/maingui.py:174
 msgid "View"
 msgstr "Vista"
 
-#: python/maingui.py:173
+#: python/maingui.py:175
 msgid "JACK Ports"
 msgstr "Porte JACK"
 
-#: python/maingui.py:173
+#: python/maingui.py:175
 msgid "Help"
 msgstr ""
 
-#: python/maingui.py:175 python/maingui.py:3470
+#: python/maingui.py:177 python/maingui.py:3535
 msgid "Streams"
 msgstr "Flussi"
 
-#: python/maingui.py:176
+#: python/maingui.py:178
 #, fuzzy
 msgid "Recorders"
 msgstr "Registratore"
 
-#: python/maingui.py:188 python/maingui.py:218
+#: python/maingui.py:190 python/maingui.py:221
 msgid "Output"
 msgstr "Uscita"
 
 #. TC: binding editor, action pane, first row, toplevel menu.
-#: python/maingui.py:188 python/midicontrols.py:1209
+#: python/maingui.py:190 python/midicontrols.py:1209
 msgid "Preferences"
 msgstr "Preferenze"
 
-#: python/maingui.py:188
+#: python/maingui.py:190
 msgid "Profiles"
 msgstr "Profili"
 
-#: python/maingui.py:191
+#: python/maingui.py:193
 #, fuzzy
 msgid "Music Database"
 msgstr "Database"
 
-#: python/maingui.py:191
+#: python/maingui.py:193
 #, fuzzy
 msgid "Channel Meters"
 msgstr "Gestore canale"
 
-#: python/maingui.py:191
+#: python/maingui.py:193
 #, fuzzy
 msgid "Output Meters"
 msgstr "Uscita"
 
-#: python/maingui.py:192
+#: python/maingui.py:194
 #, fuzzy
 msgid "Media Players"
 msgstr "Lettore destro"
 
-#: python/maingui.py:217 python/preferences.py:1273
+#: python/maingui.py:220 python/preferences.py:1273
 msgid "Channels"
 msgstr "Canali"
 
-#: python/maingui.py:217
+#: python/maingui.py:220
 #, fuzzy
 msgid "Players"
 msgstr "Lettore"
 
-#: python/maingui.py:218
+#: python/maingui.py:221
 msgid "VoIP"
 msgstr ""
 
-#: python/maingui.py:218 python/maingui.py:2933
+#: python/maingui.py:221 python/maingui.py:2998
 msgid "DSP"
 msgstr ""
 
-#: python/maingui.py:218
+#: python/maingui.py:221
 msgid "Mix"
 msgstr ""
 
-#: python/maingui.py:218
+#: python/maingui.py:221
 #, fuzzy
 msgid "MIDI"
 msgstr "MIDI nota"
 
-#: python/maingui.py:283
+#: python/maingui.py:258
+msgid "Reset"
+msgstr ""
+
+#: python/maingui.py:261
+msgid "Reset the JACK port connections to the default settings."
+msgstr ""
+
+#: python/maingui.py:266
+msgid ""
+"<span size=\"12000\" weight=\"bold\">Reset all JACK port connections?</"
+"span>\n"
+"\n"
+"All currently established connections will be lost\n"
+"and replaced with defaults."
+msgstr ""
+
+#: python/maingui.py:309
 msgid "No compatible ports available."
 msgstr ""
 
-#: python/maingui.py:326
+#: python/maingui.py:352
 msgid "{0} profile={1}:{2} settings saved."
 msgstr ""
 
-#: python/maingui.py:329
+#: python/maingui.py:355
 msgid "{0} session={1}:{2} settings saved."
 msgstr ""
 
-#: python/maingui.py:624
+#: python/maingui.py:652
 msgid "Text"
 msgstr "Testo"
 
-#: python/maingui.py:627
+#: python/maingui.py:655
 msgid "The opener button's text."
 msgstr "Il testo del pulsante di apertura"
 
-#: python/maingui.py:635
+#: python/maingui.py:663
 msgid "Icon"
 msgstr "Icona"
 
-#: python/maingui.py:643
+#: python/maingui.py:671
 msgid "The opener button's icon."
 msgstr "L'iconda del pulsante di apertura."
 
-#: python/maingui.py:651
+#: python/maingui.py:679
 msgid ""
 "The headroom is the amount by which to reduce player volume when this opener "
 "is active. Note that the actual amount will be the largest value of all the "
@@ -1048,15 +1075,15 @@ msgstr ""
 "questo opener è attivo. Notare che la riduzione attuale sarà relativa al "
 "valore più alto tra tutti i pulsanti aperti."
 
-#: python/maingui.py:656
+#: python/maingui.py:684
 msgid "The amount of headroom required (dB)"
 msgstr "La quantità di headroom richiesta (dB)"
 
-#: python/maingui.py:665
+#: python/maingui.py:693
 msgid "This button will flash as a reminder to close"
 msgstr "Questo pulsante lampeggerà per ricordarvi di chiuderlo"
 
-#: python/maingui.py:666
+#: python/maingui.py:694
 msgid ""
 "After a number of seconds where a main player is active this button's status "
 "indicator will start to flash and will continue to do so until the button is "
@@ -1067,11 +1094,11 @@ msgstr ""
 "a farlo finché il pulsante non sarà rilasciato o finché non verrò fermata la "
 "riproduzione."
 
-#: python/maingui.py:674
+#: python/maingui.py:702
 msgid "This button is to be treated as a microphone opener"
 msgstr "Questo apre il microfono"
 
-#: python/maingui.py:676
+#: python/maingui.py:704
 msgid ""
 "The button will be grouped with the other microphone opener buttons. It will "
 "be affected by signals to close microphone buttons. Channels associated with "
@@ -1082,79 +1109,79 @@ msgstr ""
 "questo pulsante saranno missati in modo diverso quando vengono usate le "
 "modalità VoIP."
 
-#: python/maingui.py:687
+#: python/maingui.py:715
 msgid ""
 "This should be set for all buttons that control input from a live sound "
 "source or device."
 msgstr ""
 
-#: python/maingui.py:690
+#: python/maingui.py:718
 msgid "Button Open Triggers"
 msgstr "Inneschi apertura pulsante"
 
-#: python/maingui.py:697
+#: python/maingui.py:725
 msgid "Playlist advance button"
 msgstr "Pulsante di avanzamento playlist"
 
-#: python/maingui.py:698 python/maingui.py:699
+#: python/maingui.py:726 python/maingui.py:727
 #, python-format
 msgid "'%s' control"
 msgstr "controllo '%s'"
 
 #. TC: Insert playlist control to stop the player.
-#: python/maingui.py:698 python/playergui.py:4016
+#: python/maingui.py:726 python/playergui.py:4016
 msgid "Player Stop"
 msgstr "Ferma lettore"
 
 #. TC: Insert playlist control to stop the player.
-#: python/maingui.py:699 python/playergui.py:4023
+#: python/maingui.py:727 python/playergui.py:4023
 msgid "Player Stop 2"
 msgstr "Ferma lettore 2"
 
-#: python/maingui.py:700
+#: python/maingui.py:728
 msgid "Announcements"
 msgstr "Annunci"
 
-#: python/maingui.py:712
+#: python/maingui.py:740
 msgid "When opened close these other buttons"
 msgstr "Chiude questi altri pulsanti se aperto"
 
-#: python/maingui.py:723
+#: python/maingui.py:751
 msgid "Shell Command"
 msgstr "Comando Shell"
 
-#: python/maingui.py:724
+#: python/maingui.py:752
 msgid ""
 "Mostly useful issuing 'amixer' commands, in particular for setting capture."
 msgstr ""
 "Più utile se si lancia il comando 'amixer', in particolare per impostare la "
 "registrazione."
 
-#: python/maingui.py:744
+#: python/maingui.py:772
 msgid "On open"
 msgstr "All'avvio"
 
-#: python/maingui.py:745
+#: python/maingui.py:773
 msgid "On close"
 msgstr "In chiusura"
 
-#: python/maingui.py:789
+#: python/maingui.py:817
 msgid "Main Panel Opener Buttons"
 msgstr "Pulsanti di apertura del pannello principale"
 
-#: python/maingui.py:801
+#: python/maingui.py:829
 msgid "Indicate button numbers and associated channel numbers"
 msgstr "Indica il numero dei pulsanti e dei numeri di canale associati"
 
-#: python/maingui.py:803
+#: python/maingui.py:831
 msgid "A useful feature to have switched on while allocating channel openers."
 msgstr "Una funzionalità utile da attivare mentre si allocano i canali"
 
-#: python/maingui.py:809
+#: python/maingui.py:837
 msgid "Status Indicator Appearance"
 msgstr "Aspetto dell'indicatore di stato"
 
-#: python/maingui.py:812
+#: python/maingui.py:840
 msgid ""
 "Each opener button has two vertical bars at the side to make the button "
 "state more apparent. These settings control their appearance."
@@ -1162,28 +1189,28 @@ msgstr ""
 "Ogni pulsante ha due barre verticali ai lati per renderne chiaro lo stato. "
 "Queste impostazioni ne controllano la grafica."
 
-#: python/maingui.py:821
+#: python/maingui.py:849
 msgid "Width"
 msgstr "Larghezza"
 
-#: python/maingui.py:828
+#: python/maingui.py:856
 msgid "Opened"
 msgstr "Aperto"
 
-#: python/maingui.py:832 python/preferences.py:350 python/preferences.py:352
+#: python/maingui.py:860 python/preferences.py:350 python/preferences.py:352
 msgid "Closed"
 msgstr "Chiuso"
 
-#: python/maingui.py:837
+#: python/maingui.py:865
 msgid "Remind"
 msgstr "Ricorda"
 
 #. TC: A placeholder text for when there are no opener buttons.
-#: python/maingui.py:1018
+#: python/maingui.py:1046
 msgid "No Channel Opener Buttons"
 msgstr "Nessun canale da abilitare"
 
-#: python/maingui.py:1308
+#: python/maingui.py:1336
 msgid ""
 "This indicates the state of the various streams. Flashing means stream "
 "packets are being discarded because of network congestion. Partial red means "
@@ -1195,50 +1222,50 @@ msgstr ""
 "indica che il buffer di invio è parzialmente pieno, ovvero difficoltà di "
 "comunicazione con il server. Verde indica che tutto è a posto."
 
-#: python/maingui.py:1331
+#: python/maingui.py:1359
 msgid "The combined total number of listeners in all server tabs."
 msgstr "Il numero cumulato di ascoltatori per tutti i server."
 
 #. TC: Record as in, to make a recording.
-#: python/maingui.py:1779 python/sourceclientgui.py:2831
+#: python/maingui.py:1807 python/sourceclientgui.py:2852
 msgid "Record"
 msgstr "Registra"
 
-#: python/maingui.py:2481
+#: python/maingui.py:2542
 msgid "Confirmation to quit IDJC is required."
 msgstr "Viene chiesta una conferma per chiudere IDJC."
 
-#: python/maingui.py:2485
+#: python/maingui.py:2546
 msgid "All active recordings and radio streams will terminate."
 msgstr "Tutte le registrazioni ed i flussi radio verranno interrotti."
 
-#: python/maingui.py:2487
+#: python/maingui.py:2548
 msgid "All of the active radio streams will terminate."
 msgstr "Tutti flussi radio verranno interrotti."
 
-#: python/maingui.py:2489
+#: python/maingui.py:2550
 msgid "All active recordings will cease."
 msgstr "Tutte le registrazioni verranno interrotte."
 
 #. TC: Popup menu item, wipes away the tracks played history text.
-#: python/maingui.py:2733 python/maingui.py:3132
+#: python/maingui.py:2798 python/maingui.py:3197
 msgid "Remove Contents"
 msgstr "Rimuove i contenuti"
 
-#: python/maingui.py:2904
+#: python/maingui.py:2969
 #, fuzzy
 msgid "Main Players"
 msgstr "Lettore destro"
 
-#: python/maingui.py:2957
+#: python/maingui.py:3022
 msgid "Mix voice over IP audio to the output stream."
 msgstr "Manda in onda l'audio del VoIP"
 
-#: python/maingui.py:2970
+#: python/maingui.py:3035
 msgid "Mix voice over IP audio to the DJ only."
 msgstr "Missa l'audio del VoIP solo al DJ"
 
-#: python/maingui.py:2998
+#: python/maingui.py:3063
 msgid ""
 "This button steps through the active playlist, pausing between tracks. The "
 "active playlist is defined by the placement of the crossfader."
@@ -1246,40 +1273,40 @@ msgstr ""
 "Questo pulsante scorre la playlist attiva facendo una pausa tra le tracce. "
 "La playlist attiva viene dedotta dal posizionamento del crossfader"
 
-#: python/maingui.py:3047 python/preferences.py:751
+#: python/maingui.py:3112 python/preferences.py:751
 msgid "The volume control shared by both music players."
 msgstr "Il controllo del volume per entrambi i lettori"
 
-#: python/maingui.py:3058
+#: python/maingui.py:3123
 msgid "The volume control for the right music player."
 msgstr "Il volume del lettore di destra."
 
-#: python/maingui.py:3078
+#: python/maingui.py:3143
 msgid "The stream volume level to send to the voice over IP connection."
 msgstr "Il volume del flusso da inviare alla connessione VoIP"
 
-#: python/maingui.py:3105 python/preferences.py:1209
+#: python/maingui.py:3170 python/preferences.py:1209
 msgid "Tracks Played"
 msgstr "Tracce eseguite"
 
-#: python/maingui.py:3178 python/maingui.py:3180 python/maingui.py:3207
+#: python/maingui.py:3243 python/maingui.py:3245 python/maingui.py:3272
 msgid "Monitor Mix"
 msgstr "Monitoraggio Mix"
 
-#: python/maingui.py:3188 python/maingui.py:3207 python/playergui.py:3967
+#: python/maingui.py:3253 python/maingui.py:3272 python/playergui.py:3967
 msgid "DJ"
 msgstr "DJ"
 
 #. TC: binding editor, action pane, first row, toplevel menu.
-#: python/maingui.py:3191 python/maingui.py:3207 python/midicontrols.py:148
+#: python/maingui.py:3256 python/maingui.py:3272 python/midicontrols.py:148
 #: python/midicontrols.py:1223 python/playergui.py:3959
-#: python/sourceclientgui.py:2839
+#: python/sourceclientgui.py:2860
 msgid "Stream"
 msgstr "Flusso"
 
 #. TC: Context {0}, {1}, {2} = Monitor Mix, Stream, DJ
 #. TC: Or whatever they become translated to.
-#: python/maingui.py:3203
+#: python/maingui.py:3268
 msgid ""
 "In IDJC there are are two audio paths and this '{0}' control toggles between "
 "them. When '{1}' is active you can hear what the listeners are hearing "
@@ -1292,77 +1319,77 @@ msgstr ""
 "impostato su '{2}' per utilizzare al meglio le funzionalità VoIP"
 
 #. TC: Dropdown box title text widget.
-#: python/maingui.py:3216 python/maingui.py:3218
+#: python/maingui.py:3281 python/maingui.py:3283
 msgid "Metadata Source"
 msgstr "Sorgente dei metadati"
 
 #. TC: The chosen source of track metadata.
-#: python/maingui.py:3224
+#: python/maingui.py:3289
 msgid "Left Player"
 msgstr "Lettore sinistro"
 
 #. TC: The chosen source of track metadata.
-#: python/maingui.py:3226
+#: python/maingui.py:3291
 msgid "Right Player"
 msgstr "Lettore destro"
 
 #. TC: The chosen source of track metadata.
-#: python/maingui.py:3228
+#: python/maingui.py:3293
 msgid "Last Played"
 msgstr "Ultima eseguita"
 
 #. TC: The chosen source of track metadata.
-#: python/maingui.py:3230 python/maingui.py:3265 python/maingui.py:3267
+#: python/maingui.py:3295 python/maingui.py:3330 python/maingui.py:3332
 msgid "Crossfader"
 msgstr "Crossfader"
 
 #. TC: The chosen source of track metadata. In this case no metadata.
 #. TC: Fade time is zero. No fade, none.
-#: python/maingui.py:3232 python/playergui.py:3942
+#: python/maingui.py:3297 python/playergui.py:3942
 msgid "None"
 msgstr "Nessuna"
 
-#: python/maingui.py:3237
+#: python/maingui.py:3302
 msgid "Select which Deck is responsible for the metadata on the stream."
 msgstr "Seleziona quale Deck è responsabile dei metadati del flusso"
 
 #. TC: Abbreviation of left.
-#: python/maingui.py:3247 python/maingui.py:3249 python/preferences.py:389
+#: python/maingui.py:3312 python/maingui.py:3314 python/preferences.py:389
 msgid "L"
 msgstr "L"
 
-#: python/maingui.py:3259
+#: python/maingui.py:3324
 msgid "Move the crossfader fully left."
 msgstr "Sposta il crossfader a sinistra"
 
-#: python/maingui.py:3279
+#: python/maingui.py:3344
 msgid "The crossfader."
 msgstr "Il crossfader"
 
 #. TC: Abbreviation of right.
-#: python/maingui.py:3283 python/maingui.py:3285 python/preferences.py:399
+#: python/maingui.py:3348 python/maingui.py:3350 python/preferences.py:399
 msgid "R"
 msgstr "R"
 
-#: python/maingui.py:3295
+#: python/maingui.py:3360
 msgid "Move the crossfader fully right."
 msgstr "Sposta il crossfader a destra"
 
 #. TC: Describes a mid point.
-#: python/maingui.py:3304 python/maingui.py:3306
+#: python/maingui.py:3369 python/maingui.py:3371
 msgid "Middle"
 msgstr "Mezzo/Metà"
 
-#: python/maingui.py:3323 python/maingui.py:3330
+#: python/maingui.py:3388 python/maingui.py:3395
 msgid "Move the crossfader to the middle of its range of travel."
 msgstr "Sposta il crossfader a metà della corsa"
 
 #. TC: The attenuation response curve of the crossfader. User selectable.
-#: python/maingui.py:3335 python/maingui.py:3337
+#: python/maingui.py:3400 python/maingui.py:3402
 msgid "Response"
 msgstr "Risposta"
 
-#: python/maingui.py:3359
+#: python/maingui.py:3424
 msgid ""
 "This selects the response curve of the crossfader.\n"
 "\n"
@@ -1372,11 +1399,11 @@ msgstr ""
 "Le attenuzioni nel punto di mezzo sono -3dB, 0dB e -22dB rispettivamente."
 
 #. TC: Duration in seconds.
-#: python/maingui.py:3373 python/maingui.py:3375
+#: python/maingui.py:3438 python/maingui.py:3440
 msgid "Time"
 msgstr "Tempo"
 
-#: python/maingui.py:3392
+#: python/maingui.py:3457
 msgid ""
 "The time in seconds that the crossfader will take to automatically pass "
 "across when the button to the right is clicked."
@@ -1386,11 +1413,11 @@ msgstr ""
 
 #. TC: The crossfader pass-across button text.
 #. TC: The actual button appears as [<-->] with this text above it.
-#: python/maingui.py:3401 python/maingui.py:3403
+#: python/maingui.py:3466 python/maingui.py:3468
 msgid "Pass"
 msgstr "Avvia"
 
-#: python/maingui.py:3416
+#: python/maingui.py:3481
 msgid ""
 "This button causes the crossfader to move to the opposite side at a speed "
 "determined by the speed selector to the left."
@@ -1398,32 +1425,32 @@ msgstr ""
 "Questo pulsante muove il crossfader fino alla parte opposta nel lasso di "
 "tempo specificato qui a sinistra"
 
-#: python/maingui.py:3459
+#: python/maingui.py:3524
 #, fuzzy
 msgid "Peak"
 msgstr "Str Peak"
 
-#: python/maingui.py:3462
+#: python/maingui.py:3527
 msgid "A peak hold meter indicating the signal strength of the stream audio."
 msgstr ""
 "Un indicatore a tenuta di picco che indica la potenza del segnale audio "
 "trasmesso."
 
 #. TC: This text appears above the stream mix VU meter.
-#: python/maingui.py:3484
+#: python/maingui.py:3549
 msgid "VU"
 msgstr ""
 
-#: python/maingui.py:3488
+#: python/maingui.py:3553
 msgid "A VU meter for the stream audio."
 msgstr "Indicatore VU per il flusso audio"
 
 #. TC: Appears above the mic meters as a label followed by a number.
-#: python/maingui.py:3491
+#: python/maingui.py:3556
 msgid "Ch"
 msgstr "Ch"
 
-#: python/maingui.py:3518
+#: python/maingui.py:3583
 msgid ""
 "A peak hold meter indicating the microphone signal strength and a meter "
 "indicating attenuation levels in the microphone signal processing system. "
@@ -1435,7 +1462,7 @@ msgstr ""
 "segnale. Il verde indica l'attenuazione del noise gate, il giallo del de-"
 "esser. Il rosso del limiter."
 
-#: python/maingui.py:3526
+#: python/maingui.py:3591
 msgid "Jingles"
 msgstr "Stacchetti"
 
@@ -1634,26 +1661,25 @@ msgstr "Stacchetto suona dall'inizio"
 #. TC: Control method. Please keep it as Target:Action.
 #: python/midicontrols.py:128
 #, fuzzy
-msgid "Jingles stop effects all"
-msgstr "Stacchetti seleziona il successivo"
+msgid "Effects stop all"
+msgstr "VoIP imposta volume"
 
 #. TC: Control method. Please keep it as Target:Action.
 #: python/midicontrols.py:130
 #, fuzzy
-msgid "Jingles set effects volume"
-msgstr "Stacchetti imposta volume stacchetti 1"
+msgid "Effects set volume"
+msgstr "VoIP imposta volume"
 
 #. TC: Control method. Please keep it as Target:Action.
 #: python/midicontrols.py:132
 #, fuzzy
-msgid "Jingles set effects headroom"
+msgid "Effects set headroom"
 msgstr "Stacchetti seleziona il successivo"
 
 #. TC: Control method. Please keep it as Target:Action.
 #: python/midicontrols.py:134
-#, fuzzy
-msgid "Jingles set background volume"
-msgstr "Stacchetti imposta volume interludio"
+msgid "Background tracks set volume"
+msgstr ""
 
 #. TC: Control method. Please keep it as Target:Action.
 #: python/midicontrols.py:137
@@ -1678,9 +1704,10 @@ msgstr "Lettore"
 msgid "Channel"
 msgstr "Canale"
 
-#: python/midicontrols.py:147
-msgid "Jingle"
-msgstr "Stacchetto"
+#: python/midicontrols.py:147 python/preferences.py:485
+#: python/preferences.py:495
+msgid "Effect"
+msgstr "Effetto"
 
 #: python/midicontrols.py:149
 msgid "Recorder"
@@ -2831,10 +2858,6 @@ msgstr ""
 msgid "HF Detail"
 msgstr "Dettaglio HF"
 
-#: python/preferences.py:485 python/preferences.py:495
-msgid "Effect"
-msgstr "Effetto"
-
 #: python/preferences.py:491
 msgid "You can use this to boost the amount of treble in the audio."
 msgstr "Potete usarlo per aumentare la quantità di alte frequenze nell'audio."
@@ -3269,64 +3292,64 @@ msgstr "Traduttori"
 msgid "About"
 msgstr "Circa"
 
-#: python/sourceclientgui.py:89
+#: python/sourceclientgui.py:90
 msgid "Insert Attribute"
 msgstr "Inserisci attributo"
 
-#: python/sourceclientgui.py:138
+#: python/sourceclientgui.py:139
 msgid "Icecast 2 Master"
 msgstr "Icecast 2 Master"
 
-#: python/sourceclientgui.py:138
+#: python/sourceclientgui.py:139
 msgid "Shoutcast Master"
 msgstr "Shoutcast Master"
 
-#: python/sourceclientgui.py:139
+#: python/sourceclientgui.py:140
 msgid "Icecast 2 Stats/Relay"
 msgstr "Icecast 2 Stats/Relay"
 
-#: python/sourceclientgui.py:139
+#: python/sourceclientgui.py:140
 msgid "Shoutcast Stats/Relay"
 msgstr "Icecast 2 Stats/Relay"
 
-#: python/sourceclientgui.py:142
+#: python/sourceclientgui.py:143
 msgid "Enter new server connection details"
 msgstr "Inserisci i dettagli della connessione al server"
 
-#: python/sourceclientgui.py:161
+#: python/sourceclientgui.py:162
 msgid "Edit existing server connection details"
 msgstr "Modifica i dettagli della connessione"
 
-#: python/sourceclientgui.py:198
+#: python/sourceclientgui.py:199
 msgid "This server is to be scanned for audience figures"
 msgstr "Da scansionare per il pubblico in ascolto"
 
-#: python/sourceclientgui.py:211
+#: python/sourceclientgui.py:212
 msgid "Server type"
 msgstr "Tipo server"
 
-#: python/sourceclientgui.py:211
+#: python/sourceclientgui.py:212
 msgid "Port number"
 msgstr "Numero porta"
 
-#: python/sourceclientgui.py:212
+#: python/sourceclientgui.py:213
 msgid "Mount point"
 msgstr "Punto di montaggio"
 
-#: python/sourceclientgui.py:212
+#: python/sourceclientgui.py:213
 msgid "Login name"
 msgstr "Nome utente"
 
-#: python/sourceclientgui.py:454
+#: python/sourceclientgui.py:455
 msgid "Encoder Format Not Set/Compatible"
 msgstr ""
 
 #. TC: Connection button text when no details have been entered.
-#: python/sourceclientgui.py:457
+#: python/sourceclientgui.py:458
 msgid "No Master Server Configured"
 msgstr "Nessun server principale configurato"
 
-#: python/sourceclientgui.py:659
+#: python/sourceclientgui.py:660
 msgid ""
 "A table of servers with which to connect. Only one master server can be "
 "added for the purpose of streaming. All other servers will appear below the "
@@ -3338,42 +3361,42 @@ msgstr ""
 "sotto il server principale nella lista allo scopo di raccogliere statistiche "
 "che possono essere attivate per ciascun server."
 
-#: python/sourceclientgui.py:675
+#: python/sourceclientgui.py:676
 msgid "Hostname/IP address"
 msgstr "Nomehost/Indirizzo IP"
 
 #. TC: Mount point is a technical term in relation to icecast servers.
-#: python/sourceclientgui.py:688
+#: python/sourceclientgui.py:689
 #, fuzzy
 msgid "Mount point       "
 msgstr "Punto di mount     "
 
 #. TC: This is the listener count heading.
-#: python/sourceclientgui.py:697
+#: python/sourceclientgui.py:698
 msgid "Listeners"
 msgstr "Ascoltatori"
 
-#: python/sourceclientgui.py:712
+#: python/sourceclientgui.py:713
 msgid "The sum total of listeners in this server tab."
 msgstr "Il totale degli ascoltatori per questo server"
 
-#: python/sourceclientgui.py:739
+#: python/sourceclientgui.py:740
 msgid "Never"
 msgstr "Mai"
 
-#: python/sourceclientgui.py:742
+#: python/sourceclientgui.py:743
 msgid "Always"
 msgstr "Sempre"
 
-#: python/sourceclientgui.py:744
+#: python/sourceclientgui.py:745
 msgid "If connected"
 msgstr "Se connesso"
 
-#: python/sourceclientgui.py:1027
+#: python/sourceclientgui.py:1028
 msgid "Custom user agent string"
 msgstr "Stringa personalizzata per i navigatori"
 
-#: python/sourceclientgui.py:1034
+#: python/sourceclientgui.py:1035
 msgid ""
 "Set this on the occasion that the server or its firewall specifically "
 "refuses to allow libshout based clients."
@@ -3381,16 +3404,16 @@ msgstr ""
 "Impostare questa opzione nell'eventualità che il server o il suo firewall "
 "rifiutino esplicitamente connessioni da client che usano libshout."
 
-#: python/sourceclientgui.py:1039
+#: python/sourceclientgui.py:1040
 msgid "If the connection breaks reconnect to the server"
 msgstr "Se la connessione si interrompe riconnettiti al server"
 
 #. TC: Label for a comma separated list of delay times.
-#: python/sourceclientgui.py:1049
+#: python/sourceclientgui.py:1050
 msgid "Delay times"
 msgstr "Tempi di ritardo"
 
-#: python/sourceclientgui.py:1053
+#: python/sourceclientgui.py:1054
 msgid ""
 "A comma separated list of delays in seconds between reconnection attempts. "
 "Note that bad values or values less than 5 will be interpreted as 5."
@@ -3398,49 +3421,49 @@ msgstr ""
 "Una lista di ritardi, separati da virgola, tra i vari tentativi di "
 "riconnessione. Valori errati o inferiori a 5 verranno interpretati come 5."
 
-#: python/sourceclientgui.py:1057
+#: python/sourceclientgui.py:1058
 msgid "Repeat"
 msgstr "Ripeti"
 
-#: python/sourceclientgui.py:1059
+#: python/sourceclientgui.py:1060
 msgid "Repeat the sequence of delays indefinitely."
 msgstr "Ripeti all'infinito la sequenza dei ritardi"
 
 #. TC: User specifies no dialog box to be shown.
-#: python/sourceclientgui.py:1062
+#: python/sourceclientgui.py:1063
 msgid "Quiet"
 msgstr "Calmo"
 
-#: python/sourceclientgui.py:1064
+#: python/sourceclientgui.py:1065
 msgid "Keep the reconnection dialogue box hidden at all times."
 msgstr "Tieni nascosta la finestra della riconnessone ad ogni tentativo."
 
-#: python/sourceclientgui.py:1069
+#: python/sourceclientgui.py:1070
 msgid "The contingency plan upon the stream buffer becoming full is..."
 msgstr "Il piano da attuare nel caso il buffer si stia riempiendo è..."
 
-#: python/sourceclientgui.py:1078
+#: python/sourceclientgui.py:1079
 msgid "Discard audio data for as long as needed."
 msgstr "Scarta i dati audio finché è necessario."
 
-#: python/sourceclientgui.py:1080
+#: python/sourceclientgui.py:1081
 msgid "Assume the connection is beyond saving and reconnect."
 msgstr "Assumi che la connessione sia in fase di salvataggio e riconnettiti."
 
-#: python/sourceclientgui.py:1450
+#: python/sourceclientgui.py:1451
 msgid "Shoutcast"
 msgstr "Shoucast"
 
-#: python/sourceclientgui.py:1486
+#: python/sourceclientgui.py:1487
 #, fuzzy
 msgid "[Metadata suppressed]"
 msgstr "Sorgente dei metadati"
 
-#: python/sourceclientgui.py:1566
+#: python/sourceclientgui.py:1567
 msgid "Individual Controls"
 msgstr "Controlli individuali"
 
-#: python/sourceclientgui.py:1580
+#: python/sourceclientgui.py:1581
 #, fuzzy
 msgid ""
 "Connect to or disconnect from the radio server. If the button does not stay "
@@ -3465,12 +3488,12 @@ msgstr ""
 "server principale."
 
 #. TC: Kick whoever is on the server.
-#: python/sourceclientgui.py:1597
+#: python/sourceclientgui.py:1598
 #, fuzzy
 msgid "Kick Source"
 msgstr "Fonte"
 
-#: python/sourceclientgui.py:1599
+#: python/sourceclientgui.py:1600
 msgid ""
 "This will disconnect whoever is currently using the server, freeing it up "
 "for personal use."
@@ -3478,15 +3501,15 @@ msgstr ""
 "Questo disconnetterà chiunque stia utilizzando il server, liberandolo per un "
 "uso personale."
 
-#: python/sourceclientgui.py:1609
+#: python/sourceclientgui.py:1610
 msgid "Connection timer:"
 msgstr "Timer di connessione:"
 
-#: python/sourceclientgui.py:1613
+#: python/sourceclientgui.py:1614
 msgid "Begin"
 msgstr "Inizio"
 
-#: python/sourceclientgui.py:1614
+#: python/sourceclientgui.py:1615
 msgid ""
 "Automatically connect to the server at a specific time in 24 hour format, "
 "midnight being 00:00"
@@ -3494,19 +3517,19 @@ msgstr ""
 "Connessione automatica al server ad un orario specifico nel formato a 24 "
 "ore, la mezzanotte è indicata con 00:00"
 
-#: python/sourceclientgui.py:1619
+#: python/sourceclientgui.py:1620
 msgid "With kick"
 msgstr "Libera"
 
-#: python/sourceclientgui.py:1621
+#: python/sourceclientgui.py:1622
 msgid "Disconnect whoever is using the server just before start time."
 msgstr "Disconnetti chiunque stia usando il server poco prima dell'inizio."
 
-#: python/sourceclientgui.py:1630
+#: python/sourceclientgui.py:1631
 msgid "End"
 msgstr "Fine"
 
-#: python/sourceclientgui.py:1631
+#: python/sourceclientgui.py:1632
 msgid ""
 "Automatically disconnect from the server at a specific time in 24 hour "
 "format."
@@ -3514,16 +3537,16 @@ msgstr ""
 "Disconnessione automatica al server ad un orario specifico nel formato a 24 "
 "ore, la mezzanotte è indicata con 00:00"
 
-#: python/sourceclientgui.py:1642
+#: python/sourceclientgui.py:1643
 msgid "At connect:"
 msgstr "Una volta connesso:"
 
 #. TC: [x] Start player (*) 1 ( ) 2
-#: python/sourceclientgui.py:1646
+#: python/sourceclientgui.py:1647
 msgid "Start player"
 msgstr "Lettore iniziale"
 
-#: python/sourceclientgui.py:1651
+#: python/sourceclientgui.py:1652
 msgid ""
 "Have one of the players start automatically when a radio server connection "
 "is successfully made."
@@ -3532,11 +3555,11 @@ msgstr ""
 "buon fine."
 
 #. TC: [x] Start recorder (*) 1 ( ) 2
-#: python/sourceclientgui.py:1659
+#: python/sourceclientgui.py:1660
 msgid "Start recorder"
 msgstr "Avvia il registratore"
 
-#: python/sourceclientgui.py:1666
+#: python/sourceclientgui.py:1667
 msgid ""
 "Have a recorder start automatically when a radio server connection is "
 "successfully made."
@@ -3544,20 +3567,20 @@ msgstr ""
 "Avvia uno dei registratori automaticamente quando una connessione al server "
 "va a buon fine."
 
-#: python/sourceclientgui.py:1671
+#: python/sourceclientgui.py:1672
 msgid "Metadata"
 msgstr "Metadati"
 
-#: python/sourceclientgui.py:1681
+#: python/sourceclientgui.py:1682
 msgid "Format String"
 msgstr "Stringa di formattazione"
 
 #. TC: Label for the metadata fallback value.
-#: python/sourceclientgui.py:1683
+#: python/sourceclientgui.py:1684
 msgid "Fallback"
 msgstr "Alternativa"
 
-#: python/sourceclientgui.py:1697
+#: python/sourceclientgui.py:1698
 msgid ""
 "You can enter text to accompany the stream here and can specify placemarkers "
 "%r %t %l %s for the artist, title, album, and songname respectively, or "
@@ -3581,7 +3604,7 @@ msgstr ""
 "Se lasciato vuoto, i flussi Ogg utilizzeranno i tag standard e gli mp3 "
 "utilizzeranno %s."
 
-#: python/sourceclientgui.py:1705
+#: python/sourceclientgui.py:1706
 msgid ""
 "The fallback text to use when %r %t %l metadata is unavailable. See the "
 "format string to the left."
@@ -3589,7 +3612,7 @@ msgstr ""
 "Il testo cui ricorrere quando i metadati %r %t %l non sono disponibili. "
 "Guarda il formato dell stringa sulla sinitra."
 
-#: python/sourceclientgui.py:1707
+#: python/sourceclientgui.py:1708
 msgid ""
 "Metadata normally updates only on song title changes but you can force an "
 "immediate update here."
@@ -3597,28 +3620,28 @@ msgstr ""
 "I metadati di solito vengono aggiornati quando cambia il titolo della song "
 "in esecuzione ma potete forzare un aggiornamento automatico qui."
 
-#: python/sourceclientgui.py:1726
+#: python/sourceclientgui.py:1727
 msgid "Configuration"
 msgstr "Configurazione"
 
-#: python/sourceclientgui.py:1727
+#: python/sourceclientgui.py:1728
 msgid "The controls for configuring a stream."
 msgstr "I controlli per configurare un flusso."
 
-#: python/sourceclientgui.py:1735
+#: python/sourceclientgui.py:1736
 msgid "Connection"
 msgstr "Connessione"
 
-#: python/sourceclientgui.py:1740
+#: python/sourceclientgui.py:1741
 msgid "Format"
 msgstr "Formato"
 
 #. TC: Tab heading. User can enter information about the stream here.
-#: python/sourceclientgui.py:1749
+#: python/sourceclientgui.py:1750
 msgid "Stream Info"
 msgstr "Informazioni flusso"
 
-#: python/sourceclientgui.py:1754
+#: python/sourceclientgui.py:1755
 msgid ""
 "Enter your DJ name or station name here. Typically this information will be "
 "displayed by listener clients."
@@ -3627,7 +3650,7 @@ msgstr ""
 "informazioni saranno visualizzate attraverso i programmi usati dagli "
 "ascoltatori."
 
-#: python/sourceclientgui.py:1757
+#: python/sourceclientgui.py:1758
 msgid ""
 "The URL of your radio station. This and the rest of the information below is "
 "intended for display on a radio station listings website."
@@ -3636,19 +3659,19 @@ msgstr ""
 "informazioni qui sotto sono da intendersi come visualizzabili su di un sito "
 "web che fornisce una lista di stazioni."
 
-#: python/sourceclientgui.py:1762
+#: python/sourceclientgui.py:1763
 msgid "A description of your radio station."
 msgstr "Descrizione della vostra stazione."
 
-#: python/sourceclientgui.py:1767
+#: python/sourceclientgui.py:1768
 msgid "The musical genres you are likely to play."
 msgstr "Il genere musicale che offrirete."
 
-#: python/sourceclientgui.py:1770
+#: python/sourceclientgui.py:1771
 msgid "Make Public"
 msgstr "Rendi pubblico"
 
-#: python/sourceclientgui.py:1771
+#: python/sourceclientgui.py:1772
 msgid ""
 "Publish your radio station on a listings website. The website in question "
 "will depend on how the server to which you connect is configured."
@@ -3656,15 +3679,15 @@ msgstr ""
 "Pubblicate la vostra stazione su un sito. Il sito in questione dipenderà "
 "dalla configurazione del server cui vi connettete."
 
-#: python/sourceclientgui.py:1783
+#: python/sourceclientgui.py:1784
 msgid "Genre(s)"
 msgstr "Genere(i)"
 
-#: python/sourceclientgui.py:1794
+#: python/sourceclientgui.py:1795
 msgid "Master server admin password"
 msgstr "Password di amministrazione del server principale"
 
-#: python/sourceclientgui.py:1799
+#: python/sourceclientgui.py:1800
 msgid ""
 "This is for kick and stats on Shoutcast master servers that have an "
 "administrator password. For those that don't leave this blank (the source "
@@ -3674,47 +3697,47 @@ msgstr ""
 "password di amministrazione impostata. Per chi riempie questo campo (la "
 "password della fonte è sufficente)"
 
-#: python/sourceclientgui.py:1808
+#: python/sourceclientgui.py:1809
 msgid "Contact Details"
 msgstr "Dettagli del contatto"
 
-#: python/sourceclientgui.py:1813
+#: python/sourceclientgui.py:1814
 msgid "Internet Relay Chat connection info goes here."
 msgstr "Le informazioni per IRC vanno inserite qui"
 
-#: python/sourceclientgui.py:1816
+#: python/sourceclientgui.py:1817
 msgid "Connection info for AOL instant messenger goes here."
 msgstr "Le informazioni per AOL vanno inserite qui."
 
-#: python/sourceclientgui.py:1819
+#: python/sourceclientgui.py:1820
 msgid "ICQ instant messenger connection info goes here."
 msgstr "Le informazioni per ICQ vanno inserite qui."
 
-#: python/sourceclientgui.py:1822
+#: python/sourceclientgui.py:1823
 msgid "IRC"
 msgstr "IRC"
 
-#: python/sourceclientgui.py:1823
+#: python/sourceclientgui.py:1824
 msgid "AIM"
 msgstr "AIM"
 
-#: python/sourceclientgui.py:1824
+#: python/sourceclientgui.py:1825
 msgid "ICQ"
 msgstr "ICQ"
 
-#: python/sourceclientgui.py:1833
+#: python/sourceclientgui.py:1834
 msgid "Extra Shoutcast"
 msgstr "Extra Shoutcast"
 
-#: python/sourceclientgui.py:1838
+#: python/sourceclientgui.py:1839
 msgid "Troubleshooting"
 msgstr "Risoluzione problemi"
 
-#: python/sourceclientgui.py:1961
+#: python/sourceclientgui.py:1962
 msgid "Stop recording."
 msgstr "Ferma la registrazione"
 
-#: python/sourceclientgui.py:1963
+#: python/sourceclientgui.py:1964
 msgid ""
 "Start recording.\n"
 "\n"
@@ -3722,20 +3745,20 @@ msgid ""
 "not valid or write permission is not granted on the selected folder."
 msgstr ""
 
-#: python/sourceclientgui.py:1968
+#: python/sourceclientgui.py:1969
 msgid "Pause recording."
 msgstr "Metti in pausa"
 
-#: python/sourceclientgui.py:2008
+#: python/sourceclientgui.py:2009
 msgid "Recording time elapsed."
 msgstr "Tempo di registrazione trascorso."
 
 #. TC: Dialog title bar text.
-#: python/sourceclientgui.py:2069
+#: python/sourceclientgui.py:2070
 msgid "Select the folder to record to"
 msgstr "Seleziona la cartella in cui registrare"
 
-#: python/sourceclientgui.py:2078
+#: python/sourceclientgui.py:2079
 msgid ""
 "Choose which stream to record or the 24 bit FLAC option. If the stream isn't "
 "already running the encoder will be started automatically using whatever "
@@ -3745,7 +3768,7 @@ msgstr ""
 "già attivo il codificatore verrà avviato automaticamente con le impostazioni "
 "attualmente configurate."
 
-#: python/sourceclientgui.py:2082
+#: python/sourceclientgui.py:2083
 msgid ""
 "Choose which directory you want to save to. All file names will be in a "
 "timestamp format and have either an oga, mp3, or flac file extension. "
@@ -3757,74 +3780,74 @@ msgstr ""
 "Importante: dovete scegliere una cartella per la quale avete i permessi "
 "necessari alla scrittura."
 
-#: python/sourceclientgui.py:2197
+#: python/sourceclientgui.py:2198
 msgid "Perform operations on multiple servers in unison."
 msgstr "Esegue le operazioni su più server alla volta."
 
-#: python/sourceclientgui.py:2209
+#: python/sourceclientgui.py:2210
 msgid "Connect"
 msgstr "Connetti"
 
-#: python/sourceclientgui.py:2226
+#: python/sourceclientgui.py:2227
 msgid "Disconnect"
 msgstr "Disconnetti"
 
-#: python/sourceclientgui.py:2234
+#: python/sourceclientgui.py:2235
 #, fuzzy
 msgid "Kick Sources"
 msgstr "Fonte"
 
-#: python/sourceclientgui.py:2243
+#: python/sourceclientgui.py:2244
 msgid "Metadata:"
 msgstr "Metadati:"
 
-#: python/sourceclientgui.py:2273
+#: python/sourceclientgui.py:2274
 msgid "Group Controls"
 msgstr "Controlli di gruppo"
 
-#: python/sourceclientgui.py:2739
+#: python/sourceclientgui.py:2760
 msgid "Recording Facility Unavailable"
 msgstr ""
 
-#: python/sourceclientgui.py:2742
+#: python/sourceclientgui.py:2763
 #, fuzzy
 msgid "No Recorders Are Correctly Configured"
 msgstr "Nessun server principale configurato"
 
 #. TC: Recorder menu format string.
-#: python/sourceclientgui.py:2755
+#: python/sourceclientgui.py:2776
 msgid "{numericid} [{source}] > [{directory}]"
 msgstr ""
 
-#: python/sourceclientgui.py:2757
+#: python/sourceclientgui.py:2778
 msgid "Misconfigured"
 msgstr ""
 
-#: python/sourceclientgui.py:2778
+#: python/sourceclientgui.py:2799
 msgid "Streaming Facility Unavailable"
 msgstr ""
 
-#: python/sourceclientgui.py:2780
+#: python/sourceclientgui.py:2801
 #, fuzzy
 msgid "No Streams Are Currently Configured"
 msgstr "Nessun server principale configurato"
 
-#: python/sourceclientgui.py:2783
+#: python/sourceclientgui.py:2804
 #, fuzzy
 msgid "Group Connect"
 msgstr "Controlli di gruppo"
 
-#: python/sourceclientgui.py:2789
+#: python/sourceclientgui.py:2810
 #, fuzzy
 msgid "Group Disconnect"
 msgstr "Disconnetti"
 
 #. TC: Window title bar text.
-#: python/sourceclientgui.py:2820
+#: python/sourceclientgui.py:2841
 msgid "IDJC Output"
 msgstr "Uscita IDJC"
 
-#: python/sourceclientgui.py:2836
+#: python/sourceclientgui.py:2857
 msgid ""
 "Each one of these tabs represents a separate stream recorder. The LED "
 "indicator colours represent the following: Clear=Stopped Yellow=Paused "
@@ -3833,7 +3856,7 @@ msgstr ""
 "Ognuna di queste linguette rappresenta un registratore di flusso. I colori "
 "del LED indicano: Vuoto=Fermo Giallo=Pausa Rosso=Registrazione."
 
-#: python/sourceclientgui.py:2844
+#: python/sourceclientgui.py:2865
 msgid ""
 "Each one of these tabs represents a separate radio streamer. The LED "
 "indicator colours represent the following: Clear=No connection "
@@ -3844,11 +3867,11 @@ msgstr ""
 "Vuoto=Non connesso Giallo=In attesa di autenticazione. Verde=Connesso. "
 "Lampeggiante=Perdita di pacchetti a causa di una cattiva connessione."
 
-#: python/sourceclientgui.py:2862
+#: python/sourceclientgui.py:2883
 msgid " Stream "
 msgstr " Flusso "
 
-#: python/sourceclientgui.py:2895
+#: python/sourceclientgui.py:2917
 msgid ""
 "<span weight=\"bold\" size=\"12000\">A connection to a radio server has "
 "failed.</span>\n"
@@ -3860,13 +3883,28 @@ msgstr ""
 "\n"
 "Non verrà effettuato un altro tentativo."
 
-#: python/sourceclientgui.py:2900
+#: python/sourceclientgui.py:2922
 msgid ""
 "<span weight=\"bold\" size=\"12000\">A scheduled stream disconnection has "
 "occurred.</span>"
 msgstr ""
 "<span weight=\"bold\" size=\"12000\">E' intervenuta una disconnessione "
 "pianificata.</span>"
+
+#, fuzzy
+#~ msgid "Jingles stop effects all"
+#~ msgstr "Stacchetti seleziona il successivo"
+
+#, fuzzy
+#~ msgid "Jingles set effects volume"
+#~ msgstr "Stacchetti imposta volume stacchetti 1"
+
+#, fuzzy
+#~ msgid "Jingles set background volume"
+#~ msgstr "Stacchetti imposta volume interludio"
+
+#~ msgid "Jingle"
+#~ msgstr "Stacchetto"
 
 #~ msgid "Kick Incumbent"
 #~ msgstr "Libera connessione"
