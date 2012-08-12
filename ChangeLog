@@ -1,5 +1,7 @@
 * Changes in version 0.8.8 *
 
+Added a python module for monitoring IDJC (metadata and streams) to the HTML documentation.
+
 The bootstrapping script env-up renamed to bootstrap.
 
 New JACK freewheel mode front panel trigger button and matching preferences option to show this.
