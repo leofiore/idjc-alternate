@@ -36,9 +36,7 @@ import gobject
 import glib
 import psutil
 
-
 __all__ = ["IDJCMonitor"]
-
 
 
 class IDJCMonitor(gobject.GObject):
@@ -78,7 +76,6 @@ class IDJCMonitor(gobject.GObject):
                 'information about the streams', gobject.PARAM_READABLE)
     }
     
-    
     def __init__(self, profile):
         """Takes the profile parameter e.g. "default".
         
@@ -92,12 +89,10 @@ class IDJCMonitor(gobject.GObject):
         self.__shutdown = False
         self._start_probing()
         
-        
     def shutdown(self):
         """Block both signal emission and property reads."""
         
         self.__shutdown = True
-
 
     def _start_probing(self):
         self.__watchdog_id = None
@@ -110,9 +105,8 @@ class IDJCMonitor(gobject.GObject):
             self.__probe_id = glib.timeout_add_seconds(
                                                 2, self._idjc_started_probe)
 
-
     def _idjc_started_probe(self):
-        """Check for a newly started IDJC instance of the correct profile."""
+        # Check for a newly started IDJC instance of the correct profile.
         
         try:
             self.__main = self.__bus.get_object("net.sf.idjc." + self.__profile,
@@ -127,7 +121,6 @@ class IDJCMonitor(gobject.GObject):
             return not self.__shutdown
         else:
             return False
-
 
     def _pid_reply_handler(self, value):
         self.__pid = value
@@ -154,10 +147,8 @@ class IDJCMonitor(gobject.GObject):
         except dbus.exceptions.DBusException:
             self._start_probing()
 
-
     def _pid_error_handler(self, error):
         self._start_probing()
-
 
     def _watchdog(self):
         if self.__watchdog_notice:
@@ -179,10 +170,8 @@ class IDJCMonitor(gobject.GObject):
         self.__watchdog_notice = True
         return not self.__shutdown
 
-
     def _heartbeat_handler(self):
         self.__watchdog_notice = False
-
 
     def _quit_handler(self):
         """Start scanning for a new bus object."""
@@ -192,7 +181,6 @@ class IDJCMonitor(gobject.GObject):
             self.emit("quit", self.__profile, self.__pid)
         self._start_probing()
         
-        
     def _streamstate_handler(self, numeric_id, connected, where):
         numeric_id = int(numeric_id)
         connected = bool(connected)
@@ -200,7 +188,6 @@ class IDJCMonitor(gobject.GObject):
         self.__streams[numeric_id] = (connected, where)
         self.notify("streaminfo")
         self.emit("streamstate-changed", numeric_id, connected, where)
-
 
     def _metadata_handler(self, artist, title, album, songname):
 
@@ -218,7 +205,6 @@ class IDJCMonitor(gobject.GObject):
         self.emit("metadata-changed", self.__artist, self.__title,
                                                 self.__album, self.__songname)
 
-
     def do_get_property(self, prop):
         if self.__shutdown:
             raise AttributeError(
@@ -234,45 +220,33 @@ class IDJCMonitor(gobject.GObject):
             raise AttributeError("Unknown property %s in %s" % (
                                                             name, repr(self)))
 
-
     def notify(self, property_name):
         if not self.__shutdown:
             gobject.GObject.notify(self, property_name)
-            
             
     def emit(self, *args, **kwargs):
         if not self.__shutdown:
             gobject.GObject.emit(self, *args, **kwargs)
 
 
-
-##############################################################################
-
-
-
 if __name__ == "__main__":
     def launch_handler(monitor, profile, pid):
         print "Hello to IDJC '%s' with process ID %d." % (profile, pid)
 
-
     def quit_handler(monitor, profile, pid):
         print "Goodbye to IDJC '%s' with process ID %d." % (profile, pid)
-
 
     def streamstate_handler(monitor, which, state, where):
         print "Stream %d is %s on connection %s." % (
                                         which, ("down", "up")[state], where)
 
-
     def metadata_handler(monitor, artist, title, album, songname):
         print "Metadata is: artist: %s, title: %s, album: %s" % (
                                                     artist, title, album)
 
-
     def frozen_handler(monitor, profile, pid, frozen):
         print "IDJC '%s' with process ID %d is %s" % (
                         profile, pid, ("no longer frozen", "frozen")[frozen])
-
 
     def main():
         argv = sys.argv
@@ -289,7 +263,6 @@ if __name__ == "__main__":
         monitor.connect("frozen", frozen_handler)
         
         glib.MainLoop().run()
-        
         
     main()
 </pre>
