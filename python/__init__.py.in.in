@@ -70,6 +70,7 @@ class FGlobs(object):
     flacenabled = @HAVE_FLAC@
     oggflacenabled = @HAVE_OGGFLAC@
     speexenabled = @HAVE_SPEEX@
+    twolameenabled = @HAVE_TWOLAME@
     
     libmp3lame_filename = ""
     have_libmp3lame = False

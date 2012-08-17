@@ -1073,21 +1073,30 @@ class FormatCodecMPEG(FormatDropdown):
     """MPEG codec selection."""
 
     def __init__(self, prev_object):
+        have_mp2 = FGlobs.twolameenabled
         have_mp3 = FGlobs.have_libmp3lame
         have_aac = FGlobs.avcodec and FGlobs.avformat
         extra = []
+
+        if not have_mp2:
+            extra.append(_('The MP2 option requires IDJC be rebuilt against libtwolame.'))
 
         if not have_mp3:
             extra.append(_('Enable the MP3 option by installing libmp3lame.'))
 
         if not have_aac:
-            extra.append(_('The AAC options require IDJC be built against libavcodec and libavformat.'))
+            extra.append(_('The AAC options require IDJC be rebuilt against libavcodec and libavformat.'))
+        else:
+            if not FormatCodecMPEG.aac_enabled:
+                extra.append(_('Specific AAC support not present in libavcodec. More info: idjc.sourceforge.net.'))
+            if not FormatCodecMPEG.aacpv2_enabled:
+                extra.append(_('Specific AAC+ support not present in libavcodec. More info: idjc.sourceforge.net.'))
 
         spc = "\n\n\n" if extra else ""
         tooltip = _('Codecs of the MPEG family.') + spc + "\n\n".join(extra)
         
         FormatDropdown.__init__(self, prev_object, _('Codec'), "codec", (
-            dict(display_text=_('MP2'), value="mp2", chain="FormatCodecMPEGMP2"),
+            dict(display_text=_('MP2'), value="mp2", chain="FormatCodecMPEGMP2", sensitive=have_mp2),
             dict(display_text=_('MP3'), value="mp3", chain="FormatCodecMPEGMP3", sensitive=have_mp3, default=have_mp3),
             dict(display_text=_('AAC'), value="aac", chain="FormatCodecMPEGAACSamplerate", sensitive=have_aac and FormatCodecMPEG.aac_enabled),
             dict(display_text=_('AAC+ v2'), value="aacpv2", chain="FormatCodecMPEGAACPlusV2Samplerate", sensitive=have_aac and FormatCodecMPEG.aacpv2_enabled)), 0,

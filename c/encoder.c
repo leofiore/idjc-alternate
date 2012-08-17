@@ -38,7 +38,7 @@
 #ifdef DYN_LAME
 #include "dyn_lame.h"
 #endif
-
+    
 #define RS_INPUT_SAMPLES 512
 
 typedef jack_default_audio_sample_t sample_t;
@@ -558,7 +558,9 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
                             encoder_init = live_mp3_encoder_init;
                             break;
                         case ENCODER_CODEC_MP2:
+#ifdef HAVE_TWOLAME
                             encoder_init = live_mp2_encoder_init;
+#endif
                             break;
                         case ENCODER_CODEC_AAC:
                         case ENCODER_CODEC_AACPLUSV2:

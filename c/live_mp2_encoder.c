@@ -19,6 +19,8 @@
 
 #include "../config.h"
 
+#ifdef HAVE_TWOLAME
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -192,3 +194,5 @@ int live_mp2_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
     encoder->run_encoder = encoder_main;
     return SUCCEEDED;
     }
+
+#endif /* HAVE_TWOLAME */

@@ -2,8 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([idjc], [0.8.8_development], 
-                [https://sourceforge.net/tracker/?group_id=135773])
+AC_INIT([idjc], [0.8.8], 
+                [http://idjc.sourceforge.net])
 AC_SUBST(COPYRIGHT_YEAR, [2012])
 AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE
@@ -28,7 +28,6 @@ PKG_CHECK_MODULES(LIBJACK, [jack >= 0.98.0])
 # Core dependencies.
 PKG_CHECK_MODULES([LIBVORBIS], [vorbis >= 1.0.0])
 PKG_CHECK_MODULES([LIBVORBISENC], [vorbisenc >= 1.0.0])
-PKG_CHECK_MODULES([TWOLAME], [twolame])
 PKG_CHECK_MODULES([MPG123], [libmpg123])
 PKG_CHECK_MODULES([LIBSAMPLERATE], [samplerate])
 PKG_CHECK_MODULES([LIBSNDFILE], [sndfile])
@@ -154,6 +153,26 @@ else
    AC_DEFINE([DYN_LAME], [1], [LAME to be linked dynamically])
    AC_SUBST([DYN_LAME], [1])
    DYNAMIC="1"
+fi
+
+AC_ARG_ENABLE([twolame],
+   AC_HELP_STRING([--disable-twolame],[remove the capability to stream in mp2]),
+   [maketwolame=$enableval],[maketwolame="maybe"])
+
+if test $maketwolame != "no" ; then
+   PKG_CHECK_MODULES([TWOLAME], [twolame],
+            [
+            AC_DEFINE(HAVE_TWOLAME, 1, [Set if libtwolame was found])
+            AC_SUBST(HAVE_TWOLAME, 1)],
+            [AC_SUBST(HAVE_TWOLAME, 0),
+
+            if test $maketwolame = "yes" ; then
+               AC_MSG_ERROR([libtwolame not detected but specifically requested in configure options])
+            else
+               AC_MSG_WARN([IDJC will be built without libtwolame mp2 streaming support])
+            fi])
+else
+   AC_SUBST([HAVE_TWOLAME],[0])
 fi
 
 AC_CHECK_LIB([pthread], [pthread_create], :, AC_MSG_ERROR("libpthread not detected"))

@@ -17,6 +17,10 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "../config.h"
+
+#ifdef HAVE_TWOLAME
+
 #include "twolame.h"
 #include "sourceclient.h"
 
@@ -33,3 +37,5 @@ struct lm2e_data
     };
 
 int live_mp2_encoder_init(struct encoder *encoder, struct encoder_vars *ev);
+
+#endif /* HAVE_TWOLAME */
