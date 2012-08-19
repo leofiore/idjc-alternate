@@ -17,6 +17,8 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "../config.h"
+
 #include "gnusource.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +31,7 @@
 #include "ialloc.h"
 #include "xlplayer.h"
 #include "mp3dec.h"
+#include "dyn_mpg123.h"
 #include "oggdec.h"
 #include "flacdecode.h"
 #include "sndfiledecode.h"
@@ -44,6 +47,19 @@
 #define PBSPEED_INPUT_BUFFER_SIZE (PBSPEED_INPUT_SAMPLE_SIZE * sizeof (float))
 
 typedef jack_default_audio_sample_t sample_t;
+
+int mpg123ok = FALSE;
+
+void xlplayer_mpg123_status()
+    {
+#ifdef DYN_MPG123
+    mpg123ok = dyn_mpg123_init();
+#else
+    mpg123ok = TRUE;
+#endif
+    fprintf(g.out, "%d\n", mpg123ok);
+    fflush(g.out);
+    }
 
 /* make_audio_to_float: convert the audio to the format used by jack and libsamplerate */
 float *xlplayer_make_audio_to_float(struct xlplayer *self, float *buffer, uint8_t *data, int num_samples, int bits_per_sample, int num_channels)
@@ -314,7 +330,7 @@ static void *xlplayer_main(struct xlplayer *self)
                           || ((!strcmp(extension, "aac") || !strcmp(extension, "m4a") || !strcmp(extension, "mp4") || !strcmp(extension, "m4b") || !strcmp(extension, "m4p") || !strcmp(extension, "wma") || !strcmp(extension, "avi") || !strcmp(extension, "mpc") || !strcmp(extension, "ape")) && avcodecdecode_reg(self))
 #endif /* HAVE_AVFORMAT */
 #endif /* HAVE_AVCODEC */
-                          || ((!strcmp(extension, "mp3") || (!strcmp(extension, "mp2"))) && mp3decode_reg(self))
+                          || ((!strcmp(extension, "mp3") || (!strcmp(extension, "mp2"))) && mpg123ok && mp3decode_reg(self))
                     )
                     {
                     self->playmode = PM_PLAYING;

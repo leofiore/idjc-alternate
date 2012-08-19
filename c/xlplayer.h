@@ -228,4 +228,7 @@ void xlplayer_buffer_alloc_all(struct xlplayer **list, jack_nframes_t nframes);
 void xlplayer_smoothing_process_all(struct xlplayer **list);
 void xlplayer_stats_all(struct xlplayer **list);
 
+/* initialise mpg123 runtime linking (if falling back to runtime linking) and report the operational status */
+void xlplayer_mpg123_status();
+
 #endif /* XLPLAYER_H */

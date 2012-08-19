@@ -26,7 +26,6 @@
 #include <jack/jack.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <mpg123.h>
 #include "xlplayer.h"
 #include "mp3dec.h"
 #include "bsdcompat.h"
@@ -39,7 +38,6 @@
 static int decoder_library_ok;
 
 int dynamic_metadata_form[4] = { DM_SPLIT_L1, DM_NOTAG, DM_NOTAG, DM_SPLIT_U8 };
-
 
 static void mp3decode_eject(struct xlplayer *xlplayer)
     {

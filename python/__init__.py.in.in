@@ -39,15 +39,29 @@ from .utils import PathStr
 
 
 
-def dlltest(name):
-    """Truth test for presence of runtime-linkable library going by name."""
+#def dlltest(name):
+#    """Truth test for presence of runtime-linkable library going by name."""
+#
+#    try:
+#        ctypes.CDLL(name)
+#    except:
+#        return False
+#    return True
 
-    try:
-        ctypes.CDLL(name)
-    except:
-        return False
-    return True
 
+def lib_probe(at_runtime, names):
+    if at_runtime:
+        for name in names.split():
+            try:
+                ctypes.CDLL(name)
+            except Exception:
+                continue
+            else:
+                return True, name
+        else:
+            return False, ""
+    else:
+        return True, ""
 
 
 class FGlobs(object):
@@ -72,22 +86,12 @@ class FGlobs(object):
     speexenabled = @HAVE_SPEEX@
     twolameenabled = @HAVE_TWOLAME@
     
-    libmp3lame_filename = ""
-    have_libmp3lame = False
-    if @DYN_LAME@:
-        for lib_name in ("libmp3lame.so.0", "liblame.so.0", "libmp3lame.dylib",
-                                                            "liblame.dylib"):
-            try:
-                ctypes.CDLL(lib_name)
-            except:
-                continue
-            else:
-                libmp3lame_filename = lib_name
-                have_libmp3lame = True
-                break
-    else:
-        have_libmp3lame = True
+    have_libmp3lame, libmp3lame_filename = lib_probe(@DYN_LAME@,
+                "libmp3lame.so.0 liblame.so.0 libmp3lame.dylib liblame.dylib")
     
+    have_libmpg123, libmpg123_filename = lib_probe(@DYN_MPG123@,
+                "libmpg123.so.0 libmpg123.dylib")
+        
     package_name = """@PACKAGE_NAME@"""
     package_version = """@PACKAGE_VERSION@"""
     backend = PathStr("""@libdir@""") / """@PACKAGE_NAME@.so.0"""

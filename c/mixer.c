@@ -1075,6 +1075,9 @@ int mixer_main()
         fflush(g.out);
         }
 
+    if (!strcmp(action, "mp3_getstatus"))
+        xlplayer_mpg123_status();
+
     if (!strcmp(action, "jackportread"))
         jackportread(jackport, jackfilter);
         

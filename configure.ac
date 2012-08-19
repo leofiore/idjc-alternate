@@ -28,7 +28,6 @@ PKG_CHECK_MODULES(LIBJACK, [jack >= 0.98.0])
 # Core dependencies.
 PKG_CHECK_MODULES([LIBVORBIS], [vorbis >= 1.0.0])
 PKG_CHECK_MODULES([LIBVORBISENC], [vorbisenc >= 1.0.0])
-PKG_CHECK_MODULES([MPG123], [libmpg123])
 PKG_CHECK_MODULES([LIBSAMPLERATE], [samplerate])
 PKG_CHECK_MODULES([LIBSNDFILE], [sndfile])
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
@@ -132,6 +131,27 @@ if test $makeflac != "no" ; then
 else
    AC_SUBST([HAVE_FLAC],[0])
    AC_SUBST([HAVE_OGGFLAC],[0])
+fi
+
+AC_CHECK_HEADERS([mpg123.h])
+
+AC_ARG_ENABLE(mpg123,
+   AC_HELP_STRING([--disable-mpg123],[remove capability to play mp3 format]),[makempg123=$enableval],[makempg123="maybe"])
+
+if test $makempg123 != "no" ; then
+    PKG_CHECK_MODULES([MPG123], [libmpg123],
+    [AC_SUBST([MPG123], [-lmpg123])
+    AC_SUBST([DYN_MPG123], [0])],
+    [AC_DEFINE([DYN_MPG123], [1], [MPG123 to be linked dynamically])
+    AC_SUBST([DYN_MPG123], [1])
+    DYNAMIC="1"
+    if test $makempg123 = "yes" ; then
+        AC_MSG_ERROR([libmpg123 not detected but specifically requested in configure options])
+    fi])
+else
+    AC_DEFINE([DYN_MPG123], [1], [MPG123 to be linked dynamically])
+    AC_SUBST([DYN_MPG123], [1])
+    DYNAMIC="1"
 fi
 
 AC_CHECK_HEADERS([lame/lame.h])

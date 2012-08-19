@@ -2597,6 +2597,10 @@ class MainWindow(dbus.service.Object):
                 else:
                     print "bad response from newly started backend"
                     continue
+
+                if FGlobs.have_libmpg123:
+                    self.mixer_write("ACTN=mp3_getstatus\nend\n")
+                    self.mp3status = int(self.mixer_read())
               
                 if message != "bootstrap":
                     # Restore previous settings.
@@ -2901,6 +2905,7 @@ class MainWindow(dbus.service.Object):
         os.environ["num_recorders"] = str(PGlobs.num_recorders)
         os.environ["has_head"] = "1"
         os.environ["libmp3lame_filename"] = FGlobs.libmp3lame_filename
+        os.environ["libmpg123_filename"] = FGlobs.libmpg123_filename
         # For IPC.
         os.environ["ui2be"] = pm.basedir / "ui2be"
         os.environ["be2ui"] = pm.basedir / "be2ui"

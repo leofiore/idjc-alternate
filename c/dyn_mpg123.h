@@ -1,5 +1,5 @@
 /*
-#   mp3dec.h: decodes mp3 file format for xlplayer
+#   dyn_mpg123.h: dynamic linking for libmpg123
 #   Copyright (C) 2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
@@ -19,24 +19,8 @@
 
 #include "../config.h"
 
-#include <stdio.h>
+#ifdef DYN_MPG123
 
-#ifdef HAVE_MPG123_H
-#include <mpg123.h>
-#else 
-#include "mpg123.h"
-#endif /* HAVE_MPG123_H */
+int dyn_mpg123_init();
 
-#include "xlplayer.h"
-#include "mp3tagread.h"
-
-struct mp3decode_vars
-   {
-   FILE *fp;
-   mpg123_handle *mh;
-   struct mp3taginfo taginfo;
-   struct chapter *current_chapter;
-   int resample;
-   };
-
-int mp3decode_reg(struct xlplayer *xlplayer);
+#endif /* DYN_MPG123 */
