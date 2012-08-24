@@ -182,7 +182,8 @@ class MainMenu(gtk.MenuBar, MenuMixin):
                                                             gtk.ImageMenuItem)
 
         for each in ("streams", "recorders"):
-            m = self.submenu(getattr(self, each + "menu_i"), each)
+            mi = getattr(self, each + "menu_i")
+            m = self.submenu(mi, each)
             
         self.submenu(self.viewmenu_i, "view")
         mkitems = self.build(self.viewmenu)
@@ -199,7 +200,11 @@ class MainMenu(gtk.MenuBar, MenuMixin):
         self.build(self.helpmenu)((("about", gtk.STOCK_ABOUT),),
                                                             gtk.ImageMenuItem)
 
+        self.filemenu_i.connect("activate", self.cb_filemenu_activate)
 
+    def cb_filemenu_activate(self, menuitem):
+        self.streamsmenu_i.emit("activate")
+        self.recordersmenu_i.emit("activate")
 
 class JackMenu(MenuMixin):
     def __init__(self, menu, write, read):
@@ -285,6 +290,7 @@ class JackMenu(MenuMixin):
         mi = getattr(self, port + "menu_i")
         sub = self.submenu(mi, port)
         mi.connect("activate", self.cb_port_connections, pport, sub)
+        mi.emit("activate")
 
 
     def cb_port_connections(self, mi, port, menu):
@@ -2956,10 +2962,10 @@ class MainWindow(dbus.service.Object):
         menuhbox = gtk.HBox()
         self.vbox8.pack_start(menuhbox, False)
         menuhbox.show()
-        dummymenu = gtk.MenuBar()
-        menuhbox.pack_start(dummymenu)
-        dummymenu.show()
-        dummymenu.set_visible(False)
+        #dummymenu = gtk.MenuBar()
+        #menuhbox.pack_start(dummymenu)
+        #dummymenu.show()
+        #dummymenu.set_visible(False)
         self.menu = MainMenu()
         self.menu.set_border_width(6)
         menuhbox.pack_start(self.menu)

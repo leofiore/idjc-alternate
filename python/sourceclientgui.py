@@ -2882,7 +2882,7 @@ class SourceClientGui(dbus.service.Object):
         for rectab in self.recordtabframe.tabs:
             rectab.source_dest.populate_stream_selector(_(' Stream '),
                                                     self.streamtabframe.tabs)
-                
+              
         self.parent.menu.recordersmenu_i.connect("activate",
                     self.cb_populate_recorder_menu, self.recordtabframe.tabs)
         self.parent.menu.streamsmenu_i.connect("activate",
