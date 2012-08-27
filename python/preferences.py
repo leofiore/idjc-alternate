@@ -720,9 +720,12 @@ class mixprefs:
             self.parent.player_right.pbspeedbar.set_value(0)
             self.parent.player_left.pbspeedbox.show()
             self.parent.player_right.pbspeedbox.show()
+            self.parent.jingles.interlude.pbspeedbar.set_value(0)
+            self.parent.jingles.interlude.pbspeedbox.show()
         else:
             self.parent.player_left.pbspeedbox.hide()
             self.parent.player_right.pbspeedbox.hide()
+            self.parent.jingles.interlude.pbspeedbox.hide()
         self.parent.send_new_mixer_stats()
 
     def cb_dual_volume(self, widget):

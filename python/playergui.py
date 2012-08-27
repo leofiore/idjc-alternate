@@ -1201,6 +1201,7 @@ class IDJC_Media_Player:
         fh.write("digiprogress_type=" + str(int(self.digiprogress_type)) + "\n")
         fh.write("stream_button=" + str(int(self.stream.get_active())) + "\n")
         fh.write("listen_button=" + str(int(self.listen.get_active())) + "\n")
+        fh.write("force_button=" + str(int(self.force.get_active())) + "\n")
         fh.write("playlist_mode=" + str(self.pl_mode.get_active()) + "\n")
         fh.write("plsave_filetype=" + str(self.plsave_filetype) + "\n")
         fh.write("plsave_open=" + str(int(self.plsave_open)) + "\n")
@@ -1269,6 +1270,8 @@ class IDJC_Media_Player:
                 if line.startswith("stream_button="):
                     self.stream.set_active(int(line[14]))
                 if line.startswith("listen_button="):
+                    self.listen.set_active(int(line[14]))
+                if line.startswith("force_button="):
                     self.listen.set_active(int(line[14]))
                 if line.startswith("playlist_mode="):
                     self.pl_mode.set_active(int(line[14]))
@@ -2278,7 +2281,7 @@ class IDJC_Media_Player:
         self.filerq.destroy()
         if response_id != gtk.RESPONSE_ACCEPT:
             return
-        gen = self.get_elements_from(chosenfiles)
+        gen = self.filter_allowed_controls(self.get_elements_from(chosenfiles))
         for each in gen:
             if self.no_more_files:
                 self.no_more_files = False
@@ -2286,6 +2289,18 @@ class IDJC_Media_Player:
             self.liststore.append(each)
             while gtk.events_pending():
                 gtk.main_iteration()
+                
+    def filter_allowed_controls(self, items):
+        """Interlude playlist must not contain certain playlist controls."""
+        
+        if self.playername != "interlude":
+            for each in items:
+                yield each
+            return
+
+        for each in items:
+            if each[0] not in (">transfer", ">crossfade", ">normalspeed"):
+                yield each
 
     def file_destroy(self, widget):
         self.showing_file_requester = False
@@ -2447,6 +2462,8 @@ class IDJC_Media_Player:
         if data == "Stream":
             self.parent.send_new_mixer_stats();
         if data == "Listen":
+            self.parent.send_new_mixer_stats();
+        if data == "Force":
             self.parent.send_new_mixer_stats();
 
     def cb_progress(self, progress):
@@ -2721,27 +2738,26 @@ class IDJC_Media_Player:
                             if meta:
                                 yield meta
                                 raise GotLocation
-                    if self.playername in ("left", "right"):
-                        # Support namespaced pld tag for literal playlist data.
-                        # This is only used for data such as playlist controls.
-                        extensions = track.getElementsByTagName('extension')
-                        for extension in extensions:
-                            if extension.getAttribute("application") == \
-                                                "http://idjc.sourceforge.net/ns/":
-                                customtags = extension.getElementsByTagNameNS(
-                                        "http://idjc.sourceforge.net/ns/", "pld")
-                                for tag in customtags:
-                                    try:
-                                        literal_entry = NOTVALID._replace(**dict((
-                                                k, type(getattr(NOTVALID, k))(
-                                                tag.attributes.get(k).nodeValue))
-                                                for k in tag.attributes.keys()))
-                                    except Exception, e:
-                                        print e
-                                        pass
-                                    else:
-                                        yield literal_entry
-                                        raise GotLocation
+                    # Support namespaced pld tag for literal playlist data.
+                    # This is only used for data such as playlist controls.
+                    extensions = track.getElementsByTagName('extension')
+                    for extension in extensions:
+                        if extension.getAttribute("application") == \
+                                            "http://idjc.sourceforge.net/ns/":
+                            customtags = extension.getElementsByTagNameNS(
+                                    "http://idjc.sourceforge.net/ns/", "pld")
+                            for tag in customtags:
+                                try:
+                                    literal_entry = NOTVALID._replace(**dict((
+                                            k, type(getattr(NOTVALID, k))(
+                                            tag.attributes.get(k).nodeValue))
+                                            for k in tag.attributes.keys()))
+                                except Exception, e:
+                                    print e
+                                    pass
+                                else:
+                                    yield literal_entry
+                                    raise GotLocation
                 except GotLocation:
                     pass
             return
@@ -2958,8 +2974,8 @@ class IDJC_Media_Player:
             self.copy_prepend_cursor.set_sensitive(sens3)
             self.transfer_append_cursor.set_sensitive(sens3)
             self.transfer_prepend_cursor.set_sensitive(sens3)
-            self.playlist_copy.set_sensitive(sens2 and sens4)
-            self.playlist_transfer.set_sensitive(sens2 and sens4)
+            self.playlist_copy.set_visible(sens2 and sens4)
+            self.playlist_transfer.set_visible(sens2 and sens4)
 
             widget.popup(None, None, None, event.button, event.time)
             return True
@@ -3473,7 +3489,6 @@ class IDJC_Media_Player:
         if celltext[:4] == "<b>>":
             celltext = celltext[3:-4]
         if celltext[0] == ">":
-            assert(self.playername != "interlude")
             crprop("xalign", 0.45)
             crprop("ypad", 0)
             crprop("scale", 0.75)
@@ -3616,7 +3631,7 @@ class IDJC_Media_Player:
     def pl_mode_data_function(self, celllayout, cell, model, iter):
         cell.props.text = _(model.get_value(iter, 0))
         if self.playername == "interlude":
-            cell.props.sensitive = model.get_path(iter)[0] in (1, 2)
+            cell.props.sensitive = model.get_path(iter)[0] in range(6)
             
 
     def __init__(self, pbox, name, parent):
@@ -3976,6 +3991,16 @@ class IDJC_Media_Player:
         set_tip(self.listen,
                         _('Make output from this player audible to the DJ.'))
 
+        self.force = nice_listen_togglebutton(" %s " % _('Force'))
+        self.force.set_active(True)
+        self.force.connect("toggled", self.cb_toggle, "Force")
+        frame.hbox.pack_start(self.force, True, True, 0)
+        if name == "interlude":
+            self.force.show()
+        set_tip(self.force,
+                _("When selected the output from this player doesn't mute"
+                " whenever either of the main players are active."))
+
         # hbox2 is now filled so lets show it
         self.hbox2.show()
 
@@ -4010,11 +4035,12 @@ class IDJC_Media_Player:
         self.control_menu = gtk.Menu()
 
         # TC: Insert playlist control to set playback speed to normal.
-        self.control_normal_speed_control = gtk.MenuItem(_('Normal Speed'))
-        self.control_normal_speed_control.connect("activate",
-                                self.menuitem_response, "Normal Speed Control")
-        self.control_menu.append(self.control_normal_speed_control)
-        self.control_normal_speed_control.show()
+        if name in ("left", "right"):
+            self.control_normal_speed_control = gtk.MenuItem(_('Normal Speed'))
+            self.control_normal_speed_control.connect("activate",
+                                    self.menuitem_response, "Normal Speed Control")
+            self.control_menu.append(self.control_normal_speed_control)
+            self.control_normal_speed_control.show()
 
         # TC: Insert playlist control to stop the player.
         self.control_menu_stop_control = gtk.MenuItem(_('Player Stop'))
@@ -4038,18 +4064,20 @@ class IDJC_Media_Player:
         self.control_menu_jumptop_control.show()
 
         # TC: Insert playlist control to transfer to the opposite player.
-        self.control_menu_transfer_control = gtk.MenuItem(_('Transfer'))
-        self.control_menu_transfer_control.connect("activate",
-                                    self.menuitem_response, "Transfer Control")
-        self.control_menu.append(self.control_menu_transfer_control)
-        self.control_menu_transfer_control.show()
+        if name in ("left", "right"):
+            self.control_menu_transfer_control = gtk.MenuItem(_('Transfer'))
+            self.control_menu_transfer_control.connect("activate",
+                                        self.menuitem_response, "Transfer Control")
+            self.control_menu.append(self.control_menu_transfer_control)
+            self.control_menu_transfer_control.show()
 
         # TC: Insert playlist control to crossfade to the opposite player.
-        self.control_menu_crossfade_control = gtk.MenuItem(_('Crossfade'))
-        self.control_menu_crossfade_control.connect("activate",
-                                    self.menuitem_response, "Crossfade Control")
-        self.control_menu.append(self.control_menu_crossfade_control)
-        self.control_menu_crossfade_control.show()
+        if name in ("left", "right"):
+            self.control_menu_crossfade_control = gtk.MenuItem(_('Crossfade'))
+            self.control_menu_crossfade_control.connect("activate",
+                                        self.menuitem_response, "Crossfade Control")
+            self.control_menu.append(self.control_menu_crossfade_control)
+            self.control_menu_crossfade_control.show()
 
         # TC: Embed a DJ announcement text into the playlist.
         self.control_menu_announcement_control = gtk.MenuItem(_('Announcement'))
@@ -4196,13 +4224,12 @@ class IDJC_Media_Player:
         self.playlist_transfer.show()
 
         # TC: Submenu Item. Parent menu is Playlist.
-        self.playlist_exchange = gtk.MenuItem(_('Exchange'))
-        self.playlist_exchange.connect("activate", self.menuitem_response,
-                                                            "Playlist Exchange")
-        self.playlist_menu.append(self.playlist_exchange)
-        self.playlist_exchange.show()
-        if name == "interlude":
-            self.playlist_exchange.set_sensitive(False)
+        if name in ("left", "right"):
+            self.playlist_exchange = gtk.MenuItem(_('Exchange'))
+            self.playlist_exchange.connect("activate", self.menuitem_response,
+                                                                "Playlist Exchange")
+            self.playlist_menu.append(self.playlist_exchange)
+            self.playlist_exchange.show()
 
         # TC: Submenu Item. Parent menu is Playlist.
         self.playlist_empty = gtk.MenuItem(_('Empty'))

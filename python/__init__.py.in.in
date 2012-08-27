@@ -19,7 +19,6 @@ Generated from file __init__.py.in.in -- edit the original.
 #   If not, see <http://www.gnu.org/licenses/>.
 
 
-
 import os
 import gettext
 
@@ -37,16 +36,6 @@ from .utils import PathStr
 #
 # namespace classes typically have no public methods
 
-
-
-#def dlltest(name):
-#    """Truth test for presence of runtime-linkable library going by name."""
-#
-#    try:
-#        ctypes.CDLL(name)
-#    except:
-#        return False
-#    return True
 
 
 def lib_probe(at_runtime, names):

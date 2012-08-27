@@ -77,7 +77,7 @@ static int volume, volume2, crossfade, jinglesvolume, jinglesheadroom, interlude
 static int jingles_playing;
 /* the player audio feed buttons */
 static int left_stream = 1, left_audio = 1, right_stream = 1, right_audio = 1;
-static int inter_stream = 1, inter_audio = 0;
+static int inter_stream = 1, inter_audio = 0, inter_force = 1;
 /* status variables for the button cluster in lower right of main window */
 static int mic_on, mixermode = NO_PHONE;
 /* simple mixer mode: uses less space on the screen and less cpu as well */
@@ -316,7 +316,7 @@ static void update_smoothed_volumes()
     /* interlude_autovol rises and falls as and when no media players are playing */
     /* it indicates the playback volume in dB in addition to the one specified by the user */
     
-    if (main_play == TRUE)
+    if (main_play && !inter_force)
         {
         if (interlude_autovol > -128.0F)
             interlude_autovol -= 0.05F;
@@ -1277,14 +1277,14 @@ int mixer_main()
         {
         if(sscanf(mixer_string,
                  ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d"
-                 "%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:"
+                 "%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:"
                  "%1d:%1d:%1d:",
                  &volume, &volume2, &crossfade, &jinglesvolume, &jinglesheadroom , &interludevol, &mixbackvol, &jingles_playing,
                  &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
                  &s.new_left_pause, &s.new_right_pause, &s.flush_left, &s.flush_right, &s.flush_jingles, &s.flush_interlude,
                  &simple_mixer, &eot_alarm_set, &mixermode, &s.fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed),
                  &speed_variance, &dj_audio_level, &crosspattern, &s.use_dsp, &s.new_inter_pause,
-                 &inter_stream, &inter_audio) !=33)
+                 &inter_stream, &inter_audio, &inter_force) !=34)
             {
             fprintf(stderr, "mixer got bad mixer string\n");
             return TRUE;

@@ -1905,7 +1905,7 @@ class MainWindow(dbus.service.Object):
 
         string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:" \
                         "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:" \
-                        "%d:%d:%d:" % (
+                        "%d:%d:%d:%d:" % (
                         deckadj,
                         deck2adj,
                         self.crossadj.get_value(),
@@ -1939,7 +1939,8 @@ class MainWindow(dbus.service.Object):
                         self.dsp_button.get_active(), 
                         self.jingles.interlude.pause.get_active(),
                         self.jingles.interlude.stream.get_active(),
-                        self.jingles.interlude.listen.get_active()
+                        self.jingles.interlude.listen.get_active(),
+                        self.jingles.interlude.force.get_active()
                         )
         self.mixer_write("MIXR=%s\nACTN=mixstats\nend\n" % string_to_send)
 
@@ -1974,6 +1975,8 @@ class MainWindow(dbus.service.Object):
                 meta = 1
         elif self.metadata_src == self.METADATA_NONE:
             meta = -1
+        elif self.metadata_src == self.METADATA_BACKGROUND:
+            meta = 2
 
         # get metadata from left (meta == 0) or right (meta == 1) player
         if meta == 0:
@@ -1986,6 +1989,11 @@ class MainWindow(dbus.service.Object):
             self.artist = self.player_right.artist
             self.title = self.player_right.title
             self.album = self.player_right.album
+        elif meta == 2:
+            self.songname = self.jingles.interlude.songname
+            self.artist = self.jingles.interlude.artist
+            self.title = self.jingles.interlude.title
+            self.album = self.jingles.interlude.album
         elif meta == -1:
             self.songname = ""
             self.artist = ""
@@ -3306,6 +3314,8 @@ class MainWindow(dbus.service.Object):
         self.metadata_source.append_text(_('Crossfader'))
         # TC: The chosen source of track metadata. In this case no metadata.
         self.metadata_source.append_text(_('None'))
+        # TC: The chosen source of track metadata. In this case no metadata.
+        self.metadata_source.append_text(_('Background'))
         self.metadata_source.set_active(3)
         cross_sizegroup.add_widget(self.metadata_source)
         self.metadata_source.connect("changed", self.cb_metadata_source)
@@ -3621,6 +3631,7 @@ class MainWindow(dbus.service.Object):
         self.METADATA_LAST_PLAYED = 2
         self.METADATA_CROSSFADER = 3
         self.METADATA_NONE = 4
+        self.METADATA_BACKGROUND = 5
         self.metadata_src = self.METADATA_CROSSFADER
 
         self.vu_update_counter = 0
