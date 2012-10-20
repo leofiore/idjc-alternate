@@ -146,6 +146,7 @@ static int backend_main()
                 setenv("num_streamers", "6", o) ||
                 setenv("num_encoders", "6", o) ||
                 setenv("num_recorders", "2", o) ||
+                setenv("num_effects", "24", o) ||
                 setenv("jack_parameter", "default", o) ||
                 setenv("has_head", "0", o) ||
                 /* C locale required for . as radix character. */

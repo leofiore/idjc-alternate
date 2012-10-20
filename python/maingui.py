@@ -2661,7 +2661,7 @@ class MainWindow(dbus.service.Object):
             
             try:
                 self.mixer_write("ACTN=requestlevels\nend\n")
-            except ValueError, IOError:
+            except (ValueError, IOError):
                 if locking:
                     gtk.gdk.threads_leave()
                 return True

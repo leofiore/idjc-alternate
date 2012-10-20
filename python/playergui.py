@@ -3991,8 +3991,7 @@ class IDJC_Media_Player:
         set_tip(self.listen,
                         _('Make output from this player audible to the DJ.'))
 
-        self.force = nice_listen_togglebutton(" %s " % _('Force'))
-        self.force.set_active(True)
+        self.force = gtk.ToggleButton(" %s " % _('Force'))
         self.force.connect("toggled", self.cb_toggle, "Force")
         frame.hbox.pack_start(self.force, True, True, 0)
         if name == "interlude":

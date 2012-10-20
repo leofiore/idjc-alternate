@@ -61,7 +61,8 @@ class Effect(gtk.HBox):
         self.approot = parent
         self.pathname = None
         self.uuid = str(uuid.uuid4())
-        
+        self._repeat_works = False
+            
         gtk.HBox.__init__(self)
         self.set_border_width(2)
         self.set_spacing(3)
@@ -91,6 +92,9 @@ class Effect(gtk.HBox):
         self.trigger.drag_dest_set(gtk.DEST_DEFAULT_ALL,
             self.dndtargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_MOVE)
         self.trigger.connect("drag-data-received", self._drag_data_received)
+        
+        self.repeat = gtk.ToggleButton("Repeat")
+        self.pack_start(self.repeat, False)
 
         image = gtk.image_new_from_stock(gtk.STOCK_PROPERTIES,
                                                             gtk.ICON_SIZE_MENU)
@@ -155,6 +159,7 @@ class Effect(gtk.HBox):
 
 
     def _on_trigger(self, widget):
+        self._repeat_works = True
         if self.pathname:
             self.approot.mixer_write(
                             "EFCT=%d\nPLRP=%s\nRGDB=%f\nACTN=playeffect\nend\n" % (
@@ -162,6 +167,7 @@ class Effect(gtk.HBox):
 
 
     def _on_stop(self, widget):
+        self._repeat_works = False
         self.approot.mixer_write("EFCT=%d\nACTN=stopeffect\nend\n" % self.num)
 
 
@@ -215,6 +221,9 @@ class Effect(gtk.HBox):
         if val != self.old_ledval:
             self.led.set_from_pixbuf(self.green if val else self.clear)
             self.old_ledval = val
+
+            if not val and self._repeat_works and self.repeat.get_active():
+                self.trigger.clicked()
 
 
 
