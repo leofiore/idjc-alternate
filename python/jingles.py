@@ -84,6 +84,7 @@ class Effect(gtk.HBox):
         self.stop.set_image(image)
         self.pack_start(self.stop, False)
         self.stop.connect("clicked", self._on_stop)
+        set_tip(self.stop, _('Stop'))
         
         self.trigger = gtk.Button()
         self.trigger.set_size_request(80, -1)
@@ -92,9 +93,16 @@ class Effect(gtk.HBox):
         self.trigger.drag_dest_set(gtk.DEST_DEFAULT_ALL,
             self.dndtargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_MOVE)
         self.trigger.connect("drag-data-received", self._drag_data_received)
+        set_tip(self.trigger, _('Play'))
         
-        self.repeat = gtk.ToggleButton("Repeat")
+        self.repeat = gtk.ToggleButton()
+        image = gtk.Image()
+        pb = gtk.gdk.pixbuf_new_from_file_at_size(FGlobs.pkgdatadir / "repeat.png", 23, 19)
+        image.set_from_pixbuf(pb)
+        self.repeat.add(image)
+        image.show()
         self.pack_start(self.repeat, False)
+        set_tip(self.repeat, _('Repeat'))
 
         image = gtk.image_new_from_stock(gtk.STOCK_PROPERTIES,
                                                             gtk.ICON_SIZE_MENU)
@@ -105,6 +113,7 @@ class Effect(gtk.HBox):
         self.config.drag_source_set(gtk.gdk.BUTTON1_MASK,
             self.dndtargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_MOVE)
         self.config.connect("drag-data-get", self._drag_get_data)
+        set_tip(self.config, _('Configure'))
 
         self.dialog = EffectConfigDialog(self, parent.window)
         self.dialog.connect("response", self._on_dialog_response)
