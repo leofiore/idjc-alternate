@@ -57,7 +57,7 @@
 #define FALSE 0
 
 /* playlength of ring buffer contents in seconds */
-#define RB_SIZE 10.0
+#define MAIN_RB_SIZE 10.0
 /* number of bytes in the MIDI queue buffer */
 #define MIDI_QUEUE_SIZE 1024
 
@@ -1021,8 +1021,8 @@ void mixer_init(void)
     int n = 0;
     int ne = atoi(getenv("num_effects"));
 
-    if(! ((players[n++] = plr_l = xlplayer_create(sr, RB_SIZE, "left", &g.app_shutdown, &volume, 0, &left_stream, &left_audio, 0.25f)) &&
-            (players[n++] = plr_r = xlplayer_create(sr, RB_SIZE, "right", &g.app_shutdown, &volume2, 0, &right_stream, &right_audio, 0.25f))))
+    if(! ((players[n++] = plr_l = xlplayer_create(sr, MAIN_RB_SIZE, "left", &g.app_shutdown, &volume, 0, &left_stream, &left_audio, 0.25f)) &&
+            (players[n++] = plr_r = xlplayer_create(sr, MAIN_RB_SIZE, "right", &g.app_shutdown, &volume2, 0, &right_stream, &right_audio, 0.25f))))
         {
         fprintf(stderr, "failed to create main player modules\n");
         exit(5);
@@ -1036,14 +1036,15 @@ void mixer_init(void)
     
     for (int i = 0; i < ne; ++i)
         {
-        if (!(plr_j[i] = xlplayer_create(sr, RB_SIZE, "jingles", &g.app_shutdown, &jinglesvolume, 0, NULL, NULL, 1.0f / 12.0f)))
+        if (!(plr_j[i] = xlplayer_create(sr, 0.15f, "jingles", &g.app_shutdown, &jinglesvolume, 0, NULL, NULL, 0.0f)))
             {
             fprintf(stderr, "failed to create jingles player module\n");
             exit(5);
             }
+        plr_j[i]->fade_mode = 3;
         }
     
-    if (!(players[n++] = plr_i = xlplayer_create(sr, RB_SIZE, "interlude", &g.app_shutdown, &interludevol, 0, &inter_stream, &inter_audio, 0.25f)))
+    if (!(players[n++] = plr_i = xlplayer_create(sr, MAIN_RB_SIZE, "interlude", &g.app_shutdown, &interludevol, 0, &inter_stream, &inter_audio, 0.25f)))
         {
         fprintf(stderr, "failed to create interlude player module\n");
         exit(5);

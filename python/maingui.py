@@ -2897,7 +2897,12 @@ class MainWindow(dbus.service.Object):
                                         'resource_count', 'num_recorders')
         except ConfigParser.Error:
             pass
-        
+        try:
+            PGlobs.num_effects = config.getint(
+                                        'resource_count', 'num_effects')
+        except ConfigParser.Error:
+            pass
+       
         if pm.session_uuid is None:
             if args.jackserver is None:
                 os.environ["jack_parameter"] = "default"
@@ -2917,6 +2922,7 @@ class MainWindow(dbus.service.Object):
         os.environ["num_streamers"] = str(PGlobs.num_streamers)
         os.environ["num_encoders"] = str(PGlobs.num_encoders)
         os.environ["num_recorders"] = str(PGlobs.num_recorders)
+        os.environ["num_effects"] = str(PGlobs.num_effects)
         os.environ["has_head"] = "1"
         os.environ["libmp3lame_filename"] = FGlobs.libmp3lame_filename
         os.environ["libmpg123_filename"] = FGlobs.libmpg123_filename

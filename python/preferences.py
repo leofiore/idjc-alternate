@@ -610,6 +610,7 @@ class mixprefs:
                 f.write("[resource_count]\n")
                 for name, widget in self.rrvaluesdict.iteritems():
                     f.write(name + "=" + str(int(widget.get_value())) + "\n")
+                f.write("num_effects=%d\n" % (24 if self.more_effects.get_active() else 12))
         except IOError:
             print "Error while writing out player defaults"
 
@@ -867,11 +868,20 @@ class mixprefs:
             hbox.show()
             return hbox
 
+        self.more_effects = gtk.RadioButton(None, _('Reserve 24 sound effects slots'))
+        fewer_effects = gtk.RadioButton(self.more_effects, _("Only 12"))
+        if PGlobs.num_effects == 24:
+            self.more_effects.clicked()
+        else:
+            fewer_effects.clicked()
+       
+        rrvbox.pack_start(hjoin(self.more_effects, fewer_effects))
+
         self.mic_qty_adj = gtk.Adjustment(
                                         PGlobs.num_micpairs * 2, 2.0, 12.0, 2.0)
         spin = gtk.SpinButton(self.mic_qty_adj)
         rrvbox.pack_start(hjoin(spin, gtk.Label(
-                                        _('General purpose audio channels*'))))
+                                        _('Audio input channels'))))
     
         self.stream_qty_adj = gtk.Adjustment(
                                             PGlobs.num_streamers, 1.0, 9.0, 1.0)
@@ -884,11 +894,6 @@ class mixprefs:
         rrvbox.pack_start(hjoin(spin, gtk.Label(
                                             _('Simultaneous recording(s)'))))
         
-        # TC: star marked items are relevant only in 'fully featured' mode.
-        key_label = gtk.Label(_("* In 'Fully Featured' mode."))
-        rrvbox.pack_start(key_label)
-        key_label.show()
-
         self.rrvaluesdict = {"num_micpairs": self.mic_qty_adj,
                                     "num_streamers": self.stream_qty_adj,
                                     "num_recorders": self.recorder_qty_adj}

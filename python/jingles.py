@@ -344,7 +344,7 @@ class EffectCluster(gtk.Frame):
     def update_leds(self, bits):
         bit = 0
         effect = iter(self.widgets)
-        while bit < 24:
+        while bit < PGlobs.num_effects:
             effect.next().update_led((1 << bit) & bits)
             bit += 1
             
@@ -381,8 +381,8 @@ class ExtraPlayers(gtk.HBox):
         estable.set_col_spacing(1, 8)
         esbox.pack_start(estable)
 
-        self.effects = EffectCluster(" %s " % _('Effects'), 24, 2, Effect,
-                                                                        parent)
+        self.effects = EffectCluster(" %s " % _('Effects'), PGlobs.num_effects,
+                            2 if PGlobs.num_effects > 12 else 1, Effect, parent)
         estable.attach(self.effects, 0, 2, 0, 1)
         
         self.jvol_adj = gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 10.0)

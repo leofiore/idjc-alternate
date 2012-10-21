@@ -114,6 +114,7 @@ class PGlobs(object):
     num_streamers = 6
     num_encoders = 6
     num_recorders = 2
+    num_effects = 24
 
 
 
