@@ -221,7 +221,7 @@ void xlplayer_smoothing_process(struct xlplayer *self);
 void xlplayer_stats(struct xlplayer *self);
 
 /* group process all players from the list */
-void xlplayer_read_start_all(struct xlplayer **list, jack_nframes_t nframes);
+void xlplayer_read_start_all(struct xlplayer **list, jack_nframes_t nframes, struct xlplayer **roster);
 void xlplayer_read_next_all(struct xlplayer **list);
 void xlplayer_levels_all(struct xlplayer **list);
 void xlplayer_buffer_alloc_all(struct xlplayer **list, jack_nframes_t nframes);

@@ -142,7 +142,9 @@ static pthread_mutex_t midi_mutex;
 
 static struct xlplayer *plr_l, *plr_r, *plr_i; /* player instance stuctures */
 static struct xlplayer **plr_j;
+static struct xlplayer **plr_j_roster;
 static struct xlplayer *players[4];
+static struct xlplayer *players_roster[4];
 
 /* these are set in the parse routine - the contents coming from the GUI */
 static char *mixer_string, *compressor_string, *gate_string, *microphone_string, *item_index;
@@ -501,8 +503,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
         }
 
     mic_process_start_all(mics, nframes);
-    xlplayer_read_start_all(players, nframes);
-    xlplayer_read_start_all(plr_j, nframes);
+    xlplayer_read_start_all(players, nframes, players_roster);
+    xlplayer_read_start_all(plr_j, nframes, plr_j_roster);
     
     /* there are four mixer modes and the only seemingly efficient way to do them is */
     /* to basically copy a lot of code four times over hence the huge size */
@@ -537,7 +539,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
             #define COMMON_MIX() \
                 do { \
                 xlplayer_read_next_all(players); \
-                xlplayer_read_next_all(plr_j); \
+                xlplayer_read_next_all(plr_j_roster); \
                 \
                 /* player audio routing through jack ports */ \
                 *plolp = plr_l->ls; \
@@ -555,7 +557,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 xlplayer_levels_all(players);\
                 xlplayer_levels_all(plr_j); \
                 j_ls = j_rs = 0.0f; \
-                for (struct xlplayer **p = plr_j; *p; ++p) { \
+                for (struct xlplayer **p = plr_j_roster; *p; ++p) { \
                     j_ls += (*p)->ls_str; \
                     j_rs += (*p)->rs_str; \
                     } \
@@ -1003,6 +1005,7 @@ static void mixer_cleanup()
     for (struct xlplayer **p = plr_j; *p; ++p)
         xlplayer_destroy(*p);
     free(plr_j);
+    free(plr_j_roster);
     }
 
 int mixer_new_buffer_size(jack_nframes_t n_frames)
@@ -1021,14 +1024,20 @@ void mixer_init(void)
     int n = 0;
     int ne = atoi(getenv("num_effects"));
 
-    if(! ((players[n++] = plr_l = xlplayer_create(sr, MAIN_RB_SIZE, "left", &g.app_shutdown, &volume, 0, &left_stream, &left_audio, 0.25f)) &&
-            (players[n++] = plr_r = xlplayer_create(sr, MAIN_RB_SIZE, "right", &g.app_shutdown, &volume2, 0, &right_stream, &right_audio, 0.25f))))
+    if(! ((players[n++] = plr_l = xlplayer_create(sr, MAIN_RB_SIZE, "left", &g.app_shutdown, &volume, 0, &left_stream, &left_audio, 0.1f)) &&
+            (players[n++] = plr_r = xlplayer_create(sr, MAIN_RB_SIZE, "right", &g.app_shutdown, &volume2, 0, &right_stream, &right_audio, 0.1f))))
         {
         fprintf(stderr, "failed to create main player modules\n");
         exit(5);
         }
     
     if (!(plr_j = (struct xlplayer **)calloc(ne + 1, sizeof (struct xlplayer *))))
+        {
+        fprintf(stderr, "malloc failure\n");
+        exit(5);
+        }
+    
+    if (!(plr_j_roster = (struct xlplayer **)calloc(ne + 1, sizeof (struct xlplayer *))))
         {
         fprintf(stderr, "malloc failure\n");
         exit(5);

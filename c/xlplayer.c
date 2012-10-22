@@ -699,7 +699,7 @@ void xlplayer_eject(struct xlplayer *self)
 
 void xlplayer_set_fadesteps(struct xlplayer *self, int fade_mode)
     {
-    static float a[] = { 1.0f, 5.0f, 10.0f, 0.15f };
+    static float a[] = { 1.0f, 5.0f, 10.0f, 0.1f };
     static float b[] = { 1.0f/20.0f, 5.0f, 10.0f, 0.0f };
     fade_set(self->fadeout, FADE_SET_SAME, a[fade_mode], FADE_DIRECTION_UNCHANGED);
     fade_set(self->fadein, FADE_SET_SAME, b[fade_mode], FADE_DIRECTION_UNCHANGED);
@@ -859,7 +859,7 @@ size_t read_from_player(struct xlplayer *self, sample_t *left_buf, sample_t *rig
             }
         }
     xlplayer_update_progress_time_ms(self);
-    return todo;
+    return (todo > ftodo) ? todo : ftodo;
     }
 
 int xlplayer_calc_rbdelay(struct xlplayer *xlplayer)
@@ -918,10 +918,12 @@ size_t xlplayer_read_start(struct xlplayer *self, jack_nframes_t nframes)
     return samples_read;
     }
 
-void xlplayer_read_start_all(struct xlplayer **list, jack_nframes_t nframes)
+void xlplayer_read_start_all(struct xlplayer **list, jack_nframes_t nframes, struct xlplayer **roster)
     {
     while (*list)
-        xlplayer_read_start(*list++, nframes);
+        if (xlplayer_read_start(*list++, nframes))
+            *roster++ = list[-1];
+    *roster = NULL;
     }
 
 void xlplayer_read_next(struct xlplayer *self)
