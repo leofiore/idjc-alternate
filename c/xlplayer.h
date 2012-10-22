@@ -145,6 +145,8 @@ struct xlplayer
     float ls_aud, ls_str;               /* the gain adjusted audio samples */
     float rs_aud, rs_str;
     uint32_t id;                        /* player identity e.g. player 3 = 1 << 3 */
+    pthread_mutex_t command_mutex;      /* lock for command varaible change */
+    pthread_cond_t command_cv;          /* used to wake up idle worker thread */
     };
 
 /* xlplayer_create: create an instance of the player */

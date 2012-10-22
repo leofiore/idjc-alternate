@@ -899,20 +899,23 @@ static int peak_to_log(float peak)
     return (int)level2db(peak);
     }
 
-int mixer_keepalive()
+int mixer_healthcheck()
     { 
-    ++plr_l->watchdog_timer;
-    ++plr_r->watchdog_timer;
-    ++plr_i->watchdog_timer;
-    for (struct xlplayer **p = plr_j; *p; ++p)
+    const int limit = 15;
+
+    for (struct xlplayer **p = plr_j_roster; *p; ++p)
         {
-        if (++(*p)->watchdog_timer >= 9)
+        if (++(*p)->watchdog_timer >= limit)
             return FALSE;
         }
 
-    #define TEST(x) (x->watchdog_timer >= 9)
-    return !(TEST(plr_l) || TEST(plr_r) || TEST(plr_i));
-    #undef TEST
+    for (struct xlplayer **p = players_roster; *p; ++p)
+        {
+        if (++(*p)->watchdog_timer >= limit)
+            return FALSE;
+        }
+        
+    return TRUE;
     }
 
 static void jackportread(const char *portname, const char *filter)
@@ -1452,7 +1455,7 @@ int mixer_main()
         xlplayer_stats_all(plr_j);
 
         int effects = 0;
-        for (struct xlplayer **p = plr_j; *p; ++p)
+        for (struct xlplayer **p = plr_j_roster; *p; ++p)
             effects |= (*p)->id;
 
         fprintf(g.out, 

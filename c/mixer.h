@@ -22,7 +22,7 @@
 void mixer_init();
 int mixer_main();
 int mixer_control(char *command);
-int mixer_keepalive();
+int mixer_healthcheck();
 int mixer_process_audio(jack_nframes_t n_frames, void *arg);
 void mixer_stop_players();
 int mixer_new_buffer_size(jack_nframes_t n_frames);

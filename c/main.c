@@ -56,7 +56,7 @@ static void alarm_handler(int sig)
     if (g.app_shutdown)
         exit(5);
 
-    if (g.mixer_up && !mixer_keepalive())
+    if (g.mixer_up && !mixer_healthcheck())
         g.app_shutdown = TRUE;
 
     if (g.jack_timeout++ > 9)

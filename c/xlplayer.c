@@ -269,6 +269,16 @@ static char *get_extension(char *pathname)
     return extension;
     }
 
+static void xlplayer_command(struct xlplayer *self, enum command_t new_command)
+    {
+    pthread_mutex_lock(&self->command_mutex);
+    self->command = new_command;
+    pthread_cond_signal(&self->command_cv);
+    pthread_mutex_unlock(&self->command_mutex);
+    while (self->command)
+        usleep(10000);
+    }
+
 static void *xlplayer_main(struct xlplayer *self)
     {
     char *extension;
@@ -310,7 +320,10 @@ static void *xlplayer_main(struct xlplayer *self)
         switch (self->playmode)
             {
             case PM_STOPPED:
-                usleep(10000);
+                pthread_mutex_lock(&self->command_mutex);
+                while (self->command == CMD_COMPLETE)
+                    pthread_cond_wait(&self->command_cv, &self->command_mutex);
+                pthread_mutex_unlock(&self->command_mutex);
                 continue;
             case PM_INITIATE:
                 self->initial_audio_context = -1;   /* pre-select failure return code */
@@ -557,6 +570,8 @@ struct xlplayer *xlplayer_create(int samplerate, double duration, char *playerna
     smoothing_volume_init(&self->volume, vol_c, vol_scale);
     smoothing_mute_init(&self->mute_str, strmute_c);
     smoothing_mute_init(&self->mute_aud, audmute_c);
+    pthread_mutex_init(&self->command_mutex, NULL);
+    pthread_cond_init(&self->command_cv, NULL);
     pthread_create(&self->thread, NULL, (void *(*)(void *)) xlplayer_main, self);
     while (self->up == FALSE)
         usleep(10000);
@@ -567,8 +582,10 @@ void xlplayer_destroy(struct xlplayer *self)
     {
     if (self)
         {
-        self->command = CMD_CLEANUP;
+        xlplayer_command(self, CMD_CLEANUP);
         pthread_join(self->thread, NULL);
+        pthread_cond_destroy(&self->command_cv);
+        pthread_mutex_destroy(&self->command_mutex);
         pthread_mutex_destroy(&(self->dynamic_metadata.meta_mutex));
         ifree(self->lcb);
         ifree(self->rcb);
@@ -603,9 +620,7 @@ int xlplayer_play(struct xlplayer *self, char *pathname, int seek_s, int size, f
     self->loop = FALSE;
     self->usedelay = FALSE;
     self->playlistmode = FALSE;
-    self->command = CMD_PLAY;
-    while (self->command)
-        usleep(10000);
+    xlplayer_command(self, CMD_PLAY);
     return self->initial_audio_context;
     }
 
@@ -649,9 +664,7 @@ int xlplayer_playmany(struct xlplayer *self, char *playlist, int loop_f)
     self->seek_s = 0;
     self->loop = loop_f;
     self->playlistmode = TRUE;
-    self->command = CMD_PLAYMANY;
-    while (self->command)
-        usleep(10000);
+    xlplayer_command(self, CMD_PLAYMANY);
     return self->initial_audio_context;
     }
 
@@ -666,9 +679,7 @@ int xlplayer_play_noflush(struct xlplayer *self, char *pathname, int seek_s, int
     self->id = 1 << id;
     self->loop = FALSE;
     self->playlistmode = FALSE;
-    self->command = CMD_PLAY;
-    while (self->command)
-        usleep(10000);
+    xlplayer_command(self, CMD_PLAY);
     self->noflush = FALSE;
     return self->initial_audio_context;
     }
@@ -692,9 +703,7 @@ void xlplayer_eject(struct xlplayer *self)
     {
     if (!self->fadeout_f)
         xlplayer_pause(self);
-    self->command = CMD_EJECT;
-    while (self->command)
-        usleep(10000);
+    xlplayer_command(self, CMD_EJECT);
     }
 
 void xlplayer_set_fadesteps(struct xlplayer *self, int fade_mode)
