@@ -59,6 +59,10 @@ static void *streamer_main(void *args)
         switch (self->stream_mode)
             {
             case SM_DISCONNECTED:
+                pthread_mutex_lock(&self->mode_mutex);
+                while (self->stream_mode == SM_DISCONNECTED && !self->thread_terminate_f)
+                    pthread_cond_wait(&self->mode_cv, &self->mode_mutex);
+                pthread_mutex_unlock(&self->mode_mutex);
                 continue;
             case SM_CONNECTING:
                 switch(self->shout_status)
@@ -403,7 +407,10 @@ int streamer_connect(struct threads_info *ti, struct universal_vars *uv, void *o
             self->shout_status = SHOUTERR_CONNECTED;
         case SHOUTERR_BUSY:
         case SHOUTERR_CONNECTED:
+            pthread_mutex_lock(&self->mode_mutex);
             self->stream_mode = SM_CONNECTING;
+            pthread_cond_signal(&self->mode_cv);
+            pthread_mutex_unlock(&self->mode_mutex);
             fprintf(stderr, "streamer_connect: established connection to the server\n");
             return SUCCEEDED;
         }
@@ -451,6 +458,8 @@ struct streamer *streamer_init(struct threads_info *ti, int numeric_id)
         }
     self->threads_info = ti;
     self->numeric_id = numeric_id;
+    pthread_mutex_init(&self->mode_mutex, NULL);
+    pthread_cond_init(&self->mode_cv, NULL);
     pthread_create(&self->thread_h, NULL, streamer_main, self);
     return self;
     }
@@ -461,7 +470,12 @@ void streamer_destroy(struct streamer *self)
     void *thread_ret;
 
     pthread_once(&once_control, shout_shutdown);
+    pthread_mutex_lock(&self->mode_mutex);
     self->thread_terminate_f = TRUE;
+    pthread_cond_signal(&self->mode_cv);
+    pthread_mutex_unlock(&self->mode_mutex);
     pthread_join(self->thread_h, &thread_ret);
+    pthread_cond_destroy(&self->mode_cv);
+    pthread_mutex_destroy(&self->mode_mutex);
     free(self);
     }

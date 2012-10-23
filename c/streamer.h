@@ -64,6 +64,8 @@ struct streamer
     int initial_serial;  /* the enocoder serial number we commence streaming from */
     int final_serial;    /* the serial number to cease streaming at the end of */
     ssize_t max_shout_queue;     /* how much audio data we are willing to stockpile */
+    pthread_mutex_t mode_mutex;
+    pthread_cond_t mode_cv;
     };
 
 struct streamer *streamer_init(struct threads_info *ti, int numeric_id);
