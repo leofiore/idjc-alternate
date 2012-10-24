@@ -1,5 +1,9 @@
 * Changes in version 0.8.9 *
 
+Pthreads now sleep when unused.
+
+Fixed regression on recorder pause button.
+
 Effects now have a repeat button.
 
 Multiple effects can now play at once.

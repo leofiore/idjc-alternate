@@ -539,6 +539,10 @@ static void *recorder_main(void *args)
         switch (self->record_mode)
             {
             case RM_STOPPED:
+                pthread_mutex_lock(&self->mode_mutex);
+                while (self->record_mode == RM_STOPPED && !self->thread_terminate_f)
+                    pthread_cond_wait(&self->mode_cv, &self->mode_mutex);
+                pthread_mutex_unlock(&self->mode_mutex);
                 continue;
             case RM_RECORDING:
                 if (self->initial_serial == -1)
@@ -647,6 +651,12 @@ static void *recorder_main(void *args)
                 if (self->stop_request || self->stop_pending)
                     self->record_mode = RM_STOPPING;
                 else
+                    {
+                    while ((nbytes = jack_ringbuffer_read(self->input_rb[1], self->right, audio_buffer_elements * sizeof (sample_t))))
+                        {
+                        jack_ringbuffer_read(self->input_rb[0], self->left, nbytes);
+                        }
+                        
                     if (self->unpause_request)
                         {
                         self->unpause_request = FALSE;
@@ -654,6 +664,7 @@ static void *recorder_main(void *args)
                             self->initial_serial = encoder_client_set_flush(self->encoder_op) + 1;
                         self->record_mode = RM_RECORDING;
                         }
+                    }
                 break;
             case RM_STOPPING:
                 if (self->initial_serial == -1)
@@ -929,10 +940,13 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
         }
     //if (file_extension == ".oga")
     //   recorder_write_ogg_metaheader(self);
+    pthread_mutex_lock(&self->mode_mutex);
     if (self->pause_request == TRUE)
         self->record_mode = RM_PAUSED;
     else 
         self->record_mode = RM_RECORDING;
+    pthread_cond_signal(&self->mode_cv);
+    pthread_mutex_unlock(&self->mode_mutex);
     fprintf(stderr, "recorder_start: device %d activated\n", self->numeric_id);
     return SUCCEEDED;
     }
@@ -1018,14 +1032,21 @@ struct recorder *recorder_init(struct threads_info *ti, int numeric_id)
     self->title = strdup("");
     self->album = strdup("");
     pthread_mutex_init(&self->artist_title_mutex, NULL);
+    pthread_mutex_init(&self->mode_mutex, NULL);
+    pthread_cond_init(&self->mode_cv, NULL);
     pthread_create(&self->thread_h, NULL, recorder_main, self);
     return self;
     }
 
 void recorder_destroy(struct recorder *self)
     {
+    pthread_mutex_lock(&self->mode_mutex);
     self->thread_terminate_f = TRUE;
+    pthread_cond_signal(&self->mode_cv);
+    pthread_mutex_unlock(&self->mode_mutex);
     pthread_join(self->thread_h, NULL);
+    pthread_cond_destroy(&self->mode_cv);
+    pthread_mutex_destroy(&self->mode_mutex);
     pthread_mutex_destroy(&self->artist_title_mutex);
     free(self->artist);
     free(self->title);

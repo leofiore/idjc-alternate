@@ -110,6 +110,8 @@ struct recorder
     int artist_title_writes;
     pthread_mutex_t artist_title_mutex;
     int new_artist_title;
+    pthread_mutex_t mode_mutex;
+    pthread_cond_t mode_cv;
     };
 
 struct recorder *recorder_init(struct threads_info *ti, int numeric_id);
