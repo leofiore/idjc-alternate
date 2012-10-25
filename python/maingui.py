@@ -2735,7 +2735,9 @@ class MainWindow(dbus.service.Object):
             if cons_changed:
                 self.jack.standard_save()
 
-            self.jingles.effects.update_leds(int(self.effects_playing))
+            ep = int(self.effects_playing)
+            if ep != -1:
+                self.jingles.effects.update_leds(ep)
 
         except Exception:
             if locking:  # Ensure unlocking occurs when there is an exception.

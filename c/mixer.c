@@ -165,6 +165,7 @@ static char *session_event_string, *session_commandline;
 
 static struct smoothing_volume jingles_headroom_smoothing;
 static int jingles_headroom_control;
+static int old_effects;
 
 /* dictionary look-up type thing used by the parse routine */
 static struct kvpdict kvpdict[] = {
@@ -1457,6 +1458,10 @@ int mixer_main()
         int effects = 0;
         for (struct xlplayer **p = plr_j_roster; *p; ++p)
             effects |= (*p)->id;
+        if (effects == old_effects)
+            effects = -1;   // -1 for no change, UI can skip updating indicators
+        else
+            old_effects = effects;
 
         fprintf(g.out, 
                     "str_l_peak=%d\nstr_r_peak=%d\n"
