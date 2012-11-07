@@ -118,8 +118,6 @@ class InitialPlayerConfig(gtk.Frame):
 
 
 class AGCControl(gtk.Frame):
-    can_mark = all(hasattr(gtk.Scale, x) for x in ('add_mark', 'clear_marks'))
-
     mic_modes = (
         # TC: Microphone mode combobox text.
         N_('Deactivated'),
@@ -170,6 +168,7 @@ class AGCControl(gtk.Frame):
         hbox.pack_end(sb, False, False, 0)
         hbox.show_all()
         self.valuesdict[self.commandname + "_" + wname] = sb
+        self.fixups.append(lambda: sb.emit("value-changed"))
         return hbox
 
     def frame(self, label, container):
@@ -212,6 +211,7 @@ class AGCControl(gtk.Frame):
         frame.add(ivbox)
         ivbox.show()
         self.activedict[self.commandname + "_" + wname] = cb
+        self.fixups.append(lambda: cb.emit("toggled"))
         return ivbox
     
     def check(self, label_text, wname, save=True):
@@ -221,14 +221,12 @@ class AGCControl(gtk.Frame):
         cb.show()
         if save:
             self.activedict[self.commandname + "_" + wname] = cb
+        self.fixups.append(lambda: cb.emit("toggled"))
         return cb
         
     def cb_open(self, widget):
         active = widget.get_active()
         self.meter.set_led(active)
-
-    def cb_pan_middle(self, button):
-        self.pan.set_value(50)
 
     def cb_mode(self, combobox):
         mode = combobox.get_active()
@@ -267,6 +265,7 @@ class AGCControl(gtk.Frame):
         self.valuesdict = {}
         self.activedict = {}
         self.textdict = {}
+        self.fixups = []
         gtk.Frame.__init__(self)
         hbox = gtk.HBox()
         hbox.set_spacing(3)
@@ -299,6 +298,7 @@ class AGCControl(gtk.Frame):
         self.mode_cell = gtk.CellRendererText()
         self.mode.pack_start(self.mode_cell)
         self.mode.set_attributes(self.mode_cell, text=0)
+        self.fixups.append(lambda: self.mode.emit("changed"))
         
         self.vbox.pack_start(self.mode, False, False)
         
@@ -359,6 +359,7 @@ class AGCControl(gtk.Frame):
         self.openaction.connect_proxy(self.open)
         self.open.emit("toggled")
         self.open.set_sensitive(False)
+        self.fixups.append(lambda: self.open.emit("toggled"))
 
         sizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
         panframe = gtk.Frame()
@@ -378,6 +379,7 @@ class AGCControl(gtk.Frame):
         self.pan_active.connect("toggled", self.sendnewstats, "pan_active")
         panframe.set_label_widget(hbox)
         hbox.show()
+        self.fixups.append(lambda: self.pan_active.emit("toggled"))
         
         panvbox = gtk.VBox()
         panvbox.set_border_width(1)
@@ -394,21 +396,15 @@ class AGCControl(gtk.Frame):
         self.pan.set_draw_value(False)
         self.pan.connect("value-changed", self.sendnewstats, "pan")
         self.pan.emit("value-changed")
+        self.fixups.append(lambda: self.pan.emit("value-changed"))
         self.valuesdict[self.commandname + "_pan"] = self.pan
         panhbox.pack_start(self.pan)
         r = gtk.Label(_('R'))
         sizegroup.add_widget(r)
         panhbox.pack_start(r, False, False)
-        pancenterbox = gtk.HBox()
-        pancenter = gtk.Button()
-        pancenter.connect("clicked", self.cb_pan_middle)
-        if self.can_mark:
-            self.pan.add_mark(50.0, gtk.POS_BOTTOM, None)
-            self.pan.add_mark(25.0, gtk.POS_BOTTOM, None)
-            self.pan.add_mark(75.0, gtk.POS_BOTTOM, None)
-        else:
-            pancenterbox.pack_start(pancenter, True, False)
-        panvbox.pack_start(pancenterbox, False, False)
+        self.pan.add_mark(50.0, gtk.POS_BOTTOM, None)
+        self.pan.add_mark(25.0, gtk.POS_BOTTOM, None)
+        self.pan.add_mark(75.0, gtk.POS_BOTTOM, None)
         self.vbox.pack_start(panframe, False, False)
         panframe.show_all()
 
@@ -766,7 +762,16 @@ class mixprefs:
     def show_about(self):
         self.notebook.set_current_page(self.notebook.page_num(self.aboutframe))
         self.window.present()
-            
+
+    def fixup_mic_controls(self):
+        """Send mic preferences to the backend.
+        
+        This needs to be called whenever the backend is restarted.
+        """
+        for mic in self.mic_controls:
+            for fixup in mic.fixups:
+                fixup()
+
     def __init__(self, parent):
         self.parent = parent
         self.parent.prefs_window = self
@@ -1254,7 +1259,7 @@ class mixprefs:
 
         # Individual channel settings
 
-        mic_controls = []
+        self.mic_controls = mic_controls = []
         vbox = gtk.VBox()
         for i in range(PGlobs.num_micpairs):
             uhbox = gtk.HBox(True)

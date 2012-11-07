@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Mic preferences settings are restored to the backend when the backend is restored.
+
 Pthreads now sleep when unused.
 
 Fixed regression on recorder pause button.

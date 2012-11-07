@@ -2619,6 +2619,7 @@ class MainWindow(dbus.service.Object):
                 if message != "bootstrap":
                     # Restore previous settings.
                     self.send_new_mixer_stats()
+                    self.prefs_window.fixup_mic_controls()
                     self.player_left.next.clicked()
                     self.player_right.next.clicked()                  
                     self.server_window.source_client_open()
