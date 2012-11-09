@@ -2693,7 +2693,7 @@ class MainWindow(dbus.service.Object):
                 if key == "ports_connections_changed":
                     cons_changed = value != "0"
                     
-                if "_silence=" in line:
+                if key.endswith("_silence"):
                     try:
                         value = float(value)
                     except ValueError:
@@ -2703,10 +2703,11 @@ class MainWindow(dbus.service.Object):
                         value = int(value)
                     except ValueError:
                         pass
-                        
-                if "_new_metadata=" in line:
-                    player_metadata.append((getattr(self, "player_" +
-                                                key.split("_", 1)[0]), value))
+
+                if key.endswith("_new_metadata"):
+                    if not key.startswith("jingles"):
+                        player_metadata.append((getattr(self, "player_" +
+                                            key.split("_", 1)[0]), value))
                     continue
 
                 try:
