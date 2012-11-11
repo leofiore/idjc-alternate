@@ -619,7 +619,10 @@ class mixprefs:
                 for name, widget in self.valuesdict.iteritems():
                     f.write(name + "=" + str(widget.get_value()) + "\n")
                 for name, widget in self.textdict.iteritems():
-                    f.write(name + "=" + widget.get_text() + "\n")
+                    if widget.get_text() is not None:
+                        f.write(name + "=" + widget.get_text() + "\n")
+                    else:
+                        f.write(name + "=\n")
         except IOError:
             print "Error while writing out player defaults"
 
@@ -1326,7 +1329,7 @@ class mixprefs:
         
         label = gtk.Label()
         label.set_markup(
-        '<span font_desc="sans 10" underline="low" foreground="blue">' +
+        '<span font_desc="sans 10">' +
          _('Released under the GNU General Public License V2.0') + '</span>')
         vbox.pack_start(label, False, False, 1)
         label.show()
@@ -1366,7 +1369,8 @@ class mixprefs:
             ("Stephen Fairchild (s-fairchild@users.sourceforge.net)",
             "And Clover (and@doxdesk.com)",
             "Dario Abatianni (eisfuchs@users.sourceforge.net)",
-            "Stefan Fendt (stefan@sfendt.de)"))
+            "Stefan Fendt (stefan@sfendt.de)",
+            "Brian Millham (bmillham@users.sourceforge.net)"))
 
         contribs_page(_('Translators'),
             ("<b>it</b>  Raffaele Morelli (raffaele.morelli@gmail.com)",))
@@ -1458,6 +1462,7 @@ class mixprefs:
             "djvolume"      : self.dj_aud_adj,
             "rg_default"    : self.rg_defaultgain,
             "rg_boost"      : self.rg_boost,
+            "p3delchars"    : self.p3prefs.pathdelchars
             }
 
         for each in itertools.chain(mic_controls, (opener_settings,)):
@@ -1468,6 +1473,7 @@ class mixprefs:
             "prokdatabase"  : self.p3prefs.prokdatabase,
             "prokpassword"  : self.p3prefs.prokpassword,
             "prokhostname"  : self.p3prefs.prokhostname,
+            "prokaddchars"  : self.p3prefs.pathaddchars,
             "ltfilerqdir"   : self.parent.player_left.file_requester_start_dir,
             "rtfilerqdir"   : self.parent.player_right.file_requester_start_dir,
             "main_full_wst" : self.parent.full_wst,

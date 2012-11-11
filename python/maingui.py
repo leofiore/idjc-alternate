@@ -2825,8 +2825,11 @@ class MainWindow(dbus.service.Object):
 
 
     def cb_key_capture(self, widget, event):
+        tlp = self.topleftpane
+        if tlp.get_visible() and tlp.notebook.get_current_page() == 1:
+            return
+            
         self.controls.input_key(event)
-        return False
 
 
     def configure_event(self, widget, event):

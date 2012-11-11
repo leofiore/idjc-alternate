@@ -1,5 +1,9 @@
 * Changes in version 0.8.9 *
 
+Fixed bug where keyboard bindings would trigger when typing in the database filter boxes.
+
+Merged in patch from Brian Millham adding Ampache music database support. Credit given.
+
 Fixed bug triggered by playing ogg or mp3 files with chapter info with the effects player.
 
 Mic preferences settings are restored to the backend when the backend is restored.

@@ -17,7 +17,6 @@
 
 __all__ = ['MediaPane', 'Prefs']
 
-
 import time
 from urllib import quote
 
@@ -25,6 +24,7 @@ import gobject
 import gtk
 
 from idjc import FGlobs
+from .tooltips import set_tip
 from .gtkstuff import threadslock, DefaultEntry, LEDDict
 
 
@@ -122,8 +122,15 @@ class TreePopulate(object):
                     if d == 2:
                         if self.artlower == row[1].lower() and self.alblower \
                                                             == row[2].lower():
+                            if self.dbtype == "Ampache":
+                                # Split the full path into path and file.
+                                row = list(row)
+                                fn = row[7].rsplit("/",1)
+                                row[7] = fn[1]
+                                row.append(fn[0])
+                            path = self.proktransform[1] + row[8][self.proktransform[0]:] 
                             append(self.iter2, (row[0], row[4], row[3],
-                                        row[5], row[6], row[7], row[8]))
+                                                row[5], row[6], row[7], path))
                             break
                         else:
                             d = 1
@@ -133,9 +140,11 @@ class TreePopulate(object):
         if int(self.done) % 100 == 0:
             self.mp.tree_pb.set_fraction(self.done / self.total)
         return retval
-    def __init__(self, mp, c, total, start_time):
+    def __init__(self, mp, c, dbtype, proktransform, total, start_time):
         self.mp = mp
         self.c = c
+        self.dbtype = dbtype
+        self.proktransform = proktransform
         self.total = float(total)
         self.start_time = start_time
         self.done = 0.0
@@ -232,9 +241,11 @@ class MediaPane(gtk.Frame):
             self.whereentry.set_sensitive(True)
         self.update.clicked()
 
-    def activate(self, db, label):
+    def activate(self, db, dbtype, proktransform, label):
         self.set_label(label)
         self.db = db
+        self.dbtype = dbtype
+        self.proktransform = proktransform
         self.whereentry.set_text("")
         self.fuzzyentry.set_text("")
         self.show()
@@ -244,19 +255,43 @@ class MediaPane(gtk.Frame):
         self.hide()
         try:
             del self.db
+            del self.dbtype
         except AttributeError:
             pass
 
     def cb_tree_update(self, widget):
+        print "Start reading the %s database" % self.dbtype
         c = self.db.cursor()
+        print "Setting UTF8 mode"
         try:
-            total = c.execute("SELECT id,artist,album,tracknumber,title,"
-                        "length,bitrate,filename,path FROM tracks ORDER BY"
-                        " artist,album,path,tracknumber,title")
+            # Set UTF8 mode for the database
+            c.execute('set names utf8')
+            c.execute('set character set utf8')
+            c.execute('set character_set_connection=utf8')
+        except dberror.MySQLError, inst:
+            print "Failed to set UTF8: " + inst
+            # Don't treat as fatal error, just warn
+        print "Reading tracks"
+        try:
+            if self.dbtype == "P3":
+                total = c.execute("SELECT id,artist,album,tracknumber,title,"
+                                  "length,bitrate,filename,path FROM tracks ORDER BY"
+                                  " artist,album,path,tracknumber,title")
+            elif self.dbtype == "Ampache":
+                total = c.execute("""SELECT song.id as id, 
+                    concat_ws(" ", artist.prefix, artist.name) as artist, 
+                    concat_ws(" ", album.prefix, album.name) as album, 
+                    track as tracknumber, title, time as length, 
+                    bitrate, file
+                    from song
+                    left join artist on song.artist = artist.id 
+                    left join album on song.album = album.id 
+                    ORDER BY artist.name,album.name,tracknumber,title""")
         except dberror.MySQLError, inst:
             print inst
             c.close()
         else:
+            print "Start populating tree"
             self.treeview.set_model(None)
             self.treestore.clear()
             self.treescroll.hide()
@@ -264,7 +299,7 @@ class MediaPane(gtk.Frame):
             self.tree_pb.set_fraction(0.0)
             if self.tree_idle is not None:
                 gobject.source_remove(self.tree_idle)
-            tree_populate = TreePopulate(self, c, total, time.time())
+            tree_populate = TreePopulate(self, c, self.dbtype, self.proktransform, total, time.time())
             self.tree_idle = gobject.idle_add(tree_populate.run)
         
     def cb_update(self, widget):
@@ -280,24 +315,55 @@ class MediaPane(gtk.Frame):
             if fuzzy:
                 while 1:
                     try:
-                        c.execute("SELECT id,artist,album,tracknumber,title,"
-                            "length,bitrate,filename,path FROM tracks WHERE "
-                            "MATCH (artist,album,title,filename) AGAINST (%s)",
-                            (fuzzy, ))
+                        if self.dbtype == "P3":
+                            c.execute("SELECT id,artist,album,tracknumber,title,"
+                                      "length,bitrate,filename,path FROM tracks WHERE "
+                                      "MATCH (artist,album,title,filename) AGAINST (%s)",
+                                      (fuzzy, ))
+                        if self.dbtype == "Ampache":
+                            c.execute("""SELECT song.id as id,
+                                concat_ws(" ",artist.prefix,artist.name),
+                                concat_ws(" ",album.prefix,album.name),
+                                track as tracknumber, title, time as length,
+                                bitrate, file FROM song
+                                LEFT JOIN artist ON artist.id = song.artist
+                                LEFT JOIN album ON album.id = song.album
+                                WHERE
+                                 (MATCH(album.name) against(%s)
+                                  OR MATCH(artist.name) against(%s)
+                                  OR MATCH(title) against(%s)
+                                 )
+                            """,(fuzzy,fuzzy,fuzzy))
                         break
                     except dberror.OperationalError, inst:
                         if "FULLTEXT" in str(inst):
                             print "adding fulltext index to database"
-                            c.execute("ALTER TABLE tracks ADD FULLTEXT"
-                                            "(artist,album,title,filename)")
+                            if self.dbtype == "P3":
+                                c.execute("ALTER TABLE tracks ADD FULLTEXT"
+                                          "(artist,album,title,filename)")
+                            if self.dbtype == "Ampache":
+                                c.execute("ALTER TABLE album ADD FULLTEXT(name)")
+                                c.execute("ALTER TABLE artist ADD FULLTEXT(name)")
+                                c.execute("ALTER TABLE song ADD FULLTEXT(title)")
                         else:
                             raise
             else:
                 if where:
                     where = "WHERE %s " % where
-                c.execute("SELECT id,artist,album,tracknumber,title,length,"
-                            "bitrate,filename,path FROM tracks %sORDER BY "
-                            "artist,album,path,tracknumber,title" % where)
+                if self.dbtype == "P3":
+                    query = """SELECT id,artist,album,tracknumber,title,length,
+                            bitrate,filename,path FROM tracks %sORDER BY 
+                            artist,album,path,tracknumber,title""" % where
+                if self.dbtype == "Ampache":
+                    query = """SELECT song.id as id,
+                            concat_ws(" ", artist.prefix, artist.name) as artist,
+                            concat_ws(" ", album.prefix, album.name) as album, track as tracknumber, title,
+                            time as length, bitrate, file FROM song
+                            LEFT JOIN album on album.id = song.album
+                            LEFT JOIN artist on artist.id = song.artist
+                            %s ORDER BY artist.name, album.name, file, track, title
+                            """ % where
+                c.execute(query)
         except dberror.MySQLError, inst:
             print inst
             c.close()
@@ -310,6 +376,12 @@ class MediaPane(gtk.Frame):
         while 1:
             row = c.fetchone()
             if row is not None:
+                if self.dbtype == "Ampache":
+                    # Split the file into path and filename
+                    row = list(row)
+                    fn = row[7].rsplit("/",1)
+                    row[7] = fn[1]
+                    row.append(fn[0])
                 found += 1
                 self.flatstore.append([found] + list(row))
             else:
@@ -335,7 +407,7 @@ class MediaPane(gtk.Frame):
         self.set_shadow_type(gtk.SHADOW_IN)
         self.set_border_width(6)
         self.set_label_align(0.5, 0.5)
-        
+
         vbox = gtk.VBox()
         self.add(vbox)
         vbox.show()
@@ -489,10 +561,12 @@ class MediaPane(gtk.Frame):
 
 class Prefs(gtk.Frame):
     """ Controls and settings for Prokyon3 database connectivity """
-    
+
     def set_ui_state(self, state):
         sens = not state
         self.prokhostname.set_sensitive(sens)
+        self.pathdelchars.set_sensitive(sens)
+        self.pathaddchars.set_sensitive(sens)
         self.prokuser.set_sensitive(sens)
         self.prokdatabase.set_sensitive(sens)
         self.prokpassword.set_sensitive(sens)
@@ -500,8 +574,8 @@ class Prefs(gtk.Frame):
                                                         if state else "clear"])
         if state:
             # TC: P3 refers to Prokyon3, a music cataloging program.
-            self.main.topleftpane.activate(self.db, " %s " % 
-                    (_('P3 Database View (%s)') % self.prokdatabase.get_text()))
+            self.main.topleftpane.activate(self.db, self.dbtype, self.proktransform, " %s " % 
+                    (_('%s Database View (%s)') % (self.dbtype, self.prokdatabase.get_text())))
         else:
             self.main.topleftpane.deactivate()
             
@@ -520,48 +594,84 @@ class Prefs(gtk.Frame):
 
         if sql is not None:
             if widget.get_active():
+                self.proktransform = (self.pathdelchars.get_value_as_int(), self.pathaddchars.get_text())
                 try:
-                    self.db = sql.connect(host=self.prokhostname.get_text(),
+                    host, port = self.prokhostname.get_text().strip().rsplit(":", 1)
+                    port = int(port)
+                except ValueError:
+                    host = self.prokhostname.get_text().strip()
+                    port = 3306  # Default MySQL port.
+
+                try:
+                    self.db = sql.connect(host=host, port=port,
                             user=self.prokuser.get_text(),
                             passwd=self.prokpassword.get_text(),
                             db=self.prokdatabase.get_text(), connect_timeout=3)
+
                     c = self.db.cursor()
                     # check this database looks familiar enough to use
+                    print "Checking for prokyon format"
                     dbtest(c, "SHOW tables", ("tracks", ))
                     dbtest(c, "DESCRIBE tracks", ("artist", "title", "album",
-                                "tracknumber", "bitrate", "path", "filename"))
+                              "tracknumber", "bitrate", "path", "filename"))
+                    self.dbtype = "P3"
                     c.close()
                 except dberror.MySQLError, inst:
-                    print inst
+                    print "prokyon: ", inst
+                    self.dbtype = None
                     try:
                         c.close()
                     except Exception:
                         pass
-                    widget.set_active(False)
                 else:
                     self.set_ui_state(True)
-                    print "connected to database"
+                    self.dbtype = "P3"
+                    print "connected to %s type database" % self.dbtype
+
+                if self.dbtype is None: #Check for ampache database
+                    try:
+                        self.db = sql.connect(host=host, port=port,
+                            user=self.prokuser.get_text(),
+                            passwd=self.prokpassword.get_text(),
+                            db=self.prokdatabase.get_text(), connect_timeout=3)
+                        c = self.db.cursor()
+                        print "Checking for ampache format"
+                        dbtest(c, "SHOW tables", ("album", "artist", "song"))
+                        dbtest(c, "DESCRIBE album", ("name", "prefix"))
+                        dbtest(c, "DESCRIBE artist", ("name", "prefix"))
+                        dbtest(c, "DESCRIBE song", ("artist", "title", "album",
+                                                    "track", "bitrate", "file"))
+                        self.dbtype = "Ampache"
+                        c.close()
+                    except dberror.MySQLError, inst:
+                        print "ampache: ", inst
+                        self.dbtype = None
+                        try:
+                            c.close()
+                        except Exception:
+                            pass
+                    else:
+                        self.set_ui_state(True)
+                        self.dbtype = "Ampache"
+                        print "connected to %s type database" % self.dbtype
+                if self.dbtype == None:
+                    widget.set_active(False)
             else:
                 try:
                     self.db.close()
+                    self.dbtype = None
                 except (AttributeError, NameError, dberror.MySQLError):
                     pass
                 else:
                     self.set_ui_state(False)
                     print "database connection removed"
 
-    @staticmethod
-    def rjustlabel(text):
-        box = gtk.HBox()
-        label = gtk.Label(text)
-        box.pack_end(label, False, False, 0)
-        label.show()
-        return box
 
     def __init__(self, parent):
         gtk.Frame.__init__(self)
         self.main = parent
-        label = gtk.Label(_('Prokyon3 (song title) Database'))
+        label = gtk.Label(_('Prokyon3 or Ampache (song title) Database'))
+        set_tip(label, _('You can make certain media databases accessible in IDJC for easy drag and drop into the playlists.'))
         self.prok_led_image = gtk.Image()
         hbox = gtk.HBox()
         hbox.pack_start(label, False, False, 4)
@@ -572,7 +682,7 @@ class Prefs(gtk.Frame):
         self.prok_led_image.set_from_pixbuf(self.led["clear"])
         self.set_label_widget(hbox)
         self.set_border_width(3)
-        table = gtk.Table(3, 4)
+        table = gtk.Table(4, 4)
         table.set_border_width(10)
         if sql:
             self.add(table)
@@ -588,41 +698,75 @@ class Prefs(gtk.Frame):
         table.show()
         table.set_row_spacing(0, 1)
         table.set_row_spacing(1, 1)
-        table.set_col_spacing(0, 2)
+        table.set_row_spacing(2, 1)
+        table.set_row_spacing(3, 1)
+        table.set_col_spacing(0, 3)
         table.set_col_spacing(1, 10)
-        table.set_col_spacing(2, 2)
-        hostlabel = self.rjustlabel(_('Hostname'))
+        table.set_col_spacing(2, 3)
+        hostlabel = gtk.Label(_('Hostname[:Port]'))
+        hostlabel.set_alignment(1.0, 0.5)
         table.attach(hostlabel, 0, 1, 0, 1, gtk.SHRINK | gtk.FILL)
         hostlabel.show()
         self.prokhostname = DefaultEntry("localhost", True)
         table.attach(self.prokhostname, 1, 4, 0, 1)
         self.prokhostname.show()
-        userlabel = self.rjustlabel(_('User'))
-        table.attach(userlabel, 0, 1, 1, 2, gtk.SHRINK | gtk.FILL)
+        
+        prefixlabel = gtk.Label(_('File Path Modify'))
+        prefixlabel.set_alignment(1.0, 0.5)
+        table.attach(prefixlabel, 0, 1, 1, 2, gtk.SHRINK | gtk.FILL)
+        prefixlabel.show()
+        
+        hbox = gtk.HBox()
+        hbox.set_spacing(3)
+        label = gtk.Label(_('-'))
+        hbox.pack_start(label, False)
+        label.show()
+        adj = gtk.Adjustment(0.0, 0.0, 999.0, 1.0, 1.0)
+        self.pathdelchars = gtk.SpinButton(adj, 0.0, 0)
+        set_tip(self.pathdelchars, _('The number of characters to strip from the left hand side of media file paths.'))
+        hbox.pack_start(self.pathdelchars, False)
+        self.pathdelchars.show()
+        label = gtk.Label('+')
+        hbox.pack_start(label, False)
+        label.show()
+        self.pathaddchars = gtk.Entry()
+        set_tip(self.pathaddchars, _('The characters to prefix to the media file paths.'))
+        hbox.pack_start(self.pathaddchars)
+        self.pathaddchars.show()
+        table.attach(hbox, 1, 4, 1, 2)
+        hbox.show()
+        
+        userlabel = gtk.Label(_('User Name'))
+        userlabel.set_alignment(1.0, 0.5)
+        table.attach(userlabel, 0, 1, 3, 4, gtk.SHRINK | gtk.FILL)
         userlabel.show()
         self.prokuser = DefaultEntry("prokyon", True)
         self.prokuser.set_size_request(30, -1)
-        table.attach(self.prokuser, 1, 2, 1, 2)
+        table.attach(self.prokuser, 1, 2, 3, 4)
         self.prokuser.show()
-        databaselabel = self.rjustlabel(_('Database'))
-        table.attach(databaselabel, 2, 3, 1, 2, gtk.SHRINK | gtk.FILL)
+        databaselabel = gtk.Label(_('Database'))
+        databaselabel.set_alignment(1.0, 0.5)
+        table.attach(databaselabel, 2, 3, 3, 4, gtk.SHRINK | gtk.FILL)
         databaselabel.show()
         self.prokdatabase = DefaultEntry("prokyon", True)
         self.prokdatabase.set_size_request(30, -1)
-        table.attach(self.prokdatabase, 3, 4, 1, 2)
+        table.attach(self.prokdatabase, 3, 4, 3, 4)
         self.prokdatabase.show()
-        passwordlabel = self.rjustlabel(_('Password'))
-        table.attach(passwordlabel, 0, 1, 2, 3, gtk.SHRINK | gtk.FILL)
+        passwordlabel = gtk.Label(_('Password'))
+        passwordlabel.set_alignment(1.0, 0.5)
+        table.attach(passwordlabel, 0, 1, 4, 5, gtk.SHRINK | gtk.FILL)
         passwordlabel.show()
         self.prokpassword = DefaultEntry("prokyon", True)
         self.prokpassword.set_size_request(30, -1)
         self.prokpassword.set_visibility(False)
-        table.attach(self.prokpassword, 1, 2, 2, 3)
+        table.attach(self.prokpassword, 1, 2, 4, 5)
         self.prokpassword.show()
         # TC: Button text, cause connection to the selected database.
         self.proktoggle = gtk.ToggleButton(_('Database Connect'))
         self.proktoggle.set_size_request(10, -1)
         self.proktoggle.connect("toggled", self.cb_proktoggle)
-        table.attach(self.proktoggle, 2, 4, 2, 3)
+        table.attach(self.proktoggle, 2, 4, 4, 5)
         self.proktoggle.show()
         self.db = None
+        self.dbtype = None
+    
