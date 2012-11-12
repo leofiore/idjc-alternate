@@ -108,14 +108,14 @@ class TreePopulate(object):
                         self.art = row[1]
                         self.artlower = self.art.lower()
                         self.iter1 = append(
-                                        None, (-1, self.art, 0, 0, 0, "", "")) 
+                                        None, (-1, self.art, 0, 0, 0, "", "", 0)) 
                         d = 1
                     if d == 1:
                         if self.artlower == row[1].lower():
                             self.alb = row[2]
                             self.alblower = self.alb.lower()
                             self.iter2 = append(
-                                    self.iter1, (-2, self.alb, 0, 0, 0, "", "")) 
+                                    self.iter1, (-2, self.alb, 0, 0, 0, "", "", 0)) 
                             d = 2
                         else:
                             d = 0
@@ -127,10 +127,10 @@ class TreePopulate(object):
                                 row = list(row)
                                 fn = row[7].rsplit("/",1)
                                 row[7] = fn[1]
-                                row.append(fn[0])
+                                row[8] = fn[0]
                             path = self.proktransform[1] + row[8][self.proktransform[0]:] 
                             append(self.iter2, (row[0], row[4], row[3],
-                                                row[5], row[6], row[7], path))
+                                                row[5], row[6], row[7], path, row[9]))
                             break
                         else:
                             d = 1
@@ -152,7 +152,7 @@ class TreePopulate(object):
         self.art = self.alb = ""
 
 class MediaPane(gtk.Frame):
-    """ UI for viewing the prokyon 3 database"""
+    """UI for viewing the prokyon 3 database"""
     
     sourcetargets = (
         #('MY_TREE_MODEL_ROW', gtk.TARGET_SAME_WIDGET, 0),
@@ -165,6 +165,16 @@ class MediaPane(gtk.Frame):
             return self.cell_secs_to_h_m_s(column, renderer, model, iter, cell)
         else:
             renderer.set_property("text", "")
+    
+    def cell_k(self, column, renderer, model, iter, cell):
+        bitrate = model.get_value(iter, cell)
+        if bitrate == 0:
+            renderer.set_property("text", "")
+        elif self.dbtype == "P3":
+            renderer.set_property("text", "%dk" % bitrate)
+        elif bitrate > 9999 and self.dbtype == "Ampache":
+            renderer.set_property("text", "%dk" % (bitrate // 1000))
+        renderer.set_property("xalign", 1.0)
     
     @staticmethod
     def cell_show_unknown(column, renderer, model, iter, cell):
@@ -248,10 +258,15 @@ class MediaPane(gtk.Frame):
         self.proktransform = proktransform
         self.whereentry.set_text("")
         self.fuzzyentry.set_text("")
+        # Show the 'Disk' column whenever the database supports it.
+        for each in (self.treecols[1], self.flatcols[3]):
+            each.set_visible(dbtype in ("Ampache",))
         self.show()
         self.tree_update.clicked()
     
     def deactivate(self):
+        self.treestore.clear()
+        self.flatstore.clear()
         self.hide()
         try:
             del self.db
@@ -275,18 +290,18 @@ class MediaPane(gtk.Frame):
         try:
             if self.dbtype == "P3":
                 total = c.execute("SELECT id,artist,album,tracknumber,title,"
-                                  "length,bitrate,filename,path FROM tracks ORDER BY"
-                                  " artist,album,path,tracknumber,title")
+                    "length,bitrate,filename,path,0 as disk FROM tracks ORDER BY"
+                    " artist,album,path,tracknumber,title")
             elif self.dbtype == "Ampache":
                 total = c.execute("""SELECT song.id as id, 
                     concat_ws(" ", artist.prefix, artist.name) as artist, 
-                    concat_ws(" ", album.prefix, album.name) as album, 
+                    concat_ws(" ", album.prefix, album.name) as album,
                     track as tracknumber, title, time as length, 
-                    bitrate, file
+                    bitrate, file, "" as padding, album.disk as disk
                     from song
                     left join artist on song.artist = artist.id 
                     left join album on song.album = album.id 
-                    ORDER BY artist.name,album.name,tracknumber,title""")
+                    ORDER BY artist.name,album.disk,album.name,tracknumber,title""")
         except dberror.MySQLError, inst:
             print inst
             c.close()
@@ -316,16 +331,17 @@ class MediaPane(gtk.Frame):
                 while 1:
                     try:
                         if self.dbtype == "P3":
-                            c.execute("SELECT id,artist,album,tracknumber,title,"
-                                      "length,bitrate,filename,path FROM tracks WHERE "
-                                      "MATCH (artist,album,title,filename) AGAINST (%s)",
+                            c.execute("""SELECT id,artist,album,
+                                      tracknumber,title,length,bitrate,
+                                      filename,path,0 as disk FROM tracks WHERE 
+                                      MATCH (artist,album,title,filename) AGAINST (%s)""",
                                       (fuzzy, ))
                         if self.dbtype == "Ampache":
                             c.execute("""SELECT song.id as id,
                                 concat_ws(" ",artist.prefix,artist.name),
                                 concat_ws(" ",album.prefix,album.name),
                                 track as tracknumber, title, time as length,
-                                bitrate, file FROM song
+                                bitrate, file, "" as padding, album.disk as disk FROM song
                                 LEFT JOIN artist ON artist.id = song.artist
                                 LEFT JOIN album ON album.id = song.album
                                 WHERE
@@ -348,23 +364,26 @@ class MediaPane(gtk.Frame):
                         else:
                             raise
             else:
-                if where:
-                    where = "WHERE %s " % where
+                if ";" in where:
+                    raise ValueError("Semicolon character is banned from WHERE box.")
                 if self.dbtype == "P3":
-                    query = """SELECT id,artist,album,tracknumber,title,length,
-                            bitrate,filename,path FROM tracks %sORDER BY 
+                    query = """SELECT id,artist,album,
+                            tracknumber,title,length,
+                            bitrate,filename, path, 0 as disk FROM tracks WHERE (%s) ORDER BY 
                             artist,album,path,tracknumber,title""" % where
                 if self.dbtype == "Ampache":
                     query = """SELECT song.id as id,
                             concat_ws(" ", artist.prefix, artist.name) as artist,
-                            concat_ws(" ", album.prefix, album.name) as album, track as tracknumber, title,
-                            time as length, bitrate, file FROM song
+                            concat_ws(" ", album.prefix, album.name) as albumname,
+                            track as tracknumber, title,
+                            time as length, bitrate, file, "" as padding,
+                            album.disk as disk FROM song
                             LEFT JOIN album on album.id = song.album
                             LEFT JOIN artist on artist.id = song.artist
-                            %s ORDER BY artist.name, album.name, file, track, title
+                            WHERE (%s) ORDER BY artist.name, album.name, file, album.disk, track, title
                             """ % where
                 c.execute(query)
-        except dberror.MySQLError, inst:
+        except (dberror.MySQLError, ValueError), inst:
             print inst
             c.close()
             self.flatstore.clear()
@@ -376,14 +395,16 @@ class MediaPane(gtk.Frame):
         while 1:
             row = c.fetchone()
             if row is not None:
+                row = list(row)
                 if self.dbtype == "Ampache":
                     # Split the file into path and filename
-                    row = list(row)
                     fn = row[7].rsplit("/",1)
                     row[7] = fn[1]
-                    row.append(fn[0])
+                    row[8] = fn[0]
                 found += 1
-                self.flatstore.append([found] + list(row))
+                
+                row[8] = self.proktransform[1] + row[8][self.proktransform[0]:]                 
+                self.flatstore.append([found] + row)
             else:
                 break
         self.flatcols[0].set_title("(%s)" % found)
@@ -452,17 +473,19 @@ class MediaPane(gtk.Frame):
                                                                 self.treeview)
         self.tree_collapse.connect_object("clicked", gtk.TreeView.collapse_all,
                                                                 self.treeview)
-        # id, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path
-        self.treestore = gtk.TreeStore(int, str, int, int, int, str, str)
+        # id, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path, disk
+        self.treestore = gtk.TreeStore(int, str, int, int, int, str, str, int)
         self.treeview.set_model(self.treestore)
         self.treecols = makecolumns(self.treeview, (
                 ("%s - %s - %s" % (_('Artist'), _('Album'), _('Title')), 1,
                                                 self.cell_show_unknown, 180),
+                # TC: The disk number of the album track.
+                (_('Disk'), 7, self.cell_ralign, -1),
                 # TC: The album track number.
                 (_('Track'), 2, self.cell_ralign, -1),
                 # TC: Track playback time.
                 (_('Duration'), 3, self.cond_cell_secs_to_h_m_s, -1),
-                (_('Bitrate'), 4, self.cell_ralign, -1),
+                (_('Bitrate'), 4, self.cell_k, -1),
                 (_('Filename'), 5, None, 100),
                 # TC: Directory path to a file.
                 (_('Path'), 6, None, -1),
@@ -538,18 +561,19 @@ class MediaPane(gtk.Frame):
         treeselection = self.flatview.get_selection()
         treeselection.set_mode(gtk.SELECTION_MULTIPLE)
         #                           found, id, ARTIST, ALBUM, TRACKNUM, TITLE,
-        #                           DURATION, BITRATE, path, filename
+        #                           DURATION, BITRATE, path, filename, disk
         self.flatstore = gtk.ListStore(
-                            int, int, str, str, int, str, int, int, str, str)
+                            int, int, str, str, int, str, int, int, str, str, int)
         self.flatview.set_model(self.flatstore)
         self.flatcols = makecolumns(self.flatview, (
                 ("(%d)" % 0, 0, self.cell_ralign, -1),
                 (_('Artist'), 2, self.cell_show_unknown, 100),
                 (_('Album'), 3, self.cell_show_unknown, 100),
+                (_('Disk'), 10, self.cell_ralign, -1),
                 (_('Track'), 4, self.cell_ralign, -1),
                 (_('Title'), 5, self.cell_show_unknown, 100),
                 (_('Duration'), 6, self.cell_secs_to_h_m_s, -1),
-                (_('Bitrate'), 7, self.cell_ralign, -1),
+                (_('Bitrate'), 7, self.cell_k, -1),
                 (_('Filename'), 8, None, 100),
                 (_('Path'), 9, None, -1),
                 ))
