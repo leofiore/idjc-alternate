@@ -47,7 +47,9 @@ class DBAccessor(threading.Thread):
     remake the connection and continue on with its work.
     """
     
-    def __init__(self, hostnameport, user, password, database):
+    def __init__(self, hostnameport, user, password, database, notify=lambda m:):
+        """The notify function must lock gtk before accessing widgets."""
+        
         threading.Thread.__init__()
         try:
             hostname, port = hostnameport.rsplit(":", 1)
@@ -61,10 +63,13 @@ class DBAccessor(threading.Thread):
         self.user = user
         self.password = password
         self.database = database
+        self.notify = notify
         self.handle = None  # No connections made until there is a query.
         self.cursor = None
         self.jobs = []
         self.semaphore = threading.Semaphore()
+        self.lock = threading.Lock()
+        self.keepalive = True
         start()
 
     def request(self, sql_query, data_handler):
@@ -72,34 +77,76 @@ class DBAccessor(threading.Thread):
         self.semaphore.release()
         
     def run(self):
-        while 1:
+        while self.keepalive:
+            self.notify(_('Ready'))
             self.semaphore.acquire()
-            if self.jobs:
-                query, handler = self.jobs.pop(0)
-            
-                try:
-                    self.cursor.execute(*query)
-                except dberror.OperationalError as e:
-                    print "Query failed.", e
-                    self.cursor.close()
-                    self.handle.close()
-                    raise
-                except Exception:
-                    for i in range(1, 4):
-                        try:
-                            self.handle = sql.connect(host=self.hostname,
-                                port=self.port, user=self.user,
-                                passwd=self.password, db=self.database,
-                                connect_timeout=3)
-                            self.cursor = self.handle.cursor()
-                            self.cursor.execute(*query)
-                        except dberror.OperationalError as e:
-                            print "Database connection failed (try %d)." % i, e
-                            time.sleep(1)
+            if self.keepalive and self.jobs:
+                query, handler, failhandler = self.jobs.pop(0)
+
+                trycount = 0
+                while trycount < 4:
+                    try:
+                        self.cursor.execute(*query)
+                    except dberror.OperationalError as e:
+                        if self.keepalive:
+                            print e
+                            if failhandler is not None:
+                                failhandler()
+                            try:
+                                self.cursor.close()
+                            except Exception:
+                                pass
+                                
+                            try:
+                                self.handle.close()
+                            except Exception:
+                                pass
+
+                            raise
                         else:
                             break
+                    except Exception:
+                        with self.lock:
+                            if self.keepalive:
+                                self.notify(_('Connecting'))
+                                trycount += 1
+                                try:
+                                    self.handle = sql.connect(host=self.hostname,
+                                        port=self.port, user=self.user,
+                                        passwd=self.password, db=self.database,
+                                        connect_timeout=3)
+                                    self.cursor = self.handle.cursor()
+                                except dberror.OperationalError as e:
+                                    self.notify(_("Connection failed (try %d)") % i)
+                                    print e
+                                    time.sleep(0.5)
+                                else:
+                                    self.notify(_('Connected'))
                     else:
-                        print "Database connection failed. Job dropped."        
-                        continue
+                        break
+ 
+                self.notify(_('Processing'))
+                while self.keepalive and handler(self.cursor):
+                    pass
+                    
+        self.notify(_('Disconnected'))
 
-                handler(self.cursor)
+    def close(self):
+        self.keepalive = False
+        self.semaphore.release()
+        
+        # If the thread is stuck on IO unblock it by closing the connection.
+        # We should clean up in any event.
+        with self.lock:
+            try:
+                self.cursor.close()
+            except Exception:
+                pass
+                
+            try:
+                self.handle.close()
+            except Exception:
+                pass
+            
+        self.join()  # Hopefully this will complete quickly.
+        self.jobs.clear()
