@@ -28,6 +28,7 @@ import gtk
 from idjc import FGlobs, PGlobs
 from . import licence_window
 from . import p3db
+from . import songdb
 from . import midicontrols
 from .gtkstuff import WindowSizeTracker
 from .prelims import ProfileManager
@@ -1168,6 +1169,9 @@ class mixprefs:
         self.p3prefs.show()
         self.parent.menu.songdbmenu_a.connect_proxy(self.p3prefs.proktoggle)
 
+        # Song database preferences and connect button.
+        self.songdbprefs = songdb.PrefsControls()
+        outervbox.pack_start(self.songdbprefs, False)
         
         # Session to be saved, or initial settings preferences.
         frame = gtk.Frame(" %s " % _('Player Settings At Startup'))
