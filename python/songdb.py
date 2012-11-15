@@ -256,6 +256,13 @@ class PrefsControls(gtk.Frame):
             
         self.data_panel.set_no_show_all(False)
         self.show_all()
+        
+        # Save and Restore settings.
+        self.activedict = {"songdb_toggle": self.dbtoggle}
+        self.valuesdict = {"songdb_delchars": self._delchars}
+        self.textdict = {"songdb_hostport": self._hostport,
+            "songdb_user": self._user, "songdb_password": self._password,
+            "songdb_dbname": self._database, "songdb_addchars": self._addchars}
 
     @property
     def hostport(self):
@@ -320,10 +327,10 @@ class MediaPane(gtk.Frame):
         self.set_shadow_type(gtk.SHADOW_IN)
         self.set_border_width(6)
         self.set_label_align(0.5, 0.5)
-        vbox = gtk.VBox()
-        self.add(vbox)
+        main_vbox = gtk.VBox()
+        self.add(main_vbox)
         self.notebook = gtk.Notebook()
-        vbox.pack_start(self.notebook, True)
+        main_vbox.pack_start(self.notebook)
         
         # Tree UI with Artist, Album, Title heirarchy.
         # TC: Refers to the tree view of the tracks database.
@@ -375,16 +382,15 @@ class MediaPane(gtk.Frame):
         self.treeview.connect_after("drag-begin", self._cb_drag_begin)
         self.treeview.connect("drag_data_get", self._cb_tree_drag_data_get)
         
-        vbox = gtk.VBox()
-        vbox.set_border_width(20)
-        vbox.set_spacing(20)
+        pop_vbox = gtk.VBox()
+        pop_vbox.set_border_width(20)
+        pop_vbox.set_spacing(20)
         # TC: The database tree view is being built (populated).
         label = gtk.Label(_('Populating'))
-        vbox.pack_start(label, False, False, 0)
+        pop_vbox.pack_start(label, False)
         self.tree_pb = gtk.ProgressBar()
-        vbox.pack_start(self.tree_pb, False, False, 0)
-        self.treealt.add(vbox)
-        vbox.show_all()
+        pop_vbox.pack_start(self.tree_pb, False)
+        self.treealt.add(pop_vbox)
         
         # Flat data view with search feature.
         # TC: User specified search filter entry box title text.
@@ -392,47 +398,39 @@ class MediaPane(gtk.Frame):
         filterframe.set_shadow_type(gtk.SHADOW_OUT)
         filterframe.set_border_width(1)
         filterframe.set_label_align(0.5, 0.5)
-        filterframe.show()
         filtervbox = gtk.VBox()
         filtervbox.set_border_width(3)
         filtervbox.set_spacing(1)
         filterframe.add(filtervbox)
-        filtervbox.show()
         
         fuzzyhbox = gtk.HBox()
-        filtervbox.pack_start(fuzzyhbox, False, False, 0)
-        fuzzyhbox.show()
+        filtervbox.pack_start(fuzzyhbox, False)
         # TC: A type of search on any data field matching paritial strings.
         fuzzylabel = gtk.Label(_('Fuzzy Search'))
-        fuzzyhbox.pack_start(fuzzylabel, False, False, 0)
-        fuzzylabel.show()
+        fuzzyhbox.pack_start(fuzzylabel, False)
         self.fuzzyentry = gtk.Entry()
         self.fuzzyentry.connect("changed", self._cb_fuzzysearch_changed)
         fuzzyhbox.pack_start(self.fuzzyentry, True, True, 0)
-        self.fuzzyentry.show()
         
         wherehbox = gtk.HBox()
-        filtervbox.pack_start(wherehbox, False, False, 0)
-        wherehbox.show()
+        filtervbox.pack_start(wherehbox, False)
         # TC: WHERE is an SQL keyword.
         wherelabel = gtk.Label(_('WHERE'))
-        wherehbox.pack_start(wherelabel, False, False, 0)
-        wherelabel.show()
+        wherehbox.pack_start(wherelabel, False)
         self.whereentry = gtk.Entry()
         self.whereentry.connect("activate", self._cb_update)
-        wherehbox.pack_start(self.whereentry, True, True, 0)
-        self.whereentry.show()
+        wherehbox.pack_start(self.whereentry)
         image = gtk.image_new_from_stock(gtk.STOCK_EXECUTE,
                                                         gtk.ICON_SIZE_BUTTON)
         self.update = gtk.Button()
         self.update.connect("clicked", self._cb_update)
         self.update.set_image(image)
         image.show
-        wherehbox.pack_start(self.update, False, False, 0)
-        self.update.show()
+        wherehbox.pack_start(self.update)
         
-        self.flatview, self.flatscroll, self.flatalt = self._makeview(
+        self.flatview, self.flatscroll, flatalt = self._makeview(
                                         self.notebook, _('Flat'), filterframe)
+        flatalt.set_no_show_all(True)
         self.flatview.set_rules_hint(True)
         self.flatview.set_rubber_banding(True)
         treeselection = self.flatview.get_selection()
@@ -460,6 +458,12 @@ class MediaPane(gtk.Frame):
         self.flatview.connect_after("drag-begin", self._cb_drag_begin)
         self.flatview.connect("drag_data_get", self._cb_flat_drag_data_get)
 
+        self.prefs_controls = PrefsControls()
+        self.prefs_controls.dbtoggle.connect("toggled", self._cb_dbtoggle)
+        main_vbox.show_all()
+        self.treescroll.hide()
+
+
     def getcolwidths(self, cols):
         return ",".join([ str(x.get_width() or x.get_fixed_width())
                                                             for x in cols ])
@@ -476,6 +480,9 @@ class MediaPane(gtk.Frame):
         ('text/plain', 0, 1),
         ('TEXT', 0, 2),
         ('STRING', 0, 3))
+
+    def _cb_dbtoggle(self, widget):
+        self.set_visible(widget.get_active())
 
     def _cb_update(self, widget):
         print "ToDo cb_update"
@@ -525,45 +532,6 @@ class MediaPane(gtk.Frame):
             self.whereentry.set_sensitive(True)
         self.update.clicked()
 
-    @staticmethod
-    def _makeview(notebook, label_text, additional = None):
-        vbox = gtk.VBox()
-        vbox.set_spacing(2)
-        scrollwindow = gtk.ScrolledWindow()
-        alternate = gtk.VBox()
-        vbox.pack_start(scrollwindow, True, True, 0)
-        vbox.pack_start(alternate, True, True, 0)
-        if additional is not None:
-            vbox.pack_start(additional, False, False, 0)
-        vbox.show()
-        scrollwindow.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
-        label = gtk.Label(label_text)
-        notebook.append_page(vbox, label)
-        label.show()
-        scrollwindow.show()
-        treeview = gtk.TreeView()
-        scrollwindow.add(treeview)
-        treeview.show()
-        return treeview, scrollwindow, alternate
-
-    @staticmethod
-    def _makecolumns(view, name_ix_rf_mw):
-        l = []
-        for name, ix, rf, mw in name_ix_rf_mw:
-            renderer = gtk.CellRendererText()
-            column = gtk.TreeViewColumn(name, renderer)
-            column.add_attribute(renderer, 'text', ix)
-            if mw != -1:
-                column.set_resizable(True)
-                column.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
-                column.set_min_width(mw)
-                column.set_fixed_width(mw + 50)
-            view.append_column(column)
-            l.append(column)
-            if rf is not None:
-                column.set_cell_data_func(renderer, rf, ix)
-        return l
-        
     def _cond_cell_secs_to_h_m_s(self, column, renderer, model, iter, cell):
         if model.get_value(iter, 0) >= 0:
             return self.cell_secs_to_h_m_s(column, renderer, model, iter, cell)
@@ -609,3 +577,38 @@ class MediaPane(gtk.Frame):
             renderer.set_property("xalign", 1.0)
         else:
             renderer.set_property("text", "")
+
+    @staticmethod
+    def _makeview(notebook, label_text, additional = None):
+        vbox = gtk.VBox()
+        vbox.set_spacing(2)
+        scrollwindow = gtk.ScrolledWindow()
+        alternate = gtk.VBox()
+        vbox.pack_start(scrollwindow)
+        vbox.pack_start(alternate)
+        if additional is not None:
+            vbox.pack_start(additional, False)
+        scrollwindow.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        label = gtk.Label(label_text)
+        notebook.append_page(vbox, label)
+        treeview = gtk.TreeView()
+        scrollwindow.add(treeview)
+        return treeview, scrollwindow, alternate
+
+    @staticmethod
+    def _makecolumns(view, name_ix_rf_mw):
+        l = []
+        for name, ix, rf, mw in name_ix_rf_mw:
+            renderer = gtk.CellRendererText()
+            column = gtk.TreeViewColumn(name, renderer)
+            column.add_attribute(renderer, 'text', ix)
+            if mw != -1:
+                column.set_resizable(True)
+                column.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+                column.set_min_width(mw)
+                column.set_fixed_width(mw + 50)
+            view.append_column(column)
+            l.append(column)
+            if rf is not None:
+                column.set_cell_data_func(renderer, rf, ix)
+        return l

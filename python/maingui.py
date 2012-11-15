@@ -54,7 +54,7 @@ from .gtkstuff import threadslock, WindowSizeTracker, ConfirmationDialog
 from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog, LEDDict
 from . import midicontrols
 from .tooltips import set_tip
-from . import p3db, songdb
+from . import songdb
 from .prelims import *
 
 
