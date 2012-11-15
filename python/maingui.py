@@ -54,7 +54,7 @@ from .gtkstuff import threadslock, WindowSizeTracker, ConfirmationDialog
 from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog, LEDDict
 from . import midicontrols
 from .tooltips import set_tip
-from . import p3db
+from . import p3db, songdb
 from .prelims import *
 
 
@@ -2966,7 +2966,7 @@ class MainWindow(dbus.service.Object):
         self.paned = gtk.HPaned()
         self.leftpane = gtk.VPaned()
         self.paned.pack1(self.leftpane)
-        self.topleftpane = p3db.MediaPane()
+        self.topleftpane = songdb.MediaPane()
         self.leftpane.pack1(self.topleftpane)
         self.topleftpane.connect_object("show", gtk.VPaned.show, self.leftpane)
         self.topleftpane.connect_object("hide", self.cb_panehide, self.leftpane)
