@@ -75,12 +75,14 @@ class DBAccessor(threading.Thread):
     def request(self, sql_query, handler, failhandler):
         """Add a request to the job queue.
         
-        sql_query = str()
-        def handler(sql cursor): implemented as a generator function with
-                                 the yield acting as a cancellation point
-                                 if processing a huge data set you want to
-                                 allow cancellation once for each artist
-        def failhandler(Exception instance)
+        sql_query is a one or 2 tuple e.g.
+                ("DESCRIBE SONGS",)
+                ("DESCRIBE %s", ("SONGS",))
+        
+        def handler(sql_cursor, notify)
+            def notify("status message")
+
+        def failhandler(exception, notify)
         """
         
         self.jobs.append((sql_query, handler, failhandler))
@@ -90,7 +92,6 @@ class DBAccessor(threading.Thread):
         notify = partial(glib.idle_add, threadslock(self.notify))
         
         while self.keepalive:
-            notify(_('Ready'))
             self.semaphore.acquire()
             if self.keepalive and self.jobs:
                 query, handler, failhandler = self.jobs.pop(0)
@@ -104,7 +105,7 @@ class DBAccessor(threading.Thread):
                             # Unhandled errors will be treated like
                             # connection failures.
                             if self.handle.open and failhandler is not None:
-                                failhandler(e)
+                                failhandler(e, notify)
                                 break
                             else:
                                 try:
@@ -140,8 +141,7 @@ class DBAccessor(threading.Thread):
                                     notify(_('Connected'))
                     else:
                         if self.keepalive:
-                            notify(_('Processing'))
-                            for dummy in handler(self.cursor):
+                            for dummy in handler(self.cursor, notify):
                                 if not self.keepalive:
                                     break
                         break
