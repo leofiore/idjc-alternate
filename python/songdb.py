@@ -72,7 +72,7 @@ class DBAccessor(threading.Thread):
         self.keepalive = True
         self.start()
 
-    def request(self, sql_query, handler, failhandler):
+    def request(self, sql_query, handler, failhandler=None):
         """Add a request to the job queue.
         
         sql_query is a one or 2 tuple e.g.
@@ -97,7 +97,7 @@ class DBAccessor(threading.Thread):
                 query, handler, failhandler = self.jobs.pop(0)
 
                 trycount = 0
-                while trycount < 4:
+                while trycount < 3:
                     try:
                         self.cursor.execute(*query)
                     except sql.OperationalError as e:
@@ -134,20 +134,33 @@ class DBAccessor(threading.Thread):
                                         connect_timeout=3)
                                     self.cursor = self.handle.cursor()
                                 except sql.Error as e:
-                                    notify(_("Connection failed (try %d)") % i)
+                                    notify(_("Connection failed (try %d)") %
+                                                                    trycount)
                                     print e
                                     time.sleep(0.5)
                                 else:
-                                    notify(_('Connected'))
+                                    try:
+                                        self.cursor.execute('set names utf8')
+                                        self.cursor.execute(
+                                                    'set character set utf8')
+                                        self.cursor.execute(
+                                            'set character_set_connection=utf8')
+                                    except sql.MySQLError:
+                                        notify(
+                                            _('Connected: utf-8 mode failed'))
+                                    else:
+                                        notify(_('Connected'))
                     else:
                         if self.keepalive:
                             for dummy in handler(self.cursor, notify):
                                 if not self.keepalive:
                                     break
                         break
-                
                 else:
-                    notify(_('Job dropped'))
+                    if failhandler is not None:
+                        failhandler(e, notify)
+                    else:
+                        notify(_('Job dropped'))
 
         notify(_('Disconnected'))
 
@@ -272,6 +285,9 @@ class PrefsControls(gtk.Frame):
             "songdb_user": self._user, "songdb_password": self._password,
             "songdb_dbname": self._database, "songdb_addchars": self._addchars}
         
+    def disconnect(self):
+        self.dbtoggle.set_active(False)    
+        
     def bind(self, callback):
         """Connect with the activate method of the view pane."""
         
@@ -311,6 +327,7 @@ class PrefsControls(gtk.Frame):
     def _notify(self, message):
         """Display status messages beneath the prefs settings."""
         
+        print message
         self._statusbar.push(1, message)
         # To ensure readability of long messages also set the tooltip.
         self._statusbar.set_tooltip_text(message)
@@ -353,18 +370,6 @@ class PageCommon(gtk.VBox):
             self._sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
         self.tree_view.connect_after("drag-begin", self._cb_drag_begin)
         self.tree_view.connect("drag_data_get", self._cb_drag_data_get)
-
-    def db_toggle(self, conn_data, transform):
-        if conn_data is not None:
-            self.transform = transform
-            self.db_accessor = DBAccessor(**conn_data)
-        else:
-            self.cleanup()
-
-    def cleanup(self):
-        if self.db_accessor is not None:
-            self.db_accessor.close()
-            self.db_accessor = None
 
     def get_col_widths(self):
         pass
@@ -679,10 +684,6 @@ class MediaPane(gtk.Frame):
 
         main_vbox.show_all()
 
-    def cleanup(self):
-        for each in (self._tree_page, self._flat_page):
-            each.cleanup()
-
     def repair_focusability(self):
         self._flat_page.repair_focusability()
 
@@ -707,7 +708,50 @@ class MediaPane(gtk.Frame):
             else:
                 target.set_col_widths(data)
 
-    def _dbtoggle(self, *args):
-        self.set_visible(any(args))
-        self._tree_page.db_toggle(*args)
-        self._flat_page.db_toggle(*args)
+    def _dbtoggle(self, conn_data, transform):
+        if conn_data:
+            # Connect and discover the database type.
+            self._acc1 = DBAccessor(**conn_data)
+            self._acc2 = DBAccessor(**conn_data)
+            self._acc1.request(('SHOW tables',), self._s1, self._f1)
+        else:
+            try:
+                self._acc1.close()
+                self._acc2.close()
+            except AttributeError:
+                pass
+            del self._acc1, self._acc2
+            self.hide()
+    
+    def safe_show(self):
+        glib.idle_add(threadslock(self.show))
+        
+    def safe_disconnect(self):
+        glib.idle_add(threadslock(self.prefs_controls.disconnect))
+            
+    def _f1(self, exception, notify):
+        self.safe_disconnect()
+
+    def _s1(self, cursor, notify):
+        """Running under the accessor worker thread!
+        
+        Step 1 Identifying a Prokyon 3 database part 1.
+        """
+        
+        yield
+        if frozenset(('tracks',)).issubset(frozenset(cursor.fetchall())):
+            notify('Found table tracks')
+            self._acc.request(('DESCRIBE tracks',), self._s2, self._f1)
+        else:
+            self.prefs_controls.disconnect()  # ToDo - check ampache.
+            
+    def _s2(self, cursor, notify):
+        """Step 2 Identifying a Prokyon 3 database part 2."""
+        
+        yield
+        if frozenset(("artist", "title", "album", "tracknumber", "bitrate",
+            "path", "filename")).issubset(frozenset(cursor.fetchall())):
+            notify('Found Prokyon 3 schema')
+            self.safe_show()
+        else:
+            self.safe_disconnect()  # Chain to Ampache in future.

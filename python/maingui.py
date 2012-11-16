@@ -2520,7 +2520,7 @@ class MainWindow(dbus.service.Object):
         self.player_left.flush = True
         self.player_right.flush = True
         self.send_new_mixer_stats()
-        self.topleftpane.cleanup()
+        self.prefs_window.songdbprefs.disconnect()
         gobject.source_remove(self.statstimeout)
         gobject.source_remove(self.vutimeout)
         gobject.source_remove(self.savetimeout)
