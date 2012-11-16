@@ -20,7 +20,7 @@
 import time
 import gettext
 import threading
-from functools import partial
+from functools import partial, wraps
 
 import glib
 import gtk
@@ -271,24 +271,34 @@ class PrefsControls(gtk.Frame):
         self.textdict = {"songdb_hostnameport": self._hostnameport,
             "songdb_user": self._user, "songdb_password": self._password,
             "songdb_dbname": self._database, "songdb_addchars": self._addchars}
-
-    @property
-    def accessor_args(self):
-        """Values to pass to the DBAccessor constructor."""
-
-        dict_ = {"notify": self._notify}
-        for key in "hostnameport user password database".split():
-            dict_[key] = getattr(self, "_" + key).get_text().strip()
         
-        return dict_
-
-    @property
-    def delchars(self):
-        return self._delchars.get_value()
+    def bind(self, callback):
+        """Connect with the activate method of the view pane."""
         
-    @property
-    def addchars(self):
-        return self._addchars.get_text().strip()
+        self.dbtoggle.connect("toggled", self._cb_bind, callback)
+
+    def _cb_bind(self, widget, callback):
+        """This runs when the database is toggled on and off."""
+        
+        if widget.get_active():
+            # Collate parameters for DBAccessor contructors.
+            conn_data = {"notify": self._notify}
+            for key in "hostnameport user password database".split():
+                conn_data[key] = getattr(self, "_" + key).get_text().strip()
+            
+            # Make a file path transformation function.
+            del_qty = self._delchars.get_value()
+            prepend_str = self._addchars.get_text().strip()
+
+            if del_qty or prepend_str:
+                def transform(input_str):
+                    return prepend_str + input_str[del_qty:]
+            else:
+                transform = lambda s: s  # Do nothing.
+        else:
+            conn_data = transform = None
+
+        callback(conn_data, transform)
 
     def _cb_dbtoggle(self, widget):
         """Parameter widgets to be made insensitive when db is active."""
@@ -321,223 +331,87 @@ class PrefsControls(gtk.Frame):
         return label, entry
 
 
-class MediaPane(gtk.Frame):
-    """Database song details are displayed in this widget."""
-
-    def __init__(self):
-        gtk.Frame.__init__(self)
-        self.set_shadow_type(gtk.SHADOW_IN)
-        self.set_border_width(6)
-        self.set_label_align(0.5, 0.5)
-        main_vbox = gtk.VBox()
-        self.add(main_vbox)
-        self.notebook = gtk.Notebook()
-        main_vbox.pack_start(self.notebook)
-        
-        # Tree UI with Artist, Album, Title heirarchy.
-        # TC: Refers to the tree view of the tracks database.
-        buttonbox = gtk.HButtonBox()
-        buttonbox.set_layout(gtk.BUTTONBOX_SPREAD)
-        tree_update = gtk.Button(gtk.STOCK_REFRESH)
-        #tree_update.connect("clicked", self._cb_tree_update)
-        tree_update.set_use_stock(True)
-        tree_expand = gtk.Button(_('_Expand'), None, True)
-        image = gtk.image_new_from_stock(gtk.STOCK_ADD, gtk.ICON_SIZE_BUTTON)
-        tree_expand.set_image(image)
-        tree_collapse = gtk.Button(_('_Collapse'), None, True)
-        image = gtk.image_new_from_stock(gtk.STOCK_REMOVE, gtk.ICON_SIZE_BUTTON)
-        tree_collapse.set_image(image)
-        for each in (tree_update, tree_expand, tree_collapse):
-            buttonbox.add(each)
-
-        self.treeview, self.treescroll, self.treealt = self._makeview(
-                                        self.notebook, _('Tree'), buttonbox)
-        self.treeview.set_enable_tree_lines(True)
-        self.treeview.set_rubber_banding(True)
-        treeselection = self.treeview.get_selection()
-        treeselection.set_mode(gtk.SELECTION_MULTIPLE)
-        treeselection.set_select_function(self._tree_select_func)
-        tree_expand.connect_object("clicked", gtk.TreeView.expand_all,
-                                                                self.treeview)
-        tree_collapse.connect_object("clicked", gtk.TreeView.collapse_all,
-                                                                self.treeview)
-        # id, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path, disk
-        self.treestore = gtk.TreeStore(int, str, int, int, int, str, str, int)
-        self.treeview.set_model(self.treestore)
-        self.treecols = self._makecolumns(self.treeview, (
-                ("%s - %s - %s" % (_('Artist'), _('Album'), _('Title')), 1,
-                                                self._cell_show_unknown, 180),
-                # TC: The disk number of the album track.
-                (_('Disk'), 7, self._cell_ralign, -1),
-                # TC: The album track number.
-                (_('Track'), 2, self._cell_ralign, -1),
-                # TC: Track playback time.
-                (_('Duration'), 3, self._cond_cell_secs_to_h_m_s, -1),
-                (_('Bitrate'), 4, self._cell_k, -1),
-                (_('Filename'), 5, None, 100),
-                # TC: Directory path to a file.
-                (_('Path'), 6, None, -1),
-                ))
-        
-        self.treeview.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
-            self._sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
-        self.treeview.connect_after("drag-begin", self._cb_drag_begin)
-        self.treeview.connect("drag_data_get", self._cb_tree_drag_data_get)
-        
-        pop_vbox = gtk.VBox()
-        pop_vbox.set_border_width(20)
-        pop_vbox.set_spacing(20)
-        # TC: The database tree view is being built (populated).
-        label = gtk.Label(_('Populating'))
-        pop_vbox.pack_start(label, False)
-        self.tree_pb = gtk.ProgressBar()
-        pop_vbox.pack_start(self.tree_pb, False)
-        self.treealt.add(pop_vbox)
-        
-        # Flat data view with search feature.
-        # TC: User specified search filter entry box title text.
-        filterframe = gtk.Frame(" %s " % _('Filters'))
-        filterframe.set_shadow_type(gtk.SHADOW_OUT)
-        filterframe.set_border_width(1)
-        filterframe.set_label_align(0.5, 0.5)
-        filtervbox = gtk.VBox()
-        filtervbox.set_border_width(3)
-        filtervbox.set_spacing(1)
-        filterframe.add(filtervbox)
-        
-        fuzzyhbox = gtk.HBox()
-        filtervbox.pack_start(fuzzyhbox, False)
-        # TC: A type of search on any data field matching paritial strings.
-        fuzzylabel = gtk.Label(_('Fuzzy Search'))
-        fuzzyhbox.pack_start(fuzzylabel, False)
-        self.fuzzyentry = gtk.Entry()
-        self.fuzzyentry.connect("changed", self._cb_fuzzysearch_changed)
-        fuzzyhbox.pack_start(self.fuzzyentry, True, True, 0)
-        
-        wherehbox = gtk.HBox()
-        filtervbox.pack_start(wherehbox, False)
-        # TC: WHERE is an SQL keyword.
-        wherelabel = gtk.Label(_('WHERE'))
-        wherehbox.pack_start(wherelabel, False)
-        self.whereentry = gtk.Entry()
-        self.whereentry.connect("activate", self._cb_update)
-        wherehbox.pack_start(self.whereentry)
-        image = gtk.image_new_from_stock(gtk.STOCK_EXECUTE,
-                                                        gtk.ICON_SIZE_BUTTON)
-        self.update = gtk.Button()
-        self.update.connect("clicked", self._cb_update)
-        self.update.set_image(image)
-        image.show
-        wherehbox.pack_start(self.update)
-        
-        self.flatview, self.flatscroll, flatalt = self._makeview(
-                                        self.notebook, _('Flat'), filterframe)
-        flatalt.set_no_show_all(True)
-        self.flatview.set_rules_hint(True)
-        self.flatview.set_rubber_banding(True)
-        treeselection = self.flatview.get_selection()
-        treeselection.set_mode(gtk.SELECTION_MULTIPLE)
-        #                           found, id, ARTIST, ALBUM, TRACKNUM, TITLE,
-        #                           DURATION, BITRATE, path, filename, disk
-        self.flatstore = gtk.ListStore(
-                        int, int, str, str, int, str, int, int, str, str, int)
-        self.flatview.set_model(self.flatstore)
-        self.flatcols = self._makecolumns(self.flatview, (
-                ("(%d)" % 0, 0, self._cell_ralign, -1),
-                (_('Artist'), 2, self._cell_show_unknown, 100),
-                (_('Album'), 3, self._cell_show_unknown, 100),
-                (_('Disk'), 10, self._cell_ralign, -1),
-                (_('Track'), 4, self._cell_ralign, -1),
-                (_('Title'), 5, self._cell_show_unknown, 100),
-                (_('Duration'), 6, self._cell_secs_to_h_m_s, -1),
-                (_('Bitrate'), 7, self._cell_k, -1),
-                (_('Filename'), 8, None, 100),
-                (_('Path'), 9, None, -1),
-                ))
-
-        self.flatview.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
-            self._sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
-        self.flatview.connect_after("drag-begin", self._cb_drag_begin)
-        self.flatview.connect("drag_data_get", self._cb_flat_drag_data_get)
-
-        self.prefs_controls = PrefsControls()
-        self.prefs_controls.dbtoggle.connect("toggled", self._cb_dbtoggle)
-        main_vbox.show_all()
-        self.treescroll.hide()
-
-
-    def getcolwidths(self, cols):
-        return ",".join([ str(x.get_width() or x.get_fixed_width())
-                                                            for x in cols ])
+class PageCommon(gtk.VBox):
+    """Base class for TreePage and FlatPage."""
     
-    def setcolwidths(self, cols, data):
-        c = cols.__iter__()
+    def __init__(self, notebook, label_text, controls):
+        gtk.VBox.__init__(self)
+        self.set_spacing(2)
+        self.scrolled_window = gtk.ScrolledWindow()
+        self.scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        self.pack_start(self.scrolled_window)
+        self.tree_view = gtk.TreeView()
+        self.tree_view.set_rubber_banding(True)
+        self.tree_selection = self.tree_view.get_selection()
+        self.tree_selection.set_mode(gtk.SELECTION_MULTIPLE)
+        self.scrolled_window.add(self.tree_view)
+        self.pack_start(controls, False)
+        label = gtk.Label(label_text)
+        notebook.append_page(self, label)
+        
+        self.tree_view.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
+            self._sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
+        self.tree_view.connect_after("drag-begin", self._cb_drag_begin)
+        self.tree_view.connect("drag_data_get", self._cb_drag_data_get)
+
+    def db_toggle(self, conn_data, transform):
+        if conn_data is not None:
+            self.transform = transform
+            self.db_accessor = DBAccessor(**conn_data)
+        else:
+            self.cleanup()
+
+    def cleanup(self):
+        if self.db_accessor is not None:
+            self.db_accessor.close()
+            self.db_accessor = None
+
+    def get_col_widths(self):
+        pass
+
+    def get_col_widths(self):
+        return ",".join([str(x.get_width() or x.get_fixed_width())
+                                                    for x in self.tree_cols])
+
+    def set_col_widths(self, data):
+        """Restore column width values."""
+         
+        c = self.tree_cols.__iter__()
         for w in data.split(","):
             if w != "0":
                 c.next().set_fixed_width(int(w))
             else:
                 c.next()
 
-    _sourcetargets = (
+    _sourcetargets = (  # Drag and drop source target specs.
         ('text/plain', 0, 1),
         ('TEXT', 0, 2),
         ('STRING', 0, 3))
 
-    def _cb_dbtoggle(self, widget):
-        if widget.get_active():
-            self.db_accessor = DBAccessor(**self.prefs_controls.accessor_args)
-            self.show()
-        else:
-            self.db_accessor.close()
-            self.hide()
-
-    def _cb_update(self, widget):
-        print "ToDo cb_update"
-
-    def _tree_select_func(self, info):
-        return len(info) - 1
-
     def _cb_drag_begin(self, widget, context):
+        """Set icon for drag and drop operation."""
+
         context.set_icon_stock(gtk.STOCK_CDROM, -5, -5)
 
-    def _cb_tree_drag_data_get(self, treeview, context, selection, target_id,
-                                                                        etime):
-        treeselection = treeview.get_selection()
-        model, paths = treeselection.get_selected_rows()
-        data = DNDAccumulator()
-        if len(paths) == 1 and len(paths[0]) == 2:
-            d2 = 0
-            while 1:
-                try:
-                    iter = model.get_iter(paths[0] + (d2, ))
-                except ValueError:
-                    break
-                data.append(model.get_value(iter, 6), model.get_value(iter, 5))
-                d2 += 1
-        else:
-            for each in paths:
-                if len(each) == 3:
-                    iter = model.get_iter(each)
-                    data.append(model.get_value(iter, 6),
-                                                        model.get_value(iter,5))
-        selection.set(selection.target, 8, str(data))
+    @staticmethod
+    def _make_tv_columns(tree_view, parameters):
+        """Build a TreeViewColumn list from a table of data."""
 
-    def _cb_flat_drag_data_get(self, treeview, context, selection, target_id,
-                                                                        etime):
-        treeselection = treeview.get_selection()
-        model, paths = treeselection.get_selected_rows()
-        data = DNDAccumulator()
-        for each in paths:
-            iter = model.get_iter(each)
-            data.append(model.get_value(iter, 9), model.get_value(iter, 8))
-        selection.set(selection.target, 8, str(data))
-
-    def _cb_fuzzysearch_changed(self, widget):
-        if widget.get_text().strip():
-            self.whereentry.set_sensitive(False)
-        else:
-            self.whereentry.set_sensitive(True)
-        self.update.clicked()
+        list_ = []
+        for label, data_index, data_function, mw in parameters:
+            renderer = gtk.CellRendererText()
+            column = gtk.TreeViewColumn(label, renderer)
+            column.add_attribute(renderer, 'text', data_index)
+            if mw != -1:
+                column.set_resizable(True)
+                column.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+                column.set_min_width(mw)
+                column.set_fixed_width(mw + 50)
+            tree_view.append_column(column)
+            list_.append(column)
+            if data_function is not None:
+                column.set_cell_data_func(renderer, data_function, data_index)
+        return list_
 
     def _cond_cell_secs_to_h_m_s(self, column, renderer, model, iter, cell):
         if model.get_value(iter, 0) >= 0:
@@ -585,37 +459,255 @@ class MediaPane(gtk.Frame):
         else:
             renderer.set_property("text", "")
 
-    @staticmethod
-    def _makeview(notebook, label_text, additional = None):
-        vbox = gtk.VBox()
-        vbox.set_spacing(2)
-        scrollwindow = gtk.ScrolledWindow()
-        alternate = gtk.VBox()
-        vbox.pack_start(scrollwindow)
-        vbox.pack_start(alternate)
-        if additional is not None:
-            vbox.pack_start(additional, False)
-        scrollwindow.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
-        label = gtk.Label(label_text)
-        notebook.append_page(vbox, label)
-        treeview = gtk.TreeView()
-        scrollwindow.add(treeview)
-        return treeview, scrollwindow, alternate
 
-    @staticmethod
-    def _makecolumns(view, name_ix_rf_mw):
-        l = []
-        for name, ix, rf, mw in name_ix_rf_mw:
-            renderer = gtk.CellRendererText()
-            column = gtk.TreeViewColumn(name, renderer)
-            column.add_attribute(renderer, 'text', ix)
-            if mw != -1:
-                column.set_resizable(True)
-                column.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
-                column.set_min_width(mw)
-                column.set_fixed_width(mw + 50)
-            view.append_column(column)
-            l.append(column)
-            if rf is not None:
-                column.set_cell_data_func(renderer, rf, ix)
-        return l
+def drag_data_get_common(func):
+    @wraps(func)
+    def inner(self, tree_view, context, selection, target_id, etime):
+        tree_selection = tree_view.get_selection()
+        model, paths = tree_selectoin.get_selected_rows()
+        data = DNDAccumulator()
+        return func(tree_view, model, paths, data, selection)
+        
+    return inner
+
+
+class TreePage(PageCommon):
+    """Tree UI with Artist, Album, Title heirarchy."""
+
+    def __init__(self, notebook):
+        # Base class overwrites these values.
+        self.scrolled_window = self.tree_view = self.tree_selection = None
+        self.transfrom = self.db_accessor = None
+        
+        self.controls = gtk.HButtonBox()
+        self.controls.set_layout(gtk.BUTTONBOX_SPREAD)
+        tree_rebuild = gtk.Button(gtk.STOCK_REFRESH)
+        tree_rebuild.connect("clicked", self._cb_tree_rebuild)
+        tree_rebuild.set_use_stock(True)
+        tree_expand = gtk.Button(_('_Expand'), None, True)
+        image = gtk.image_new_from_stock(gtk.STOCK_ADD, gtk.ICON_SIZE_BUTTON)
+        tree_expand.set_image(image)
+        tree_collapse = gtk.Button(_('_Collapse'), None, True)
+        image = gtk.image_new_from_stock(gtk.STOCK_REMOVE, gtk.ICON_SIZE_BUTTON)
+        tree_collapse.set_image(image)
+        for each in (tree_rebuild, tree_expand, tree_collapse):
+            self.controls.add(each)
+            
+        PageCommon.__init__(self, notebook, _("Tree"), self.controls)
+        
+        self.tree_view.set_enable_tree_lines(True)
+        self.tree_selection.set_select_function(self._tree_select_func)
+
+        tree_expand.connect_object("clicked", gtk.TreeView.expand_all,
+                                                                self.tree_view)
+        tree_collapse.connect_object("clicked", gtk.TreeView.collapse_all,
+                                                                self.tree_view)
+
+        # id, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path, disk
+        self.tree_store = gtk.TreeStore(int, str, int, int, int, str, str, int)
+        self.tree_view.set_model(self.tree_store)
+        self.tree_cols = self._make_tv_columns(self.tree_view, (
+                ("%s - %s - %s" % (_('Artist'), _('Album'), _('Title')), 1,
+                                                self._cell_show_unknown, 180),
+                # TC: The disk number of the album track.
+                (_('Disk'), 7, self._cell_ralign, -1),
+                # TC: The album track number.
+                (_('Track'), 2, self._cell_ralign, -1),
+                # TC: Track playback time.
+                (_('Duration'), 3, self._cond_cell_secs_to_h_m_s, -1),
+                (_('Bitrate'), 4, self._cell_k, -1),
+                (_('Filename'), 5, None, 100),
+                # TC: Directory path to a file.
+                (_('Path'), 6, None, -1),
+                ))
+                
+        self.loading_vbox = gtk.VBox()
+        self.loading_vbox.set_border_width(20)
+        self.loading_vbox.set_spacing(20)
+        # TC: The database tree view is being built (populated).
+        label = gtk.Label(_('Populating'))
+        self.loading_vbox.pack_start(label, False)
+        self.progress_bar = gtk.ProgressBar()
+        self.loading_vbox.pack_start(self.progress_bar, False)
+        
+        self.show_all()
+
+    def set_loading_view(self, loading):
+        if loading:
+            self.controls.hide()
+            self.scrolled_window.hide()
+            self.loading_vbox.show()
+        else:
+            self.loading_vbox.hide()
+            self.scrolled_window.show()
+            self.controls.show()
+
+    def _cb_tree_rebuild(self, widget):
+        """(Re)load the tree with info from the database."""
+
+        pass
+
+    def _tree_select_func(self, info):
+        return len(info) - 1
+
+    @drag_data_get_common
+    def _cb_drag_data_get(tree_view, model, paths, data, selection):
+        if len(paths) == 1 and len(paths[0]) == 2:
+            d2 = 0
+            while 1:
+                try:
+                    iter = model.get_iter(paths[0] + (d2, ))
+                except ValueError:
+                    break
+                data.append(model.get_value(iter, 6), model.get_value(iter, 5))
+                d2 += 1
+        else:
+            for each in paths:
+                if len(each) == 3:
+                    iter = model.get_iter(each)
+                    data.append(model.get_value(iter, 6),
+                                                        model.get_value(iter,5))
+        selection.set(selection.target, 8, str(data))
+
+
+class FlatPage(PageCommon):
+    """Flat list based user interface with a search facility."""
+    
+    def __init__(self, notebook):
+        # Base class overwrites these values.
+        self.scrolled_window = self.tree_view = self.tree_selection = None
+        self.transfrom = self.db_accessor = None
+
+        # TC: User specified search filter entry box title text.
+        self.controls = gtk.Frame(" %s " % _('Filters'))
+        self.controls.set_shadow_type(gtk.SHADOW_OUT)
+        self.controls.set_border_width(1)
+        self.controls.set_label_align(0.5, 0.5)
+        filter_vbox = gtk.VBox()
+        filter_vbox.set_border_width(3)
+        filter_vbox.set_spacing(1)
+        self.controls.add(filter_vbox)
+        
+        fuzzy_hbox = gtk.HBox()
+        filter_vbox.pack_start(fuzzy_hbox, False)
+        # TC: A type of search on any data field matching paritial strings.
+        fuzzy_label = gtk.Label(_('Fuzzy Search'))
+        fuzzy_hbox.pack_start(fuzzy_label, False)
+        self.fuzzy_entry = gtk.Entry()
+        self.fuzzy_entry.connect("changed", self._cb_fuzzysearch_changed)
+        fuzzy_hbox.pack_start(self.fuzzy_entry, True, True, 0)
+        
+        where_hbox = gtk.HBox()
+        filter_vbox.pack_start(where_hbox, False)
+        # TC: WHERE is an SQL keyword.
+        where_label = gtk.Label(_('WHERE'))
+        where_hbox.pack_start(where_label, False)
+        self.where_entry = gtk.Entry()
+        self.where_entry.connect("activate", self._cb_update)
+        where_hbox.pack_start(self.where_entry)
+        image = gtk.image_new_from_stock(gtk.STOCK_EXECUTE,
+                                                        gtk.ICON_SIZE_BUTTON)
+        self.update_button = gtk.Button()
+        self.update_button.connect("clicked", self._cb_update)
+        self.update_button.set_image(image)
+        image.show
+        where_hbox.pack_start(self.update_button)
+        
+        PageCommon.__init__(self, notebook, _("Flat"), self.controls)
+ 
+        # Row data specification:
+        # index, id, ARTIST, ALBUM, TRACKNUM, TITLE, DURATION, BITRATE,
+        # path, filename, disk
+        self.list_store = gtk.ListStore(
+                        int, int, str, str, int, str, int, int, str, str, int)
+        self.tree_view.set_model(self.list_store)
+        self.tree_cols = self._make_tv_columns(self.tree_view, (
+                ("(%d)" % 0, 0, self._cell_ralign, -1),
+                (_('Artist'), 2, self._cell_show_unknown, 100),
+                (_('Album'), 3, self._cell_show_unknown, 100),
+                (_('Disk'), 10, self._cell_ralign, -1),
+                (_('Track'), 4, self._cell_ralign, -1),
+                (_('Title'), 5, self._cell_show_unknown, 100),
+                (_('Duration'), 6, self._cell_secs_to_h_m_s, -1),
+                (_('Bitrate'), 7, self._cell_k, -1),
+                (_('Filename'), 8, None, 100),
+                (_('Path'), 9, None, -1),
+                ))
+
+        self.tree_view.set_rules_hint(True)
+
+    def repair_focusability(self):
+        self.fuzzy_entry.set_flags(gtk.CAN_FOCUS)
+        self.where_entry.set_flags(gtk.CAN_FOCUS)
+
+    def _cb_update(self, widget):
+        print "update button was pressed"
+
+    @drag_data_get_common
+    def _cb_drag_data_get(self, tree_view, model, paths, data, selection):
+        for each in paths:
+            iter = model.get_iter(each)
+            data.append(model.get_value(iter, 9), model.get_value(iter, 8))
+        selection.set(selection.target, 8, str(data))
+
+    def _cb_fuzzysearch_changed(self, widget):
+        if widget.get_text().strip():
+            self.where_entry.set_sensitive(False)
+        else:
+            self.where_entry.set_sensitive(True)
+        self.update_button.clicked()
+
+
+class MediaPane(gtk.Frame):
+    """Database song details are displayed in this widget."""
+
+    def __init__(self):
+        gtk.Frame.__init__(self)
+        self.set_shadow_type(gtk.SHADOW_IN)
+        self.set_border_width(6)
+        self.set_label_align(0.5, 0.5)
+        main_vbox = gtk.VBox()
+        self.add(main_vbox)
+        self.notebook = gtk.Notebook()
+        main_vbox.pack_start(self.notebook)
+        
+        self._tree_page = TreePage(self.notebook)
+        self._flat_page = FlatPage(self.notebook)
+        
+        self.prefs_controls = PrefsControls()
+        self.prefs_controls.bind(self._dbtoggle)
+
+        main_vbox.show_all()
+
+    def cleanup(self):
+        for each in (self._tree_page, self._flat_page):
+            each.cleanup()
+
+    def repair_focusability(self):
+        self._flat_page.repair_focusability()
+
+    def get_col_widths(self, keyval):
+        """Grab column widths as textual data."""
+        
+        try:
+            target = getattr(self, keyval)
+        except AttributeError:
+            return ""
+        else:
+            return target.get_col_widths()
+    
+    def set_col_widths(self, keyval, data):
+        """Column widths are to be restored on application restart."""
+        
+        if data:
+            try:
+                target = getattr(self, keyval)
+            except AttributeError:
+                return
+            else:
+                target.set_col_widths(data)
+
+    def _dbtoggle(self, *args):
+        self.set_visible(any(args))
+        self._tree_page.db_toggle(*args)
+        self._flat_page.db_toggle(*args)
