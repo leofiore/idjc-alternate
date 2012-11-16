@@ -22,7 +22,7 @@ import gettext
 import threading
 from functools import partial
 
-import gobject
+import glib
 import gtk
 try:
     import MySQLdb as sql
@@ -47,10 +47,10 @@ class DBAccessor(threading.Thread):
     remake the connection and continue on with its work.
     """
     
-    def __init__(self, hostnameport, user, password, database, notify=lambda m: 0):
+    def __init__(self, hostnameport, user, password, database, notify):
         """The notify function must lock gtk before accessing widgets."""
         
-        threading.Thread.__init__()
+        threading.Thread.__init__(self)
         try:
             hostname, port = hostnameport.rsplit(":", 1)
             port = int(port)
@@ -70,7 +70,7 @@ class DBAccessor(threading.Thread):
         self.semaphore = threading.Semaphore()
         self.lock = threading.Lock()
         self.keepalive = True
-        start()
+        self.start()
 
     def request(self, sql_query, handler, failhandler):
         """Add a request to the job queue.
@@ -87,8 +87,10 @@ class DBAccessor(threading.Thread):
         self.semaphore.release()
         
     def run(self):
+        notify = partial(glib.idle_add, threadslock(self.notify))
+        
         while self.keepalive:
-            self.notify(_('Ready'))
+            notify(_('Ready'))
             self.semaphore.acquire()
             if self.keepalive and self.jobs:
                 query, handler, failhandler = self.jobs.pop(0)
@@ -121,39 +123,40 @@ class DBAccessor(threading.Thread):
                     except (sql.Error, AttributeError):
                         with self.lock:
                             if self.keepalive:
-                                self.notify(_('Connecting'))
+                                notify(_('Connecting'))
                                 trycount += 1
                                 try:
-                                    self.handle = sql.connect(host=self.hostname,
+                                    self.handle = sql.connect(
+                                        host=self.hostname,
                                         port=self.port, user=self.user,
                                         passwd=self.password, db=self.database,
                                         connect_timeout=3)
                                     self.cursor = self.handle.cursor()
                                 except sql.Error as e:
-                                    self.notify(_("Connection failed (try %d)") % i)
+                                    notify(_("Connection failed (try %d)") % i)
                                     print e
                                     time.sleep(0.5)
                                 else:
-                                    self.notify(_('Connected'))
+                                    notify(_('Connected'))
                     else:
                         if self.keepalive:
-                            self.notify(_('Processing'))
+                            notify(_('Processing'))
                             for dummy in handler(self.cursor):
                                 if not self.keepalive:
                                     break
                         break
                 
                 else:
-                    self.notify(_('Job dropped'))
- 
-        self.notify(_('Disconnected'))
+                    notify(_('Job dropped'))
+
+        notify(_('Disconnected'))
 
     def close(self):
         """Clean up the worker thread prior to disposal."""
         
         self.keepalive = False
         self.semaphore.release()
-        
+
         # If the thread is stuck on IO unblock it by closing the connection.
         # We should clean up in any event.
         with self.lock:
@@ -166,9 +169,9 @@ class DBAccessor(threading.Thread):
                 self.handle.close()
             except Exception:
                 pass
-            
+
         self.join()  # Hopefully this will complete quickly.
-        self.jobs.clear()
+        del self.jobs[:]
 
 
 class PrefsControls(gtk.Frame):
@@ -177,11 +180,14 @@ class PrefsControls(gtk.Frame):
     def __init__(self):
         gtk.Frame.__init__(self)
         self.set_border_width(3)
-        label = gtk.Label(" %s " % _('Prokyon3 or Ampache (song title) Database'))
-        set_tip(label, _('You can make certain media databases accessible in IDJC for easy drag and drop into the playlists.'))
+        label = gtk.Label(" %s " % 
+                            _('Prokyon3 or Ampache (song title) Database'))
+        set_tip(label, _('You can make certain media databases accessible in '
+                            'IDJC for easy drag and drop into the playlists.'))
         self.set_label_widget(label)
         
-        self._parameters = []  # List of widgets that should be made insensitive when db is active. 
+        # List of widgets that should be made insensitive when db is active. 
+        self._parameters = []  
         if not sql:
             # Feature is disabled.
             vbox = gtk.VBox()
@@ -203,19 +209,23 @@ class PrefsControls(gtk.Frame):
             l_attach = partial(table.attach, xoptions=gtk.SHRINK | gtk.FILL)
             
             # Top row.
-            hostportlabel, self._hostport = self._factory(_('Hostname[:Port]'), 'localhost')
+            hostportlabel, self._hostnameport = self._factory(
+                                            _('Hostname[:Port]'), 'localhost')
             l_attach(hostportlabel, 0, 1, 0, 1)
-            table.attach(self._hostport, 1, 4, 0, 1)
+            table.attach(self._hostnameport, 1, 4, 0, 1)
             
             # Second row.
             hbox = gtk.HBox()
             hbox.set_spacing(3)
-            fpmlabel, self._addchars = self._factory(_('File Path Modify'), None)
+            fpmlabel, self._addchars = self._factory(
+                                                _('File Path Modify'), None)
             adj = gtk.Adjustment(0.0, 0.0, 999.0, 1.0, 1.0)
             self._delchars = gtk.SpinButton(adj, 0.0, 0)
             self._parameters.append(self._delchars)
-            set_tip(self._delchars, _('The number of characters to strip from the left hand side of media file paths.'))
-            set_tip(self._addchars, _('The characters to prefix to the media file paths.'))
+            set_tip(self._delchars, _('The number of characters to strip from '
+                                    'the left hand side of media file paths.'))
+            set_tip(self._addchars, 
+                        _('The characters to prefix to the media file paths.'))
             l_attach(fpmlabel, 0, 1, 1, 2)
             minus = gtk.Label('-')
             hbox.pack_start(minus, False)
@@ -246,9 +256,7 @@ class PrefsControls(gtk.Frame):
             # Notification row.
             self._statusbar = gtk.Statusbar()
             self._statusbar.set_has_resize_grip(False)
-            gtk.gdk.threads_leave()
-            self.notify(_('Disconnected'))
-            gtk.gdk.threads_enter()
+            self._notify(_('Disconnected'))
             table.attach(self._statusbar, 0, 4, 5, 6)
             
             self.add(table)
@@ -260,26 +268,20 @@ class PrefsControls(gtk.Frame):
         # Save and Restore settings.
         self.activedict = {"songdb_toggle": self.dbtoggle}
         self.valuesdict = {"songdb_delchars": self._delchars}
-        self.textdict = {"songdb_hostport": self._hostport,
+        self.textdict = {"songdb_hostnameport": self._hostnameport,
             "songdb_user": self._user, "songdb_password": self._password,
             "songdb_dbname": self._database, "songdb_addchars": self._addchars}
 
     @property
-    def hostport(self):
-        return self._hostport.get_text().strip()
+    def accessor_args(self):
+        """Values to pass to the DBAccessor constructor."""
+
+        dict_ = {"notify": self._notify}
+        for key in "hostnameport user password database".split():
+            dict_[key] = getattr(self, "_" + key).get_text().strip()
         
-    @property
-    def user(self):
-        return self._user.get_text().strip()
-        
-    @property
-    def password(self):
-        return self._password.get_text().strip()
-        
-    @property
-    def database(self):
-        return self._database.get_text().strip()
-        
+        return dict_
+
     @property
     def delchars(self):
         return self._delchars.get_value()
@@ -288,13 +290,6 @@ class PrefsControls(gtk.Frame):
     def addchars(self):
         return self._addchars.get_text().strip()
 
-    @threadslock
-    def notify(self, message):
-        """Intended for use by DBAccessor worker thread for status messages."""
-        
-        self._statusbar.push(1, message)
-        self._statusbar.set_tooltip_text(message)  # To show long messages.
-
     def _cb_dbtoggle(self, widget):
         """Parameter widgets to be made insensitive when db is active."""
     
@@ -302,6 +297,13 @@ class PrefsControls(gtk.Frame):
     
         for each in self._parameters:
             each.set_sensitive(sens)
+
+    def _notify(self, message):
+        """Display status messages beneath the prefs settings."""
+        
+        self._statusbar.push(1, message)
+        # To ensure readability of long messages also set the tooltip.
+        self._statusbar.set_tooltip_text(message)
 
     def _factory(self, labeltext, entrytext=None):
         """Widget factory method."""
@@ -438,7 +440,7 @@ class MediaPane(gtk.Frame):
         #                           found, id, ARTIST, ALBUM, TRACKNUM, TITLE,
         #                           DURATION, BITRATE, path, filename, disk
         self.flatstore = gtk.ListStore(
-                            int, int, str, str, int, str, int, int, str, str, int)
+                        int, int, str, str, int, str, int, int, str, str, int)
         self.flatview.set_model(self.flatstore)
         self.flatcols = self._makecolumns(self.flatview, (
                 ("(%d)" % 0, 0, self._cell_ralign, -1),
@@ -482,7 +484,12 @@ class MediaPane(gtk.Frame):
         ('STRING', 0, 3))
 
     def _cb_dbtoggle(self, widget):
-        self.set_visible(widget.get_active())
+        if widget.get_active():
+            self.db_accessor = DBAccessor(**self.prefs_controls.accessor_args)
+            self.show()
+        else:
+            self.db_accessor.close()
+            self.hide()
 
     def _cb_update(self, widget):
         print "ToDo cb_update"
