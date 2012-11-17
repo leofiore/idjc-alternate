@@ -628,7 +628,7 @@ class mixprefs:
 
             
     def load_player_prefs(self):
-        proktogglevalue = False
+        songdb_active = False
         try:
             file = open(pm.basedir / "playerdefaults")
             
@@ -648,8 +648,8 @@ class mixprefs:
                         value = False
                     else:
                         value = int(value)
-                    if key == "proktoggle":
-                        proktogglevalue = value
+                    if key == "songdb_active":
+                        songdb_active = value
                     else:
                         self.activedict[key].set_active(value)
                 elif self.valuesdict.has_key(key):
@@ -659,8 +659,8 @@ class mixprefs:
             file.close()
         except IOError:
             print "Failed to read playerdefaults file"
-        if proktogglevalue:
-            self.activedict["proktoggle"].set_active(True)
+        if songdb_active:
+            self.activedict["songdb_active"].set_active(songdb_active)
         self.parent.send_new_mixer_stats()
             
     def apply_player_prefs(self):

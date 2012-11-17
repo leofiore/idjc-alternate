@@ -2526,6 +2526,13 @@ class MainWindow(dbus.service.Object):
         gobject.source_remove(self.savetimeout)
         self._mixer_ctrl.close()
         self.quitting()
+        self.window.hide()
+        self.prefs_window.window.hide()
+        self.server_window.window.hide()
+        pm.profile_dialog.hide()
+        while gtk.gdk.events_pending():
+            gtk.main_iteration()
+        
         if gtk.main_level():
             gtk.main_quit()
         time.sleep(0.3) # Allow time for all subthreads/programs time to exit 

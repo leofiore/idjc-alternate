@@ -21,6 +21,8 @@ import time
 import gettext
 import threading
 from functools import partial, wraps
+from collections import deque
+from urllib import quote
 
 import glib
 import gtk
@@ -38,6 +40,24 @@ __all__ = ['MediaPane']
 
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
 _ = t.gettext
+
+
+def schema_test(string, data):
+    """For checking a database schema."""
+    
+    data = frozenset(x[0] for x in data)
+    return frozenset(string.split()).issubset(data)
+
+
+class DNDAccumulator(list):
+    """ Helper class for assembling a string of file URLs """
+
+    def append(self, pathname, filename):
+        list.append(self, "file://%s/%s\n" % (quote(pathname), quote(filename)))
+    def __str__(self):
+        return "".join(self)
+    def __init__(self):
+        list.__init__(self)
 
 
 class DBAccessor(threading.Thread):
@@ -64,11 +84,10 @@ class DBAccessor(threading.Thread):
         self.password = password
         self.database = database
         self.notify = notify
-        self.handle = None  # No connections made until there is a query.
-        self.cursor = None
-        self.jobs = []
+        self._handle = None  # No connections made until there is a query.
+        self._cursor = None
+        self.jobs = deque()
         self.semaphore = threading.Semaphore()
-        self.lock = threading.Lock()
         self.keepalive = True
         self.start()
 
@@ -94,67 +113,63 @@ class DBAccessor(threading.Thread):
         while self.keepalive:
             self.semaphore.acquire()
             if self.keepalive and self.jobs:
-                query, handler, failhandler = self.jobs.pop(0)
+                try:
+                    query, handler, failhandler = self.jobs.popleft()
+                except IndexError:
+                    break
 
                 trycount = 0
                 while trycount < 3:
                     try:
-                        self.cursor.execute(*query)
-                    except sql.OperationalError as e:
-                        if self.keepalive:
+                        rows = self._cursor.execute(*query)
+                    except (sql.OperationalError, AttributeError) as e:
+                        if not self.keepalive:
+                            break
+                        
+                        if isinstance(e, sql.OperationalError):
                             # Unhandled errors will be treated like
                             # connection failures.
-                            if self.handle.open and failhandler is not None:
-                                failhandler(e, notify)
-                                break
-                            else:
-                                try:
-                                    self.cursor.close()
-                                except Exception:
-                                    pass
-                                    
-                                try:
-                                    self.handle.close()
-                                except Exception:
-                                    pass
-
-                                raise
-                        else:
+                            try:
+                                self._cursor.close()
+                            except Exception:
+                                pass
+                                
+                            try:
+                                self._handle.close()
+                            except Exception:
+                                pass
+                            
+                        if not self.keepalive:
                             break
-                    except (sql.Error, AttributeError):
-                        with self.lock:
-                            if self.keepalive:
-                                notify(_('Connecting'))
-                                trycount += 1
-                                try:
-                                    self.handle = sql.connect(
-                                        host=self.hostname,
-                                        port=self.port, user=self.user,
-                                        passwd=self.password, db=self.database,
-                                        connect_timeout=3)
-                                    self.cursor = self.handle.cursor()
-                                except sql.Error as e:
-                                    notify(_("Connection failed (try %d)") %
-                                                                    trycount)
-                                    print e
-                                    time.sleep(0.5)
-                                else:
-                                    try:
-                                        self.cursor.execute('set names utf8')
-                                        self.cursor.execute(
-                                                    'set character set utf8')
-                                        self.cursor.execute(
-                                            'set character_set_connection=utf8')
-                                    except sql.MySQLError:
-                                        notify(
-                                            _('Connected: utf-8 mode failed'))
-                                    else:
-                                        notify(_('Connected'))
+
+                        notify(_('Connecting'))
+                        trycount += 1
+                        try:
+                            self._handle = sql.Connection(
+                                host=self.hostname, port=self.port,
+                                user=self.user, passwd=self.password,
+                                db=self.database, connect_timeout=3)
+                            self._cursor = self._handle.cursor()
+                        except sql.Error as e:
+                            notify(_("Connection failed (try %d)") %
+                                                                trycount)
+                            print e
+                            time.sleep(0.5)
+                        else:
+                            try:
+                                self._cursor.execute('set names utf8')
+                                self._cursor.execute(
+                                                'set character set utf8')
+                                self._cursor.execute(
+                                        'set character_set_connection=utf8')
+                            except sql.MySQLError:
+                                notify(_('Connected: utf-8 mode failed'))
+                            else:
+                                notify(_('Connected'))
                     else:
                         if self.keepalive:
-                            for dummy in handler(self.cursor, notify):
-                                if not self.keepalive:
-                                    break
+                            handler(self, self.request,
+                                                    self._cursor, notify, rows)
                         break
                 else:
                     if failhandler is not None:
@@ -167,24 +182,10 @@ class DBAccessor(threading.Thread):
     def close(self):
         """Clean up the worker thread prior to disposal."""
         
-        self.keepalive = False
-        self.semaphore.release()
-
-        # If the thread is stuck on IO unblock it by closing the connection.
-        # We should clean up in any event.
-        with self.lock:
-            try:
-                self.cursor.close()
-            except Exception:
-                pass
-                
-            try:
-                self.handle.close()
-            except Exception:
-                pass
-
-        self.join()  # Hopefully this will complete quickly.
-        del self.jobs[:]
+        if self.is_alive():
+            self.keepalive = False
+            self.semaphore.release()
+            return
 
 
 class PrefsControls(gtk.Frame):
@@ -269,7 +270,8 @@ class PrefsControls(gtk.Frame):
             # Notification row.
             self._statusbar = gtk.Statusbar()
             self._statusbar.set_has_resize_grip(False)
-            self._notify(_('Disconnected'))
+            cid = self._statusbar.get_context_id("all output")
+            self._statusbar.push(cid, _('Disconnected'))
             table.attach(self._statusbar, 0, 4, 5, 6)
             
             self.add(table)
@@ -279,7 +281,7 @@ class PrefsControls(gtk.Frame):
         self.show_all()
         
         # Save and Restore settings.
-        self.activedict = {"songdb_toggle": self.dbtoggle}
+        self.activedict = {"songdb_active": self.dbtoggle}
         self.valuesdict = {"songdb_delchars": self._delchars}
         self.textdict = {"songdb_hostnameport": self._hostnameport,
             "songdb_user": self._user, "songdb_password": self._password,
@@ -303,7 +305,7 @@ class PrefsControls(gtk.Frame):
                 conn_data[key] = getattr(self, "_" + key).get_text().strip()
             
             # Make a file path transformation function.
-            del_qty = self._delchars.get_value()
+            del_qty = self._delchars.get_value_as_int()
             prepend_str = self._addchars.get_text().strip()
 
             if del_qty or prepend_str:
@@ -327,8 +329,10 @@ class PrefsControls(gtk.Frame):
     def _notify(self, message):
         """Display status messages beneath the prefs settings."""
         
-        print message
-        self._statusbar.push(1, message)
+        print "Song title database:", message
+        cid = self._statusbar.get_context_id("all output")
+        self._statusbar.pop(cid)
+        self._statusbar.push(cid, message)
         # To ensure readability of long messages also set the tooltip.
         self._statusbar.set_tooltip_text(message)
 
@@ -370,6 +374,15 @@ class PageCommon(gtk.VBox):
             self._sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
         self.tree_view.connect_after("drag-begin", self._cb_drag_begin)
         self.tree_view.connect("drag_data_get", self._cb_drag_data_get)
+        self._acc = None
+
+    @property
+    def db_type(self):
+        return self._db_type
+
+    @property
+    def transform(self):
+        return self._transform
 
     def get_col_widths(self):
         pass
@@ -387,6 +400,18 @@ class PageCommon(gtk.VBox):
                 c.next().set_fixed_width(int(w))
             else:
                 c.next()
+
+    def activate(self, accessor, db_type, transform):
+        self._db_type = db_type
+        self._acc = accessor
+        self._transform = transform
+        
+    def deactivate(self):
+        self._acc = None
+        model = self.tree_view.get_model()
+        self.tree_view.set_model(None)
+        if model is not None:
+            model.clear()
 
     _sourcetargets = (  # Drag and drop source target specs.
         ('text/plain', 0, 1),
@@ -420,7 +445,7 @@ class PageCommon(gtk.VBox):
 
     def _cond_cell_secs_to_h_m_s(self, column, renderer, model, iter, cell):
         if model.get_value(iter, 0) >= 0:
-            return self.cell_secs_to_h_m_s(column, renderer, model, iter, cell)
+            return self._cell_secs_to_h_m_s(column, renderer, model, iter, cell)
         else:
             renderer.set_property("text", "")
     
@@ -428,9 +453,9 @@ class PageCommon(gtk.VBox):
         bitrate = model.get_value(iter, cell)
         if bitrate == 0:
             renderer.set_property("text", "")
-        elif self.dbtype == "P3":
+        elif self._db_type == "P3":
             renderer.set_property("text", "%dk" % bitrate)
-        elif bitrate > 9999 and self.dbtype == "Ampache":
+        elif bitrate > 9999 and self._db_type == "Ampache":
             renderer.set_property("text", "%dk" % (bitrate // 1000))
         renderer.set_property("xalign", 1.0)
     
@@ -469,11 +494,77 @@ def drag_data_get_common(func):
     @wraps(func)
     def inner(self, tree_view, context, selection, target_id, etime):
         tree_selection = tree_view.get_selection()
-        model, paths = tree_selectoin.get_selected_rows()
+        model, paths = tree_selection.get_selected_rows()
         data = DNDAccumulator()
         return func(tree_view, model, paths, data, selection)
         
     return inner
+
+class TreeUpdater(object):
+    """ runs as an idle process building the tree view of the p3 database """
+    def __init__(self, tree_page, data):
+        self.tree_page = tree_page
+        self.data = data
+        self.done = 0.0
+        self.total = float(len(data))
+        self.dep = 0
+        self.art = self.alb = ""
+
+    @threadslock
+    def run(self, acc):
+        tree_page = self.tree_page
+        transform = tree_page.transform
+        ampache = tree_page.db_type == "Ampache"
+        append = tree_page.tree_store.append
+        next_row = self.data.popleft
+        dep = self.dep
+
+        for each in xrange(10):
+            if acc.keepalive == False:
+                return
+
+            try:
+                row = next_row()
+            except IndexError:
+                self.tree_page.set_loading_view(False)
+                return
+            else:
+                while 1:
+                    if dep == 0:
+                        self.art = row[1]
+                        self.artlower = self.art.lower()
+                        self.iter1 = append(
+                                        None, (-1, self.art, 0, 0, 0, "", "", 0)) 
+                        dep = 1
+                    if dep == 1:
+                        if self.artlower == row[1].lower():
+                            self.alb = row[2]
+                            self.alblower = self.alb.lower()
+                            self.iter2 = append(
+                                    self.iter1, (-2, self.alb, 0, 0, 0, "", "", 0)) 
+                            dep = 2
+                        else:
+                            dep = 0
+                    if dep == 2:
+                        if self.artlower == row[1].lower() and self.alblower \
+                                                            == row[2].lower():
+                            if ampache:
+                                # Split the full path into path and file.
+                                row = list(row)
+                                fn = row[7].rsplit("/",1)
+                                row[7] = fn[1]
+                                row[8] = fn[0]
+                            path = transform(row[8]) 
+                            append(self.iter2, (row[0], row[4], row[3],
+                                                row[5], row[6], row[7], path, row[9]))
+                            break
+                        else:
+                            dep = 1
+        self.dep = dep
+        self.done += 10.0
+        if int(self.done) % 100 == 0:
+            self.tree_page.progress_bar.set_fraction(self.done / self.total)
+        return True
 
 
 class TreePage(PageCommon):
@@ -486,16 +577,16 @@ class TreePage(PageCommon):
         
         self.controls = gtk.HButtonBox()
         self.controls.set_layout(gtk.BUTTONBOX_SPREAD)
-        tree_rebuild = gtk.Button(gtk.STOCK_REFRESH)
-        tree_rebuild.connect("clicked", self._cb_tree_rebuild)
-        tree_rebuild.set_use_stock(True)
+        self.tree_rebuild = gtk.Button(gtk.STOCK_REFRESH)
+        self.tree_rebuild.connect("clicked", self._cb_tree_rebuild)
+        self.tree_rebuild.set_use_stock(True)
         tree_expand = gtk.Button(_('_Expand'), None, True)
         image = gtk.image_new_from_stock(gtk.STOCK_ADD, gtk.ICON_SIZE_BUTTON)
         tree_expand.set_image(image)
         tree_collapse = gtk.Button(_('_Collapse'), None, True)
         image = gtk.image_new_from_stock(gtk.STOCK_REMOVE, gtk.ICON_SIZE_BUTTON)
         tree_collapse.set_image(image)
-        for each in (tree_rebuild, tree_expand, tree_collapse):
+        for each in (self.tree_rebuild, tree_expand, tree_collapse):
             self.controls.add(each)
             
         PageCommon.__init__(self, notebook, _("Tree"), self.controls)
@@ -510,7 +601,6 @@ class TreePage(PageCommon):
 
         # id, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path, disk
         self.tree_store = gtk.TreeStore(int, str, int, int, int, str, str, int)
-        self.tree_view.set_model(self.tree_store)
         self.tree_cols = self._make_tv_columns(self.tree_view, (
                 ("%s - %s - %s" % (_('Artist'), _('Album'), _('Title')), 1,
                                                 self._cell_show_unknown, 180),
@@ -530,27 +620,67 @@ class TreePage(PageCommon):
         self.loading_vbox.set_border_width(20)
         self.loading_vbox.set_spacing(20)
         # TC: The database tree view is being built (populated).
-        label = gtk.Label(_('Populating'))
-        self.loading_vbox.pack_start(label, False)
+        self.loading_label = gtk.Label()
+        self.loading_vbox.pack_start(self.loading_label, False)
         self.progress_bar = gtk.ProgressBar()
         self.loading_vbox.pack_start(self.progress_bar, False)
+        self.pack_start(self.loading_vbox)
+        self._tree_update_id = deque()
+        self._pulse_id = deque()
         
         self.show_all()
 
     def set_loading_view(self, loading):
         if loading:
+            self.progress_bar.set_fraction(0.0)
+            self.loading_label.set_text(_('Fetching'))
             self.controls.hide()
             self.scrolled_window.hide()
             self.loading_vbox.show()
+            self.tree_view.set_model(None)
+            self.tree_store.clear()
         else:
+            self.tree_view.set_model(self.tree_store)
             self.loading_vbox.hide()
             self.scrolled_window.show()
             self.controls.show()
 
+    def activate(self, *args, **kwargs):
+        PageCommon.activate(self, *args, **kwargs)
+        glib.idle_add(threadslock(self.tree_rebuild.clicked))
+
+    def deactivate(self):
+        while self._tree_update_id:
+            glib.source_remove(self._tree_update_id.popleft())
+        while self._pulse_id:
+            glib.source_remove(self._pulse_id.popleft())
+        
+        PageCommon.deactivate(self)
+
     def _cb_tree_rebuild(self, widget):
         """(Re)load the tree with info from the database."""
 
-        pass
+        self.set_loading_view(True)
+        if self._db_type == "Prokyon 3":
+            query = """SELECT id,artist,album,tracknumber,title,length,bitrate,
+                        filename,path,0 as disk FROM tracks ORDER BY
+                        artist,album,path,tracknumber,title"""
+        elif self._db_type == "Ampache":
+            query = """SELECT song.id as id, 
+                concat_ws(" ", artist.prefix, artist.name) as artist, 
+                concat_ws(" ", album.prefix, album.name) as album,
+                track as tracknumber, title, time as length, 
+                bitrate, file, "" as padding, album.disk as disk
+                from song
+                left join artist on song.artist = artist.id 
+                left join album on song.album = album.id 
+                ORDER BY artist.name,album.disk,album.name,tracknumber,title"""
+        else:
+            print "unsupported database type:", self._db_type
+            return
+            
+        self._pulse_id.append(glib.timeout_add(1000, self._progress_pulse))
+        self._acc.request((query,), self._handler, self._failhandler)
 
     def _tree_select_func(self, info):
         return len(info) - 1
@@ -574,6 +704,29 @@ class TreePage(PageCommon):
                                                         model.get_value(iter,5))
         selection.set(selection.target, 8, str(data))
 
+    @threadslock
+    def _progress_pulse(self):
+        self.progress_bar.pulse()
+        return True
+
+    ###########################################################################
+    
+    def _handler(self, acc, request, cursor, notify, rows):
+        self._tree_updater = TreeUpdater(self, deque(cursor.fetchall()))
+        while self._tree_update_id:
+            glib.source_remove(self._tree_update_id.popleft())
+        while self._pulse_id:
+            glib.source_remove(self._pulse_id.popleft())
+        glib.idle_add(self.loading_label.set_text, _('Populating'))
+        self._tree_update_id.append(glib.idle_add(self._tree_updater.run, acc))
+
+    def _failhandler(self, exception, notify):
+        print str(exception)
+        notify(_('Tree fetch failed'))
+        glib.idle_add(threadslock(self.loading_label.set_text),
+                                                        _('Fetch Failed!'))
+        while self._pulse_id:
+            glib.source_remove(self._pulse_id.popleft())
 
 class FlatPage(PageCommon):
     """Flat list based user interface with a search facility."""
@@ -713,6 +866,7 @@ class MediaPane(gtk.Frame):
             # Connect and discover the database type.
             self._acc1 = DBAccessor(**conn_data)
             self._acc2 = DBAccessor(**conn_data)
+            self._transform = transform
             self._acc1.request(('SHOW tables',), self._s1, self._f1)
         else:
             try:
@@ -720,38 +874,72 @@ class MediaPane(gtk.Frame):
                 self._acc2.close()
             except AttributeError:
                 pass
-            del self._acc1, self._acc2
+            else:
+                self._tree_page.deactivate()
+                self._flat_page.deactivate()
             self.hide()
     
-    def safe_show(self):
-        glib.idle_add(threadslock(self.show))
-        
-    def safe_disconnect(self):
+    ###########################################################################
+
+    def _safe_disconnect(self):
         glib.idle_add(threadslock(self.prefs_controls.disconnect))
+           
+    def _hand_over(self, database_name):
+        self._tree_page.activate(self._acc1, database_name, self._transform)
+        self._flat_page.activate(self._acc2, database_name, self._transform)
+        glib.idle_add(threadslock(self.show))
             
     def _f1(self, exception, notify):
-        self.safe_disconnect()
+        self._safe_disconnect()
 
-    def _s1(self, cursor, notify):
+    def _s1(self, acc, request, cursor, notify, rows):
         """Running under the accessor worker thread!
         
-        Step 1 Identifying a Prokyon 3 database part 1.
+        Step 1 Identifying database type.
         """
         
-        yield
-        if frozenset(('tracks',)).issubset(frozenset(cursor.fetchall())):
-            notify('Found table tracks')
-            self._acc.request(('DESCRIBE tracks',), self._s2, self._f1)
+        data = cursor.fetchall()
+        if schema_test("tracks", data):
+            request(('DESCRIBE tracks',), self._s2, self._f1)
+        elif schema_test("album artist song", data):
+            request(('DESCRIBE song',), self._s3, self._f1)
         else:
-            self.prefs_controls.disconnect()  # ToDo - check ampache.
+            notify(_('Unrecognised database'))
+            self._safe_disconnect()
             
-    def _s2(self, cursor, notify):
-        """Step 2 Identifying a Prokyon 3 database part 2."""
+    def _s2(self, acc, request, cursor, notify, rows):
+        """Confirm it's a Prokyon 3 database."""
         
-        yield
-        if frozenset(("artist", "title", "album", "tracknumber", "bitrate",
-            "path", "filename")).issubset(frozenset(cursor.fetchall())):
-            notify('Found Prokyon 3 schema')
-            self.safe_show()
+        if schema_test("artist title album tracknumber bitrate path filename",
+                                                            cursor.fetchall()):
+            notify(_('Found Prokyon 3 schema'))
+            self._hand_over("Prokyon 3")
         else:
-            self.safe_disconnect()  # Chain to Ampache in future.
+            notify(_('Unrecognised database'))
+            self._safe_disconnect()
+
+    def _s3(self, acc, request, cursor, notify, rows):
+        
+        if schema_test("artist title album track bitrate file", 
+                                                            cursor.fetchall()):
+            request(('DESCRIBE artist',), self._s4, self._f1)
+        else:
+            notify('Unrecognised database')
+            self._safe_disconnect()
+
+    def _s4(self, acc, request, cursor, notify, rows):
+        
+        if schema_test("name prefix", cursor.fetchall()):
+            request(('DESCRIBE artist',), self._s5, self._f1)
+        else:
+            notify('Unrecognised database')
+            self._safe_disconnect()
+
+    def _s5(self, acc, request, cursor, notify, rows):
+        
+        if schema_test("name prefix", cursor.fetchall()):
+            notify('Found Ampache schema')
+            self._hand_over("Ampache")
+        else:
+            notify('Unrecognised database')
+            self._safe_disconnect()
