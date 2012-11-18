@@ -1984,23 +1984,28 @@ class MainWindow(dbus.service.Object):
             self.artist = self.player_left.artist
             self.title = self.player_left.title
             self.album = self.player_left.album
+            self.music_filename = self.player_left.music_filename
         elif meta == 1:
             self.songname = self.player_right.songname
             self.artist = self.player_right.artist
             self.title = self.player_right.title
             self.album = self.player_right.album
+            self.music_filename = self.player_right.music_filename
         elif meta == 2:
             self.songname = self.jingles.interlude.songname
             self.artist = self.jingles.interlude.artist
             self.title = self.jingles.interlude.title
             self.album = self.jingles.interlude.album
+            self.music_filename = self.jingles.interlude.music_filename
         elif meta == -1:
             self.songname = ""
             self.artist = ""
             self.title = ""
             self.album = ""
+            self.music_filename = ""
 
-        self.new_metadata = (self.songname, self.artist, self.title, self.album)
+        self.new_metadata = (self.songname, self.artist, self.title, self.album,
+                             self.music_filename)
         
         # update metadata on stream if it has changed
         if self.new_metadata != self.old_metadata:
@@ -2029,7 +2034,7 @@ class MainWindow(dbus.service.Object):
                     file.close()
 
                 self._track_metadata_changed(self.artist, self.title,
-                                                    self.album, self.songname)
+                                self.album, self.songname, self.music_filename)
             else:
                 self.window.set_title(self.appname + pm.title_extra)
 
@@ -2039,11 +2044,12 @@ class MainWindow(dbus.service.Object):
 
         self._old_metadata_2 = args
         self.track_metadata_changed(*args)
-        self.server_window.new_metadata(*args)
+        self.server_window.new_metadata(*args[:-1]) # Don't pass music_filename
 
     @dbus.service.signal(dbus_interface=PGlobs.dbus_bus_basename,
-                                                            signature="ssss")
-    def track_metadata_changed(self, artist, title, album, songname):
+                                                            signature="sssss")
+    def track_metadata_changed(self, artist, title, album, songname,
+                                                                music_filename):
         """DBus signal for plugins to attach to for metadata updates."""
     
         print "track_metadata_changed called and signal emitted"

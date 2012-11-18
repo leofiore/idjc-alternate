@@ -16,7 +16,7 @@ ui('Extra code: An IDJC monitoring class', 'code-idjcmon-nav')
 It can be extended to issue e-mail alerts if IDJC freezes or perform Twitter
 updates when the music changes.
 
-Requires IDJC 0.8.8 or higher.
+Requires IDJC 0.8.9 or higher.
 
 As a standalone (essentially demo code):
 for the default profile: ./idjcmon.py
@@ -56,7 +56,7 @@ class IDJCMonitor(gobject.GObject):
                 (gobject.TYPE_INT, gobject.TYPE_BOOLEAN, gobject.TYPE_STRING)),
         
         'metadata-changed' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
-                                                    (gobject.TYPE_STRING,) * 4),
+                                                    (gobject.TYPE_STRING,) * 5),
         'frozen' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
                 (gobject.TYPE_STRING, gobject.TYPE_UINT, gobject.TYPE_BOOLEAN))
     }
@@ -72,6 +72,9 @@ class IDJCMonitor(gobject.GObject):
                             'the song name from metadata tags when available'
                             ' and from the filenmame when not',
                             "", gobject.PARAM_READABLE),
+        'music_filename' : (gobject.TYPE_STRING, 'music_filename',
+                            'music_filename from track metadata',
+                            "", gobject.PARAM_READABLE),
         'streaminfo' : (gobject.TYPE_PYOBJECT, 'streaminfo',
                 'information about the streams', gobject.PARAM_READABLE)
     }
@@ -85,7 +88,8 @@ class IDJCMonitor(gobject.GObject):
         gobject.GObject.__init__(self)
         self.__profile = profile
         self.__bus = dbus.SessionBus()
-        self.__artist = self.__title = self.__album = self.__songname = ""
+        self.__artist = self.__title = self.__album = ""
+        self.__songname = self.__music_filename = ""
         self.__shutdown = False
         self._start_probing()
         
@@ -152,7 +156,7 @@ class IDJCMonitor(gobject.GObject):
 
     def _watchdog(self):
         if self.__watchdog_notice:
-            if psutil.pid_exists(self.__pid):
+            if psutil.pid_exists(int(self.__pid)):
                 if not self.__frozen:
                     self.__frozen = True
                     self.emit("frozen", self.__profile, self.__pid, True)
@@ -189,7 +193,7 @@ class IDJCMonitor(gobject.GObject):
         self.notify("streaminfo")
         self.emit("streamstate-changed", numeric_id, connected, where)
 
-    def _metadata_handler(self, artist, title, album, songname):
+    def _metadata_handler(self, artist, title, album, songname, music_filename):
 
         def update_property(name, value):
             oldvalue = getattr(self, "_IDJCMonitor__" + name)
@@ -198,12 +202,14 @@ class IDJCMonitor(gobject.GObject):
                 setattr(self, "_IDJCMonitor__" + name, newvalue)
                 self.notify(name)
 
-        for name, value in zip("artist title album songname".split(),
-                                        (artist, title, album, songname)):
+        for name, value in zip(
+                        "artist title album songname music_filename".split(),
+                            (artist, title, album, songname, music_filename)):
             update_property(name, value)
 
         self.emit("metadata-changed", self.__artist, self.__title,
-                                                self.__album, self.__songname)
+                                                self.__album, self.__songname,
+                                                self.__music_filename)
 
     def do_get_property(self, prop):
         if self.__shutdown:
@@ -212,7 +218,7 @@ class IDJCMonitor(gobject.GObject):
         
         name = prop.name
         
-        if name in ("artist", "title", "album", "songname"):
+        if name in ("artist", "title", "album", "songname", "music_filename"):
             return getattr(self, "_IDJCMonitor__" + name)
         if name == "streaminfo":
             return tuple(self.__streams[n] for n in xrange(10))
@@ -240,9 +246,10 @@ if __name__ == "__main__":
         print "Stream %d is %s on connection %s." % (
                                         which, ("down", "up")[state], where)
 
-    def metadata_handler(monitor, artist, title, album, songname):
-        print "Metadata is: artist: %s, title: %s, album: %s" % (
-                                                    artist, title, album)
+    def metadata_handler(monitor, artist, title, album, songname,
+                                                            music_filename):
+        print "Metadata is: artist: %s, title: %s, album: %s, filename: %s" % (
+                                        artist, title, album, music_filename)
 
     def frozen_handler(monitor, profile, pid, frozen):
         print "IDJC '%s' with process ID %d is %s" % (
