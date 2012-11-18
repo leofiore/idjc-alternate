@@ -355,12 +355,12 @@ class MediaPane(gtk.Frame):
                         if "FULLTEXT" in str(inst):
                             print "adding fulltext index to database"
                             if self.dbtype == "P3":
-                                c.execute("ALTER TABLE tracks ADD FULLTEXT"
-                                          "(artist,album,title,filename)")
+                                c.execute("""ALTER TABLE tracks ADD FULLTEXT
+                                    artist(artist,album,title,filename)""")
                             if self.dbtype == "Ampache":
-                                c.execute("ALTER TABLE album ADD FULLTEXT(name)")
-                                c.execute("ALTER TABLE artist ADD FULLTEXT(name)")
-                                c.execute("ALTER TABLE song ADD FULLTEXT(title)")
+                                c.execute("ALTER TABLE album ADD FULLTEXT name(name)")
+                                c.execute("ALTER TABLE artist ADD FULLTEXT name(name)")
+                                c.execute("ALTER TABLE song ADD FULLTEXT title(title)")
                         else:
                             raise
             else:

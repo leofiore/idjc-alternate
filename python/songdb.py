@@ -110,74 +110,85 @@ class DBAccessor(threading.Thread):
     def run(self):
         notify = partial(glib.idle_add, threadslock(self.notify))
         
-        while self.keepalive:
-            self.semaphore.acquire()
-            if self.keepalive and self.jobs:
-                try:
-                    query, handler, failhandler = self.jobs.popleft()
-                except IndexError:
-                    break
-
-                trycount = 0
-                while trycount < 3:
+        try:
+            while self.keepalive:
+                self.semaphore.acquire()
+                if self.keepalive and self.jobs:
                     try:
-                        rows = self._cursor.execute(*query)
-                    except (sql.OperationalError, AttributeError) as e:
-                        if not self.keepalive:
-                            break
-                        
-                        if isinstance(e, sql.OperationalError):
-                            # Unhandled errors will be treated like
-                            # connection failures.
-                            try:
-                                self._cursor.close()
-                            except Exception:
-                                pass
-                                
-                            try:
-                                self._handle.close()
-                            except Exception:
-                                pass
-                            
-                        if not self.keepalive:
-                            break
-
-                        notify(_('Connecting'))
-                        trycount += 1
-                        try:
-                            self._handle = sql.Connection(
-                                host=self.hostname, port=self.port,
-                                user=self.user, passwd=self.password,
-                                db=self.database, connect_timeout=3)
-                            self._cursor = self._handle.cursor()
-                        except sql.Error as e:
-                            notify(_("Connection failed (try %d)") %
-                                                                trycount)
-                            print e
-                            time.sleep(0.5)
-                        else:
-                            try:
-                                self._cursor.execute('set names utf8')
-                                self._cursor.execute(
-                                                'set character set utf8')
-                                self._cursor.execute(
-                                        'set character_set_connection=utf8')
-                            except sql.MySQLError:
-                                notify(_('Connected: utf-8 mode failed'))
-                            else:
-                                notify(_('Connected'))
-                    else:
-                        if self.keepalive:
-                            handler(self, self.request,
-                                                    self._cursor, notify, rows)
+                        query, handler, failhandler = self.jobs.popleft()
+                    except IndexError:
                         break
-                else:
-                    if failhandler is not None:
-                        failhandler(e, notify)
-                    else:
-                        notify(_('Job dropped'))
 
-        notify(_('Disconnected'))
+                    trycount = 0
+                    while trycount < 3:
+                        try:
+                            rows = self._cursor.execute(*query)
+                        except (sql.OperationalError, AttributeError) as e:
+                            if not self.keepalive:
+                                return
+                            
+                            if isinstance(e, sql.OperationalError):
+                                # Unhandled errors will be treated like
+                                # connection failures.
+                                try:
+                                    self._cursor.close()
+                                except Exception:
+                                    pass
+                                    
+                                try:
+                                    self._handle.close()
+                                except Exception:
+                                    pass
+                                
+                            if not self.keepalive:
+                                return
+
+                            notify(_('Connecting'))
+                            trycount += 1
+                            try:
+                                self._handle = sql.Connection(
+                                    host=self.hostname, port=self.port,
+                                    user=self.user, passwd=self.password,
+                                    db=self.database, connect_timeout=3)
+                                self._cursor = self._handle.cursor()
+                            except sql.Error as e:
+                                notify(_("Connection failed (try %d)") %
+                                                                    trycount)
+                                print e
+                                time.sleep(0.5)
+                            else:
+                                try:
+                                    self._cursor.execute('set names utf8')
+                                    self._cursor.execute(
+                                                    'set character set utf8')
+                                    self._cursor.execute(
+                                            'set character_set_connection=utf8')
+                                except sql.MySQLError:
+                                    notify(_('Connected: utf-8 mode failed'))
+                                else:
+                                    notify(_('Connected'))
+                                self._cursor.detach = self._patch_for_cursor()
+                        else:
+                            if not self.keepalive:
+                                return
+                            handler(self, self.request, self._cursor, notify,
+                                                                        rows)
+                            break
+                    else:
+                        if failhandler is not None:
+                            failhandler(e, notify)
+                        else:
+                            notify(_('Job dropped'))
+        finally:
+            try:
+                self._cursor.close()
+            except Exception:
+                pass
+            try:
+                self._handle.close()
+            except Exception:
+                pass
+            notify(_('Disconnected'))
 
     def close(self):
         """Clean up the worker thread prior to disposal."""
@@ -186,6 +197,28 @@ class DBAccessor(threading.Thread):
             self.keepalive = False
             self.semaphore.release()
             return
+
+    def _patch_for_cursor(self):
+        """Adds a detach method to the database cursor.
+        
+        This is intended to be used in handler threads.
+        It is not compatible with server side cursors.
+        """
+
+        orig_cursor = self._cursor
+        orig_cursor.is_detached = False
+        
+        def detach():
+            try:
+                self._cursor = self._handle.cursor()
+            except sql.OperationalError:
+                # Connection may have dropped but it's not a problem.
+                pass
+            else:
+                self._cursor.detach = self._patch_for_cursor()
+
+            self.is_detached = True
+        return detach
 
 
 class PrefsControls(gtk.Frame):
@@ -502,11 +535,11 @@ def drag_data_get_common(func):
 
 class TreeUpdater(object):
     """ runs as an idle process building the tree view of the p3 database """
-    def __init__(self, tree_page, data):
+    def __init__(self, tree_page, cursor, rows):
         self.tree_page = tree_page
-        self.data = data
+        self.cursor = cursor
         self.done = 0.0
-        self.total = float(len(data))
+        self.total = float(rows)
         self.dep = 0
         self.art = self.alb = ""
 
@@ -516,17 +549,18 @@ class TreeUpdater(object):
         transform = tree_page.transform
         ampache = tree_page.db_type == "Ampache"
         append = tree_page.tree_store.append
-        next_row = self.data.popleft
+        next_row = self.cursor.fetchone
         dep = self.dep
 
         for each in xrange(10):
             if acc.keepalive == False:
                 return
 
-            try:
-                row = next_row()
-            except IndexError:
+            row = next_row()
+            if row is None:
                 self.tree_page.set_loading_view(False)
+                if self.cursor.is_detached:
+                    self.cursor.close()
                 return
             else:
                 while 1:
@@ -712,7 +746,8 @@ class TreePage(PageCommon):
     ###########################################################################
     
     def _handler(self, acc, request, cursor, notify, rows):
-        self._tree_updater = TreeUpdater(self, deque(cursor.fetchall()))
+        cursor.detach()
+        self._tree_updater = TreeUpdater(self, cursor, rows)
         while self._tree_update_id:
             glib.source_remove(self._tree_update_id.popleft())
         while self._pulse_id:
@@ -890,7 +925,22 @@ class MediaPane(gtk.Frame):
         glib.idle_add(threadslock(self.show))
             
     def _f1(self, exception, notify):
+        # Give up.
         self._safe_disconnect()
+
+    def factory(dbtype):
+        def inner(self, exception, notify):
+            try:
+                code = exception.args[0]
+            except IndexError:
+                pass
+            else:
+                if code != 1061:
+                    notify_('Failed to create FULLTEXT index')
+            self._hand_over(dbtype)
+        return inner
+    _f2, _f3 = [factory(x) for x in ("Prokyon 3", "Ampache")]
+    del factory, x
 
     def _s1(self, acc, request, cursor, notify, rows):
         """Running under the accessor worker thread!
@@ -902,7 +952,7 @@ class MediaPane(gtk.Frame):
         if schema_test("tracks", data):
             request(('DESCRIBE tracks',), self._s2, self._f1)
         elif schema_test("album artist song", data):
-            request(('DESCRIBE song',), self._s3, self._f1)
+            request(('DESCRIBE song',), self._s4, self._f1)
         else:
             notify(_('Unrecognised database'))
             self._safe_disconnect()
@@ -913,33 +963,51 @@ class MediaPane(gtk.Frame):
         if schema_test("artist title album tracknumber bitrate path filename",
                                                             cursor.fetchall()):
             notify(_('Found Prokyon 3 schema'))
-            self._hand_over("Prokyon 3")
+            # Try to add a FULLTEXT database.
+            request(("""ALTER TABLE tracks ADD FULLTEXT artist (artist,title,
+                        album,filename)""",), self._s3, self._f2)
         else:
             notify(_('Unrecognised database'))
             self._safe_disconnect()
 
     def _s3(self, acc, request, cursor, notify, rows):
-        
-        if schema_test("artist title album track bitrate file", 
-                                                            cursor.fetchall()):
-            request(('DESCRIBE artist',), self._s4, self._f1)
-        else:
-            notify('Unrecognised database')
-            self._safe_disconnect()
+        notify('Fulltext index added')
+        self._hand_over('Prokyon 3')
 
     def _s4(self, acc, request, cursor, notify, rows):
-        
-        if schema_test("name prefix", cursor.fetchall()):
+        """Test for Ampache database."""
+
+        if schema_test("artist title album track bitrate file", 
+                                                            cursor.fetchall()):
             request(('DESCRIBE artist',), self._s5, self._f1)
         else:
             notify('Unrecognised database')
             self._safe_disconnect()
 
     def _s5(self, acc, request, cursor, notify, rows):
-        
         if schema_test("name prefix", cursor.fetchall()):
-            notify('Found Ampache schema')
-            self._hand_over("Ampache")
+            request(('DESCRIBE artist',), self._s6, self._f1)
         else:
             notify('Unrecognised database')
             self._safe_disconnect()
+
+    def _s6(self, acc, request, cursor, notify, rows):
+        if schema_test("name prefix", cursor.fetchall()):
+            notify('Found Ampache schema')
+            request(("ALTER TABLE album ADD FULLTEXT name (name)",), self._s7,
+                                                                    self._f3)
+        else:
+            notify('Unrecognised database')
+            self._safe_disconnect()
+        
+    def _s7(self, acc, request, cursor, notify, rows):
+        request(("ALTER TABLE artist ADD FULLTEXT name (name)",), self._s8,
+                                                                    self._f3)
+        
+    def _s8(self, acc, request, cursor, notify, rows):
+        request(("ALTER TABLE song ADD FULLTEXT title (title)",), self._s9,
+                                                                    self._f3)
+
+    def _s9(self, acc, request, cursor, notify, rows):
+        notify('Fulltext index added')
+        self._hand_over("Ampache")
