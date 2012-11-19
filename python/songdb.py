@@ -407,6 +407,7 @@ class PageCommon(gtk.VBox):
             self._sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
         self.tree_view.connect_after("drag-begin", self._cb_drag_begin)
         self.tree_view.connect("drag_data_get", self._cb_drag_data_get)
+        self._update_id = deque()
         self._acc = None
 
     @property
@@ -440,6 +441,9 @@ class PageCommon(gtk.VBox):
         self._transform = transform
         
     def deactivate(self):
+        while self._update_id:
+            glib.source_remove(self._update_id.popleft())
+        
         self._acc = None
         model = self.tree_view.get_model()
         self.tree_view.set_model(None)
@@ -534,7 +538,8 @@ def drag_data_get_common(func):
     return inner
 
 class TreeUpdater(object):
-    """ runs as an idle process building the tree view of the p3 database """
+    """Fills the data store of the TreePage instance."""
+
     def __init__(self, tree_page, cursor, rows):
         self.tree_page = tree_page
         self.cursor = cursor
@@ -568,14 +573,14 @@ class TreeUpdater(object):
                         self.art = row[1]
                         self.artlower = self.art.lower()
                         self.iter1 = append(
-                                        None, (-1, self.art, 0, 0, 0, "", "", 0)) 
+                                    None, (-1, self.art, 0, 0, 0, "", "", 0)) 
                         dep = 1
                     if dep == 1:
                         if self.artlower == row[1].lower():
                             self.alb = row[2]
                             self.alblower = self.alb.lower()
                             self.iter2 = append(
-                                    self.iter1, (-2, self.alb, 0, 0, 0, "", "", 0)) 
+                                self.iter1, (-2, self.alb, 0, 0, 0, "", "", 0)) 
                             dep = 2
                         else:
                             dep = 0
@@ -590,7 +595,7 @@ class TreeUpdater(object):
                                 row[8] = fn[0]
                             path = transform(row[8]) 
                             append(self.iter2, (row[0], row[4], row[3],
-                                                row[5], row[6], row[7], path, row[9]))
+                                        row[5], row[6], row[7], path, row[9]))
                             break
                         else:
                             dep = 1
@@ -659,7 +664,6 @@ class TreePage(PageCommon):
         self.progress_bar = gtk.ProgressBar()
         self.loading_vbox.pack_start(self.progress_bar, False)
         self.pack_start(self.loading_vbox)
-        self._tree_update_id = deque()
         self._pulse_id = deque()
         
         self.show_all()
@@ -684,8 +688,6 @@ class TreePage(PageCommon):
         glib.idle_add(threadslock(self.tree_rebuild.clicked))
 
     def deactivate(self):
-        while self._tree_update_id:
-            glib.source_remove(self._tree_update_id.popleft())
         while self._pulse_id:
             glib.source_remove(self._pulse_id.popleft())
         
@@ -747,13 +749,13 @@ class TreePage(PageCommon):
     
     def _handler(self, acc, request, cursor, notify, rows):
         cursor.detach()
-        self._tree_updater = TreeUpdater(self, cursor, rows)
-        while self._tree_update_id:
-            glib.source_remove(self._tree_update_id.popleft())
+        self._updater = TreeUpdater(self, cursor, rows)
+        while self._update_id:
+            glib.source_remove(self._update_id.popleft())
         while self._pulse_id:
             glib.source_remove(self._pulse_id.popleft())
         glib.idle_add(self.loading_label.set_text, _('Populating'))
-        self._tree_update_id.append(glib.idle_add(self._tree_updater.run, acc))
+        self._update_id.append(glib.idle_add(self._updater.run, acc))
 
     def _failhandler(self, exception, notify):
         print str(exception)
@@ -762,6 +764,55 @@ class TreePage(PageCommon):
                                                         _('Fetch Failed!'))
         while self._pulse_id:
             glib.source_remove(self._pulse_id.popleft())
+
+
+class FlatUpdater(object):
+    """Fills the data store of the FlatPage instance."""
+    
+    def __init__(self, flat_page, cursor):
+        flat_page.tree_view.set_model(None)
+        flat_page.list_store.clear()
+        self.flat_page = flat_page
+        self.cursor = cursor
+        self.ampache = flat_page.db_type == "Ampache"
+        self.transform = flat_page.transform
+        self.found = 0
+
+    @threadslock
+    def run(self, acc):
+        next_row = self.cursor.fetchone
+        ampache = self.ampache
+        transform = self.transform
+        found = self.found
+        store = self.flat_page.list_store
+
+        for i in xrange(100):
+            if acc.keepalive == False:
+                return False
+            
+            row = next_row()
+            if row:
+                found += 1
+                row = list(row)
+                if ampache:
+                    # Split the file into path and filename
+                    fn = row[7].rsplit("/",1)
+                    row[7] = fn[1]
+                    row[8] = fn[0]
+                
+                row[8] = transform(row[8])                
+                store.append([found] + row)
+            else:
+                if found:
+                    self.flat_page.tree_cols[0].set_title("(%s)" % found)
+                    self.flat_page.tree_view.set_model(store)
+                if self.cursor.is_detached:
+                    self.cursor.close()
+                return False
+
+        self.found = found
+        return True
+
 
 class FlatPage(PageCommon):
     """Flat list based user interface with a search facility."""
@@ -804,7 +855,7 @@ class FlatPage(PageCommon):
         self.update_button.connect("clicked", self._cb_update)
         self.update_button.set_image(image)
         image.show
-        where_hbox.pack_start(self.update_button)
+        where_hbox.pack_start(self.update_button, False)
         
         PageCommon.__init__(self, notebook, _("Flat"), self.controls)
  
@@ -813,7 +864,6 @@ class FlatPage(PageCommon):
         # path, filename, disk
         self.list_store = gtk.ListStore(
                         int, int, str, str, int, str, int, int, str, str, int)
-        self.tree_view.set_model(self.list_store)
         self.tree_cols = self._make_tv_columns(self.tree_view, (
                 ("(%d)" % 0, 0, self._cell_ralign, -1),
                 (_('Artist'), 2, self._cell_show_unknown, 100),
@@ -833,11 +883,82 @@ class FlatPage(PageCommon):
         self.fuzzy_entry.set_flags(gtk.CAN_FOCUS)
         self.where_entry.set_flags(gtk.CAN_FOCUS)
 
-    def _cb_update(self, widget):
-        print "update button was pressed"
+    _queries_table = {
+        "Prokyon 3":
+            {"fuzzy": ("clean", """
+                    SELECT id,artist,album,tracknumber,title,length,
+                    bitrate,filename,path,0 as disk FROM tracks
+                    WHERE MATCH (artist,album,title,filename) AGAINST (%s)
+                    """),
+        
+            "where": ("dirty", """
+                    SELECT id,artist,album,tracknumber,title,length,
+                    bitrate,filename, path, 0 as disk FROM tracks WHERE (%s)
+                    ORDER BY artist,album,path,tracknumber,title
+                    """)},
+        
+        "Ampache":
+            {"fuzzy": ("clean", """
+                    SELECT song.id as id,
+                    concat_ws(" ",artist.prefix,artist.name),
+                    concat_ws(" ",album.prefix,album.name),
+                    track as tracknumber, title, time as length,
+                    bitrate, file, "" as padding, album.disk as disk FROM song
+                    LEFT JOIN artist ON artist.id = song.artist
+                    LEFT JOIN album ON album.id = song.album
+                    WHERE
+                         (MATCH(album.name) against(%s)
+                          OR MATCH(artist.name) against(%s)
+                          OR MATCH(title) against(%s))
+                    """),
 
+            "where": ("dirty", """
+                    SELECT song.id as id,
+                    concat_ws(" ", artist.prefix, artist.name) as artist,
+                    concat_ws(" ", album.prefix, album.name) as albumname,
+                    track as tracknumber, title,
+                    time as length, bitrate, file, "" as padding,
+                    album.disk as disk FROM song
+                    LEFT JOIN album on album.id = song.album
+                    LEFT JOIN artist on artist.id = song.artist
+                    WHERE (%s) ORDER BY
+                    artist.name, album.name, file, album.disk, track, title
+                    """)}
+    }
+
+    def _cb_update(self, widget):
+        try:
+            table = self._queries_table[self._db_type]
+        except KeyError:
+            print "unsupported database type"
+            return
+
+        for widget, search_type in ((self.fuzzy_entry, "fuzzy"),
+                                    (self.where_entry, "where")):
+            user_text = widget.get_text().strip()
+            if user_text:
+                access_mode, query = table[search_type]
+                break
+        else:
+            # An empty search.
+            self.list_store.clear()
+            self.where_entry.set_text("")
+            return
+
+        qty = query.count("(%s)")
+        if access_mode == "clean":
+            query = (query, (user_text, ) * qty)
+        elif access_mode == "dirty":  # Accepting of SQL code in user data.
+            query = (query % (user_text, ) * qty, )
+        else:
+            print "unknown database access mode", access_mode
+            return
+                        
+        self._acc.request(query, self._s1)
+        return
+            
     @drag_data_get_common
-    def _cb_drag_data_get(self, tree_view, model, paths, data, selection):
+    def _cb_drag_data_get(tree_view, model, paths, data, selection):
         for each in paths:
             iter = model.get_iter(each)
             data.append(model.get_value(iter, 9), model.get_value(iter, 8))
@@ -846,10 +967,19 @@ class FlatPage(PageCommon):
     def _cb_fuzzysearch_changed(self, widget):
         if widget.get_text().strip():
             self.where_entry.set_sensitive(False)
+            self.where_entry.set_text("")
         else:
             self.where_entry.set_sensitive(True)
         self.update_button.clicked()
+        
+    ###########################################################################
 
+    def _s1(self, acc, request, cursor, notify, rows):
+        cursor.detach()
+        self._updater = FlatUpdater(self, cursor)
+        while self._update_id:
+            glib.source_remove(self._update_id.popleft())
+        self._update_id.append(glib.idle_add(self._updater.run, acc))
 
 class MediaPane(gtk.Frame):
     """Database song details are displayed in this widget."""
