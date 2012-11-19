@@ -54,7 +54,7 @@ from .gtkstuff import threadslock, WindowSizeTracker, ConfirmationDialog
 from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog, LEDDict
 from . import midicontrols
 from .tooltips import set_tip
-from . import p3db
+from . import songdb
 from .prelims import *
 
 
@@ -2328,51 +2328,51 @@ class MainWindow(dbus.service.Object):
             return True
 
         try:
-            fh = open(session_filename, "w")
-            fh.write("deckvol=" + str(self.deckadj.get_value()) + "\n")
-            fh.write("deck2vol=" + str(self.deck2adj.get_value()) + "\n")
-            fh.write("crossfade=" + str(self.crossadj.get_value()) + "\n")
-            fh.write("stream_mon=" +
-                            str(int(self.listen_stream.get_active())) + "\n")
-            fh.write("tracks_played=" +
-                        str(int(self.history_expander.get_expanded())) + "\n")
-            fh.write("pass_speed=" +
-                        str(self.passspeed_adj.get_value()) + "\n")
-            fh.write("prefs=" +
-                        str(int((self.prefs_window.window.flags() &
-                        gtk.VISIBLE) != 0)) + "\n")
-            fh.write("server=" +
-                        str(int((self.server_window.window.flags() &
-                        gtk.VISIBLE) != 0)) + "\n")
-            fh.write("prefspage=" +
-                    str(self.prefs_window.notebook.get_current_page()) + "\n")
-            fh.write("metadata_src=" +
-                    str(self.metadata_source.get_active()) + "\n")
-            fh.write("crosstype=" +
-                    str(self.crosspattern.get_active()) + "\n")
-            fh.write("hpane=" +
-                    str(self.paned.get_position()) + "\n")
-            fh.write("vpane=" +
-                    str(self.leftpane.get_position()) + "\n")
-            fh.write("treecols=" +
-                self.topleftpane.getcolwidths(self.topleftpane.treecols) + "\n")
-            fh.write("flatcols=" +
-                self.topleftpane.getcolwidths(self.topleftpane.flatcols) + "\n")
-            fh.write("dbpage=" +
-                str(self.topleftpane.notebook.get_current_page()) + "\n")
-            fh.write("playerpage=" +
-                str(self.player_nb.get_current_page()) + "\n")
-            fh.close()
-            
-            # Save a list of files played and timestamps.
-            fh = open(session_filename + "_files_played", "w")
-            cutoff = time.time() - 2592000 # 2592000 = 30 days.
-            recent = {}
-            for key, value in self.files_played.iteritems():
-                if value > cutoff:
-                    recent[key] = value
-            pickle.Pickler(fh).dump(recent)
-            fh.close()
+            with open(session_filename, "w") as fh:
+                fh.write("deckvol=" + str(self.deckadj.get_value()) + "\n")
+                fh.write("deck2vol=" + str(self.deck2adj.get_value()) + "\n")
+                fh.write("crossfade=" + str(self.crossadj.get_value()) + "\n")
+                fh.write("stream_mon=" +
+                                str(int(self.listen_stream.get_active())) + "\n")
+                fh.write("tracks_played=" +
+                            str(int(self.history_expander.get_expanded())) + "\n")
+                fh.write("pass_speed=" +
+                            str(self.passspeed_adj.get_value()) + "\n")
+                fh.write("prefs=" +
+                            str(int((self.prefs_window.window.flags() &
+                            gtk.VISIBLE) != 0)) + "\n")
+                fh.write("server=" +
+                            str(int((self.server_window.window.flags() &
+                            gtk.VISIBLE) != 0)) + "\n")
+                fh.write("prefspage=" +
+                        str(self.prefs_window.notebook.get_current_page()) + "\n")
+                fh.write("metadata_src=" +
+                        str(self.metadata_source.get_active()) + "\n")
+                fh.write("crosstype=" +
+                        str(self.crosspattern.get_active()) + "\n")
+                fh.write("hpane=" +
+                        str(self.paned.get_position()) + "\n")
+                fh.write("vpane=" +
+                        str(self.leftpane.get_position()) + "\n")
+                fh.write("tree_page=" +
+                    self.topleftpane.get_col_widths("tree_page") + "\n")
+                fh.write("flat_page=" +
+                    self.topleftpane.get_col_widths("flat_page") + "\n")
+                fh.write("dbpage=" +
+                    str(self.topleftpane.notebook.get_current_page()) + "\n")
+                fh.write("playerpage=" +
+                    str(self.player_nb.get_current_page()) + "\n")
+                fh.close()
+                
+                # Save a list of files played and timestamps.
+                fh = open(session_filename + "_files_played", "w")
+                cutoff = time.time() - 2592000 # 2592000 = 30 days.
+                recent = {}
+                for key, value in self.files_played.iteritems():
+                    if value > cutoff:
+                        recent[key] = value
+                pickle.Pickler(fh).dump(recent)
+                fh.close()
             
         except Exception as e:
             print "Error writing out main session data", e
@@ -2466,10 +2466,8 @@ class MainWindow(dbus.service.Object):
                 self.paned.set_position(int(v))
             elif k=="vpane":
                 self.leftpane.set_position(int(v))
-            elif k=="treecols":
-                self.topleftpane.setcolwidths(self.topleftpane.treecols, v)
-            elif k=="flatcols":
-                self.topleftpane.setcolwidths(self.topleftpane.flatcols, v)
+            elif k in ("tree_page", "flat_page"):
+                self.topleftpane.set_col_widths(k, v)
             elif k=="dbpage":
                 self.topleftpane.notebook.set_current_page(int(v))
             elif k=="playerpage":
@@ -2528,11 +2526,19 @@ class MainWindow(dbus.service.Object):
         self.player_left.flush = True
         self.player_right.flush = True
         self.send_new_mixer_stats()
+        self.prefs_window.songdbprefs.disconnect()
         gobject.source_remove(self.statstimeout)
         gobject.source_remove(self.vutimeout)
         gobject.source_remove(self.savetimeout)
         self._mixer_ctrl.close()
         self.quitting()
+        self.window.hide()
+        self.prefs_window.window.hide()
+        self.server_window.window.hide()
+        pm.profile_dialog.hide()
+        while gtk.gdk.events_pending():
+            gtk.main_iteration()
+        
         if gtk.main_level():
             gtk.main_quit()
         time.sleep(0.3) # Allow time for all subthreads/programs time to exit 
@@ -2972,7 +2978,7 @@ class MainWindow(dbus.service.Object):
         self.paned = gtk.HPaned()
         self.leftpane = gtk.VPaned()
         self.paned.pack1(self.leftpane)
-        self.topleftpane = p3db.MediaPane()
+        self.topleftpane = songdb.MediaPane()
         self.leftpane.pack1(self.topleftpane)
         self.topleftpane.connect_object("show", gtk.VPaned.show, self.leftpane)
         self.topleftpane.connect_object("hide", self.cb_panehide, self.leftpane)
@@ -3807,8 +3813,7 @@ class MainWindow(dbus.service.Object):
         self.server_window.update_metadata()
         
         self.window.forall(self.strip_focusability)
-        self.topleftpane.fuzzyentry.set_flags(gtk.CAN_FOCUS)
-        self.topleftpane.whereentry.set_flags(gtk.CAN_FOCUS)
+        self.topleftpane.repair_focusability()
         self.player_left.treeview.set_flags(gtk.CAN_FOCUS)
         self.player_right.treeview.set_flags(gtk.CAN_FOCUS)
         self.jingles.interlude.treeview.set_flags(gtk.CAN_FOCUS)

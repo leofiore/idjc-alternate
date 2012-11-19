@@ -27,7 +27,7 @@ import gtk
 
 from idjc import FGlobs, PGlobs
 from . import licence_window
-from . import p3db
+from . import songdb
 from . import midicontrols
 from .gtkstuff import WindowSizeTracker
 from .prelims import ProfileManager
@@ -628,7 +628,7 @@ class mixprefs:
 
             
     def load_player_prefs(self):
-        proktogglevalue = False
+        songdb_active = False
         try:
             file = open(pm.basedir / "playerdefaults")
             
@@ -648,8 +648,8 @@ class mixprefs:
                         value = False
                     else:
                         value = int(value)
-                    if key == "proktoggle":
-                        proktogglevalue = value
+                    if key == "songdb_active":
+                        songdb_active = value
                     else:
                         self.activedict[key].set_active(value)
                 elif self.valuesdict.has_key(key):
@@ -659,8 +659,8 @@ class mixprefs:
             file.close()
         except IOError:
             print "Failed to read playerdefaults file"
-        if proktogglevalue:
-            self.activedict["proktoggle"].set_active(True)
+        if songdb_active:
+            self.activedict["songdb_active"].set_active(songdb_active)
         self.parent.send_new_mixer_stats()
             
     def apply_player_prefs(self):
@@ -1162,12 +1162,10 @@ class mixprefs:
         outervbox.pack_start(aud_rs_hbox, False, False, 0)
         aud_rs_hbox.show()
         
-        # Prokyon 3 database connection
-        self.p3prefs = p3db.Prefs(self.parent)
-        outervbox.pack_start(self.p3prefs, False, False, 0)
-        self.p3prefs.show()
-        self.parent.menu.songdbmenu_a.connect_proxy(self.p3prefs.proktoggle)
-
+        # Song database preferences and connect button.
+        self.songdbprefs = self.parent.topleftpane.prefs_controls
+        self.parent.menu.songdbmenu_a.connect_proxy(self.songdbprefs.dbtoggle)
+        outervbox.pack_start(self.songdbprefs, False)
         
         # Session to be saved, or initial settings preferences.
         frame = gtk.Frame(" %s " % _('Player Settings At Startup'))
@@ -1432,7 +1430,6 @@ class mixprefs:
             "bigdigibox"  : self.bigger_box_toggle, 
             "dither"      : self.dither,
             "recallsession" : self.restore_session_option,
-            "proktoggle"    : self.p3prefs.proktoggle,
             "best_rs"       : self.best_quality_resample,
             "good_rs"       : self.good_quality_resample,
             "fast_rs"       : self.fast_resample,
@@ -1450,7 +1447,7 @@ class mixprefs:
             }
             
         for each in itertools.chain(mic_controls, 
-                            (self.parent.freewheel_button,
+                            (self.parent.freewheel_button, self.songdbprefs,
                             self.lpconfig, self.rpconfig, opener_settings)):
             self.activedict.update(each.activedict)
 
@@ -1462,18 +1459,13 @@ class mixprefs:
             "djvolume"      : self.dj_aud_adj,
             "rg_default"    : self.rg_defaultgain,
             "rg_boost"      : self.rg_boost,
-            "p3delchars"    : self.p3prefs.pathdelchars
             }
 
-        for each in itertools.chain(mic_controls, (opener_settings,)):
+        for each in itertools.chain(mic_controls, (opener_settings,
+                                                            self.songdbprefs)):
             self.valuesdict.update(each.valuesdict)
 
         self.textdict = {  # These widgets all have the get_text method.
-            "prokuser"      : self.p3prefs.prokuser,
-            "prokdatabase"  : self.p3prefs.prokdatabase,
-            "prokpassword"  : self.p3prefs.prokpassword,
-            "prokhostname"  : self.p3prefs.prokhostname,
-            "prokaddchars"  : self.p3prefs.pathaddchars,
             "ltfilerqdir"   : self.parent.player_left.file_requester_start_dir,
             "rtfilerqdir"   : self.parent.player_right.file_requester_start_dir,
             "main_full_wst" : self.parent.full_wst,
@@ -1481,7 +1473,8 @@ class mixprefs:
             "prefs_wst"   : self.wst,
             }
 
-        for each in itertools.chain(mic_controls, (opener_settings,)):
+        for each in itertools.chain(mic_controls, (opener_settings,
+                                                            self.songdbprefs)):
             self.textdict.update(each.textdict)
 
         self.rangewidgets = (self.parent.deckadj,)

@@ -20,6 +20,7 @@ import os
 import json
 import gettext
 from abc import ABCMeta, abstractmethod
+from functools import wraps
 
 import gobject
 import gtk
@@ -171,7 +172,7 @@ class ErrorMessageDialog(StandardDialog):
 def threadslock(f):
     """Function decorator for thread locking timeout callbacks."""
     
-    
+    @wraps(f)
     def newf(*args, **kwargs):
         gtk.gdk.threads_enter()
         try:

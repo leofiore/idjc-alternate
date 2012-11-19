@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Rewrote p3db.py as songdb.py to fix a problem with connection timeouts and UI freeze during large database fetch operations.
+
 Fixed bug where keyboard bindings would trigger when typing in the database filter boxes.
 
 Merged in patch from Brian Millham adding Ampache music database support. Credit given.
