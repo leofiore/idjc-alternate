@@ -1984,32 +1984,34 @@ class MainWindow(dbus.service.Object):
             self.artist = self.player_left.artist
             self.title = self.player_left.title
             self.album = self.player_left.album
+            self.meta_context = self.player_left, self.player_left.player_cid
             self.music_filename = self.player_left.music_filename
         elif meta == 1:
             self.songname = self.player_right.songname
             self.artist = self.player_right.artist
             self.title = self.player_right.title
             self.album = self.player_right.album
+            self.meta_context = self.player_right, self.player_right.player_cid
             self.music_filename = self.player_right.music_filename
         elif meta == 2:
             self.songname = self.jingles.interlude.songname
             self.artist = self.jingles.interlude.artist
             self.title = self.jingles.interlude.title
             self.album = self.jingles.interlude.album
+            self.meta_context = self.jingles.interlude, self.jinges.interlude.player_cid
             self.music_filename = self.jingles.interlude.music_filename
         elif meta == -1:
             self.songname = ""
             self.artist = ""
             self.title = ""
             self.album = ""
+            self.meta_context = None
             self.music_filename = ""
 
-        self.new_metadata = (self.songname, self.artist, self.title, self.album,
-                             self.music_filename)
-        
+       
         # update metadata on stream if it has changed
-        if self.new_metadata != self.old_metadata:
-            self.old_metadata = self.new_metadata
+        if self.meta_context != self.old_meta_context:
+            self.old_meta_context = self.meta_context
             print "song title: %s\n" % self.songname
             if self.songname != u"":
                 self.window.set_title("%s :: IDJC%s" % (
@@ -2076,37 +2078,40 @@ class MainWindow(dbus.service.Object):
         album = gen.next()
         player_context = int(gen.next())
         time_lag = int(gen.next())
-  
+
+        if infotype in (1, 2):
+            artist = artist.decode("utf-8")
+            title = title.decode("utf-8")
+            album = album.decode("utf-8")
+            infotype = 1  # Chain
+
+        if infotype in (3, 4):
+            artist = artist.decode("latin1")
+            title = title.decode("latin1")
+            album = album.decode("latin1")
+            infotype = 1  # Chain
+
         if infotype == 1:
-            if not artist and " - " in title:
-                artist, title = title.split(" - ")
-            song = artist.decode("utf-8", "replace") + u" - " + \
-                                                title.decode("utf-8", "replace")
-        if infotype == 2:
-            if not artist and " - " in title:
-                artist, title = title.split(" - ")
-            song = artist + " - " + title
-        if infotype == 3:
-            if not artist and " - " in title:
-                artist, title = title.split(" - ")
-            song = artist.decode("iso8859-1", "replace") + u" - " + \
-                                            title.decode("iso8859-1", "replace")
-            artist = artist.decode("iso8859-1", "replace").encode(
-                                                            "utf-8", "replace")
-            title = title.decode("iso8859-1", "replace").encode(
-                                                            "utf-8", "replace")
-            album = album.decode("iso8859-1", "replace").encode(
-                                                            "utf-8", "replace")
-        if infotype == 4:
-            song = title.decode("iso8859-1", "replace")
-            if not artist and " - " in title:
-                artist, title = title.split(" - ")
-            artist = artist.decode("iso8859-1", "replace").encode(
-                                                            "utf-8", "replace")
-            title = title.decode("iso8859-1", "replace").encode(
-                                                            "utf-8", "replace")
-            album = album.decode("iso8859-1", "replace").encode(
-                                                            "utf-8", "replace")
+            if not album and not artist:
+                sep = title.count(u" - ")
+                if sep == 2:
+                    artist, title, album = title.split(u" - ")
+                elif sep == 1:
+                    artist, title = title.split(u" - ")
+                album = album.lstrip(u"(").rstrip(u")")
+                if artist and title and album:
+                    song = u" - ".join(artist, title, u"(%s)" % album)
+                elif artist and title:
+                    song = u" - ".join(artist, title)
+            elif not album:
+                song = u" - ".join(artist, title)
+            else:
+                song = u"%s - %s - (%s)" % (artist, title, album)
+
+            artist = artist.encode("utf-8")
+            title = title.encode("utf-8")
+            album = album.encode("utf-8")
+
         if infotype == 7:
             model = player.model_playing
             iter = player.iter_playing
@@ -2231,6 +2236,11 @@ class MainWindow(dbus.service.Object):
         print "Metadata source was changed. Before: %d" % self.metadata_src
         self.metadata_src = widget.get_active()
         print "Metadata source was changed. Now: %d" % self.metadata_src
+        
+        for each in (self.player_left, self.player_right,
+                                                    self.jingles.interlude):
+            each.expire_metadata()
+
         # update mixer status and metadata
         self.send_new_mixer_stats()
         return True;
@@ -2286,11 +2296,9 @@ class MainWindow(dbus.service.Object):
     def cb_crossfade(self, fader):
         # Expire old metadata.
         if self.crossadj.get_value() < 50:
-            if self.player_right.is_playing == False:
-                self.player_right.songname = u""
+            self.player_right.expire_metadata()
         else:
-            if self.player_left.is_playing == False:
-                self.player_left.songname = u""
+            self.player_left.expire_metadata()
         # Backend to get new mixer settings.
         self.send_new_mixer_stats()
     
@@ -3644,10 +3652,11 @@ class MainWindow(dbus.service.Object):
         self.newmetadata = False
         self.showing_left_file_requester = False
         self.showing_right_file_requester = False
-        self.old_metadata = ("",) * 4
+        self.old_metadata = None
         self._old_metadata_2 = None
         self.simplemixer = False
         self.crosspass = 0
+        self.old_meta_context = None
 
         # initialize metadata source setting
         self.last_player = ""

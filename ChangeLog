@@ -1,5 +1,9 @@
 * Changes in version 0.8.9 *
 
+Fixed bug where repeated playing of the same song would only register in the Tracks Played as a single play.
+
+Fixed bug where live metadata would not include the album metadata resulting in double counting of tracks in the tracks played window from standard unchained ogg files.
+
 Rewrote p3db.py as songdb.py to fix a problem with connection timeouts and UI freeze during large database fetch operations.
 
 Fixed bug where keyboard bindings would trigger when typing in the database filter boxes.

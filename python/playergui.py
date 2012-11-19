@@ -1180,6 +1180,10 @@ class IDJC_Media_Player:
             self.player_restart()
             self.parent.send_new_mixer_stats()
 
+    def expire_metadata(self):
+        if not self.is_playing:
+            self.songname = self.title = self.artist = self.album = ""
+
     # Shut down our media players when we exit.
     def cleanup(self):
         self.exiting = True
@@ -1546,6 +1550,7 @@ class IDJC_Media_Player:
                                 self.cb_play_progress_timeout, self.player_cid)
             else:
                 self.invoke_end_of_track_policy()
+        self.parent.send_new_mixer_stats()
         return True
 
     def player_shutdown(self):
@@ -1604,10 +1609,10 @@ class IDJC_Media_Player:
             return False
 
         print "player context id is %d\n" % self.player_cid
-
         # Restart a callback to update the progressbar.
         self.timeout_source_id = gobject.timeout_add(
             PROGRESS_TIMEOUT, self.cb_play_progress_timeout, self.player_cid)
+        self.parent.send_new_mixer_stats()
         return True
 
     def next_real_track(self, i):
@@ -4368,3 +4373,5 @@ class IDJC_Media_Player:
         self.playlist_todo = deque()
         self.no_more_files = False
         self.model_playing = None
+        self.player_cid = -1
+
