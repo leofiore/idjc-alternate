@@ -2092,21 +2092,25 @@ class MainWindow(dbus.service.Object):
             infotype = 1  # Chain
 
         if infotype == 1:
+            def fmt(artist, title, album):
+                o, c = ("[", "]") if "(" in album or ")" in album else ("(", ")")
+                return "%s - %s - %s%s%s" % (artist, title, o, album, c)
+            
             if not album and not artist:
                 sep = title.count(u" - ")
                 if sep == 2:
                     artist, title, album = title.split(u" - ")
                 elif sep == 1:
                     artist, title = title.split(u" - ")
-                album = album.lstrip(u"(").rstrip(u")")
+
                 if artist and title and album:
-                    song = u" - ".join(artist, title, u"(%s)" % album)
+                    song = fmt(artist, title, album)
                 elif artist and title:
                     song = u" - ".join(artist, title)
             elif not album:
                 song = u" - ".join(artist, title)
             else:
-                song = u"%s - %s - (%s)" % (artist, title, album)
+                song = fmt(artist, title, album)
 
             artist = artist.encode("utf-8")
             title = title.encode("utf-8")
