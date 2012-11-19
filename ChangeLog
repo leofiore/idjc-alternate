@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Improved metadata cancellation for stopped players.
+
 Fixed bug where repeated playing of the same song would only register in the Tracks Played as a single play.
 
 Fixed bug where live metadata would not include the album metadata resulting in double counting of tracks in the tracks played window from standard unchained ogg files.

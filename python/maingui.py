@@ -1998,7 +1998,7 @@ class MainWindow(dbus.service.Object):
             self.artist = self.jingles.interlude.artist
             self.title = self.jingles.interlude.title
             self.album = self.jingles.interlude.album
-            self.meta_context = self.jingles.interlude, self.jinges.interlude.player_cid
+            self.meta_context = self.jingles.interlude, self.jingles.interlude.player_cid
             self.music_filename = self.jingles.interlude.music_filename
         elif meta == -1:
             self.songname = ""
