@@ -92,17 +92,7 @@ class DBAccessor(threading.Thread):
         self.start()
 
     def request(self, sql_query, handler, failhandler=None):
-        """Add a request to the job queue.
-        
-        sql_query is a one or 2 tuple e.g.
-                ("DESCRIBE SONGS",)
-                ("DESCRIBE %s", ("SONGS",))
-        
-        def handler(sql_cursor, notify)
-            def notify("status message")
-
-        def failhandler(exception, notify)
-        """
+        """Add a request to the job queue."""
         
         self.jobs.append((sql_query, handler, failhandler))
         self.semaphore.release()
@@ -149,7 +139,7 @@ class DBAccessor(threading.Thread):
                                 self._handle = sql.Connection(
                                     host=self.hostname, port=self.port,
                                     user=self.user, passwd=self.password,
-                                    db=self.database, connect_timeout=3)
+                                    db=self.database, connect_timeout=6)
                                 self._cursor = self._handle.cursor()
                             except sql.Error as e:
                                 notify(_("Connection failed (try %d)") %
@@ -291,7 +281,7 @@ class PrefsControls(gtk.Frame):
             table.attach(self._database, 3, 4, 3, 4)
             
             # Fourth row.
-            passlabel, self._password = self._factory(_('Password'), 'password')
+            passlabel, self._password = self._factory("", 'password')
             self._password.set_visibility(False)
             l_attach(passlabel, 0, 1, 4, 5)
             table.attach(self._password, 1, 2, 4, 5)
@@ -395,6 +385,7 @@ class PageCommon(gtk.VBox):
         self.scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
         self.pack_start(self.scrolled_window)
         self.tree_view = gtk.TreeView()
+        self.tree_view.set_enable_search(False)
         self.tree_view.set_rubber_banding(True)
         self.tree_selection = self.tree_view.get_selection()
         self.tree_selection.set_mode(gtk.SELECTION_MULTIPLE)
@@ -449,6 +440,9 @@ class PageCommon(gtk.VBox):
         self.tree_view.set_model(None)
         if model is not None:
             model.clear()
+
+    def repair_focusability(self):
+        self.tree_view.set_flags(gtk.CAN_FOCUS)
 
     _sourcetargets = (  # Drag and drop source target specs.
         ('text/plain', 0, 1),
@@ -879,7 +873,13 @@ class FlatPage(PageCommon):
 
         self.tree_view.set_rules_hint(True)
 
+    def deactivate(self):
+        self.fuzzy_entry.set_text("")
+        self.where_entry.set_text("")
+        PageCommon.deactivate(self)
+
     def repair_focusability(self):
+        PageCommon.repair_focusability(self)
         self.fuzzy_entry.set_flags(gtk.CAN_FOCUS)
         self.where_entry.set_flags(gtk.CAN_FOCUS)
 
@@ -1003,6 +1003,7 @@ class MediaPane(gtk.Frame):
         main_vbox.show_all()
 
     def repair_focusability(self):
+        self._tree_page.repair_focusability()
         self._flat_page.repair_focusability()
 
     def get_col_widths(self, keyval):
@@ -1124,18 +1125,18 @@ class MediaPane(gtk.Frame):
     def _s6(self, acc, request, cursor, notify, rows):
         if schema_test("name prefix", cursor.fetchall()):
             notify('Found Ampache schema')
-            request(("ALTER TABLE album ADD FULLTEXT name (name)",), self._s7,
+            request(("ALTER TABLE album ADD FULLTEXT idjc (name)",), self._s7,
                                                                     self._f3)
         else:
             notify('Unrecognised database')
             self._safe_disconnect()
         
     def _s7(self, acc, request, cursor, notify, rows):
-        request(("ALTER TABLE artist ADD FULLTEXT name (name)",), self._s8,
+        request(("ALTER TABLE artist ADD FULLTEXT idjc (name)",), self._s8,
                                                                     self._f3)
         
     def _s8(self, acc, request, cursor, notify, rows):
-        request(("ALTER TABLE song ADD FULLTEXT title (title)",), self._s9,
+        request(("ALTER TABLE song ADD FULLTEXT idjc (title)",), self._s9,
                                                                     self._f3)
 
     def _s9(self, acc, request, cursor, notify, rows):
