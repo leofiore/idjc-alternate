@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Added optional song database tree heirarchy album - artist - track.
+
 Improved metadata cancellation for stopped players.
 
 Fixed bug where repeated playing of the same song would only register in the Tracks Played as a single play.

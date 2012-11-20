@@ -25,6 +25,7 @@ from collections import deque
 from urllib import quote
 
 import glib
+import pango
 import gtk
 try:
     import MySQLdb as sql
@@ -54,10 +55,9 @@ class DNDAccumulator(list):
 
     def append(self, pathname, filename):
         list.append(self, "file://%s/%s\n" % (quote(pathname), quote(filename)))
+
     def __str__(self):
         return "".join(self)
-    def __init__(self):
-        list.__init__(self)
 
 
 class DBAccessor(threading.Thread):
@@ -281,7 +281,7 @@ class PrefsControls(gtk.Frame):
             table.attach(self._database, 3, 4, 3, 4)
             
             # Fourth row.
-            passlabel, self._password = self._factory("", 'password')
+            passlabel, self._password = self._factory(_('Password'), "")
             self._password.set_visibility(False)
             l_attach(passlabel, 0, 1, 4, 5)
             table.attach(self._password, 1, 2, 4, 5)
@@ -459,8 +459,9 @@ class PageCommon(gtk.VBox):
         """Build a TreeViewColumn list from a table of data."""
 
         list_ = []
-        for label, data_index, data_function, mw in parameters:
+        for label, data_index, data_function, mw, el in parameters:
             renderer = gtk.CellRendererText()
+            renderer.props.ellipsize = el
             column = gtk.TreeViewColumn(label, renderer)
             column.add_attribute(renderer, 'text', data_index)
             if mw != -1:
@@ -531,6 +532,7 @@ def drag_data_get_common(func):
         
     return inner
 
+
 class TreeUpdater(object):
     """Fills the data store of the TreePage instance."""
 
@@ -539,17 +541,19 @@ class TreeUpdater(object):
         self.cursor = cursor
         self.done = 0.0
         self.total = float(rows)
-        self.dep = 0
-        self.art = self.alb = ""
+        self.r_dep = 0
+        self.l_dep = 0
 
     @threadslock
     def run(self, acc):
         tree_page = self.tree_page
         transform = tree_page.transform
         ampache = tree_page.db_type == "Ampache"
-        append = tree_page.tree_store.append
+        r_append = tree_page.artist_store.append
+        l_append = tree_page.album_store.append
         next_row = self.cursor.fetchone
-        dep = self.dep
+        r_dep = self.r_dep
+        l_dep = self.l_dep
 
         for each in xrange(10):
             if acc.keepalive == False:
@@ -562,42 +566,73 @@ class TreeUpdater(object):
                     self.cursor.close()
                 return
             else:
+                if ampache:
+                    # Split the full path into path and file.
+                    row = list(row)
+                    fn = row[7].rsplit("/", 1)
+                    row[7] = fn[1]
+                    row[8] = fn[0]
+
                 while 1:
-                    if dep == 0:
-                        self.art = row[1]
-                        self.artlower = self.art.lower()
-                        self.iter1 = append(
-                                    None, (-1, self.art, 0, 0, 0, "", "", 0)) 
-                        dep = 1
-                    if dep == 1:
+                    if r_dep == 0:
+                        art = row[1]
+                        self.artlower = art.lower()
+                        self.r_iter1 = r_append(
+                                    None, (-1, art, 0, 0, 0, "", "", 0)) 
+                        r_dep = 1
+                    if r_dep == 1:
                         if self.artlower == row[1].lower():
-                            self.alb = row[2]
-                            self.alblower = self.alb.lower()
-                            self.iter2 = append(
-                                self.iter1, (-2, self.alb, 0, 0, 0, "", "", 0)) 
-                            dep = 2
+                            alb = row[2]
+                            self.alblower = alb.lower()
+                            self.r_iter2 = r_append(
+                                self.r_iter1, (-2, alb, 0, 0, 0, "", "", 0)) 
+                            r_dep = 2
                         else:
-                            dep = 0
-                    if dep == 2:
+                            r_dep = 0
+                    if r_dep == 2:
                         if self.artlower == row[1].lower() and self.alblower \
                                                             == row[2].lower():
-                            if ampache:
-                                # Split the full path into path and file.
-                                row = list(row)
-                                fn = row[7].rsplit("/",1)
-                                row[7] = fn[1]
-                                row[8] = fn[0]
                             path = transform(row[8]) 
-                            append(self.iter2, (row[0], row[4], row[3],
+                            r_append(self.r_iter2, (row[0], row[4], row[3],
                                         row[5], row[6], row[7], path, row[9]))
                             break
                         else:
-                            dep = 1
-        self.dep = dep
+                            r_dep = 1
+
+                while 1:
+                    if l_dep == 0:
+                        self.albartlower = row[2].lower(), row[1].lower()
+                        self.l_iter = l_append(
+                            None, (-1, row[2], 0, 0, 0, "", "", 0, row[1])) 
+                        self.l_iter = l_append(
+                            self.l_iter, (-2, row[1], 0, 0, 0, "", "", 0, "")) 
+                        l_dep = 1
+                    if l_dep == 1:
+                        if self.albartlower == (row[2].lower(), row[1].lower()):
+                            path = transform(row[8]) 
+                            l_append(self.l_iter, (row[0], row[4], row[3],
+                                    row[5], row[6], row[7], path, row[9], ""))
+                            break
+                        else:
+                            l_dep = 0
+
+        self.r_dep = r_dep
+        self.l_dep = l_dep
         self.done += 10.0
         if int(self.done) % 100 == 0:
             self.tree_page.progress_bar.set_fraction(self.done / self.total)
         return True
+
+
+class ExpandAllButton(gtk.Button):
+    def __init__(self, expanded, tooltip=None):
+        expander = gtk.Expander()
+        expander.set_expanded(expanded)
+        expander.show_all()
+        gtk.Button.__init__(self)
+        self.add(expander)
+        if tooltip is not None:
+            set_tip(self, tooltip)
 
 
 class TreePage(PageCommon):
@@ -607,20 +642,29 @@ class TreePage(PageCommon):
         # Base class overwrites these values.
         self.scrolled_window = self.tree_view = self.tree_selection = None
         self.transfrom = self.db_accessor = None
-        
-        self.controls = gtk.HButtonBox()
-        self.controls.set_layout(gtk.BUTTONBOX_SPREAD)
-        self.tree_rebuild = gtk.Button(gtk.STOCK_REFRESH)
+
+        self.controls = gtk.HBox()
+        layout_store = gtk.ListStore(str, gtk.TreeStore)
+        self.layout_combo = gtk.ComboBox(layout_store)
+        cell_text = gtk.CellRendererText()
+        self.layout_combo.pack_start(cell_text)
+        self.layout_combo.add_attribute(cell_text, "text", 0)
+        self.controls.pack_start(self.layout_combo, False)
+        self.right_controls = gtk.HBox()
+        self.right_controls.set_spacing(1)
+        self.tree_rebuild = gtk.Button()
+        set_tip(self.tree_rebuild, _('Reload the database.'))
+        image = gtk.image_new_from_stock(gtk.STOCK_REFRESH, gtk.ICON_SIZE_MENU)
+        self.tree_rebuild.add(image)
         self.tree_rebuild.connect("clicked", self._cb_tree_rebuild)
         self.tree_rebuild.set_use_stock(True)
-        tree_expand = gtk.Button(_('_Expand'), None, True)
-        image = gtk.image_new_from_stock(gtk.STOCK_ADD, gtk.ICON_SIZE_BUTTON)
-        tree_expand.set_image(image)
-        tree_collapse = gtk.Button(_('_Collapse'), None, True)
-        image = gtk.image_new_from_stock(gtk.STOCK_REMOVE, gtk.ICON_SIZE_BUTTON)
-        tree_collapse.set_image(image)
+        tree_expand = ExpandAllButton(True, _('Expand entire tree.'))
+        tree_collapse = ExpandAllButton(False, _('Collapse tree.'))
+        sg = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
         for each in (self.tree_rebuild, tree_expand, tree_collapse):
-            self.controls.add(each)
+            self.right_controls.pack_start(each, False)
+            sg.add_widget(each)
+        self.controls.pack_end(self.right_controls, False)
             
         PageCommon.__init__(self, notebook, _("Tree"), self.controls)
         
@@ -631,24 +675,32 @@ class TreePage(PageCommon):
                                                                 self.tree_view)
         tree_collapse.connect_object("clicked", gtk.TreeView.collapse_all,
                                                                 self.tree_view)
+        self.tree_cols = self._make_tv_columns(self.tree_view, (
+                ("", 1, self._cell_show_unknown, 180, pango.ELLIPSIZE_END),
+                # TC: The disk number of the album track.
+                (_('Disk'), 7, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+                # TC: The album track number.
+                (_('Track'), 2, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+                # TC: Track playback time.
+                (_('Duration'), 3, self._cond_cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
+                (_('Bitrate'), 4, self._cell_k, -1, pango.ELLIPSIZE_NONE),
+                (_('Filename'), 5, None, 100, pango.ELLIPSIZE_END),
+                # TC: Directory path to a file.
+                (_('Path'), 6, None, -1, pango.ELLIPSIZE_NONE),
+                ))
 
         # id, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path, disk
-        self.tree_store = gtk.TreeStore(int, str, int, int, int, str, str, int)
-        self.tree_cols = self._make_tv_columns(self.tree_view, (
-                ("%s - %s - %s" % (_('Artist'), _('Album'), _('Title')), 1,
-                                                self._cell_show_unknown, 180),
-                # TC: The disk number of the album track.
-                (_('Disk'), 7, self._cell_ralign, -1),
-                # TC: The album track number.
-                (_('Track'), 2, self._cell_ralign, -1),
-                # TC: Track playback time.
-                (_('Duration'), 3, self._cond_cell_secs_to_h_m_s, -1),
-                (_('Bitrate'), 4, self._cell_k, -1),
-                (_('Filename'), 5, None, 100),
-                # TC: Directory path to a file.
-                (_('Path'), 6, None, -1),
-                ))
-                
+        data_signature = int, str, int, int, int, str, str, int
+        self.artist_store = gtk.TreeStore(*data_signature)
+        data_signature += (str,)  # For sorting.
+        self.album_store = gtk.TreeStore(*data_signature)
+        self.album_store.set_default_sort_func(self._album_sort_compare)
+        self.album_store.set_sort_column_id(-1, gtk.SORT_ASCENDING)
+        layout_store.append((_('Artist - Album - Track'), self.artist_store))
+        layout_store.append((_('Album (Artist) - Track'), self.album_store))
+        self.layout_combo.set_active(0)
+        self.layout_combo.connect("changed", self._cb_layout_combo)
+
         self.loading_vbox = gtk.VBox()
         self.loading_vbox.set_border_width(20)
         self.loading_vbox.set_spacing(20)
@@ -670,9 +722,10 @@ class TreePage(PageCommon):
             self.scrolled_window.hide()
             self.loading_vbox.show()
             self.tree_view.set_model(None)
-            self.tree_store.clear()
+            self.artist_store.clear()
+            self.album_store.clear()
         else:
-            self.tree_view.set_model(self.tree_store)
+            self.layout_combo.emit("changed")
             self.loading_vbox.hide()
             self.scrolled_window.show()
             self.controls.show()
@@ -686,6 +739,17 @@ class TreePage(PageCommon):
             glib.source_remove(self._pulse_id.popleft())
         
         PageCommon.deactivate(self)
+
+    @staticmethod
+    def _album_sort_compare(model, iter1, iter2):
+        depth = model.get_value(iter1, 0)
+        
+        cols = (1, 8) if depth < 0 else (7, 2, 1)
+        return cmp(*[[model.get_value(i, c) for c in cols] for i in (iter1, iter2)])
+
+    def _cb_layout_combo(self, widget):
+        store = widget.get_model().get_value(widget.get_active_iter(), 1)
+        self.tree_view.set_model(store)
 
     def _cb_tree_rebuild(self, widget):
         """(Re)load the tree with info from the database."""
@@ -712,7 +776,8 @@ class TreePage(PageCommon):
         self._pulse_id.append(glib.timeout_add(1000, self._progress_pulse))
         self._acc.request((query,), self._handler, self._failhandler)
 
-    def _tree_select_func(self, info):
+    @staticmethod
+    def _tree_select_func(info):
         return len(info) - 1
 
     @drag_data_get_common
@@ -859,17 +924,17 @@ class FlatPage(PageCommon):
         self.list_store = gtk.ListStore(
                         int, int, str, str, int, str, int, int, str, str, int)
         self.tree_cols = self._make_tv_columns(self.tree_view, (
-                ("(%d)" % 0, 0, self._cell_ralign, -1),
-                (_('Artist'), 2, self._cell_show_unknown, 100),
-                (_('Album'), 3, self._cell_show_unknown, 100),
-                (_('Disk'), 10, self._cell_ralign, -1),
-                (_('Track'), 4, self._cell_ralign, -1),
-                (_('Title'), 5, self._cell_show_unknown, 100),
-                (_('Duration'), 6, self._cell_secs_to_h_m_s, -1),
-                (_('Bitrate'), 7, self._cell_k, -1),
-                (_('Filename'), 8, None, 100),
-                (_('Path'), 9, None, -1),
-                ))
+            ("(%d)" % 0, 0, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+            (_('Artist'), 2, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
+            (_('Album'), 3, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
+            (_('Disk'), 10, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+            (_('Track'), 4, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+            (_('Title'), 5, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
+            (_('Duration'), 6, self._cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
+            (_('Bitrate'), 7, self._cell_k, -1, pango.ELLIPSIZE_NONE),
+            (_('Filename'), 8, None, 100, pango.ELLIPSIZE_END),
+            (_('Path'), 9, None, -1, pango.ELLIPSIZE_NONE),
+            ))
 
         self.tree_view.set_rules_hint(True)
 
