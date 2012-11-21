@@ -18,6 +18,7 @@
 
 
 import time
+import types
 import gettext
 import threading
 from functools import partial, wraps
@@ -549,8 +550,6 @@ class TreeUpdater(object):
         tree_page.tree_view.set_model(None)
         tree_page.artist_store.clear()
         tree_page.album_store.clear()
-        # Turn off sort for speed.
-        tree_page.album_store.set_sort_column_id(0, gtk.SORT_ASCENDING)
 
     @threadslock
     def run(self, acc):
@@ -616,15 +615,15 @@ class TreeUpdater(object):
                     if l_dep == 0:
                         self.albartlower = row[2].lower(), row[1].lower()
                         self.l_iter = l_append(
-                            None, (-1, row[2], 0, 0, 0, "", "", 0)) 
+                            None, (-1, row[2], 0, 0, 0, "", "", 0, row[1])) 
                         self.l_iter = l_append(
-                            self.l_iter, (-2, row[1], 0, 0, 0, "", "", 0)) 
+                            self.l_iter, (-2, row[1], 0, 0, 0, "", "", 0, "")) 
                         l_dep = 1
                     if l_dep == 1:
                         if self.albartlower == (row[2].lower(), row[1].lower()):
                             path = transform(row[8]) 
                             l_append(self.l_iter, (row[0], row[4], row[3],
-                                    row[5], row[6], row[7], path, row[9]))
+                                    row[5], row[6], row[7], path, row[9], ""))
                             break
                         else:
                             l_dep = 0
@@ -638,19 +637,38 @@ class TreeUpdater(object):
 
     def _sort(self, acc):
         self.tree_page.album_store.set_sort_column_id(-1, gtk.SORT_ASCENDING)
-        self.tree_page.loading_label.set_text(_('Pruning'))
+        self.tree_page.album_store.set_sort_column_id(0, gtk.SORT_ASCENDING)
+        self.tree_page.loading_label.set_text(_('Merging Albums'))
+        self.tree_page.progress_bar.set_fraction(1.0)
         self._stage_run = self._prune
         return acc.keepalive
 
     def _prune(self, acc):
-        
-        
-        
-        
-        
-        
+        model = self.tree_page.album_store
+        read_alb = lambda i: model.get_value(i, 1).lower()
+        i1 = model.get_iter_root()
+        while i1 is not None:
+            alb = read_alb(i1)
+            i2 = model.iter_next(i1)
+            while i2 is not None and alb == read_alb(i2):
+                self._copy_children(model, i1, i2)
+                model.remove(i2)
+            i1 = i2
+
         self.tree_page.set_loading_view(False)
         return False
+
+    def _copy_children(this, model, p1, p2):
+        c2 = model.iter_children(p2)
+        if c2 is None:
+            return
+            
+        while c2:
+            c1 = model.append(p1, model.get(c2, *xrange(9)))
+            this(this, model, c1, c2)
+            c2 = model.iter_next(c2)
+    _copy_children = types.MethodType(_copy_children, _copy_children)
+        
 
 class ExpandAllButton(gtk.Button):
     def __init__(self, expanded, tooltip=None):
@@ -720,10 +738,10 @@ class TreePage(PageCommon):
         # id, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path, disk
         data_signature = int, str, int, int, int, str, str, int
         self.artist_store = gtk.TreeStore(*data_signature)
-        self.album_store = gtk.TreeStore(*data_signature)
+        self.album_store = gtk.TreeStore(*data_signature + (str, ))
         self.album_store.set_default_sort_func(self._album_sort_compare)
         layout_store.append((_('Artist - Album - Track'), self.artist_store))
-        layout_store.append((_('Album (Artist) - Track'), self.album_store))
+        layout_store.append((_('Album - Artist - Track'), self.album_store))
         self.layout_combo.set_active(0)
         self.layout_combo.connect("changed", self._cb_layout_combo)
 
@@ -768,7 +786,7 @@ class TreePage(PageCommon):
     def _album_sort_compare(model, iter1, iter2):
         depth = model.get_value(iter1, 0)
         
-        cols = (1,) if depth < 0 else (7, 2, 1)
+        cols = (1, 8) if depth < 0 else (7, 2, 1)
         return cmp(*[[model.get_value(i, c) for c in cols] for i in (iter1, iter2)])
 
     def _cb_layout_combo(self, widget):
