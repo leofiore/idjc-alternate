@@ -543,9 +543,20 @@ class TreeUpdater(object):
         self.total = float(rows)
         self.r_dep = 0
         self.l_dep = 0
+        self._stage_run = self._fill
+
+        # Empty out old data.
+        tree_page.tree_view.set_model(None)
+        tree_page.artist_store.clear()
+        tree_page.album_store.clear()
+        # Turn off sort for speed.
+        tree_page.album_store.set_sort_column_id(0, gtk.SORT_ASCENDING)
 
     @threadslock
     def run(self, acc):
+        return self._stage_run(acc)
+
+    def _fill(self, acc):
         tree_page = self.tree_page
         transform = tree_page.transform
         ampache = tree_page.db_type == "Ampache"
@@ -557,14 +568,16 @@ class TreeUpdater(object):
 
         for each in xrange(10):
             if acc.keepalive == False:
-                return
+                return False
 
             row = next_row()
             if row is None:
-                self.tree_page.set_loading_view(False)
                 if self.cursor.is_detached:
                     self.cursor.close()
-                return
+                tree_page.loading_label.set_text(_('Sorting'))
+                self._stage_run = self._sort
+
+                return True
             else:
                 if ampache:
                     # Split the full path into path and file.
@@ -603,15 +616,15 @@ class TreeUpdater(object):
                     if l_dep == 0:
                         self.albartlower = row[2].lower(), row[1].lower()
                         self.l_iter = l_append(
-                            None, (-1, row[2], 0, 0, 0, "", "", 0, row[1])) 
+                            None, (-1, row[2], 0, 0, 0, "", "", 0)) 
                         self.l_iter = l_append(
-                            self.l_iter, (-2, row[1], 0, 0, 0, "", "", 0, "")) 
+                            self.l_iter, (-2, row[1], 0, 0, 0, "", "", 0)) 
                         l_dep = 1
                     if l_dep == 1:
                         if self.albartlower == (row[2].lower(), row[1].lower()):
                             path = transform(row[8]) 
                             l_append(self.l_iter, (row[0], row[4], row[3],
-                                    row[5], row[6], row[7], path, row[9], ""))
+                                    row[5], row[6], row[7], path, row[9]))
                             break
                         else:
                             l_dep = 0
@@ -623,6 +636,21 @@ class TreeUpdater(object):
             self.tree_page.progress_bar.set_fraction(self.done / self.total)
         return True
 
+    def _sort(self, acc):
+        self.tree_page.album_store.set_sort_column_id(-1, gtk.SORT_ASCENDING)
+        self.tree_page.loading_label.set_text(_('Pruning'))
+        self._stage_run = self._prune
+        return acc.keepalive
+
+    def _prune(self, acc):
+        
+        
+        
+        
+        
+        
+        self.tree_page.set_loading_view(False)
+        return False
 
 class ExpandAllButton(gtk.Button):
     def __init__(self, expanded, tooltip=None):
@@ -692,10 +720,8 @@ class TreePage(PageCommon):
         # id, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path, disk
         data_signature = int, str, int, int, int, str, str, int
         self.artist_store = gtk.TreeStore(*data_signature)
-        data_signature += (str,)  # For sorting.
         self.album_store = gtk.TreeStore(*data_signature)
         self.album_store.set_default_sort_func(self._album_sort_compare)
-        self.album_store.set_sort_column_id(-1, gtk.SORT_ASCENDING)
         layout_store.append((_('Artist - Album - Track'), self.artist_store))
         layout_store.append((_('Album (Artist) - Track'), self.album_store))
         self.layout_combo.set_active(0)
@@ -721,10 +747,8 @@ class TreePage(PageCommon):
             self.controls.hide()
             self.scrolled_window.hide()
             self.loading_vbox.show()
-            self.tree_view.set_model(None)
-            self.artist_store.clear()
-            self.album_store.clear()
         else:
+            self.album_store.set_sort_column_id(-1, gtk.SORT_ASCENDING)
             self.layout_combo.emit("changed")
             self.loading_vbox.hide()
             self.scrolled_window.show()
@@ -744,7 +768,7 @@ class TreePage(PageCommon):
     def _album_sort_compare(model, iter1, iter2):
         depth = model.get_value(iter1, 0)
         
-        cols = (1, 8) if depth < 0 else (7, 2, 1)
+        cols = (1,) if depth < 0 else (7, 2, 1)
         return cmp(*[[model.get_value(i, c) for c in cols] for i in (iter1, iter2)])
 
     def _cb_layout_combo(self, widget):
