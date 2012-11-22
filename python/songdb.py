@@ -97,6 +97,11 @@ class DBAccessor(threading.Thread):
         
         self.jobs.append((sql_query, handler, failhandler))
         self.semaphore.release()
+
+    def request_disconnect(self):
+        """Non handlers can queue a request for disconnection."""
+        
+        self.request(None, None, None)
         
     def run(self):
         notify = partial(glib.idle_add, threadslock(self.notify))
@@ -105,16 +110,16 @@ class DBAccessor(threading.Thread):
             while self.keepalive:
                 self.semaphore.acquire()
                 if self.keepalive and self.jobs:
-                    try:
-                        query, handler, failhandler = self.jobs.popleft()
-                    except IndexError:
-                        break
+                    query, handler, failhandler = self.jobs.popleft()
 
                     trycount = 0
                     while trycount < 3:
                         try:
+                            if query is None:
+                                self.disconnect()
+                            
                             rows = self._cursor.execute(*query)
-                        except (sql.OperationalError, AttributeError) as e:
+                        except (sql.Error, AttributeError) as e:
                             if not self.keepalive:
                                 return
                             
@@ -158,7 +163,6 @@ class DBAccessor(threading.Thread):
                                     notify(_('Connected: utf-8 mode failed'))
                                 else:
                                     notify(_('Connected'))
-                                self._cursor.detach = self._patch_for_cursor()
                         else:
                             if not self.keepalive:
                                 return
@@ -181,6 +185,19 @@ class DBAccessor(threading.Thread):
                 pass
             notify(_('Disconnected'))
 
+    def disconnect(self):
+        """Handler may request a disconnection."""
+        
+        assert threading.current_thread() is self
+        
+        try:
+            self._handle.close()
+        except sql.Error:
+            glib.idle_add(threadslock(self.notify),
+                                            _('Problem dropping connection'))
+        else:
+            glib.idle_add(threadslock(self.notify), _('Connection dropped'))
+
     def close(self):
         """Clean up the worker thread prior to disposal."""
         
@@ -189,27 +206,16 @@ class DBAccessor(threading.Thread):
             self.semaphore.release()
             return
 
-    def _patch_for_cursor(self):
-        """Adds a detach method to the database cursor.
+    def replace_cursor(self, current_cursor):
+        """To be called in handlers so they get to keep the cursor."""
         
-        This is intended to be used in handler threads.
-        It is not compatible with server side cursors.
-        """
+        assert threading.current_thread() is self
+        assert current_cursor is self._cursor
+            
+        self._cursor = self._handle.cursor()
 
-        orig_cursor = self._cursor
-        orig_cursor.is_detached = False
-        
-        def detach():
-            try:
-                self._cursor = self._handle.cursor()
-            except sql.OperationalError:
-                # Connection may have dropped but it's not a problem.
-                pass
-            else:
-                self._cursor.detach = self._patch_for_cursor()
-
-            self.is_detached = True
-        return detach
+    def cursor_is_unbound(self, cursor):
+        return cursor is not self._cursor
 
 
 class PrefsControls(gtk.Frame):
@@ -571,7 +577,7 @@ class TreeUpdater(object):
 
             row = next_row()
             if row is None:
-                if self.cursor.is_detached:
+                if acc.cursor_is_unbound(self.cursor):
                     self.cursor.close()
                 tree_page.loading_label.set_text(_('Sorting'))
                 self._stage_run = self._sort
@@ -849,7 +855,8 @@ class TreePage(PageCommon):
     ###########################################################################
     
     def _handler(self, acc, request, cursor, notify, rows):
-        cursor.detach()
+        acc.replace_cursor(cursor)
+        acc.disconnect()
         self._updater = TreeUpdater(self, cursor, rows)
         while self._update_id:
             glib.source_remove(self._update_id.popleft())
@@ -907,7 +914,7 @@ class FlatUpdater(object):
                 if found:
                     self.flat_page.tree_cols[0].set_title("(%s)" % found)
                     self.flat_page.tree_view.set_model(store)
-                if self.cursor.is_detached:
+                if acc.cursor_is_unbound(self.cursor):
                     self.cursor.close()
                 return False
 
@@ -1082,7 +1089,7 @@ class FlatPage(PageCommon):
     ###########################################################################
 
     def _s1(self, acc, request, cursor, notify, rows):
-        cursor.detach()
+        acc.replace_cursor(cursor)
         self._updater = FlatUpdater(self, cursor)
         while self._update_id:
             glib.source_remove(self._update_id.popleft())
