@@ -40,6 +40,10 @@ from .gtkstuff import threadslock, DefaultEntry
 
 __all__ = ['MediaPane']
 
+AMPACHE = "Ampache"
+PROKYON_3 = "Prokyon 3"
+FUZZY, CLEAN, WHERE, DIRTY = xrange(4)
+
 t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
 _ = t.gettext
 
@@ -49,16 +53,6 @@ def schema_test(string, data):
     
     data = frozenset(x[0] for x in data)
     return frozenset(string.split()).issubset(data)
-
-
-class DNDAccumulator(list):
-    """ Helper class for assembling a string of file URLs """
-
-    def append(self, pathname, filename):
-        list.append(self, "file://%s/%s\n" % (quote(pathname), quote(filename)))
-
-    def __str__(self):
-        return "".join(self)
 
 
 class DBAccessor(threading.Thread):
@@ -404,7 +398,7 @@ class PageCommon(gtk.VBox):
         self.tree_view.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
             self._sourcetargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_COPY)
         self.tree_view.connect_after("drag-begin", self._cb_drag_begin)
-        self.tree_view.connect("drag_data_get", self._cb_drag_data_get)
+        self.tree_view.connect("drag-data-get", self._cb_drag_data_get)
         self._update_id = deque()
         self._acc = None
 
@@ -461,6 +455,11 @@ class PageCommon(gtk.VBox):
 
         context.set_icon_stock(gtk.STOCK_CDROM, -5, -5)
 
+    def _cb_drag_data_get(self, tree_view, context, selection, target, etime):
+        model, paths = self.tree_selection.get_selected_rows()
+        data = ("file://%s/%s" % row for row in self._drag_data(model, paths))
+        selection.set(selection.target, 8, "\n".join(data))
+
     @staticmethod
     def _make_tv_columns(tree_view, parameters):
         """Build a TreeViewColumn list from a table of data."""
@@ -494,7 +493,7 @@ class PageCommon(gtk.VBox):
             renderer.set_property("text", "")
         elif self._db_type == "P3":
             renderer.set_property("text", "%dk" % bitrate)
-        elif bitrate > 9999 and self._db_type == "Ampache":
+        elif bitrate > 9999 and self._db_type == AMPACHE:
             renderer.set_property("text", "%dk" % (bitrate // 1000))
         renderer.set_property("xalign", 1.0)
     
@@ -529,17 +528,6 @@ class PageCommon(gtk.VBox):
             renderer.set_property("text", "")
 
 
-def drag_data_get_common(func):
-    @wraps(func)
-    def inner(self, tree_view, context, selection, target_id, etime):
-        tree_selection = tree_view.get_selection()
-        model, paths = tree_selection.get_selected_rows()
-        data = DNDAccumulator()
-        return func(tree_view, model, paths, data, selection)
-        
-    return inner
-
-
 class TreeUpdater(object):
     """Fills the data store of the TreePage instance."""
 
@@ -564,7 +552,7 @@ class TreeUpdater(object):
     def _fill(self, acc):
         tree_page = self.tree_page
         transform = tree_page.transform
-        ampache = tree_page.db_type == "Ampache"
+        ampache = tree_page.db_type == AMPACHE
         r_append = tree_page.artist_store.append
         l_append = tree_page.album_store.append
         next_row = self.cursor.fetchone
@@ -803,11 +791,11 @@ class TreePage(PageCommon):
         """(Re)load the tree with info from the database."""
 
         self.set_loading_view(True)
-        if self._db_type == "Prokyon 3":
+        if self._db_type == PROKYON_3:
             query = """SELECT id,artist,album,tracknumber,title,length,bitrate,
                         filename,path,0 as disk FROM tracks ORDER BY
                         artist,album,path,tracknumber,title"""
-        elif self._db_type == "Ampache":
+        elif self._db_type == AMPACHE:
             query = """SELECT song.id as id, 
                 concat_ws(" ", artist.prefix, artist.name) as artist, 
                 concat_ws(" ", album.prefix, album.name) as album,
@@ -828,24 +816,22 @@ class TreePage(PageCommon):
     def _tree_select_func(info):
         return len(info) - 1
 
-    @drag_data_get_common
-    def _cb_drag_data_get(tree_view, model, paths, data, selection):
+    @staticmethod
+    def _drag_data(model, paths):
         if len(paths) == 1 and len(paths[0]) == 2:
             d2 = 0
             while 1:
                 try:
-                    iter = model.get_iter(paths[0] + (d2, ))
-                except ValueError:
-                    break
-                data.append(model.get_value(iter, 6), model.get_value(iter, 5))
+                    row = model[paths[0] + (d2, )]
+                except:
+                    return
+                yield row[6], row[5]
                 d2 += 1
         else:
             for each in paths:
                 if len(each) == 3:
-                    iter = model.get_iter(each)
-                    data.append(model.get_value(iter, 6),
-                                                        model.get_value(iter,5))
-        selection.set(selection.target, 8, str(data))
+                    row = model[each]
+                    yield row[6], row[5]
 
     @threadslock
     def _progress_pulse(self):
@@ -882,7 +868,7 @@ class FlatUpdater(object):
         flat_page.list_store.clear()
         self.flat_page = flat_page
         self.cursor = cursor
-        self.ampache = flat_page.db_type == "Ampache"
+        self.ampache = flat_page.db_type == AMPACHE
         self.transform = flat_page.transform
         self.found = 0
 
@@ -998,21 +984,21 @@ class FlatPage(PageCommon):
         self.where_entry.set_flags(gtk.CAN_FOCUS)
 
     _queries_table = {
-        "Prokyon 3":
-            {"fuzzy": ("clean", """
+        PROKYON_3:
+            {FUZZY: (CLEAN, """
                     SELECT id,artist,album,tracknumber,title,length,
                     bitrate,filename,path,0 as disk FROM tracks
                     WHERE MATCH (artist,album,title,filename) AGAINST (%s)
                     """),
         
-            "where": ("dirty", """
+            WHERE: (DIRTY, """
                     SELECT id,artist,album,tracknumber,title,length,
                     bitrate,filename, path, 0 as disk FROM tracks WHERE (%s)
                     ORDER BY artist,album,path,tracknumber,title
                     """)},
         
-        "Ampache":
-            {"fuzzy": ("clean", """
+        AMPACHE:
+            {FUZZY: (CLEAN, """
                     SELECT song.id as id,
                     concat_ws(" ",artist.prefix,artist.name),
                     concat_ws(" ",album.prefix,album.name),
@@ -1026,7 +1012,7 @@ class FlatPage(PageCommon):
                           OR MATCH(title) against(%s))
                     """),
 
-            "where": ("dirty", """
+            WHERE: (DIRTY, """
                     SELECT song.id as id,
                     concat_ws(" ", artist.prefix, artist.name) as artist,
                     concat_ws(" ", album.prefix, album.name) as albumname,
@@ -1047,8 +1033,8 @@ class FlatPage(PageCommon):
             print "unsupported database type"
             return
 
-        for widget, search_type in ((self.fuzzy_entry, "fuzzy"),
-                                    (self.where_entry, "where")):
+        for widget, search_type in ((self.fuzzy_entry, FUZZY),
+                                    (self.where_entry, WHERE)):
             user_text = widget.get_text().strip()
             if user_text:
                 access_mode, query = table[search_type]
@@ -1060,9 +1046,9 @@ class FlatPage(PageCommon):
             return
 
         qty = query.count("(%s)")
-        if access_mode == "clean":
+        if access_mode == CLEAN:
             query = (query, (user_text, ) * qty)
-        elif access_mode == "dirty":  # Accepting of SQL code in user data.
+        elif access_mode == DIRTY:  # Accepting of SQL code in user data.
             query = (query % (user_text, ) * qty, )
         else:
             print "unknown database access mode", access_mode
@@ -1071,12 +1057,13 @@ class FlatPage(PageCommon):
         self._acc.request(query, self._s1)
         return
             
-    @drag_data_get_common
-    def _cb_drag_data_get(tree_view, model, paths, data, selection):
-        for each in paths:
-            iter = model.get_iter(each)
-            data.append(model.get_value(iter, 9), model.get_value(iter, 8))
-        selection.set(selection.target, 8, str(data))
+    @staticmethod
+    def _drag_data(model, paths):
+        """Generate tuples of (path, filename) for the given paths."""
+        
+        for path in paths:
+            row = model[path]
+            yield row[9], row[8]
 
     def _cb_fuzzysearch_changed(self, widget):
         if widget.get_text().strip():
@@ -1184,7 +1171,7 @@ class MediaPane(gtk.Frame):
                     notify_('Failed to create FULLTEXT index')
             self._hand_over(dbtype)
         return inner
-    _f2, _f3 = [factory(x) for x in ("Prokyon 3", "Ampache")]
+    _f2, _f3 = [factory(x) for x in (PROKYON_3, AMPACHE)]
     del factory, x
 
     def _s1(self, acc, request, cursor, notify, rows):
@@ -1255,4 +1242,4 @@ class MediaPane(gtk.Frame):
 
     def _s9(self, acc, request, cursor, notify, rows):
         notify('Fulltext index added')
-        self._hand_over("Ampache")
+        self._hand_over(AMPACHE)
