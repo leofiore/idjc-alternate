@@ -48,11 +48,14 @@ t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
 _ = t.gettext
 
 
-def schema_test(string, data):
-    """For checking a database schema."""
+def thread_only(func):
+    """Guard a method from being called from outside the thread context."""
     
-    data = frozenset(x[0] for x in data)
-    return frozenset(string.split()).issubset(data)
+    @wraps(func)
+    def inner(self, *args, **kwargs):
+        assert threading.current_thread() == self
+        func(self, *args, **kwargs)
+    return inner
 
 
 class DBAccessor(threading.Thread):
@@ -92,12 +95,17 @@ class DBAccessor(threading.Thread):
         self.jobs.append((sql_query, handler, failhandler))
         self.semaphore.release()
 
-    def request_disconnect(self):
-        """Non handlers can queue a request for disconnection."""
+    def close(self):
+        """Clean up the worker thread prior to disposal."""
         
-        self.request(None, None, None)
-        
+        if self.is_alive():
+            self.keepalive = False
+            self.semaphore.release()
+            return
+
     def run(self):
+        """This is the worker thread."""
+
         notify = partial(glib.idle_add, threadslock(self.notify))
         
         try:
@@ -179,11 +187,14 @@ class DBAccessor(threading.Thread):
                 pass
             notify(_('Disconnected'))
 
+    @thread_only
+    def purge_job_queue(self):
+        while self.jobs:
+            self.jobs.popleft()
+            self.semaphore.acquire()
+
+    @thread_only
     def disconnect(self):
-        """Handler may request a disconnection."""
-        
-        assert threading.current_thread() is self
-        
         try:
             self._handle.close()
         except sql.Error:
@@ -192,24 +203,12 @@ class DBAccessor(threading.Thread):
         else:
             glib.idle_add(threadslock(self.notify), _('Connection dropped'))
 
-    def close(self):
-        """Clean up the worker thread prior to disposal."""
+    @thread_only
+    def replace_cursor(self, cursor):
+        """Handler may break off the cursor to pass along its data."""
         
-        if self.is_alive():
-            self.keepalive = False
-            self.semaphore.release()
-            return
-
-    def replace_cursor(self, current_cursor):
-        """To be called in handlers so they get to keep the cursor."""
-        
-        assert threading.current_thread() is self
-        assert current_cursor is self._cursor
-            
+        assert cursor is self._cursor
         self._cursor = self._handle.cursor()
-
-    def cursor_is_unbound(self, cursor):
-        return cursor is not self._cursor
 
 
 class PrefsControls(gtk.Frame):
@@ -569,8 +568,7 @@ class TreeUpdater(object):
 
             row = next_row()
             if row is None:
-                if acc.cursor_is_unbound(self.cursor):
-                    self.cursor.close()
+                self.cursor.close()
                 tree_page.loading_label.set_text(_('Sorting'))
                 self._stage_run = self._sort
 
@@ -876,63 +874,6 @@ class TreePage(PageCommon):
             glib.source_remove(self._pulse_id.popleft())
 
 
-class FlatUpdater(object):
-    """Fills the data store of the FlatPage instance."""
-    
-    def __init__(self, flat_page, cursor):
-        self.flat_page = flat_page
-        self.cursor = cursor
-        self.ampache = flat_page.db_type == AMPACHE
-        self.transform = flat_page.transform
-        self.found = 0
-        self.init = False
-        glib.idle_add(self.run_first, priority=glib.PRIORITY_HIGH)
-
-    @threadslock
-    def run_first(self):
-        self.flat_page.tree_view.set_model(None)
-        self.flat_page.list_store.clear()
-        self.init = True
-
-    @threadslock
-    def run(self, acc):
-        if not self.init:
-            return True
-        
-        next_row = self.cursor.fetchone
-        ampache = self.ampache
-        transform = self.transform
-        found = self.found
-        store = self.flat_page.list_store
-
-        for i in xrange(100):
-            if acc.keepalive == False:
-                return False
-            
-            row = next_row()
-            if row:
-                found += 1
-                row = list(row)
-                if ampache:
-                    # Split the file into path and filename
-                    fn = row[6].rsplit("/",1)
-                    row[6] = fn[1]
-                    row[7] = fn[0]
-                
-                row[7] = transform(row[7])                
-                store.append([found] + row)
-            else:
-                if found:
-                    self.flat_page.tree_cols[0].set_title("(%s)" % found)
-                    self.flat_page.tree_view.set_model(store)
-                if acc.cursor_is_unbound(self.cursor):
-                    self.cursor.close()
-                return False
-
-        self.found = found
-        return True
-
-
 class FlatPage(PageCommon):
     """Flat list based user interface with a search facility."""
     
@@ -1058,17 +999,18 @@ class FlatPage(PageCommon):
             print "unsupported database type"
             return
 
-        for widget, search_type in ((self.fuzzy_entry, FUZZY),
-                                    (self.where_entry, WHERE)):
-            user_text = widget.get_text().strip()
-            if user_text:
-                access_mode, query = table[search_type]
-                break
+        user_text = self.fuzzy_entry.get_text().strip()
+        if user_text:
+            access_mode, query = table[FUZZY]
         else:
-            # An empty search.
-            self.list_store.clear()
-            self.where_entry.set_text("")
-            return
+            access_mode, query = table[WHERE]
+            user_text = self.where_entry.get_text().strip()
+            if not user_text:
+                self.where_entry.set_text("")
+                while self._update_id:
+                    glib.source_remove(self._update_id.popleft())
+                self.list_store.clear()
+                return
 
         qty = query.count("(%s)")
         if access_mode == CLEAN:
@@ -1079,7 +1021,7 @@ class FlatPage(PageCommon):
             print "unknown database access mode", access_mode
             return
 
-        self._acc.request(query, self._s1)
+        self._acc.request(query, self._handler_1)
         return
             
     @staticmethod
@@ -1100,12 +1042,66 @@ class FlatPage(PageCommon):
         
     ###########################################################################
 
-    def _s1(self, acc, request, cursor, notify, rows):
-        acc.replace_cursor(cursor)
-        self._updater = FlatUpdater(self, cursor)
+    def _handler_1(self, acc, request, cursor, notify, rows):
         while self._update_id:
             glib.source_remove(self._update_id.popleft())
-        self._update_id.append(glib.idle_add(self._updater.run, acc))
+
+        try:
+            self._old_cursor.close()
+        except (AttributeError, sql.Error):
+            pass
+
+        self._old_cursor = cursor
+        acc.replace_cursor(cursor)
+        acc.purge_job_queue()
+        self._update_id.append(glib.idle_add(self._update_1, acc, cursor))
+
+    ###########################################################################
+    
+    @threadslock
+    def _update_1(self, acc, cursor):
+        self.found = 0
+        self.tree_view.set_model(None)
+        self.list_store.clear()
+        self._update_id.append(glib.idle_add(self._update_2, acc, cursor))
+        return False
+
+    @threadslock
+    def _update_2(self, acc, cursor):
+        next_row = cursor.fetchone
+        ampache = self._db_type == AMPACHE
+        transform = self.transform
+        found = self.found
+        append = self.list_store.append
+
+        for i in xrange(100):
+            if acc.keepalive == False:
+                return False
+
+            try:
+                row = next_row()
+            except sql.Error:
+                return False
+
+            if row:
+                found += 1
+                row = list(row)
+                if ampache:
+                    # Split the file into path and filename
+                    fn = row[6].rsplit("/",1)
+                    row[6] = fn[1]
+                    row[7] = fn[0]
+
+                row[7] = transform(row[7])                
+                append([found] + row)
+            else:
+                if found:
+                    self.tree_cols[0].set_title("(%s)" % found)
+                    self.tree_view.set_model(self.list_store)
+                return False
+
+        self.found = found
+        return True
 
 
 class MediaPane(gtk.Frame):
@@ -1160,7 +1156,7 @@ class MediaPane(gtk.Frame):
             self._acc1 = DBAccessor(**conn_data)
             self._acc2 = DBAccessor(**conn_data)
             self._transform = transform
-            self._acc1.request(('SHOW tables',), self._s1, self._f1)
+            self._acc1.request(('SHOW tables',), self._stage_1, self._fail_1)
         else:
             try:
                 self._acc1.close()
@@ -1171,6 +1167,11 @@ class MediaPane(gtk.Frame):
                 self._tree_page.deactivate()
                 self._flat_page.deactivate()
             self.hide()
+
+    @staticmethod
+    def schema_test(string, data):
+        data = frozenset(x[0] for x in data)
+        return frozenset(string.split()).issubset(data)
     
     ###########################################################################
 
@@ -1182,7 +1183,7 @@ class MediaPane(gtk.Frame):
         self._flat_page.activate(self._acc2, database_name, self._transform)
         glib.idle_add(threadslock(self.show))
             
-    def _f1(self, exception, notify):
+    def _fail_1(self, exception, notify):
         # Give up.
         self._safe_disconnect()
 
@@ -1197,75 +1198,75 @@ class MediaPane(gtk.Frame):
                     notify_('Failed to create FULLTEXT index')
             self._hand_over(dbtype)
         return inner
-    _f2, _f3 = [factory(x) for x in (PROKYON_3, AMPACHE)]
+    _fail_2, _fail_3 = [factory(x) for x in (PROKYON_3, AMPACHE)]
     del factory, x
 
-    def _s1(self, acc, request, cursor, notify, rows):
+    def _stage_1(self, acc, request, cursor, notify, rows):
         """Running under the accessor worker thread!
         
         Step 1 Identifying database type.
         """
         
         data = cursor.fetchall()
-        if schema_test("tracks", data):
-            request(('DESCRIBE tracks',), self._s2, self._f1)
-        elif schema_test("album artist song", data):
-            request(('DESCRIBE song',), self._s4, self._f1)
+        if self.schema_test("tracks", data):
+            request(('DESCRIBE tracks',), self._stage_2, self._fail_1)
+        elif self.schema_test("album artist song", data):
+            request(('DESCRIBE song',), self._stage_4, self._fail_1)
         else:
             notify(_('Unrecognised database'))
             self._safe_disconnect()
             
-    def _s2(self, acc, request, cursor, notify, rows):
+    def _stage_2(self, acc, request, cursor, notify, rows):
         """Confirm it's a Prokyon 3 database."""
         
-        if schema_test("artist title album tracknumber bitrate path filename",
+        if self.schema_test("artist title album tracknumber bitrate path filename",
                                                             cursor.fetchall()):
             notify(_('Found Prokyon 3 schema'))
             # Try to add a FULLTEXT database.
             request(("""ALTER TABLE tracks ADD FULLTEXT artist (artist,title,
-                        album,filename)""",), self._s3, self._f2)
+                        album,filename)""",), self._stage_3, self._fail_2)
         else:
             notify(_('Unrecognised database'))
             self._safe_disconnect()
 
-    def _s3(self, acc, request, cursor, notify, rows):
+    def _stage_3(self, acc, request, cursor, notify, rows):
         notify('Fulltext index added')
         self._hand_over('Prokyon 3')
 
-    def _s4(self, acc, request, cursor, notify, rows):
+    def _stage_4(self, acc, request, cursor, notify, rows):
         """Test for Ampache database."""
 
-        if schema_test("artist title album track bitrate file", 
+        if self.schema_test("artist title album track bitrate file", 
                                                             cursor.fetchall()):
-            request(('DESCRIBE artist',), self._s5, self._f1)
+            request(('DESCRIBE artist',), self._stage_5, self._fail_1)
         else:
             notify('Unrecognised database')
             self._safe_disconnect()
 
-    def _s5(self, acc, request, cursor, notify, rows):
-        if schema_test("name prefix", cursor.fetchall()):
-            request(('DESCRIBE artist',), self._s6, self._f1)
+    def _stage_5(self, acc, request, cursor, notify, rows):
+        if self.schema_test("name prefix", cursor.fetchall()):
+            request(('DESCRIBE artist',), self._stage_6, self._fail_1)
         else:
             notify('Unrecognised database')
             self._safe_disconnect()
 
-    def _s6(self, acc, request, cursor, notify, rows):
-        if schema_test("name prefix", cursor.fetchall()):
+    def _stage_6(self, acc, request, cursor, notify, rows):
+        if self.schema_test("name prefix", cursor.fetchall()):
             notify('Found Ampache schema')
-            request(("ALTER TABLE album ADD FULLTEXT idjc (name)",), self._s7,
-                                                                    self._f3)
+            request(("ALTER TABLE album ADD FULLTEXT idjc (name)",),
+                                                    self._stage_7, self._fail_3)
         else:
             notify('Unrecognised database')
             self._safe_disconnect()
         
-    def _s7(self, acc, request, cursor, notify, rows):
-        request(("ALTER TABLE artist ADD FULLTEXT idjc (name)",), self._s8,
-                                                                    self._f3)
+    def _stage_7(self, acc, request, cursor, notify, rows):
+        request(("ALTER TABLE artist ADD FULLTEXT idjc (name)",), self._stage_8,
+                                                                self._fail_3)
         
-    def _s8(self, acc, request, cursor, notify, rows):
-        request(("ALTER TABLE song ADD FULLTEXT idjc (title)",), self._s9,
-                                                                    self._f3)
+    def _stage_8(self, acc, request, cursor, notify, rows):
+        request(("ALTER TABLE song ADD FULLTEXT idjc (title)",), self._stage_9,
+                                                                self._fail_3)
 
-    def _s9(self, acc, request, cursor, notify, rows):
+    def _stage_9(self, acc, request, cursor, notify, rows):
         notify('Fulltext index added')
         self._hand_over(AMPACHE)
