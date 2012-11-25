@@ -535,19 +535,23 @@ class TreeUpdater(object):
         self.tree_page = tree_page
         self.cursor = cursor
         self.done = 0.0
+        # Aim for a smooth progress bar.
+        self.do_max = min(max(30, rows / 100), 200)
         self.total = float(rows)
         self.r_dep = 0
         self.l_dep = 0
-        self._stage_run = self._fill
-
-        # Empty out old data.
-        tree_page.tree_view.set_model(None)
-        tree_page.artist_store.clear()
-        tree_page.album_store.clear()
+        self._stage_run = self._empty_out
 
     @threadslock
     def run(self, acc):
         return self._stage_run(acc)
+
+    def _empty_out(self, acc):
+        self.tree_page.tree_view.set_model(None)
+        self.tree_page.artist_store.clear()
+        self.tree_page.album_store.clear()
+        self._stage_run = self._fill
+        return True
 
     def _fill(self, acc):
         tree_page = self.tree_page
@@ -559,7 +563,7 @@ class TreeUpdater(object):
         r_dep = self.r_dep
         l_dep = self.l_dep
 
-        for each in xrange(10):
+        for each in xrange(self.do_max):
             if acc.keepalive == False:
                 return False
 
@@ -574,21 +578,23 @@ class TreeUpdater(object):
             else:
                 if ampache:
                     # Split the full path into path and file.
-                    row = list(row)
-                    fn = row[7].rsplit("/", 1)
-                    row[7] = fn[1]
-                    row[8] = fn[0]
+                    try:
+                        path, filename = tuple(row[6].rsplit("/", 1))
+                    except ValueError:
+                        continue
+                        
+                    row = row[0:6] + (filename, path) + row[8:]
 
                 while 1:
                     if r_dep == 0:
-                        art = row[1]
+                        art = row[0]
                         self.artlower = art.lower()
                         self.r_iter1 = r_append(
                                     None, (-1, art, 0, 0, 0, "", "", 0)) 
                         r_dep = 1
                     if r_dep == 1:
-                        if self.artlower == row[1].lower():
-                            alb = row[2]
+                        if self.artlower == row[0].lower():
+                            alb = row[1]
                             self.alblower = alb.lower()
                             self.r_iter2 = r_append(
                                 self.r_iter1, (-2, alb, 0, 0, 0, "", "", 0)) 
@@ -596,37 +602,36 @@ class TreeUpdater(object):
                         else:
                             r_dep = 0
                     if r_dep == 2:
-                        if self.artlower == row[1].lower() and self.alblower \
-                                                            == row[2].lower():
-                            path = transform(row[8]) 
-                            r_append(self.r_iter2, (row[0], row[4], row[3],
-                                        row[5], row[6], row[7], path, row[9]))
+                        if self.artlower == row[0].lower() and self.alblower \
+                                                            == row[1].lower():
+                            path = transform(row[7]) 
+                            r_append(self.r_iter2, (0, row[3], row[2],
+                                        row[4], row[5], row[6], path, row[8]))
                             break
                         else:
                             r_dep = 1
 
                 while 1:
                     if l_dep == 0:
-                        self.albartlower = row[2].lower(), row[1].lower()
+                        self.albartlower = row[1].lower(), row[0].lower()
                         self.l_iter = l_append(
-                            None, (-1, row[2], 0, 0, 0, "", "", 0, row[1])) 
+                            None, (-1, row[1], 0, 0, 0, "", "", 0, row[0])) 
                         self.l_iter = l_append(
-                            self.l_iter, (-2, row[1], 0, 0, 0, "", "", 0, "")) 
+                            self.l_iter, (-2, row[0], 0, 0, 0, "", "", 0, "")) 
                         l_dep = 1
                     if l_dep == 1:
-                        if self.albartlower == (row[2].lower(), row[1].lower()):
-                            path = transform(row[8]) 
-                            l_append(self.l_iter, (row[0], row[4], row[3],
-                                    row[5], row[6], row[7], path, row[9], ""))
+                        if self.albartlower == (row[1].lower(), row[0].lower()):
+                            path = transform(row[7]) 
+                            l_append(self.l_iter, (0, row[3], row[2],
+                                    row[4], row[5], row[6], path, row[8], ""))
                             break
                         else:
                             l_dep = 0
 
         self.r_dep = r_dep
         self.l_dep = l_dep
-        self.done += 10.0
-        if int(self.done) % 100 == 0:
-            self.tree_page.progress_bar.set_fraction(self.done / self.total)
+        self.done += self.do_max
+        self.tree_page.progress_bar.set_fraction(self.done / self.total)
         return True
 
     def _sort(self, acc):
@@ -634,14 +639,26 @@ class TreeUpdater(object):
         self.tree_page.album_store.set_sort_column_id(0, gtk.SORT_ASCENDING)
         self.tree_page.loading_label.set_text(_('Merging Albums'))
         self.tree_page.progress_bar.set_fraction(1.0)
-        self._stage_run = self._prune
+        
+        self.model = self.tree_page.album_store
+        self.i1 = self.model.get_iter_root()
+        self.count = 0
+        self._stage_run = self._album_merge
         return acc.keepalive
 
-    def _prune(self, acc):
-        model = self.tree_page.album_store
-        read_alb = lambda i: model.get_value(i, 1).lower()
-        i1 = model.get_iter_root()
+    def _album_merge(self, acc):
+        model = self.model
+        read_alb = lambda iter: model.get_value(iter, 1).lower()
+        i1 = self.i1
+        count = self.count
+        
         while i1 is not None:
+            if count == 200:
+                self.count = 0
+                self.i1 = i1
+                return acc.keepalive
+            count += 1
+                
             alb = read_alb(i1)
             i2 = model.iter_next(i1)
             while i2 is not None and alb == read_alb(i2):
@@ -656,7 +673,7 @@ class TreeUpdater(object):
         c2 = model.iter_children(p2)
         if c2 is None:
             return
-            
+
         while c2:
             c1 = model.append(p1, model.get(c2, *xrange(9)))
             this(this, model, c1, c2)
@@ -705,8 +722,8 @@ class TreePage(PageCommon):
             self.right_controls.pack_start(each, False)
             sg.add_widget(each)
         self.controls.pack_end(self.right_controls, False)
-            
-        PageCommon.__init__(self, notebook, _("Tree"), self.controls)
+
+        PageCommon.__init__(self, notebook, _('Browse'), self.controls)
         
         self.tree_view.set_enable_tree_lines(True)
         self.tree_selection.set_select_function(self._tree_select_func)
@@ -729,7 +746,7 @@ class TreePage(PageCommon):
                 (_('Path'), 6, None, -1, pango.ELLIPSIZE_NONE),
                 ))
 
-        # id, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path, disk
+        # depth, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path, disk
         data_signature = int, str, int, int, int, str, str, int
         self.artist_store = gtk.TreeStore(*data_signature)
         self.album_store = gtk.TreeStore(*data_signature + (str, ))
@@ -760,7 +777,6 @@ class TreePage(PageCommon):
             self.scrolled_window.hide()
             self.loading_vbox.show()
         else:
-            self.album_store.set_sort_column_id(-1, gtk.SORT_ASCENDING)
             self.layout_combo.emit("changed")
             self.loading_vbox.hide()
             self.scrolled_window.show()
@@ -777,11 +793,11 @@ class TreePage(PageCommon):
         PageCommon.deactivate(self)
 
     @staticmethod
-    def _album_sort_compare(model, iter1, iter2):
-        depth = model.get_value(iter1, 0)
-        
-        cols = (1, 8) if depth < 0 else (7, 2, 1)
-        return cmp(*[[model.get_value(i, c) for c in cols] for i in (iter1, iter2)])
+    def _album_sort_compare(model, i1, i2):
+        if model.get_value(i1, 0) < 0:
+            return cmp(model.get(i1, 1, 8), model.get(i2, 1, 8))
+        else:
+            return cmp(model.get(i1, 7, 2, 1), model.get(i2, 7, 2, 1))
 
     def _cb_layout_combo(self, widget):
         store = widget.get_model().get_value(widget.get_active_iter(), 1)
@@ -792,11 +808,11 @@ class TreePage(PageCommon):
 
         self.set_loading_view(True)
         if self._db_type == PROKYON_3:
-            query = """SELECT id,artist,album,tracknumber,title,length,bitrate,
+            query = """SELECT artist,album,tracknumber,title,length,bitrate,
                         filename,path,0 as disk FROM tracks ORDER BY
                         artist,album,path,tracknumber,title"""
         elif self._db_type == AMPACHE:
-            query = """SELECT song.id as id, 
+            query = """SELECT
                 concat_ws(" ", artist.prefix, artist.name) as artist, 
                 concat_ws(" ", album.prefix, album.name) as album,
                 track as tracknumber, title, time as length, 
@@ -864,16 +880,25 @@ class FlatUpdater(object):
     """Fills the data store of the FlatPage instance."""
     
     def __init__(self, flat_page, cursor):
-        flat_page.tree_view.set_model(None)
-        flat_page.list_store.clear()
         self.flat_page = flat_page
         self.cursor = cursor
         self.ampache = flat_page.db_type == AMPACHE
         self.transform = flat_page.transform
         self.found = 0
+        self.init = False
+        glib.idle_add(self.run_first, priority=glib.PRIORITY_HIGH)
+
+    @threadslock
+    def run_first(self):
+        self.flat_page.tree_view.set_model(None)
+        self.flat_page.list_store.clear()
+        self.init = True
 
     @threadslock
     def run(self, acc):
+        if not self.init:
+            return True
+        
         next_row = self.cursor.fetchone
         ampache = self.ampache
         transform = self.transform
@@ -890,11 +915,11 @@ class FlatUpdater(object):
                 row = list(row)
                 if ampache:
                     # Split the file into path and filename
-                    fn = row[7].rsplit("/",1)
-                    row[7] = fn[1]
-                    row[8] = fn[0]
+                    fn = row[6].rsplit("/",1)
+                    row[6] = fn[1]
+                    row[7] = fn[0]
                 
-                row[8] = transform(row[8])                
+                row[7] = transform(row[7])                
                 store.append([found] + row)
             else:
                 if found:
@@ -951,24 +976,24 @@ class FlatPage(PageCommon):
         image.show
         where_hbox.pack_start(self.update_button, False)
         
-        PageCommon.__init__(self, notebook, _("Flat"), self.controls)
+        PageCommon.__init__(self, notebook, _("Search"), self.controls)
  
         # Row data specification:
-        # index, id, ARTIST, ALBUM, TRACKNUM, TITLE, DURATION, BITRATE,
+        # index, ARTIST, ALBUM, TRACKNUM, TITLE, DURATION, BITRATE,
         # path, filename, disk
         self.list_store = gtk.ListStore(
-                        int, int, str, str, int, str, int, int, str, str, int)
+                        int, str, str, int, str, int, int, str, str, int)
         self.tree_cols = self._make_tv_columns(self.tree_view, (
-            ("(%d)" % 0, 0, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
-            (_('Artist'), 2, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
-            (_('Album'), 3, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
-            (_('Disk'), 10, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
-            (_('Track'), 4, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
-            (_('Title'), 5, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
-            (_('Duration'), 6, self._cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
-            (_('Bitrate'), 7, self._cell_k, -1, pango.ELLIPSIZE_NONE),
-            (_('Filename'), 8, None, 100, pango.ELLIPSIZE_END),
-            (_('Path'), 9, None, -1, pango.ELLIPSIZE_NONE),
+            ("(0)", 0, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+            (_('Artist'), 1, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
+            (_('Album'), 2, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
+            (_('Disk'), 9, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+            (_('Track'), 3, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+            (_('Title'), 4, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
+            (_('Duration'), 5, self._cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
+            (_('Bitrate'), 6, self._cell_k, -1, pango.ELLIPSIZE_NONE),
+            (_('Filename'), 7, None, 100, pango.ELLIPSIZE_END),
+            (_('Path'), 8, None, -1, pango.ELLIPSIZE_NONE),
             ))
 
         self.tree_view.set_rules_hint(True)
@@ -986,20 +1011,20 @@ class FlatPage(PageCommon):
     _queries_table = {
         PROKYON_3:
             {FUZZY: (CLEAN, """
-                    SELECT id,artist,album,tracknumber,title,length,
+                    SELECT artist,album,tracknumber,title,length,
                     bitrate,filename,path,0 as disk FROM tracks
                     WHERE MATCH (artist,album,title,filename) AGAINST (%s)
                     """),
         
             WHERE: (DIRTY, """
-                    SELECT id,artist,album,tracknumber,title,length,
+                    SELECT artist,album,tracknumber,title,length,
                     bitrate,filename, path, 0 as disk FROM tracks WHERE (%s)
                     ORDER BY artist,album,path,tracknumber,title
                     """)},
         
         AMPACHE:
             {FUZZY: (CLEAN, """
-                    SELECT song.id as id,
+                    SELECT
                     concat_ws(" ",artist.prefix,artist.name),
                     concat_ws(" ",album.prefix,album.name),
                     track as tracknumber, title, time as length,
@@ -1013,7 +1038,7 @@ class FlatPage(PageCommon):
                     """),
 
             WHERE: (DIRTY, """
-                    SELECT song.id as id,
+                    SELECT
                     concat_ws(" ", artist.prefix, artist.name) as artist,
                     concat_ws(" ", album.prefix, album.name) as albumname,
                     track as tracknumber, title,
@@ -1053,7 +1078,7 @@ class FlatPage(PageCommon):
         else:
             print "unknown database access mode", access_mode
             return
-                        
+
         self._acc.request(query, self._s1)
         return
             
@@ -1063,7 +1088,7 @@ class FlatPage(PageCommon):
         
         for path in paths:
             row = model[path]
-            yield row[9], row[8]
+            yield row[8], row[7]
 
     def _cb_fuzzysearch_changed(self, widget):
         if widget.get_text().strip():
@@ -1081,6 +1106,7 @@ class FlatPage(PageCommon):
         while self._update_id:
             glib.source_remove(self._update_id.popleft())
         self._update_id.append(glib.idle_add(self._updater.run, acc))
+
 
 class MediaPane(gtk.Frame):
     """Database song details are displayed in this widget."""
