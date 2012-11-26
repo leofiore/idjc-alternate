@@ -188,8 +188,8 @@ class DBAccessor(threading.Thread):
             notify(_('Disconnected'))
 
     @thread_only
-    def purge_job_queue(self):
-        while self.jobs:
+    def purge_job_queue(self, remain=0):
+        while len(self.jobs) > remain:
             self.jobs.popleft()
             self.semaphore.acquire()
 
@@ -433,7 +433,9 @@ class PageCommon(gtk.VBox):
         
     def deactivate(self):
         while self._update_id:
-            glib.source_remove(self._update_id.popleft())
+            context, namespace = self._update_id.popleft()
+            namespace[0] = True
+            glib.source_remove(context)
         
         self._acc = None
         model = self.tree_view.get_model()
@@ -744,7 +746,8 @@ class TreePage(PageCommon):
                 (_('Path'), 6, None, -1, pango.ELLIPSIZE_NONE),
                 ))
 
-        # depth, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename, path, disk
+        # depth, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename,
+        # path, disk
         data_signature = int, str, int, int, int, str, str, int
         self.artist_store = gtk.TreeStore(*data_signature)
         self.album_store = gtk.TreeStore(*data_signature + (str, ))
@@ -859,11 +862,12 @@ class TreePage(PageCommon):
         acc.disconnect()
         self._updater = TreeUpdater(self, cursor, rows)
         while self._update_id:
-            glib.source_remove(self._update_id.popleft())
+            context, namespace = self._update_id.popleft()
+            glib.source_remove(context)
         while self._pulse_id:
             glib.source_remove(self._pulse_id.popleft())
         glib.idle_add(self.loading_label.set_text, _('Populating'))
-        self._update_id.append(glib.idle_add(self._updater.run, acc))
+        self._update_id.append((glib.idle_add(self._updater.run, acc), [False, ()]))
 
     def _failhandler(self, exception, notify):
         print str(exception)
@@ -1008,7 +1012,9 @@ class FlatPage(PageCommon):
             if not user_text:
                 self.where_entry.set_text("")
                 while self._update_id:
-                    glib.source_remove(self._update_id.popleft())
+                    context, namespace = self._update_id.popleft()
+                    glib.source_remove(context)
+                    namespace[0] = True
                 self.list_store.clear()
                 return
 
@@ -1043,35 +1049,52 @@ class FlatPage(PageCommon):
     ###########################################################################
 
     def _handler_1(self, acc, request, cursor, notify, rows):
+        # Lock against the very start of the update functions.
+        gtk.gdk.threads_enter()
         while self._update_id:
-            glib.source_remove(self._update_id.popleft())
+            context, namespace = self._update_id.popleft()
+            glib.source_remove(context)
+            # Idle functions to receive the following and know to clean-up.
+            namespace[0] = True
+        gtk.gdk.threads_leave()
 
         try:
             self._old_cursor.close()
-        except (AttributeError, sql.Error):
+        except sql.Error as e:
+            print str(e)
+        except AttributeError:
             pass
 
         self._old_cursor = cursor
         acc.replace_cursor(cursor)
-        acc.purge_job_queue()
-        self._update_id.append(glib.idle_add(self._update_1, acc, cursor))
+        # Scrap intermediate jobs whose output would merely slow down the
+        # user interface responsiveness.
+        acc.purge_job_queue(1)
+        namespace = [False, ()]
+        context = glib.idle_add(self._update_1, acc, cursor, namespace)
+        self._update_id.append((context, namespace))
 
     ###########################################################################
     
     @threadslock
-    def _update_1(self, acc, cursor):
-        self.found = 0
-        self.tree_view.set_model(None)
-        self.list_store.clear()
-        self._update_id.append(glib.idle_add(self._update_2, acc, cursor))
+    def _update_1(self, acc, cursor, namespace):
+        if not namespace[0]:
+            self.tree_view.set_model(None)
+            self.list_store.clear()
+            namespace[1] = (0, )  # found = 0
+            context = glib.idle_add(self._update_2, acc, cursor, namespace)
+            self._update_id.append((context, namespace))
         return False
 
     @threadslock
-    def _update_2(self, acc, cursor):
+    def _update_2(self, acc, cursor, namespace):
+        kill, (found, ) = namespace
+        if kill:
+            return False
+        
         next_row = cursor.fetchone
         ampache = self._db_type == AMPACHE
         transform = self.transform
-        found = self.found
         append = self.list_store.append
 
         for i in xrange(100):
@@ -1085,22 +1108,25 @@ class FlatPage(PageCommon):
 
             if row:
                 found += 1
-                row = list(row)
                 if ampache:
                     # Split the file into path and filename
-                    fn = row[6].rsplit("/",1)
-                    row[6] = fn[1]
-                    row[7] = fn[0]
-
-                row[7] = transform(row[7])                
-                append([found] + row)
+                    try:
+                        path, fname = row[6].rsplit("/", 1)
+                    except IndexError:
+                        continue
+                
+                    append((found, ) + row[:6] + (fname, transform(path))
+                                                                    + row[8:])
+                else:
+                    append((found, ) + row[:7] + (transform(row[7]), )
+                                                                    + row[8:])
             else:
                 if found:
                     self.tree_cols[0].set_title("(%s)" % found)
                     self.tree_view.set_model(self.list_store)
                 return False
 
-        self.found = found
+        namespace[1] = (found, )
         return True
 
 
@@ -1219,8 +1245,8 @@ class MediaPane(gtk.Frame):
     def _stage_2(self, acc, request, cursor, notify, rows):
         """Confirm it's a Prokyon 3 database."""
         
-        if self.schema_test("artist title album tracknumber bitrate path filename",
-                                                            cursor.fetchall()):
+        if self.schema_test("artist title album tracknumber bitrate " 
+                                        "path filename", cursor.fetchall()):
             notify(_('Found Prokyon 3 schema'))
             # Try to add a FULLTEXT database.
             request(("""ALTER TABLE tracks ADD FULLTEXT artist (artist,title,
