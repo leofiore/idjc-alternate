@@ -528,158 +528,31 @@ class PageCommon(gtk.VBox):
         else:
             renderer.set_property("text", "")
 
+    def _handler(self, acc, request, cursor, notify, rows):
+        # Lock against the very start of the update functions.
+        gtk.gdk.threads_enter()
+        while self._update_id:
+            context, namespace = self._update_id.popleft()
+            glib.source_remove(context)
+            # Idle functions to receive the following and know to clean-up.
+            namespace[0] = True
+        gtk.gdk.threads_leave()
 
-class TreeUpdater(object):
-    """Fills the data store of the TreePage instance."""
+        try:
+            self._old_cursor.close()
+        except sql.Error as e:
+            print str(e)
+        except AttributeError:
+            pass
 
-    def __init__(self, tree_page, cursor, rows):
-        self.tree_page = tree_page
-        self.cursor = cursor
-        self.done = 0.0
-        # Aim for a smooth progress bar.
-        self.do_max = min(max(30, rows / 100), 200)
-        self.total = float(rows)
-        self.r_dep = 0
-        self.l_dep = 0
-        self._stage_run = self._empty_out
+        self._old_cursor = cursor
+        acc.replace_cursor(cursor)
+        # Scrap intermediate jobs whose output would merely slow down the
+        # user interface responsiveness.
+        namespace = [False, ()]
+        context = glib.idle_add(self._update_1, acc, cursor, rows, namespace)
+        self._update_id.append((context, namespace))
 
-    @threadslock
-    def run(self, acc):
-        return self._stage_run(acc)
-
-    def _empty_out(self, acc):
-        self.tree_page.tree_view.set_model(None)
-        self.tree_page.artist_store.clear()
-        self.tree_page.album_store.clear()
-        self._stage_run = self._fill
-        return True
-
-    def _fill(self, acc):
-        tree_page = self.tree_page
-        transform = tree_page.transform
-        ampache = tree_page.db_type == AMPACHE
-        r_append = tree_page.artist_store.append
-        l_append = tree_page.album_store.append
-        next_row = self.cursor.fetchone
-        r_dep = self.r_dep
-        l_dep = self.l_dep
-
-        for each in xrange(self.do_max):
-            if acc.keepalive == False:
-                return False
-
-            row = next_row()
-            if row is None:
-                self.cursor.close()
-                tree_page.loading_label.set_text(_('Sorting'))
-                self._stage_run = self._sort
-
-                return True
-            else:
-                if ampache:
-                    # Split the full path into path and file.
-                    try:
-                        path, filename = tuple(row[6].rsplit("/", 1))
-                    except ValueError:
-                        continue
-                        
-                    row = row[0:6] + (filename, path) + row[8:]
-
-                while 1:
-                    if r_dep == 0:
-                        art = row[0]
-                        self.artlower = art.lower()
-                        self.r_iter1 = r_append(
-                                    None, (-1, art, 0, 0, 0, "", "", 0)) 
-                        r_dep = 1
-                    if r_dep == 1:
-                        if self.artlower == row[0].lower():
-                            alb = row[1]
-                            self.alblower = alb.lower()
-                            self.r_iter2 = r_append(
-                                self.r_iter1, (-2, alb, 0, 0, 0, "", "", 0)) 
-                            r_dep = 2
-                        else:
-                            r_dep = 0
-                    if r_dep == 2:
-                        if self.artlower == row[0].lower() and self.alblower \
-                                                            == row[1].lower():
-                            path = transform(row[7]) 
-                            r_append(self.r_iter2, (0, row[3], row[2],
-                                        row[4], row[5], row[6], path, row[8]))
-                            break
-                        else:
-                            r_dep = 1
-
-                while 1:
-                    if l_dep == 0:
-                        self.albartlower = row[1].lower(), row[0].lower()
-                        self.l_iter = l_append(
-                            None, (-1, row[1], 0, 0, 0, "", "", 0, row[0])) 
-                        self.l_iter = l_append(
-                            self.l_iter, (-2, row[0], 0, 0, 0, "", "", 0, "")) 
-                        l_dep = 1
-                    if l_dep == 1:
-                        if self.albartlower == (row[1].lower(), row[0].lower()):
-                            path = transform(row[7]) 
-                            l_append(self.l_iter, (0, row[3], row[2],
-                                    row[4], row[5], row[6], path, row[8], ""))
-                            break
-                        else:
-                            l_dep = 0
-
-        self.r_dep = r_dep
-        self.l_dep = l_dep
-        self.done += self.do_max
-        self.tree_page.progress_bar.set_fraction(self.done / self.total)
-        return True
-
-    def _sort(self, acc):
-        self.tree_page.album_store.set_sort_column_id(-1, gtk.SORT_ASCENDING)
-        self.tree_page.album_store.set_sort_column_id(0, gtk.SORT_ASCENDING)
-        self.tree_page.loading_label.set_text(_('Merging Albums'))
-        self.tree_page.progress_bar.set_fraction(1.0)
-        
-        self.model = self.tree_page.album_store
-        self.i1 = self.model.get_iter_root()
-        self.count = 0
-        self._stage_run = self._album_merge
-        return acc.keepalive
-
-    def _album_merge(self, acc):
-        model = self.model
-        read_alb = lambda iter: model.get_value(iter, 1).lower()
-        i1 = self.i1
-        count = self.count
-        
-        while i1 is not None:
-            if count == 200:
-                self.count = 0
-                self.i1 = i1
-                return acc.keepalive
-            count += 1
-                
-            alb = read_alb(i1)
-            i2 = model.iter_next(i1)
-            while i2 is not None and alb == read_alb(i2):
-                self._copy_children(model, i1, i2)
-                model.remove(i2)
-            i1 = i2
-
-        self.tree_page.set_loading_view(False)
-        return False
-
-    def _copy_children(this, model, p1, p2):
-        c2 = model.iter_children(p2)
-        if c2 is None:
-            return
-
-        while c2:
-            c1 = model.append(p1, model.get(c2, *xrange(9)))
-            this(this, model, c1, c2)
-            c2 = model.iter_next(c2)
-    _copy_children = types.MethodType(_copy_children, _copy_children)
-        
 
 class ExpandAllButton(gtk.Button):
     def __init__(self, expanded, tooltip=None):
@@ -856,18 +729,10 @@ class TreePage(PageCommon):
         return True
 
     ###########################################################################
-    
+
     def _handler(self, acc, request, cursor, notify, rows):
-        acc.replace_cursor(cursor)
+        PageCommon._handler(self, acc, request, cursor, notify, rows)
         acc.disconnect()
-        self._updater = TreeUpdater(self, cursor, rows)
-        while self._update_id:
-            context, namespace = self._update_id.popleft()
-            glib.source_remove(context)
-        while self._pulse_id:
-            glib.source_remove(self._pulse_id.popleft())
-        glib.idle_add(self.loading_label.set_text, _('Populating'))
-        self._update_id.append((glib.idle_add(self._updater.run, acc), [False, ()]))
 
     def _failhandler(self, exception, notify):
         print str(exception)
@@ -876,6 +741,155 @@ class TreePage(PageCommon):
                                                         _('Fetch Failed!'))
         while self._pulse_id:
             glib.source_remove(self._pulse_id.popleft())
+
+    ###########################################################################
+
+    @threadslock
+    def _update_1(self, acc, cursor, rows, namespace):
+        if namespace[0]:
+            return False
+            
+        self.loading_label.set_text(_('Populating'))
+        # Turn off progress bar pulser.
+        while self._pulse_id:
+            glib.source_remove(self._pulse_id.popleft())
+
+        # Clean away old data.
+        self.tree_view.set_model(None)
+        self.artist_store.clear()
+        self.album_store.clear()
+
+        namespace = [False, (0, 0, 0.0)]  # r_dep, l_dep, done 
+        do_max = min(max(30, rows / 100), 200)  # Data size to process.
+        total = float(rows)
+        context = glib.idle_add(self._update_2, acc, cursor, total, do_max,
+                                                                    namespace)
+        self._update_id.append((context, namespace))
+        return False
+
+    @threadslock
+    def _update_2(self, acc, cursor, total, do_max, namespace):
+        kill, (r_dep, l_dep, done) = namespace
+        if kill:
+            return False
+
+        transform = self.transform
+        ampache = self.db_type == AMPACHE
+        r_append = self.artist_store.append
+        l_append = self.album_store.append
+        next_row = cursor.fetchone
+
+        for each in xrange(do_max):
+            if acc.keepalive == False:
+                return False
+
+            row = next_row()
+            if row is None:
+                if acc.keepalive:
+                    self.loading_label.set_text(_('Sorting'))
+                    self.album_store.set_sort_column_id(-1, gtk.SORT_ASCENDING)
+                    self.album_store.set_sort_column_id(0, gtk.SORT_ASCENDING)
+                    self.loading_label.set_text(_('Merging Albums'))
+                    self.progress_bar.set_fraction(1.0)
+                    
+                    namespace = [False, (self.album_store.get_iter_root(), )]
+                    context = glib.idle_add(self._update_3, acc, namespace)
+                    self._update_id.append((context, namespace))
+                return False
+            else:
+                if ampache:
+                    # Split the full path into path and file.
+                    try:
+                        path, filename = tuple(row[6].rsplit("/", 1))
+                    except ValueError:
+                        continue
+                        
+                    row = row[0:6] + (filename, path) + row[8:]
+
+                while 1:
+                    if r_dep == 0:
+                        art = row[0]
+                        self.artlower = art.lower()
+                        self.r_iter1 = r_append(
+                                    None, (-1, art, 0, 0, 0, "", "", 0)) 
+                        r_dep = 1
+                    if r_dep == 1:
+                        if self.artlower == row[0].lower():
+                            alb = row[1]
+                            self.alblower = alb.lower()
+                            self.r_iter2 = r_append(
+                                self.r_iter1, (-2, alb, 0, 0, 0, "", "", 0)) 
+                            r_dep = 2
+                        else:
+                            r_dep = 0
+                    if r_dep == 2:
+                        if self.artlower == row[0].lower() and self.alblower \
+                                                            == row[1].lower():
+                            path = transform(row[7]) 
+                            r_append(self.r_iter2, (0, row[3], row[2],
+                                        row[4], row[5], row[6], path, row[8]))
+                            break
+                        else:
+                            r_dep = 1
+
+                while 1:
+                    if l_dep == 0:
+                        self.albartlower = row[1].lower(), row[0].lower()
+                        self.l_iter = l_append(
+                            None, (-1, row[1], 0, 0, 0, "", "", 0, row[0])) 
+                        self.l_iter = l_append(
+                            self.l_iter, (-2, row[0], 0, 0, 0, "", "", 0, "")) 
+                        l_dep = 1
+                    if l_dep == 1:
+                        if self.albartlower == (row[1].lower(), row[0].lower()):
+                            path = transform(row[7]) 
+                            l_append(self.l_iter, (0, row[3], row[2],
+                                    row[4], row[5], row[6], path, row[8], ""))
+                            break
+                        else:
+                            l_dep = 0
+
+        done += do_max
+        self.progress_bar.set_fraction(done / total)
+        namespace[1] = r_dep, l_dep, done
+        return True
+
+    @threadslock
+    def _update_3(self, acc, namespace):
+        kill, (i1, ) = namespace
+        if kill:
+            return False
+
+        count = 0
+        model = self.album_store
+        read_alb = lambda iter: model.get_value(iter, 1).lower()
+        
+        while i1 is not None:
+            if count == 200:
+                namespace[1] = (i1, )
+                return acc.keepalive
+            count += 1
+
+            alb = read_alb(i1)
+            i2 = model.iter_next(i1)
+            while i2 is not None and alb == read_alb(i2):
+                self._copy_children(model, i1, i2)
+                model.remove(i2)
+            i1 = i2
+
+        self.set_loading_view(False)
+        return False
+
+    def _copy_children(this, model, p1, p2):
+        c2 = model.iter_children(p2)
+        if c2 is None:
+            return
+
+        while c2:
+            c1 = model.append(p1, model.get(c2, *xrange(9)))
+            this(this, model, c1, c2)
+            c2 = model.iter_next(c2)
+    _copy_children = types.MethodType(_copy_children, _copy_children)
 
 
 class FlatPage(PageCommon):
@@ -1027,7 +1041,7 @@ class FlatPage(PageCommon):
             print "unknown database access mode", access_mode
             return
 
-        self._acc.request(query, self._handler_1)
+        self._acc.request(query, self._handler)
         return
             
     @staticmethod
@@ -1048,36 +1062,14 @@ class FlatPage(PageCommon):
         
     ###########################################################################
 
-    def _handler_1(self, acc, request, cursor, notify, rows):
-        # Lock against the very start of the update functions.
-        gtk.gdk.threads_enter()
-        while self._update_id:
-            context, namespace = self._update_id.popleft()
-            glib.source_remove(context)
-            # Idle functions to receive the following and know to clean-up.
-            namespace[0] = True
-        gtk.gdk.threads_leave()
-
-        try:
-            self._old_cursor.close()
-        except sql.Error as e:
-            print str(e)
-        except AttributeError:
-            pass
-
-        self._old_cursor = cursor
-        acc.replace_cursor(cursor)
-        # Scrap intermediate jobs whose output would merely slow down the
-        # user interface responsiveness.
+    def _handler(self, acc, *args, **kwargs):
+        PageCommon._handler(self, acc, *args, **kwargs)
         acc.purge_job_queue(1)
-        namespace = [False, ()]
-        context = glib.idle_add(self._update_1, acc, cursor, namespace)
-        self._update_id.append((context, namespace))
 
     ###########################################################################
     
     @threadslock
-    def _update_1(self, acc, cursor, namespace):
+    def _update_1(self, acc, cursor, rows, namespace):
         if not namespace[0]:
             self.tree_view.set_model(None)
             self.list_store.clear()
