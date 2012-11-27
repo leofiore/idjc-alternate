@@ -566,13 +566,15 @@ class ExpandAllButton(gtk.Button):
 
 
 class TreePage(PageCommon):
-    """Tree UI with Artist, Album, Title heirarchy."""
+    """Browsable UI with tree structure."""
+
+    # *depth*, *treecol*, album, album_id, disk, tracknumber, title, artist,
+    # filename, path, bitrate, length
+    # Precedence chosen to facilitate efficient sort to album order.
+    DATA_SIGNATURE = int, str, str, int, int, int, str, str, str, str, int, int
+    BLANK_ROW = tuple(x() for x in DATA_SIGNATURE[2:])
 
     def __init__(self, notebook):
-        # Base class overwrites these values.
-        self.scrolled_window = self.tree_view = self.tree_selection = None
-        self.transfrom = self.db_accessor = None
-
         self.controls = gtk.HBox()
         layout_store = gtk.ListStore(str, gtk.TreeStore)
         self.layout_combo = gtk.ComboBox(layout_store)
@@ -607,26 +609,24 @@ class TreePage(PageCommon):
                                                                 self.tree_view)
         self.tree_cols = self._make_tv_columns(self.tree_view, (
                 ("", 1, self._cell_show_unknown, 180, pango.ELLIPSIZE_END),
+                # TC: Track artist.
+                (_('Artist'), 7, None, 100, pango.ELLIPSIZE_END),
                 # TC: The disk number of the album track.
-                (_('Disk'), 7, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+                (_('Disk'), 4, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
                 # TC: The album track number.
-                (_('Track'), 2, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+                (_('Track'), 5, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
                 # TC: Track playback time.
-                (_('Duration'), 3, self._cond_cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
-                (_('Bitrate'), 4, self._cell_k, -1, pango.ELLIPSIZE_NONE),
-                (_('Filename'), 5, None, 100, pango.ELLIPSIZE_END),
+                (_('Duration'), 11, self._cond_cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
+                (_('Bitrate'), 10, self._cell_k, -1, pango.ELLIPSIZE_NONE),
+                (_('Filename'), 8, None, 100, pango.ELLIPSIZE_END),
                 # TC: Directory path to a file.
-                (_('Path'), 6, None, -1, pango.ELLIPSIZE_NONE),
+                (_('Path'), 9, None, -1, pango.ELLIPSIZE_NONE),
                 ))
 
-        # depth, ARTIST-ALBUM-TITLE, TRACK, DURATION, BITRATE, filename,
-        # path, disk
-        data_signature = int, str, int, int, int, str, str, int
-        self.artist_store = gtk.TreeStore(*data_signature)
-        self.album_store = gtk.TreeStore(*data_signature + (str, ))
-        self.album_store.set_default_sort_func(self._album_sort_compare)
-        layout_store.append((_('Artist - Album - Track'), self.artist_store))
-        layout_store.append((_('Album - Artist - Track'), self.album_store))
+        self.artist_store = gtk.TreeStore(*self.DATA_SIGNATURE)
+        self.album_store = gtk.TreeStore(*self.DATA_SIGNATURE)
+        layout_store.append((_('Artist - Album - Title'), self.artist_store))
+        layout_store.append((_('Album - [Disk] - Title'), self.album_store))
         self.layout_combo.set_active(0)
         self.layout_combo.connect("changed", self._cb_layout_combo)
 
@@ -666,41 +666,43 @@ class TreePage(PageCommon):
         
         PageCommon.deactivate(self)
 
-    @staticmethod
-    def _album_sort_compare(model, i1, i2):
-        if model.get_value(i1, 0) < 0:
-            return cmp(model.get(i1, 1, 8), model.get(i2, 1, 8))
-        else:
-            return cmp(model.get(i1, 7, 2, 1), model.get(i2, 7, 2, 1))
-
     def _cb_layout_combo(self, widget):
         store = widget.get_model().get_value(widget.get_active_iter(), 1)
         self.tree_view.set_model(store)
+        # ToDo: column show/hide.
 
     def _cb_tree_rebuild(self, widget):
         """(Re)load the tree with info from the database."""
 
         self.set_loading_view(True)
         if self._db_type == PROKYON_3:
-            query = """SELECT artist,album,tracknumber,title,length,bitrate,
-                        filename,path,0 as disk FROM tracks ORDER BY
-                        artist,album,path,tracknumber,title"""
+            query = """SELECT album, albums.id as album_id, 0 as disk,
+                    tracknumber, title, artist, filename, path, bitrate,
+                    length FROM tracks
+                    LEFT JOIN albums on tracks.album = albums.name
+                    ORDER BY artist, album, path, tracknumber, title"""
         elif self._db_type == AMPACHE:
             query = """SELECT
-                concat_ws(" ", artist.prefix, artist.name) as artist, 
-                concat_ws(" ", album.prefix, album.name) as album,
-                track as tracknumber, title, time as length, 
-                bitrate, file, "" as padding, album.disk as disk
-                from song
-                left join artist on song.artist = artist.id 
-                left join album on song.album = album.id 
-                ORDER BY artist.name,album.disk,album.name,tracknumber,title"""
+                    concat_ws(" ", album.prefix, album.name) as album,
+                    album.id as album_id,
+                    album.disk as disk,
+                    track as tracknumber,
+                    title,
+                    concat_ws(" ", artist.prefix, artist.name) as artist, 
+                    file as filename,
+                    "" as path,
+                    bitrate,
+                    time as length FROM song
+                    LEFT JOIN artist on song.artist = artist.id
+                    LEFT JOIN album on song.album = album.id
+                    ORDER BY artist.name, album.disk, album.name,
+                    tracknumber, title"""
         else:
             print "unsupported database type:", self._db_type
             return
             
         self._pulse_id.append(glib.timeout_add(1000, self._progress_pulse))
-        self._acc.request((query,), self._handler, self._failhandler)
+        self._acc.request((query, ), self._handler, self._failhandler)
 
     @staticmethod
     def _tree_select_func(info):
@@ -763,12 +765,12 @@ class TreePage(PageCommon):
         do_max = min(max(30, rows / 100), 200)  # Data size to process.
         total = float(rows)
         context = glib.idle_add(self._update_2, acc, cursor, total, do_max,
-                                                                    namespace)
+                                                            [], namespace)
         self._update_id.append((context, namespace))
         return False
 
     @threadslock
-    def _update_2(self, acc, cursor, total, do_max, namespace):
+    def _update_2(self, acc, cursor, total, do_max, store, namespace):
         kill, (r_dep, l_dep, done) = namespace
         if kill:
             return False
@@ -776,7 +778,7 @@ class TreePage(PageCommon):
         transform = self.transform
         ampache = self.db_type == AMPACHE
         r_append = self.artist_store.append
-        l_append = self.album_store.append
+        l_append = store.append
         next_row = cursor.fetchone
 
         for each in xrange(do_max):
@@ -787,14 +789,16 @@ class TreePage(PageCommon):
             if row is None:
                 if acc.keepalive:
                     self.loading_label.set_text(_('Sorting'))
-                    self.album_store.set_sort_column_id(-1, gtk.SORT_ASCENDING)
-                    self.album_store.set_sort_column_id(0, gtk.SORT_ASCENDING)
-                    self.loading_label.set_text(_('Merging Albums'))
+                    store.sort()
                     self.progress_bar.set_fraction(1.0)
-                    
+                    # ToDo: chain to Album builder.
+                    self.set_loading_view(False)
+
+                    """
                     namespace = [False, (self.album_store.get_iter_root(), )]
                     context = glib.idle_add(self._update_3, acc, namespace)
                     self._update_id.append((context, namespace))
+                    """
                 return False
             else:
                 if ampache:
@@ -808,88 +812,34 @@ class TreePage(PageCommon):
 
                 while 1:
                     if r_dep == 0:
-                        art = row[0]
+                        art = row[5]
                         self.artlower = art.lower()
-                        self.r_iter1 = r_append(
-                                    None, (-1, art, 0, 0, 0, "", "", 0)) 
+                        self.r_iter1 = r_append(None,
+                                                    (-1, art) + self.BLANK_ROW)
                         r_dep = 1
                     if r_dep == 1:
-                        if self.artlower == row[0].lower():
-                            alb = row[1]
+                        if self.artlower == row[5].lower():
+                            alb = row[0]
                             self.alblower = alb.lower()
-                            self.r_iter2 = r_append(
-                                self.r_iter1, (-2, alb, 0, 0, 0, "", "", 0)) 
+                            self.r_iter2 = r_append(self.r_iter1,
+                                                    (-2, alb) + self.BLANK_ROW)
                             r_dep = 2
                         else:
                             r_dep = 0
                     if r_dep == 2:
-                        if self.artlower == row[0].lower() and self.alblower \
-                                                            == row[1].lower():
-                            path = transform(row[7]) 
-                            r_append(self.r_iter2, (0, row[3], row[2],
-                                        row[4], row[5], row[6], path, row[8]))
+                        if self.artlower == row[5].lower() and self.alblower \
+                                                            == row[0].lower():
+                            row = row[:7] + (transform(row[7]), ) + row[8:]
+                            r_append(self.r_iter2, (0, row[4]) + row)
+                            l_append(row)
                             break
                         else:
                             r_dep = 1
-
-                while 1:
-                    if l_dep == 0:
-                        self.albartlower = row[1].lower(), row[0].lower()
-                        self.l_iter = l_append(
-                            None, (-1, row[1], 0, 0, 0, "", "", 0, row[0])) 
-                        self.l_iter = l_append(
-                            self.l_iter, (-2, row[0], 0, 0, 0, "", "", 0, "")) 
-                        l_dep = 1
-                    if l_dep == 1:
-                        if self.albartlower == (row[1].lower(), row[0].lower()):
-                            path = transform(row[7]) 
-                            l_append(self.l_iter, (0, row[3], row[2],
-                                    row[4], row[5], row[6], path, row[8], ""))
-                            break
-                        else:
-                            l_dep = 0
 
         done += do_max
         self.progress_bar.set_fraction(done / total)
         namespace[1] = r_dep, l_dep, done
         return True
-
-    @threadslock
-    def _update_3(self, acc, namespace):
-        kill, (i1, ) = namespace
-        if kill:
-            return False
-
-        count = 0
-        model = self.album_store
-        read_alb = lambda iter: model.get_value(iter, 1).lower()
-        
-        while i1 is not None:
-            if count == 200:
-                namespace[1] = (i1, )
-                return acc.keepalive
-            count += 1
-
-            alb = read_alb(i1)
-            i2 = model.iter_next(i1)
-            while i2 is not None and alb == read_alb(i2):
-                self._copy_children(model, i1, i2)
-                model.remove(i2)
-            i1 = i2
-
-        self.set_loading_view(False)
-        return False
-
-    def _copy_children(this, model, p1, p2):
-        c2 = model.iter_children(p2)
-        if c2 is None:
-            return
-
-        while c2:
-            c1 = model.append(p1, model.get(c2, *xrange(9)))
-            this(this, model, c1, c2)
-            c2 = model.iter_next(c2)
-    _copy_children = types.MethodType(_copy_children, _copy_children)
 
 
 class FlatPage(PageCommon):
