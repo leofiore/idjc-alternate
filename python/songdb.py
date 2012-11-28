@@ -26,6 +26,7 @@ from collections import deque
 from urllib import quote
 
 import glib
+import gobject
 import pango
 import gtk
 try:
@@ -117,10 +118,14 @@ class DBAccessor(threading.Thread):
                     trycount = 0
                     while trycount < 3:
                         try:
-                            if query is None:
-                                self.disconnect()
-                            
-                            rows = self._cursor.execute(*query)
+                            try:
+                                rows = self._cursor.execute(*query)
+                            except sql.OperationalError as e:
+                                if failhandler is not None:
+                                    failhandler(e, notify)
+                                    rows = 0
+                                else:
+                                    raise
                         except (sql.Error, AttributeError) as e:
                             if not self.keepalive:
                                 return
@@ -172,10 +177,7 @@ class DBAccessor(threading.Thread):
                                                                         rows)
                             break
                     else:
-                        if failhandler is not None:
-                            failhandler(e, notify)
-                        else:
-                            notify(_('Job dropped'))
+                        notify(_('Job dropped'))
         finally:
             try:
                 self._cursor.close()
@@ -571,12 +573,12 @@ class TreePage(PageCommon):
     # *depth*, *treecol*, album, album_id, disk, tracknumber, title, artist,
     # filename, path, bitrate, length
     # Precedence chosen to facilitate efficient sort to album order.
-    DATA_SIGNATURE = int, str, str, int, int, int, str, str, str, str, int, int
+    DATA_SIGNATURE = int, str, str, int, int, int, str, str, str, str, int, int, int
     BLANK_ROW = tuple(x() for x in DATA_SIGNATURE[2:])
 
     def __init__(self, notebook):
         self.controls = gtk.HBox()
-        layout_store = gtk.ListStore(str, gtk.TreeStore)
+        layout_store = gtk.ListStore(str, gtk.TreeStore, gobject.TYPE_PYOBJECT)
         self.layout_combo = gtk.ComboBox(layout_store)
         cell_text = gtk.CellRendererText()
         self.layout_combo.pack_start(cell_text)
@@ -625,8 +627,8 @@ class TreePage(PageCommon):
 
         self.artist_store = gtk.TreeStore(*self.DATA_SIGNATURE)
         self.album_store = gtk.TreeStore(*self.DATA_SIGNATURE)
-        layout_store.append((_('Artist - Album - Title'), self.artist_store))
-        layout_store.append((_('Album - [Disk] - Title'), self.album_store))
+        layout_store.append((_('Artist - Album - Title'), self.artist_store, (1, )))
+        layout_store.append((_('Album - [Disk] - Title'), self.album_store, (2, )))
         self.layout_combo.set_active(0)
         self.layout_combo.connect("changed", self._cb_layout_combo)
 
@@ -667,9 +669,11 @@ class TreePage(PageCommon):
         PageCommon.deactivate(self)
 
     def _cb_layout_combo(self, widget):
-        store = widget.get_model().get_value(widget.get_active_iter(), 1)
+        iter = widget.get_active_iter()
+        store, hide = widget.get_model().get(iter, 1, 2)
         self.tree_view.set_model(store)
-        # ToDo: column show/hide.
+        for i, col in enumerate(self.tree_cols):
+            col.set_visible(i not in hide)
 
     def _cb_tree_rebuild(self, widget):
         """(Re)load the tree with info from the database."""
@@ -678,8 +682,9 @@ class TreePage(PageCommon):
         if self._db_type == PROKYON_3:
             query = """SELECT album, albums.id as album_id, 0 as disk,
                     tracknumber, title, artist, filename, path, bitrate,
-                    length FROM tracks
+                    length, artists.id as artist_id FROM tracks
                     LEFT JOIN albums on tracks.album = albums.name
+                    LEFT JOIN artist on tracks.artist = artists.name
                     ORDER BY artist, album, path, tracknumber, title"""
         elif self._db_type == AMPACHE:
             query = """SELECT
@@ -692,7 +697,9 @@ class TreePage(PageCommon):
                     file as filename,
                     "" as path,
                     bitrate,
-                    time as length FROM song
+                    time as length,
+                    artist.id as artist_id
+                    FROM song
                     LEFT JOIN artist on song.artist = artist.id
                     LEFT JOIN album on song.album = album.id
                     ORDER BY artist.name, album.disk, album.name,
@@ -710,6 +717,8 @@ class TreePage(PageCommon):
 
     @staticmethod
     def _drag_data(model, paths):
+        # ToDo: FIX ME
+        
         if len(paths) == 1 and len(paths[0]) == 2:
             d2 = 0
             while 1:
@@ -717,13 +726,13 @@ class TreePage(PageCommon):
                     row = model[paths[0] + (d2, )]
                 except:
                     return
-                yield row[6], row[5]
+                yield row[9], row[8]
                 d2 += 1
         else:
             for each in paths:
                 if len(each) == 3:
                     row = model[each]
-                    yield row[6], row[5]
+                    yield row[9], row[8]
 
     @threadslock
     def _progress_pulse(self):
@@ -761,9 +770,9 @@ class TreePage(PageCommon):
         self.artist_store.clear()
         self.album_store.clear()
 
-        namespace = [False, (0, 0, 0.0)]  # r_dep, l_dep, done 
+        namespace = [False, (0, 0.0, None, None, None, None)]
         do_max = min(max(30, rows / 100), 200)  # Data size to process.
-        total = float(rows)
+        total = 2.0 * rows
         context = glib.idle_add(self._update_2, acc, cursor, total, do_max,
                                                             [], namespace)
         self._update_id.append((context, namespace))
@@ -771,7 +780,7 @@ class TreePage(PageCommon):
 
     @threadslock
     def _update_2(self, acc, cursor, total, do_max, store, namespace):
-        kill, (r_dep, l_dep, done) = namespace
+        kill, (dep, done, iter1, iter2, artist_id, album_id) = namespace
         if kill:
             return False
 
@@ -780,6 +789,7 @@ class TreePage(PageCommon):
         r_append = self.artist_store.append
         l_append = store.append
         next_row = cursor.fetchone
+        BLANK_ROW = self.BLANK_ROW
 
         for each in xrange(do_max):
             if acc.keepalive == False:
@@ -787,58 +797,105 @@ class TreePage(PageCommon):
 
             row = next_row()
             if row is None:
-                if acc.keepalive:
-                    self.loading_label.set_text(_('Sorting'))
-                    store.sort()
-                    self.progress_bar.set_fraction(1.0)
-                    # ToDo: chain to Album builder.
-                    self.set_loading_view(False)
-
-                    """
-                    namespace = [False, (self.album_store.get_iter_root(), )]
-                    context = glib.idle_add(self._update_3, acc, namespace)
-                    self._update_id.append((context, namespace))
-                    """
+                store.sort()
+                namespace = [False, (0, done, None, None, None, None, None)]
+                context = glib.idle_add(self._update_3, acc, total, do_max,
+                                                            store, namespace)
+                self._update_id.append((context, namespace))
                 return False
-            else:
-                if ampache:
-                    # Split the full path into path and file.
-                    try:
-                        path, filename = tuple(row[6].rsplit("/", 1))
-                    except ValueError:
-                        continue
-                        
-                    row = row[0:6] + (filename, path) + row[8:]
 
-                while 1:
-                    if r_dep == 0:
-                        art = row[5]
-                        self.artlower = art.lower()
-                        self.r_iter1 = r_append(None,
-                                                    (-1, art) + self.BLANK_ROW)
-                        r_dep = 1
-                    if r_dep == 1:
-                        if self.artlower == row[5].lower():
-                            alb = row[0]
-                            self.alblower = alb.lower()
-                            self.r_iter2 = r_append(self.r_iter1,
-                                                    (-2, alb) + self.BLANK_ROW)
-                            r_dep = 2
-                        else:
-                            r_dep = 0
-                    if r_dep == 2:
-                        if self.artlower == row[5].lower() and self.alblower \
-                                                            == row[0].lower():
-                            row = row[:7] + (transform(row[7]), ) + row[8:]
-                            r_append(self.r_iter2, (0, row[4]) + row)
-                            l_append(row)
-                            break
-                        else:
-                            r_dep = 1
+            if ampache:
+                # Split the full path into path and file.
+                try:
+                    path, filename = tuple(row[6].rsplit("/", 1))
+                except ValueError:
+                    continue
+                    
+                row = row[0:6] + (filename, path) + row[8:]
+
+            while 1:
+                if dep == 0:
+                    artist_id = row[10]
+                    iter1 = r_append(None, (-1, row[5]) + BLANK_ROW)
+                    dep = 1
+
+                if dep == 1:
+                    if artist_id != row[10]:
+                        dep = 0
+                        continue
+                    
+                    album_id = row[1]    
+                    iter2 = r_append(iter1, (-2, row[0]) + BLANK_ROW)
+                    dep = 2
+
+                if dep == 2:
+                    if artist_id == row[10] and album_id == row[1]:
+                        row = row[:7] + (transform(row[7]), ) + row[8:]
+                        r_append(iter2, (0, row[4]) + row)
+                        l_append(row)
+                        break
+                    else:
+                        dep = 1
 
         done += do_max
         self.progress_bar.set_fraction(done / total)
-        namespace[1] = r_dep, l_dep, done
+        namespace[1] = dep, done, iter1, iter2, artist_id, album_id
+        return True
+
+    @threadslock
+    def _update_3(self, acc, total, do_max, store, namespace):
+        kill, (dep, done, iter_1, iter_2, artist_id, album_id, disk) = namespace
+        if kill:
+            return False
+
+        append = self.album_store.append
+        pop = store.pop
+        BLANK_ROW = self.BLANK_ROW
+        
+        for each in xrange(do_max):
+            if acc.keepalive == False:
+                return False
+                
+            try:
+                row = pop(0)
+            except IndexError:
+                self.set_loading_view(False)
+                return False
+                
+            while 1:
+                if dep == 0:
+                    album_id = row[1]
+                    iter_1 = append(None, (-1, row[0]) + BLANK_ROW)
+                    dep = 1
+
+                if dep == 1:
+                    if album_id != row[1]:
+                        dep = 0
+                        continue
+                    
+                    disk = row[2]
+                    if disk == 0:
+                        iter_2 = iter_1
+                    else:
+                        iter_2 = append(iter_1, (-2, "Disk %d" % disk)
+                                                                + BLANK_ROW)
+                    dep = 2
+
+                if dep == 2:
+                    if album_id != row[1]:
+                        dep = 0
+                        continue
+                    
+                    if disk != row[2]:
+                        dep = 1
+                        continue
+                        
+                    append(iter_2, (0, row[4]) + row)
+                    break
+            
+        done += do_max
+        self.progress_bar.set_fraction(done / total)
+        namespace[1] = dep, done, iter_1, iter_2, artist_id, album_id, disk
         return True
 
 
@@ -1155,19 +1212,17 @@ class MediaPane(gtk.Frame):
         # Give up.
         self._safe_disconnect()
 
-    def factory(dbtype):
-        def inner(self, exception, notify):
-            try:
-                code = exception.args[0]
-            except IndexError:
-                pass
-            else:
-                if code != 1061:
-                    notify_('Failed to create FULLTEXT index')
-            self._hand_over(dbtype)
-        return inner
-    _fail_2, _fail_3 = [factory(x) for x in (PROKYON_3, AMPACHE)]
-    del factory, x
+    def _fail_2(self, exception, notify):
+        try:
+            code = exception.args[0]
+        except IndexError:
+            raise
+
+        if code != 1061:
+            notify_('Failed to create FULLTEXT index')
+            raise
+
+        notify('Found existing FULLTEXT index')
 
     def _stage_1(self, acc, request, cursor, notify, rows):
         """Running under the accessor worker thread!
@@ -1198,8 +1253,7 @@ class MediaPane(gtk.Frame):
             self._safe_disconnect()
 
     def _stage_3(self, acc, request, cursor, notify, rows):
-        notify('Fulltext index added')
-        self._hand_over('Prokyon 3')
+        self._hand_over(PROKYON_3)
 
     def _stage_4(self, acc, request, cursor, notify, rows):
         """Test for Ampache database."""
@@ -1222,19 +1276,18 @@ class MediaPane(gtk.Frame):
         if self.schema_test("name prefix", cursor.fetchall()):
             notify('Found Ampache schema')
             request(("ALTER TABLE album ADD FULLTEXT idjc (name)",),
-                                                    self._stage_7, self._fail_3)
+                                                self._stage_7, self._fail_2)
         else:
             notify('Unrecognised database')
             self._safe_disconnect()
         
     def _stage_7(self, acc, request, cursor, notify, rows):
         request(("ALTER TABLE artist ADD FULLTEXT idjc (name)",), self._stage_8,
-                                                                self._fail_3)
+                                                                self._fail_2)
         
     def _stage_8(self, acc, request, cursor, notify, rows):
         request(("ALTER TABLE song ADD FULLTEXT idjc (title)",), self._stage_9,
-                                                                self._fail_3)
+                                                                self._fail_2)
 
     def _stage_9(self, acc, request, cursor, notify, rows):
-        notify('Fulltext index added')
         self._hand_over(AMPACHE)
