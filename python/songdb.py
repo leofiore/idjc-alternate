@@ -120,7 +120,7 @@ class DBAccessor(threading.Thread):
                         try:
                             try:
                                 rows = self._cursor.execute(*query)
-                            except sql.OperationalError as e:
+                            except sql.Error as e:
                                 if failhandler is not None:
                                     failhandler(e, notify)
                                     rows = 0
@@ -681,11 +681,11 @@ class TreePage(PageCommon):
         self.set_loading_view(True)
         if self._db_type == PROKYON_3:
             query = """SELECT album, albums.id as album_id, 0 as disk,
-                    tracknumber, title, artist, filename, path, bitrate,
+                    tracknumber, title, tracks.artist, filename, path, bitrate,
                     length, artists.id as artist_id FROM tracks
                     LEFT JOIN albums on tracks.album = albums.name
-                    LEFT JOIN artist on tracks.artist = artists.name
-                    ORDER BY artist, album, path, tracknumber, title"""
+                    LEFT JOIN artists on tracks.artist = artists.name
+                    ORDER BY artist, album, tracknumber, title"""
         elif self._db_type == AMPACHE:
             query = """SELECT
                     concat_ws(" ", album.prefix, album.name) as album,
@@ -702,8 +702,7 @@ class TreePage(PageCommon):
                     FROM song
                     LEFT JOIN artist on song.artist = artist.id
                     LEFT JOIN album on song.album = album.id
-                    ORDER BY artist.name, album.disk, album.name,
-                    tracknumber, title"""
+                    ORDER BY artist, album, disk, tracknumber, title"""
         else:
             print "unsupported database type:", self._db_type
             return
@@ -1048,9 +1047,9 @@ class FlatPage(PageCommon):
             print "unknown database access mode", access_mode
             return
 
-        self._acc.request(query, self._handler)
+        self._acc.request(query, self._handler, self._failhandler)
         return
-            
+
     @staticmethod
     def _drag_data(model, paths):
         """Generate tuples of (path, filename) for the given paths."""
@@ -1072,6 +1071,11 @@ class FlatPage(PageCommon):
     def _handler(self, acc, *args, **kwargs):
         PageCommon._handler(self, acc, *args, **kwargs)
         acc.purge_job_queue(1)
+
+    def _failhandler(self, exception, notify):
+        notify(str(exception))
+        glib.idle_add(self.tree_view.set_model, None)
+        glib.idle_add(self.list_store.clear)
 
     ###########################################################################
     
@@ -1219,10 +1223,11 @@ class MediaPane(gtk.Frame):
             raise
 
         if code != 1061:
-            notify_('Failed to create FULLTEXT index')
+            notify(_('Failed to create FULLTEXT index'))
+            print exception
             raise
 
-        notify('Found existing FULLTEXT index')
+        notify(_('Found existing FULLTEXT index'))
 
     def _stage_1(self, acc, request, cursor, notify, rows):
         """Running under the accessor worker thread!
