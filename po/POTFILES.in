@@ -10,7 +10,7 @@ python/licence_window.py
 python/maingui.py
 python/midicontrols.py
 python/mutagentagger.py
-python/p3db.py
+python/songdb.py
 python/playergui.py
 python/preferences.py
 python/sourceclientgui.py
