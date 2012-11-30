@@ -331,31 +331,6 @@ int avcodecdecode_reg(struct xlplayer *xlplayer)
     
     return ACCEPTED;
     }
-
-void avformatinfo(char *pathname)
-    {
-    AVFormatContext *ic = NULL;
-    AVDictionary *mc;
-    AVDictionaryEntry *tag;
-    const int flags = AV_METADATA_DONT_STRDUP_KEY | AV_METADATA_DONT_STRDUP_VAL;
-    char *keys[] = {"artist", "title", "album", NULL}, **kp;
-    
-    if (avformat_open_input(&ic, pathname, NULL, NULL) >= 0 && avformat_find_stream_info(ic, NULL) >= 0)
-        {
-        mc = ic->metadata;
-
-        for(kp = keys; *kp; kp++)
-            {
-            if ((tag = av_dict_get(mc, *kp, NULL, flags)))
-                fprintf(g.out, "avformatinfo: %s=%s\n", tag->key, tag->value);
-            }
-      
-        fprintf(g.out, "avformatinfo: duration=%d\n", (int)(ic->duration / AV_TIME_BASE));
-        avformat_close_input(&ic);
-        }
-    fprintf(g.out, "avformatinfo: end\n");
-    fflush(g.out);
-    }
     
 #endif /* HAVE_AVUTIL */
 #endif /* HAVE_AVFORMAT */

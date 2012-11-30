@@ -1326,13 +1326,6 @@ int mixer_main()
     if (!strcmp(action, "sndfileinforequest"))
         sndfileinfo(sndfilepathname);
 
-#ifdef HAVE_AVCODEC
-#ifdef HAVE_AVFORMAT
-    if (!strcmp(action, "avformatinforequest"))
-        avformatinfo(avformatpathname);
-#endif
-#endif
-
 #ifdef HAVE_SPEEX
     if (!(strcmp(action, "speexreadtagrequest")))
         speex_tag_read(speexpathname);

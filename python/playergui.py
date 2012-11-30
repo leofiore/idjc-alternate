@@ -979,23 +979,7 @@ class IDJC_Media_Player:
 
 
         # Trying for metadata from native tagging formats.
-        if FGlobs.avcodec and FGlobs.avformat and filext == ".avi":
-            self.parent.mixer_write("AVFP=%s\nACTN=avformatinforequest\nend\n" %
-                                                                    filename)
-            while 1:
-                line = self.parent.mixer_read()
-                if line.startswith("avformatinfo: artist="):
-                    artist = line[21:].strip()
-                if line.startswith("avformatinfo: title="):
-                    title = line[20:].strip()
-                if line.startswith("avformatinfo: album="):
-                    album = line[20:].strip()
-                if line.startswith("avformatinfo: duration="):
-                    length = int(line[23:-1])
-                if line == "avformatinfo: end\n":
-                    break
-
-        elif (filext == ".wav" or filext == ".aiff" or filext == ".au"):
+        if (filext == ".wav" or filext == ".aiff" or filext == ".au"):
             self.parent.mixer_write("SNDP=%s\nACTN=sndfileinforequest\nend\n" %
                                                                     filename)
             while 1:
