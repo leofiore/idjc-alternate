@@ -388,9 +388,7 @@ class PageCommon(gtk.VBox):
         self.pack_start(self.scrolled_window)
         self.tree_view = gtk.TreeView()
         self.tree_view.set_enable_search(False)
-        self.tree_view.set_rubber_banding(True)
         self.tree_selection = self.tree_view.get_selection()
-        self.tree_selection.set_mode(gtk.SELECTION_MULTIPLE)
         self.scrolled_window.add(self.tree_view)
         self.pack_start(controls, False)
         label = gtk.Label(label_text)
@@ -570,10 +568,10 @@ class ExpandAllButton(gtk.Button):
 class TreePage(PageCommon):
     """Browsable UI with tree structure."""
 
-    # *depth*, *treecol*, album, disk, tracknumber, title, artist,
+    # *depth*, *treecol*, album, year, disk, album_id, tracknumber, title, artist,
     # filename, path, bitrate, length
     # Precedence chosen to facilitate efficient sort to album order.
-    DATA_SIGNATURE = int, str, str, int, int, str, str, str, str, int, int
+    DATA_SIGNATURE = int, str, str, int, int, int, int, str, str, str, str, int, int
     BLANK_ROW = tuple(x() for x in DATA_SIGNATURE[2:])
 
     def __init__(self, notebook):
@@ -603,8 +601,6 @@ class TreePage(PageCommon):
         PageCommon.__init__(self, notebook, _('Browse'), self.controls)
         
         self.tree_view.set_enable_tree_lines(True)
-        self.tree_selection.set_select_function(self._tree_select_func)
-
         tree_expand.connect_object("clicked", gtk.TreeView.expand_all,
                                                                 self.tree_view)
         tree_collapse.connect_object("clicked", gtk.TreeView.collapse_all,
@@ -612,17 +608,17 @@ class TreePage(PageCommon):
         self.tree_cols = self._make_tv_columns(self.tree_view, (
                 ("", 1, self._cell_show_unknown, 180, pango.ELLIPSIZE_END),
                 # TC: Track artist.
-                (_('Artist'), 6, None, 100, pango.ELLIPSIZE_END),
+                (_('Artist'), 8, None, 100, pango.ELLIPSIZE_END),
                 # TC: The disk number of the album track.
-                (_('Disk'), 3, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+                (_('Disk'), 4, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
                 # TC: The album track number.
-                (_('Track'), 4, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+                (_('Track'), 6, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
                 # TC: Track playback time.
-                (_('Duration'), 10, self._cond_cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
-                (_('Bitrate'), 9, self._cell_k, -1, pango.ELLIPSIZE_NONE),
-                (_('Filename'), 7, None, 100, pango.ELLIPSIZE_END),
+                (_('Duration'), 12, self._cond_cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
+                (_('Bitrate'), 11, self._cell_k, -1, pango.ELLIPSIZE_NONE),
+                (_('Filename'), 9, None, 100, pango.ELLIPSIZE_END),
                 # TC: Directory path to a file.
-                (_('Path'), 8, None, -1, pango.ELLIPSIZE_NONE),
+                (_('Path'), 10, None, -1, pango.ELLIPSIZE_NONE),
                 ))
 
         self.artist_store = gtk.TreeStore(*self.DATA_SIGNATURE)
@@ -680,13 +676,19 @@ class TreePage(PageCommon):
 
         self.set_loading_view(True)
         if self._db_type == PROKYON_3:
-            query = """SELECT album, 0 as disk, tracknumber, title, artist,
-                    filename, path, bitrate, length FROM tracks
+            query = """SELECT album, albums.year as year,
+                    0 as disk, albums.id as album_id, tracknumber
+                    title, artist,
+                    filename, path, bitrate, length
+                    FROM tracks
+                    LEFT JOIN albums on tracks.album = albums.name
                     ORDER BY artist, album, tracknumber, title"""
         elif self._db_type == AMPACHE:
             query = """SELECT
                     concat_ws(" ", album.prefix, album.name) as album,
+                    album.year as year,
                     album.disk as disk,
+                    song.album as album_id,
                     track as tracknumber,
                     title,
                     concat_ws(" ", artist.prefix, artist.name) as artist, 
@@ -695,8 +697,8 @@ class TreePage(PageCommon):
                     bitrate,
                     time as length
                     FROM song
-                    LEFT JOIN artist on song.artist = artist.id
-                    LEFT JOIN album on song.album = album.id
+                    LEFT JOIN artist ON song.artist = artist.id
+                    LEFT JOIN album ON song.album = album.id
                     ORDER BY artist, album, disk, tracknumber, title"""
         else:
             print "unsupported database type:", self._db_type
@@ -705,28 +707,22 @@ class TreePage(PageCommon):
         self._pulse_id.append(glib.timeout_add(1000, self._progress_pulse))
         self._acc.request((query, ), self._handler, self._failhandler)
 
-    @staticmethod
-    def _tree_select_func(info):
-        return len(info) - 1
-
-    @staticmethod
-    def _drag_data(model, paths):
-        # ToDo: FIX ME
-        
-        if len(paths) == 1 and len(paths[0]) == 2:
-            d2 = 0
-            while 1:
-                try:
-                    row = model[paths[0] + (d2, )]
-                except:
-                    return
-                yield row[8], row[7]
-                d2 += 1
+    def _drag_data(self, model, path):
+        iter = model.get_iter(path[0])
+        for each in self._more_drag_data(model, iter):
+            yield each 
+                
+    def _more_drag_data(self, model, iter):
+        depth, path, filename = model.get(iter, 0, 10, 9)
+        if depth == 0:
+            yield path, filename
         else:
-            for each in paths:
-                if len(each) == 3:
-                    row = model[each]
-                    yield row[8], row[7]
+            iter = model.iter_children(iter)
+            while iter is not None:
+                for path, filename in self._more_drag_data(model, iter):
+                    yield path, filename
+            
+                iter = model.iter_next(iter)
 
     @threadslock
     def _progress_pulse(self):
@@ -764,7 +760,7 @@ class TreePage(PageCommon):
         self.artist_store.clear()
         self.album_store.clear()
 
-        namespace = [False, (0, 0.0, None, None, None, None)]
+        namespace = [False, (0.0, None, None, None, None)]
         do_max = min(max(30, rows / 100), 200)  # Data size to process.
         total = 2.0 * rows
         context = glib.idle_add(self._update_2, acc, cursor, total, do_max,
@@ -774,7 +770,7 @@ class TreePage(PageCommon):
 
     @threadslock
     def _update_2(self, acc, cursor, total, do_max, store, namespace):
-        kill, (dep, done, iter1, iter2, artist, album) = namespace
+        kill, (done, iter_1, iter_2, artist, album) = namespace
         if kill:
             return False
 
@@ -782,68 +778,59 @@ class TreePage(PageCommon):
         ampache = self.db_type == AMPACHE
         r_append = self.artist_store.append
         l_append = store.append
-        next_row = cursor.fetchone
         BLANK_ROW = self.BLANK_ROW
 
-        for each in xrange(do_max):
-            if acc.keepalive == False:
-                return False
+        rows = cursor.fetchmany(do_max)
+        if not rows:
+            store.sort()
+            namespace = [False, (done, ) + (None, ) * 7]
+            context = glib.idle_add(self._update_3, acc, total, do_max,
+                                                        store, namespace)
+            self._update_id.append((context, namespace))
+            return False
 
-            row = next_row()
-            if row is None:
-                store.sort()
-                namespace = [False, (0, done, None, None, None, None, None)]
-                context = glib.idle_add(self._update_3, acc, total, do_max,
-                                                            store, namespace)
-                self._update_id.append((context, namespace))
+        for row in rows:
+            if acc.keepalive == False:
                 return False
 
             if ampache:
                 # Split the full path into path and file.
                 try:
-                    path, filename = tuple(row[5].rsplit("/", 1))
+                    path, filename = tuple(row[7].rsplit("/", 1))
                 except ValueError:
                     continue
                     
-                row = row[0:5] + (filename, path) + row[7:]
+                row = row[0:7] + (filename, path) + row[9:]
 
-            while 1:
-                if dep == 0:
-                    artist = row[4]
-                    iter1 = r_append(None, (-1, artist) + BLANK_ROW)
-                    dep = 1
+            row = row[:8] + (transform(row[8]), ) + row[9:]
+            l_append(row)
 
-                if dep == 1:
-                    if artist != row[4]:
-                        dep = 0
-                        continue
-                    
-                    album = row[0]    
-                    iter2 = r_append(iter1, (-2, album) + BLANK_ROW)
-                    dep = 2
-
-                if dep == 2:
-                    if artist != row[4]:
-                        dep = 0
-                        continue
-                        
-                    if album != row[0]:
-                        dep = 1
-                        continue
-                        
-                    row = row[:6] + (transform(row[6]), ) + row[7:]
-                    r_append(iter2, (0, row[3]) + row)
-                    l_append(row)
-                    break
-
+            if album == row[0] and artist == row[6]:
+                r_append(iter_2, (0, row[5]) + row)
+                continue
+            else:
+                if artist != row[6]:
+                    artist = row[6]
+                    iter_1 = r_append(None, (-1, artist) + BLANK_ROW)
+                    album = None
+                if album != row[0]:
+                    album = row[0]
+                    year = row[1]
+                    if year:
+                        albumtext = "%s (%d)" % (album, year)
+                    else:
+                        albumtext = album
+                    iter_2 = r_append(iter_1, (-2, albumtext) + BLANK_ROW)
+                r_append(iter_2, (0, row[5]) + row)
+                
         done += do_max
         self.progress_bar.set_fraction(done / total)
-        namespace[1] = dep, done, iter1, iter2, artist, album
+        namespace[1] = done, iter_1, iter_2, artist, album
         return True
 
     @threadslock
     def _update_3(self, acc, total, do_max, store, namespace):
-        kill, (dep, done, iter_1, iter_2, artist, album, disk) = namespace
+        kill, (done, iter_1, iter_2, artist, album, year, disk, album_id) = namespace
         if kill:
             return False
 
@@ -861,40 +848,31 @@ class TreePage(PageCommon):
                 self.set_loading_view(False)
                 return False
 
-            while 1:
-                if dep == 0:
+            if album_id == row[3]:
+                append(iter_2, (0, row[5]) + row)
+                continue
+            else:
+                if album != row[0] or year != row[1]:
                     album = row[0]
-                    iter_1 = append(None, (-1, album) + BLANK_ROW)
-                    dep = 1
-
-                if dep == 1:
-                    if album != row[0]:
-                        dep = 0
-                        continue
-
-                    disk = row[1]
+                    year = row[1]
+                    disk = None
+                    if year:
+                        albumtext = "%s (%d)" % (album, year)
+                    else:
+                        albumtext = album
+                    iter_1 = append(None, (-1, albumtext) + BLANK_ROW)
+                if disk != row[2]:
+                    disk = row[2]
                     if disk == 0:
                         iter_2 = iter_1
                     else:
-                        iter_2 = append(iter_1, (-2, "Disk %d" % disk)
+                        iter_2 = append(iter_1, (-2, _('Disk %d') % disk)
                                                                 + BLANK_ROW)
-                    dep = 2
-
-                if dep == 2:
-                    if album != row[0]:
-                        dep = 0
-                        continue
-                    
-                    if disk != row[1]:
-                        dep = 1
-                        continue
-
-                    append(iter_2, (0, row[3]) + row)
-                    break
-            
+                append(iter_2, (0, row[5]) + row)
+                
         done += do_max
         self.progress_bar.set_fraction(done / total)
-        namespace[1] = dep, done, iter_1, iter_2, artist, album, disk
+        namespace[1] = done, iter_1, iter_2, artist, album, year, disk, album_id
         return True
 
 
@@ -962,6 +940,8 @@ class FlatPage(PageCommon):
             ))
 
         self.tree_view.set_rules_hint(True)
+        self.tree_view.set_rubber_banding(True)
+        self.tree_selection.set_mode(gtk.SELECTION_MULTIPLE)
 
     def deactivate(self):
         self.fuzzy_entry.set_text("")
@@ -1074,6 +1054,9 @@ class FlatPage(PageCommon):
 
     def _failhandler(self, exception, notify):
         notify(str(exception))
+        if exception[0] == 2006:
+            raise
+
         glib.idle_add(self.tree_view.set_model, None)
         glib.idle_add(self.list_store.clear)
 
