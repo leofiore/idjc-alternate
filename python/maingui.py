@@ -194,6 +194,9 @@ class MainMenu(gtk.MenuBar, MenuMixin):
                 (_('Music Database'), _('Channel Meters'), _('Output Meters'),
                  _('Media Players'))), gtk.CheckMenuItem)
 
+        if not songdb.have_songdb:
+            self.songdbmenu_i.hide()
+
         self.submenu(self.jackmenu_i, "jack")
 
         self.submenu(self.helpmenu_i, "help")

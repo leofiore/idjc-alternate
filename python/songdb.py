@@ -31,14 +31,16 @@ import gtk
 try:
     import MySQLdb as sql
 except ImportError:
-    sql = None
+    have_songdb = False
+else:
+    have_songdb = True
 
 from idjc import FGlobs
 from .tooltips import set_tip
 from .gtkstuff import threadslock, DefaultEntry
 
 
-__all__ = ['MediaPane']
+__all__ = ['MediaPane', 'have_songdb']
 
 AMPACHE = "Ampache"
 PROKYON_3 = "Prokyon 3"
@@ -225,82 +227,78 @@ class PrefsControls(gtk.Frame):
         
         # List of widgets that should be made insensitive when db is active. 
         self._parameters = []  
-        if not sql:
-            # Feature is disabled.
+        # Control widgets.
+        table = gtk.Table(5, 4)
+        table.set_border_width(10)
+        table.set_row_spacings(1)
+        for col, spc in zip(xrange(3), (3, 10, 3)):
+            table.set_col_spacing(col, spc)
+
+        # Attachment for labels.
+        l_attach = partial(table.attach, xoptions=gtk.SHRINK | gtk.FILL)
+        
+        # Top row.
+        hostportlabel, self._hostnameport = self._factory(
+                                        _('Hostname[:Port]'), 'localhost')
+        l_attach(hostportlabel, 0, 1, 0, 1)
+        table.attach(self._hostnameport, 1, 4, 0, 1)
+        
+        # Second row.
+        hbox = gtk.HBox()
+        hbox.set_spacing(3)
+        fpmlabel, self._addchars = self._factory(
+                                            _('File Path Modify'), None)
+        adj = gtk.Adjustment(0.0, 0.0, 999.0, 1.0, 1.0)
+        self._delchars = gtk.SpinButton(adj, 0.0, 0)
+        self._parameters.append(self._delchars)
+        set_tip(self._delchars, _('The number of characters to strip from '
+                                'the left hand side of media file paths.'))
+        set_tip(self._addchars, 
+                    _('The characters to prefix to the media file paths.'))
+        l_attach(fpmlabel, 0, 1, 1, 2)
+        minus = gtk.Label('-')
+        hbox.pack_start(minus, False)
+        hbox.pack_start(self._delchars, False)
+        plus = gtk.Label('+')
+        hbox.pack_start(plus, False)
+        hbox.pack_start(self._addchars)
+        table.attach(hbox, 1, 4, 1, 2)
+        
+        # Third row.
+        userlabel, self._user = self._factory(_('User Name'), "admin")
+        l_attach(userlabel, 0, 1, 3, 4)
+        table.attach(self._user, 1, 2, 3, 4)
+        dblabel, self._database = self._factory(_('Database'), "ampache")
+        l_attach(dblabel, 2, 3, 3, 4)
+        table.attach(self._database, 3, 4, 3, 4)
+        
+        # Fourth row.
+        passlabel, self._password = self._factory(_('Password'), "")
+        self._password.set_visibility(False)
+        l_attach(passlabel, 0, 1, 4, 5)
+        table.attach(self._password, 1, 2, 4, 5)
+        self.dbtoggle = gtk.ToggleButton(_('Music Database'))
+        self.dbtoggle.set_size_request(10, -1)
+        self.dbtoggle.connect("toggled", self._cb_dbtoggle)
+        table.attach(self.dbtoggle, 2, 4, 4, 5)
+        
+        # Notification row.
+        self._statusbar = gtk.Statusbar()
+        self._statusbar.set_has_resize_grip(False)
+        cid = self._statusbar.get_context_id("all output")
+        self._statusbar.push(cid, _('Disconnected'))
+        table.attach(self._statusbar, 0, 4, 5, 6)
+        
+        if have_songdb:
+            self.add(table)
+        else:
             vbox = gtk.VBox()
             vbox.set_sensitive(False)
             vbox.set_border_width(3)
-            label = gtk.Label(_('Python module MySQLdb required'))
+            label = gtk.Label(_('Module mysql-python (MySQLdb) required'))
             vbox.add(label)
             self.add(vbox)
-            self.data_panel = gtk.VBox()  # Empty placeholder widget.
-        else:
-            # Control widgets.
-            table = gtk.Table(5, 4)
-            table.set_border_width(10)
-            table.set_row_spacings(1)
-            for col, spc in zip(xrange(3), (3, 10, 3)):
-                table.set_col_spacing(col, spc)
-
-            # Attachment for labels.
-            l_attach = partial(table.attach, xoptions=gtk.SHRINK | gtk.FILL)
             
-            # Top row.
-            hostportlabel, self._hostnameport = self._factory(
-                                            _('Hostname[:Port]'), 'localhost')
-            l_attach(hostportlabel, 0, 1, 0, 1)
-            table.attach(self._hostnameport, 1, 4, 0, 1)
-            
-            # Second row.
-            hbox = gtk.HBox()
-            hbox.set_spacing(3)
-            fpmlabel, self._addchars = self._factory(
-                                                _('File Path Modify'), None)
-            adj = gtk.Adjustment(0.0, 0.0, 999.0, 1.0, 1.0)
-            self._delchars = gtk.SpinButton(adj, 0.0, 0)
-            self._parameters.append(self._delchars)
-            set_tip(self._delchars, _('The number of characters to strip from '
-                                    'the left hand side of media file paths.'))
-            set_tip(self._addchars, 
-                        _('The characters to prefix to the media file paths.'))
-            l_attach(fpmlabel, 0, 1, 1, 2)
-            minus = gtk.Label('-')
-            hbox.pack_start(minus, False)
-            hbox.pack_start(self._delchars, False)
-            plus = gtk.Label('+')
-            hbox.pack_start(plus, False)
-            hbox.pack_start(self._addchars)
-            table.attach(hbox, 1, 4, 1, 2)
-            
-            # Third row.
-            userlabel, self._user = self._factory(_('User Name'), "admin")
-            l_attach(userlabel, 0, 1, 3, 4)
-            table.attach(self._user, 1, 2, 3, 4)
-            dblabel, self._database = self._factory(_('Database'), "ampache")
-            l_attach(dblabel, 2, 3, 3, 4)
-            table.attach(self._database, 3, 4, 3, 4)
-            
-            # Fourth row.
-            passlabel, self._password = self._factory(_('Password'), "")
-            self._password.set_visibility(False)
-            l_attach(passlabel, 0, 1, 4, 5)
-            table.attach(self._password, 1, 2, 4, 5)
-            self.dbtoggle = gtk.ToggleButton(_('Music Database'))
-            self.dbtoggle.set_size_request(10, -1)
-            self.dbtoggle.connect("toggled", self._cb_dbtoggle)
-            table.attach(self.dbtoggle, 2, 4, 4, 5)
-            
-            # Notification row.
-            self._statusbar = gtk.Statusbar()
-            self._statusbar.set_has_resize_grip(False)
-            cid = self._statusbar.get_context_id("all output")
-            self._statusbar.push(cid, _('Disconnected'))
-            table.attach(self._statusbar, 0, 4, 5, 6)
-            
-            self.add(table)
-            self.data_panel = gtk.VBox()  # Bring in widget at some point.
-            
-        self.data_panel.set_no_show_all(False)
         self.show_all()
         
         # Save and Restore settings.
@@ -1127,6 +1125,7 @@ class MediaPane(gtk.Frame):
 
     def __init__(self):
         gtk.Frame.__init__(self)
+
         self.set_shadow_type(gtk.SHADOW_IN)
         self.set_border_width(6)
         self.set_label_align(0.5, 0.5)
@@ -1137,9 +1136,10 @@ class MediaPane(gtk.Frame):
         
         self._tree_page = TreePage(self.notebook)
         self._flat_page = FlatPage(self.notebook)
-        
         self.prefs_controls = PrefsControls()
-        self.prefs_controls.bind(self._dbtoggle)
+
+        if have_songdb:
+            self.prefs_controls.bind(self._dbtoggle)
 
         main_vbox.show_all()
 
