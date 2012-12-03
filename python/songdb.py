@@ -279,17 +279,34 @@ class PrefsControls(gtk.Frame):
         self._password.set_visibility(False)
         l_attach(passlabel, 0, 1, 4, 5)
         table.attach(self._password, 1, 2, 4, 5)
+
         self.dbtoggle = gtk.ToggleButton(_('Music Database'))
-        self.dbtoggle.set_size_request(10, -1)
         self.dbtoggle.connect("toggled", self._cb_dbtoggle)
-        table.attach(self.dbtoggle, 2, 4, 4, 5)
+
+        hbox = gtk.HBox()
+        hbox.set_spacing(2)
+        
+        self._disconnect = gtk.Button()
+        self._disconnect.set_sensitive(False)
+        image = gtk.image_new_from_stock(gtk.STOCK_DISCONNECT, gtk.ICON_SIZE_MENU)
+        self._disconnect.add(image)
+        self._disconnect.connect("clicked", lambda w: self.dbtoggle.set_active(False))
+        hbox.pack_start(self._disconnect, False)
+        
+        connect = gtk.Button()
+        self._parameters.append(connect)
+        image = gtk.image_new_from_stock(gtk.STOCK_CONNECT, gtk.ICON_SIZE_MENU)
+        connect.add(image)
+        connect.connect("clicked", lambda w: self.dbtoggle.set_active(True))
+        hbox.pack_start(connect, False)
         
         # Notification row.
         self._statusbar = gtk.Statusbar()
         self._statusbar.set_has_resize_grip(False)
         cid = self._statusbar.get_context_id("all output")
         self._statusbar.push(cid, _('Disconnected'))
-        table.attach(self._statusbar, 0, 4, 5, 6)
+        hbox.pack_start(self._statusbar)
+        table.attach(hbox, 0, 4, 5, 6)
         
         if have_songdb:
             self.add(table)
@@ -300,7 +317,7 @@ class PrefsControls(gtk.Frame):
             label = gtk.Label(_('Module mysql-python (MySQLdb) required'))
             vbox.add(label)
             self.add(vbox)
-            
+
         self.show_all()
         
         # Save and Restore settings.
@@ -344,10 +361,12 @@ class PrefsControls(gtk.Frame):
     def _cb_dbtoggle(self, widget):
         """Parameter widgets to be made insensitive when db is active."""
     
-        sens = not widget.get_active()
+        active = widget.get_active()
     
         for each in self._parameters:
-            each.set_sensitive(sens)
+            each.set_sensitive(not active)
+        
+        self._disconnect.set_sensitive(active)
 
     def _notify(self, message):
         """Display status messages beneath the prefs settings."""
@@ -869,7 +888,7 @@ class TreePage(PageCommon):
                 append(iter_2, (0, row[5]) + row)
                 
         done += do_max
-        self.progress_bar.set_fraction(done / total)
+        self.progress_bar.set_fraction(min(done / total, 1.0))
         namespace[1] = done, iter_1, iter_2, artist, album, year, disk, album_id
         return True
 
