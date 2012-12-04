@@ -93,7 +93,13 @@ class DBAccessor(threading.Thread):
         self.start()
 
     def request(self, sql_query, handler, failhandler=None):
-        """Add a request to the job queue."""
+        """Add a request to the job queue.
+        
+        The failhandler may "raise exception" to reconnect and try again or
+        it may return...
+            False, None: to run the handler
+            True: to cancel the job
+        """
         
         self.jobs.append((sql_query, handler, failhandler))
         self.semaphore.release()
@@ -124,10 +130,11 @@ class DBAccessor(threading.Thread):
                                 rows = self._cursor.execute(*query)
                             except sql.Error as e:
                                 if failhandler is not None:
-                                    failhandler(e, notify)
+                                    if failhandler(e, notify):
+                                        break
                                     rows = 0
                                 else:
-                                    raise
+                                    raise e
                         except (sql.Error, AttributeError) as e:
                             if not self.keepalive:
                                 return
@@ -678,6 +685,7 @@ class TreePage(PageCommon):
     def deactivate(self):
         while self._pulse_id:
             glib.source_remove(self._pulse_id.popleft())
+        self.progress_bar.set_fraction(0.0)
         
         PageCommon.deactivate(self)
 
@@ -716,7 +724,7 @@ class TreePage(PageCommon):
                     FROM song
                     LEFT JOIN artist ON song.artist = artist.id
                     LEFT JOIN album ON song.album = album.id
-                    ORDER BY artist, album, disk, tracknumber, title"""
+                    ORDER BY artist.name, album, disk, tracknumber, title"""
         else:
             print "unsupported database type:", self._db_type
             return
@@ -753,12 +761,16 @@ class TreePage(PageCommon):
         acc.disconnect()
 
     def _failhandler(self, exception, notify):
-        print str(exception)
+        if isinstance(exception, sql.InterfaceError):
+            raise exception  # Recover.
+        
         notify(_('Tree fetch failed'))
         glib.idle_add(threadslock(self.loading_label.set_text),
                                                         _('Fetch Failed!'))
         while self._pulse_id:
             glib.source_remove(self._pulse_id.popleft())
+        
+        return True  # Drop job. Don't run handler.
 
     ###########################################################################
 
@@ -1217,6 +1229,7 @@ class MediaPane(gtk.Frame):
     def _fail_1(self, exception, notify):
         # Give up.
         self._safe_disconnect()
+        return True
 
     def _fail_2(self, exception, notify):
         try:
