@@ -38,7 +38,7 @@ else:
 
 from idjc import FGlobs
 from .tooltips import set_tip
-from .gtkstuff import threadslock, DefaultEntry
+from .gtkstuff import threadslock, DefaultEntry, NotebookSR
 
 
 __all__ = ['MediaPane', 'have_songdb']
@@ -222,6 +222,110 @@ class DBAccessor(threading.Thread):
         self._cursor = self._handle.cursor()
 
 
+class Settings(gtk.Table):
+    def __init__(self, name):
+        self._name = name
+        gtk.Table.__init__(self, 5, 4)
+        self.set_border_width(10)
+        self.set_row_spacings(1)
+        for col, spc in zip(xrange(3), (3, 10, 3)):
+            self.set_col_spacing(col, spc)
+
+        self._controls = []
+        self.textdict = {}
+
+        # Attachment for labels.
+        l_attach = partial(self.attach, xoptions=gtk.SHRINK | gtk.FILL)
+        
+        # Top row.
+        hostportlabel, self.hostnameport = self._factory(
+            _('Hostname[:Port]'), 'localhost', "hostnameport")
+        l_attach(hostportlabel, 0, 1, 0, 1)
+        self.attach(self.hostnameport, 1, 4, 0, 1)
+        
+        # Second row.
+        hbox = gtk.HBox()
+        hbox.set_spacing(3)
+        fpmlabel, self.addchars = self._factory(_('File Path Modify'), None,
+                                                                    "addchars")
+        adj = gtk.Adjustment(0.0, 0.0, 999.0, 1.0, 1.0)
+        self.delchars = gtk.SpinButton(adj, 0.0, 0)
+        self._controls.append(self.delchars)
+        self.valuesdict = {"songdb_delchars_" + name: self.delchars}
+        set_tip(self.delchars, _('The number of characters to strip from '
+                                'the left hand side of media file paths.'))
+        set_tip(self.addchars, 
+                    _('The characters to prefix to the media file paths.'))
+        l_attach(fpmlabel, 0, 1, 1, 2)
+        minus = gtk.Label('-')
+        hbox.pack_start(minus, False)
+        hbox.pack_start(self.delchars, False)
+        plus = gtk.Label('+')
+        hbox.pack_start(plus, False)
+        hbox.pack_start(self.addchars)
+        self.attach(hbox, 1, 4, 1, 2)
+        
+        # Third row.
+        userlabel, self.user = self._factory(_('User Name'), "admin", "user")
+        l_attach(userlabel, 0, 1, 3, 4)
+        self.attach(self.user, 1, 2, 3, 4)
+        dblabel, self.database = self._factory(_('Database'), "ampache",
+                                                                    "database")
+        l_attach(dblabel, 2, 3, 3, 4)
+        self.attach(self.database, 3, 4, 3, 4)
+        
+        # Fourth row.
+        passlabel, self.password = self._factory(_('Password'), "", "password")
+        self.password.set_visibility(False)
+        l_attach(passlabel, 0, 1, 4, 5)
+        self.attach(self.password, 1, 2, 4, 5)
+
+    def get_conn_data(self):
+        """Collate parameters for DBAccessor contructors."""
+        
+        conn_data = {}
+        for key in "hostnameport user password database".split():
+            conn_data[key] = getattr(self, key).get_text().strip()
+        
+        return conn_data
+
+    def get_transform_function(self):
+        """Make a file path transformation function."""
+
+        del_qty = self.delchars.get_value_as_int()
+        prepend_str = self.addchars.get_text().strip()
+        if del_qty or prepend_str:
+            def transform(input_str):
+                return prepend_str + input_str[del_qty:]
+        else:
+            transform = lambda s: s  # Do nothing.
+
+        return transform
+
+    def set_sensitive(self, sens):
+        """Just specific contents of the table are made insensitive."""
+
+        for each in self._controls:
+            each.set_sensitive(sens)
+
+    def _factory(self, labeltext, entrytext, control_name):
+        """Widget factory method."""
+
+        label = gtk.Label(labeltext)
+        label.set_alignment(1.0, 0.5)
+
+        if entrytext:
+            entry = DefaultEntry(entrytext, True)
+        else:
+            entry = gtk.Entry()
+
+        entry.set_size_request(10, -1)
+        self._controls.append(entry)
+        self.textdict["songdb_%s_%s" % (control_name, self._name)] = entry
+        
+        return label, entry
+
+
 class PrefsControls(gtk.Frame):
     """Database controls as visible in the preferences window."""
     
@@ -233,59 +337,21 @@ class PrefsControls(gtk.Frame):
         set_tip(label, _('You can make certain media databases accessible in '
                             'IDJC for easy drag and drop into the playlists.'))
         self.set_label_widget(label)
+        vbox = gtk.VBox()
+        vbox.set_border_width(6)
+        vbox.set_spacing(2)
+        self.add(vbox)
         
-        # List of widgets that should be made insensitive when db is active. 
-        self._parameters = []  
-        # Control widgets.
-        table = gtk.Table(5, 4)
-        table.set_border_width(10)
-        table.set_row_spacings(1)
-        for col, spc in zip(xrange(3), (3, 10, 3)):
-            table.set_col_spacing(col, spc)
+        self._notebook = NotebookSR()
+        if have_songdb:
+            vbox.pack_start(self._notebook, False)
 
-        # Attachment for labels.
-        l_attach = partial(table.attach, xoptions=gtk.SHRINK | gtk.FILL)
-        
-        # Top row.
-        hostportlabel, self._hostnameport = self._factory(
-                                        _('Hostname[:Port]'), 'localhost')
-        l_attach(hostportlabel, 0, 1, 0, 1)
-        table.attach(self._hostnameport, 1, 4, 0, 1)
-        
-        # Second row.
-        hbox = gtk.HBox()
-        hbox.set_spacing(3)
-        fpmlabel, self._addchars = self._factory(
-                                            _('File Path Modify'), None)
-        adj = gtk.Adjustment(0.0, 0.0, 999.0, 1.0, 1.0)
-        self._delchars = gtk.SpinButton(adj, 0.0, 0)
-        self._parameters.append(self._delchars)
-        set_tip(self._delchars, _('The number of characters to strip from '
-                                'the left hand side of media file paths.'))
-        set_tip(self._addchars, 
-                    _('The characters to prefix to the media file paths.'))
-        l_attach(fpmlabel, 0, 1, 1, 2)
-        minus = gtk.Label('-')
-        hbox.pack_start(minus, False)
-        hbox.pack_start(self._delchars, False)
-        plus = gtk.Label('+')
-        hbox.pack_start(plus, False)
-        hbox.pack_start(self._addchars)
-        table.attach(hbox, 1, 4, 1, 2)
-        
-        # Third row.
-        userlabel, self._user = self._factory(_('User Name'), "admin")
-        l_attach(userlabel, 0, 1, 3, 4)
-        table.attach(self._user, 1, 2, 3, 4)
-        dblabel, self._database = self._factory(_('Database'), "ampache")
-        l_attach(dblabel, 2, 3, 3, 4)
-        table.attach(self._database, 3, 4, 3, 4)
-        
-        # Fourth row.
-        passlabel, self._password = self._factory(_('Password'), "")
-        self._password.set_visibility(False)
-        l_attach(passlabel, 0, 1, 4, 5)
-        table.attach(self._password, 1, 2, 4, 5)
+        self._settings = []
+        for i in range(1, 5):
+            settings = Settings(str(i))
+            self._settings.append(settings)
+            label = gtk.Label(str(i))
+            self._notebook.append_page(settings, label)
 
         self.dbtoggle = gtk.ToggleButton(_('Music Database'))
         self.dbtoggle.connect("toggled", self._cb_dbtoggle)
@@ -300,40 +366,36 @@ class PrefsControls(gtk.Frame):
         self._disconnect.connect("clicked", lambda w: self.dbtoggle.set_active(False))
         hbox.pack_start(self._disconnect, False)
         
-        connect = gtk.Button()
-        self._parameters.append(connect)
+        self._connect = gtk.Button()
         image = gtk.image_new_from_stock(gtk.STOCK_CONNECT, gtk.ICON_SIZE_MENU)
-        connect.add(image)
-        connect.connect("clicked", lambda w: self.dbtoggle.set_active(True))
-        hbox.pack_start(connect, False)
+        self._connect.add(image)
+        self._connect.connect("clicked", lambda w: self.dbtoggle.set_active(True))
+        hbox.pack_start(self._connect, False)
         
-        # Notification row.
         self._statusbar = gtk.Statusbar()
         self._statusbar.set_has_resize_grip(False)
         cid = self._statusbar.get_context_id("all output")
         self._statusbar.push(cid, _('Disconnected'))
         hbox.pack_start(self._statusbar)
-        table.attach(hbox, 0, 4, 5, 6)
-        
+
         if have_songdb:
-            self.add(table)
+            vbox.pack_start(hbox, False)
         else:
-            vbox = gtk.VBox()
             vbox.set_sensitive(False)
-            vbox.set_border_width(3)
             label = gtk.Label(_('Module mysql-python (MySQLdb) required'))
             vbox.add(label)
-            self.add(vbox)
 
         self.show_all()
         
-        # Save and Restore settings.
-        self.activedict = {"songdb_active": self.dbtoggle}
-        self.valuesdict = {"songdb_delchars": self._delchars}
-        self.textdict = {"songdb_hostnameport": self._hostnameport,
-            "songdb_user": self._user, "songdb_password": self._password,
-            "songdb_dbname": self._database, "songdb_addchars": self._addchars}
-        
+        # Save and Restore.
+        self.activedict = {"songdb_active": self.dbtoggle,
+                            "songdb_page": self._notebook}
+        self.textdict = {}
+        self.valuesdict = {}
+        for each in self._settings:
+            self.textdict.update(each.textdict)
+            self.valuesdict.update(each.valuesdict)
+
     def disconnect(self):
         self.dbtoggle.set_active(False)    
         
@@ -346,20 +408,11 @@ class PrefsControls(gtk.Frame):
         """This runs when the database is toggled on and off."""
         
         if widget.get_active():
-            # Collate parameters for DBAccessor contructors.
-            conn_data = {"notify": self._notify}
-            for key in "hostnameport user password database".split():
-                conn_data[key] = getattr(self, "_" + key).get_text().strip()
-            
-            # Make a file path transformation function.
-            del_qty = self._delchars.get_value_as_int()
-            prepend_str = self._addchars.get_text().strip()
-
-            if del_qty or prepend_str:
-                def transform(input_str):
-                    return prepend_str + input_str[del_qty:]
-            else:
-                transform = lambda s: s  # Do nothing.
+            settings = self._notebook.get_nth_page(
+                                            self._notebook.get_current_page())
+            conn_data = settings.get_conn_data()
+            conn_data["notify"] = self._notify
+            transform = settings.get_transform_function()
         else:
             conn_data = transform = None
 
@@ -368,12 +421,22 @@ class PrefsControls(gtk.Frame):
     def _cb_dbtoggle(self, widget):
         """Parameter widgets to be made insensitive when db is active."""
     
-        active = widget.get_active()
-    
-        for each in self._parameters:
-            each.set_sensitive(not active)
-        
-        self._disconnect.set_sensitive(active)
+        if widget.get_active():
+            self._connect.set_sensitive(False)
+            self._disconnect.set_sensitive(True)
+            settings = self._notebook.get_nth_page(
+                                            self._notebook.get_current_page())
+            for settings_page in self._settings:
+                if settings_page is settings:
+                    settings_page.set_sensitive(False)
+                else:
+                    settings_page.hide()
+        else:
+            self._connect.set_sensitive(True)
+            self._disconnect.set_sensitive(False)
+            for settings_page in self._settings:
+                settings_page.set_sensitive(True)
+                settings_page.show()
 
     def _notify(self, message):
         """Display status messages beneath the prefs settings."""
@@ -384,21 +447,6 @@ class PrefsControls(gtk.Frame):
         self._statusbar.push(cid, message)
         # To ensure readability of long messages also set the tooltip.
         self._statusbar.set_tooltip_text(message)
-
-    def _factory(self, labeltext, entrytext=None):
-        """Widget factory method."""
-        
-        label = gtk.Label(labeltext)
-        label.set_alignment(1.0, 0.5)
-        
-        if entrytext:
-            entry = DefaultEntry(entrytext, True)
-        else:
-            entry = gtk.Entry()
-            
-        entry.set_size_request(10, -1)
-        self._parameters.append(entry)
-        return label, entry
 
 
 class PageCommon(gtk.VBox):
@@ -701,22 +749,26 @@ class TreePage(PageCommon):
 
         self.set_loading_view(True)
         if self._db_type == PROKYON_3:
-            query = """SELECT album, albums.year as year,
-                    0 as disk, albums.id as album_id, tracknumber
-                    title, artist,
+            query = """SELECT album, 
+                    IFNULL(albums.year, 0) as year,
+                    0 as disk,
+                    IFNULL(albums.id, 0) as album_id,
+                    tracknumber,
+                    title,
+                    tracks.artist as artist,
                     filename, path, bitrate, length
                     FROM tracks
                     LEFT JOIN albums on tracks.album = albums.name
-                    ORDER BY artist, album, tracknumber, title"""
+                    ORDER BY tracks.artist, album, tracknumber, title"""
         elif self._db_type == AMPACHE:
             query = """SELECT
-                    concat_ws(" ", album.prefix, album.name) as album,
+                    CONCAT_WS(" ", album.prefix, album.name) as album,
                     album.year as year,
                     album.disk as disk,
                     song.album as album_id,
                     track as tracknumber,
                     title,
-                    concat_ws(" ", artist.prefix, artist.name) as artist, 
+                    CONCAT_WS(" ", artist.prefix, artist.name) as artist, 
                     file as filename,
                     "" as path,
                     bitrate,
@@ -763,6 +815,8 @@ class TreePage(PageCommon):
     def _failhandler(self, exception, notify):
         if isinstance(exception, sql.InterfaceError):
             raise exception  # Recover.
+        
+        print exception
         
         notify(_('Tree fetch failed'))
         glib.idle_add(threadslock(self.loading_label.set_text),

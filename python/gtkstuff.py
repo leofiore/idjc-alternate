@@ -34,6 +34,15 @@ t = gettext.translation(FGlobs.package_name, FGlobs.localedir, fallback=True)
 _ = t.gettext
 
 
+class NotebookSR(gtk.Notebook):
+    """Add methods so the save/restore scheme does not have to be extended."""
+
+    def get_active(self):
+        return self.get_current_page()
+        
+    def set_active(self, page):
+        self.set_current_page(page)
+
 
 class LEDDict(dict):
     """Dictionary of pixbufs of LEDs."""
@@ -48,7 +57,6 @@ class LEDDict(dict):
         for name, filename in zip(names, filenames):
             self[name] = gtk.gdk.pixbuf_new_from_file_at_size(
                 FGlobs.pkgdatadir / filename, size, size)
-
 
 
 class CellRendererLED(gtk.CellRendererPixbuf):
