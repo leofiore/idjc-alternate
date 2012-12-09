@@ -17,6 +17,7 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
 import time
 import types
 import gettext
@@ -289,18 +290,13 @@ class Settings(gtk.Table):
         
         return conn_data
 
-    def get_transform_function(self):
+    def get_transformation_data(self):
         """Make a file path transformation function."""
 
-        del_qty = self.delchars.get_value_as_int()
+        from_ = self.delchars.get_value_as_int() + 1
         prepend_str = self.addchars.get_text().strip()
-        if del_qty or prepend_str:
-            def transform(input_str):
-                return prepend_str + input_str[del_qty:]
-        else:
-            transform = lambda s: s  # Do nothing.
 
-        return transform
+        return from_, prepend_str
 
     def set_sensitive(self, sens):
         """Just specific contents of the table are made insensitive."""
@@ -412,11 +408,11 @@ class PrefsControls(gtk.Frame):
                                             self._notebook.get_current_page())
             conn_data = settings.get_conn_data()
             conn_data["notify"] = self._notify
-            transform = settings.get_transform_function()
+            trans_data = settings.get_transformation_data()
         else:
-            conn_data = transform = None
+            conn_data = trans_data = None
 
-        callback(conn_data, transform)
+        callback(conn_data, trans_data)
 
     def _cb_dbtoggle(self, widget):
         """Parameter widgets to be made insensitive when db is active."""
@@ -478,8 +474,12 @@ class PageCommon(gtk.VBox):
         return self._db_type
 
     @property
-    def transform(self):
-        return self._transform
+    def trans_from(self):
+        return self._trans_data[0]
+       
+    @property
+    def trans_prepend(self):
+        return self._trans_data[1]
 
     def get_col_widths(self):
         pass
@@ -498,10 +498,10 @@ class PageCommon(gtk.VBox):
             else:
                 c.next()
 
-    def activate(self, accessor, db_type, transform):
+    def activate(self, accessor, db_type, trans_data):
         self._db_type = db_type
         self._acc = accessor
-        self._transform = transform
+        self._trans_data = trans_data
         
     def deactivate(self):
         while self._update_id:
@@ -530,7 +530,7 @@ class PageCommon(gtk.VBox):
 
     def _cb_drag_data_get(self, tree_view, context, selection, target, etime):
         model, paths = self.tree_selection.get_selected_rows()
-        data = ("file://%s/%s" % row for row in self._drag_data(model, paths))
+        data = ("file://%s" % row for row in self._drag_data(model, paths))
         selection.set(selection.target, 8, "\n".join(data))
 
     @staticmethod
@@ -542,7 +542,6 @@ class PageCommon(gtk.VBox):
             renderer = gtk.CellRendererText()
             renderer.props.ellipsize = el
             column = gtk.TreeViewColumn(label, renderer)
-            column.add_attribute(renderer, 'text', data_index)
             if mw != -1:
                 column.set_resizable(True)
                 column.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
@@ -552,6 +551,9 @@ class PageCommon(gtk.VBox):
             list_.append(column)
             if data_function is not None:
                 column.set_cell_data_func(renderer, data_function, data_index)
+            else:
+                column.add_attribute(renderer, 'text', data_index)
+
         return list_
 
     def _cond_cell_secs_to_h_m_s(self, column, renderer, model, iter, cell):
@@ -569,12 +571,23 @@ class PageCommon(gtk.VBox):
         elif bitrate > 9999 and self._db_type == AMPACHE:
             renderer.set_property("text", "%dk" % (bitrate // 1000))
         renderer.set_property("xalign", 1.0)
-    
+
     @staticmethod
     def _cell_show_unknown(column, renderer, model, iter, cell):
-        if model.get_value(iter, cell) == "":
-            # TC: Placeholder for unknown data.
-            renderer.set_property("text", _('<unknown>'))
+        text = model.get_value(iter, cell) or _('<unknown>')
+        renderer.props.text = text
+
+
+    def inner(column, renderer, model, iter, cell, which_bit):
+        text = model.get_value(iter, cell)
+
+        if text:
+            renderer.props.text = which_bit(text)
+        else:
+            renderer.props.text = ""    
+    _cell_path = staticmethod(partial(inner, which_bit=os.path.dirname))
+    _cell_filename = staticmethod(partial(inner, which_bit=os.path.basename))
+    del inner
     
     @staticmethod
     def _cell_secs_to_h_m_s(column, renderer, model, iter, cell):
@@ -597,6 +610,7 @@ class PageCommon(gtk.VBox):
         val = model.get_value(iter, cell)
         if val:
             renderer.set_property("xalign", 1.0)
+            renderer.set_property("text", val)
         else:
             renderer.set_property("text", "")
 
@@ -640,10 +654,10 @@ class ExpandAllButton(gtk.Button):
 class TreePage(PageCommon):
     """Browsable UI with tree structure."""
 
-    # *depth*, *treecol*, album, year, disk, album_id, tracknumber, title, artist,
-    # filename, path, bitrate, length
-    # Precedence chosen to facilitate efficient sort to album order.
-    DATA_SIGNATURE = int, str, str, int, int, int, int, str, str, str, str, int, int
+    # *depth*, *treecol*, album, album_prefix, year, disk, album_id,
+    # tracknumber, title, artist, artist_prefix, pathname, bitrate, length
+    # The order chosen negates the need for a custom sort comparison function.
+    DATA_SIGNATURE = int, str, str, str, int, int, int, int, str, str, str, str, int, int
     BLANK_ROW = tuple(x() for x in DATA_SIGNATURE[2:])
 
     def __init__(self, notebook):
@@ -680,17 +694,17 @@ class TreePage(PageCommon):
         self.tree_cols = self._make_tv_columns(self.tree_view, (
                 ("", 1, self._cell_show_unknown, 180, pango.ELLIPSIZE_END),
                 # TC: Track artist.
-                (_('Artist'), 8, None, 100, pango.ELLIPSIZE_END),
+                (_('Artist'), (10, 9), self._data_merge, 100, pango.ELLIPSIZE_END),
                 # TC: The disk number of the album track.
-                (_('Disk'), 4, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+                (_('Disk'), 5, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
                 # TC: The album track number.
-                (_('Track'), 6, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+                (_('Track'), 7, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
                 # TC: Track playback time.
-                (_('Duration'), 12, self._cond_cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
-                (_('Bitrate'), 11, self._cell_k, -1, pango.ELLIPSIZE_NONE),
-                (_('Filename'), 9, None, 100, pango.ELLIPSIZE_END),
+                (_('Duration'), 13, self._cond_cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
+                (_('Bitrate'), 12, self._cell_k, -1, pango.ELLIPSIZE_NONE),
+                (_('Filename'), 11, self._cell_filename, 100, pango.ELLIPSIZE_END),
                 # TC: Directory path to a file.
-                (_('Path'), 10, None, -1, pango.ELLIPSIZE_NONE),
+                (_('Path'), 11, self._cell_path, -1, pango.ELLIPSIZE_NONE),
                 ))
 
         self.artist_store = gtk.TreeStore(*self.DATA_SIGNATURE)
@@ -749,28 +763,33 @@ class TreePage(PageCommon):
 
         self.set_loading_view(True)
         if self._db_type == PROKYON_3:
-            query = """SELECT album, 
+            query = """SELECT
+                    album,
+                    "" as alb_prefix,
                     IFNULL(albums.year, 0) as year,
                     0 as disk,
                     IFNULL(albums.id, 0) as album_id,
                     tracknumber,
                     title,
                     tracks.artist as artist,
-                    filename, path, bitrate, length
+                    "" as art_prefix,
+                    CONCAT(%s,MID(CONCAT_WS('/',path,filename),%s)) as file,
+                    bitrate, length
                     FROM tracks
                     LEFT JOIN albums on tracks.album = albums.name
                     ORDER BY tracks.artist, album, tracknumber, title"""
         elif self._db_type == AMPACHE:
             query = """SELECT
-                    CONCAT_WS(" ", album.prefix, album.name) as album,
+                    album.name as album,
+                    album.prefix as alb_prefix,
                     album.year as year,
                     album.disk as disk,
                     song.album as album_id,
                     track as tracknumber,
                     title,
-                    CONCAT_WS(" ", artist.prefix, artist.name) as artist, 
-                    file as filename,
-                    "" as path,
+                    artist.name as artist,
+                    artist.prefix as art_prefix,
+                    CONCAT(%s,MID(file,%s)) as file,
                     bitrate,
                     time as length
                     FROM song
@@ -782,7 +801,8 @@ class TreePage(PageCommon):
             return
             
         self._pulse_id.append(glib.timeout_add(1000, self._progress_pulse))
-        self._acc.request((query, ), self._handler, self._failhandler)
+        self._acc.request((query, (self.trans_prepend, self.trans_from)),
+                                            self._handler, self._failhandler)
 
     def _drag_data(self, model, path):
         iter = model.get_iter(path[0])
@@ -790,14 +810,14 @@ class TreePage(PageCommon):
             yield each 
                 
     def _more_drag_data(self, model, iter):
-        depth, path, filename = model.get(iter, 0, 10, 9)
+        depth, pathname = model.get(iter, 0, 11)
         if depth == 0:
-            yield path, filename
+            yield pathname
         else:
             iter = model.iter_children(iter)
             while iter is not None:
-                for path, filename in self._more_drag_data(model, iter):
-                    yield path, filename
+                for pathname in self._more_drag_data(model, iter):
+                    yield pathname
             
                 iter = model.iter_next(iter)
 
@@ -805,6 +825,15 @@ class TreePage(PageCommon):
     def _progress_pulse(self):
         self.progress_bar.pulse()
         return True
+
+    def _data_merge(self, column, renderer, model, iter, elements):
+        renderer.props.text = self._join(*model.get(iter, *elements))
+
+    @staticmethod
+    def _join(prefix, name):
+        if prefix and name:
+            return prefix + " " + name
+        return prefix or name or ""
 
     ###########################################################################
 
@@ -843,7 +872,7 @@ class TreePage(PageCommon):
         self.artist_store.clear()
         self.album_store.clear()
 
-        namespace = [False, (0.0, None, None, None, None)]
+        namespace = [False, (0.0, None, None, None, None, None, None)]
         do_max = min(max(30, rows / 100), 200)  # Data size to process.
         total = 2.0 * rows
         context = glib.idle_add(self._update_2, acc, cursor, total, do_max,
@@ -853,12 +882,10 @@ class TreePage(PageCommon):
 
     @threadslock
     def _update_2(self, acc, cursor, total, do_max, store, namespace):
-        kill, (done, iter_1, iter_2, artist, album) = namespace
+        kill, (done, iter_1, iter_2, artist, album, art_prefix, alb_prefix) = namespace
         if kill:
             return False
 
-        transform = self.transform
-        ampache = self.db_type == AMPACHE
         r_append = self.artist_store.append
         l_append = store.append
         BLANK_ROW = self.BLANK_ROW
@@ -866,7 +893,7 @@ class TreePage(PageCommon):
         rows = cursor.fetchmany(do_max)
         if not rows:
             store.sort()
-            namespace = [False, (done, ) + (None, ) * 7]
+            namespace = [False, (done, ) + (None, ) * 9]
             context = glib.idle_add(self._update_3, acc, total, do_max,
                                                         store, namespace)
             self._update_id.append((context, namespace))
@@ -876,44 +903,36 @@ class TreePage(PageCommon):
             if acc.keepalive == False:
                 return False
 
-            if ampache:
-                # Split the full path into path and file.
-                try:
-                    path, filename = tuple(row[7].rsplit("/", 1))
-                except ValueError:
-                    continue
-                    
-                row = row[0:7] + (filename, path) + row[9:]
-
-            row = row[:8] + (transform(row[8]), ) + row[9:]
             l_append(row)
-
-            if album == row[0] and artist == row[6]:
-                r_append(iter_2, (0, row[5]) + row)
+            if album == row[0] and artist == row[7] and \
+                                alb_prefix == row[1] and art_prefix == row[8]:
+                r_append(iter_2, (0, row[6]) + row)
                 continue
             else:
-                if artist != row[6]:
-                    artist = row[6]
-                    iter_1 = r_append(None, (-1, artist) + BLANK_ROW)
+                if artist != row[7] or art_prefix != row[8]:
+                    artist = row[7]
+                    art_prefix = row[8]
+                    iter_1 = r_append(None, (-1, self._join(art_prefix, artist)) + BLANK_ROW)
                     album = None
-                if album != row[0]:
+                if album != row[0] or alb_prefix != row[1]:
                     album = row[0]
-                    year = row[1]
+                    alb_prefix = row[1]
+                    year = row[2]
                     if year:
-                        albumtext = "%s (%d)" % (album, year)
+                        albumtext = "%s (%d)" % (self._join(alb_prefix, album), year)
                     else:
                         albumtext = album
                     iter_2 = r_append(iter_1, (-2, albumtext) + BLANK_ROW)
-                r_append(iter_2, (0, row[5]) + row)
+                r_append(iter_2, (0, row[6]) + row)
                 
         done += do_max
         self.progress_bar.set_fraction(done / total)
-        namespace[1] = done, iter_1, iter_2, artist, album
+        namespace[1] = done, iter_1, iter_2, artist, album, art_prefix, alb_prefix
         return True
 
     @threadslock
     def _update_3(self, acc, total, do_max, store, namespace):
-        kill, (done, iter_1, iter_2, artist, album, year, disk, album_id) = namespace
+        kill, (done, iter_1, iter_2, artist, album, art_prefix, alb_prefix, year, disk, album_id) = namespace
         if kill:
             return False
 
@@ -931,31 +950,32 @@ class TreePage(PageCommon):
                 self.set_loading_view(False)
                 return False
 
-            if album_id == row[3]:
-                append(iter_2, (0, row[5]) + row)
+            if album_id == row[4]:
+                append(iter_2, (0, row[6]) + row)
                 continue
             else:
-                if album != row[0] or year != row[1]:
+                if album != row[0] or year != row[2] or alb_prefix != row[1]:
                     album = row[0]
-                    year = row[1]
+                    alb_prefix = row[1]
+                    year = row[2]
                     disk = None
                     if year:
-                        albumtext = "%s (%d)" % (album, year)
+                        albumtext = "%s (%d)" % (self._join(alb_prefix, album), year)
                     else:
                         albumtext = album
                     iter_1 = append(None, (-1, albumtext) + BLANK_ROW)
-                if disk != row[2]:
-                    disk = row[2]
+                if disk != row[3]:
+                    disk = row[3]
                     if disk == 0:
                         iter_2 = iter_1
                     else:
                         iter_2 = append(iter_1, (-2, _('Disk %d') % disk)
                                                                 + BLANK_ROW)
-                append(iter_2, (0, row[5]) + row)
-                
+                append(iter_2, (0, row[6]) + row)
+
         done += do_max
         self.progress_bar.set_fraction(min(done / total, 1.0))
-        namespace[1] = done, iter_1, iter_2, artist, album, year, disk, album_id
+        namespace[1] = done, iter_1, iter_2, artist, album, art_prefix, alb_prefix, year, disk, album_id
         return True
 
 
@@ -1006,9 +1026,9 @@ class FlatPage(PageCommon):
  
         # Row data specification:
         # index, ARTIST, ALBUM, TRACKNUM, TITLE, DURATION, BITRATE,
-        # path, filename, disk
+        # pathname, disk
         self.list_store = gtk.ListStore(
-                        int, str, str, int, str, int, int, str, str, int)
+                                int, str, str, int, str, int, int, str, int)
         self.tree_cols = self._make_tv_columns(self.tree_view, (
             ("(0)", 0, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
             (_('Artist'), 1, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
@@ -1018,8 +1038,8 @@ class FlatPage(PageCommon):
             (_('Title'), 4, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
             (_('Duration'), 5, self._cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
             (_('Bitrate'), 6, self._cell_k, -1, pango.ELLIPSIZE_NONE),
-            (_('Filename'), 7, None, 100, pango.ELLIPSIZE_END),
-            (_('Path'), 8, None, -1, pango.ELLIPSIZE_NONE),
+            (_('Filename'), 7, self._cell_filename, 100, pango.ELLIPSIZE_END),
+            (_('Path'), 7, self._cell_path, -1, pango.ELLIPSIZE_NONE),
             ))
 
         self.tree_view.set_rules_hint(True)
@@ -1039,14 +1059,18 @@ class FlatPage(PageCommon):
     _queries_table = {
         PROKYON_3:
             {FUZZY: (CLEAN, """
-                    SELECT artist,album,tracknumber,title,length,
-                    bitrate,filename,path,0 as disk FROM tracks
+                    SELECT artist,album,tracknumber,title,length,bitrate,
+                    CONCAT(%s,MID(CONCAT_WS('/',path,filename),%s)) as file,
+                    0 as disk
+                    FROM tracks
                     WHERE MATCH (artist,album,title,filename) AGAINST (%s)
                     """),
         
             WHERE: (DIRTY, """
-                    SELECT artist,album,tracknumber,title,length,
-                    bitrate,filename, path, 0 as disk FROM tracks WHERE (%s)
+                    SELECT artist,album,tracknumber,title,length,bitrate,
+                    CONCAT("%s",MID(CONCAT_WS('/',path,filename),%s)) as file,
+                    0 as disk
+                    FROM tracks WHERE (%s)
                     ORDER BY artist,album,path,tracknumber,title
                     """)},
         
@@ -1055,8 +1079,9 @@ class FlatPage(PageCommon):
                     SELECT
                     concat_ws(" ",artist.prefix,artist.name),
                     concat_ws(" ",album.prefix,album.name),
-                    track as tracknumber, title, time as length,
-                    bitrate, file, "" as padding, album.disk as disk FROM song
+                    track as tracknumber, title, time as length,bitrate,
+                    CONCAT(%s,MID(file,%s)) as file,
+                    album.disk as disk FROM song
                     LEFT JOIN artist ON artist.id = song.artist
                     LEFT JOIN album ON album.id = song.album
                     WHERE
@@ -1069,8 +1094,8 @@ class FlatPage(PageCommon):
                     SELECT
                     concat_ws(" ", artist.prefix, artist.name) as artist,
                     concat_ws(" ", album.prefix, album.name) as albumname,
-                    track as tracknumber, title,
-                    time as length, bitrate, file, "" as padding,
+                    track as tracknumber, title,time as length, bitrate,
+                    CONCAT("%s",MID(file,%s)) as file,
                     album.disk as disk FROM song
                     LEFT JOIN album on album.id = song.album
                     LEFT JOIN artist on artist.id = song.artist
@@ -1103,9 +1128,11 @@ class FlatPage(PageCommon):
 
         qty = query.count("(%s)")
         if access_mode == CLEAN:
-            query = (query, (user_text, ) * qty)
+            query = (query, (self.trans_prepend, self.trans_from, ) + 
+                                                    (user_text, ) * qty)
         elif access_mode == DIRTY:  # Accepting of SQL code in user data.
-            query = (query % (user_text, ) * qty, )
+            query = (query % ((self.trans_prepend, self.trans_from, )
+                                                    + (user_text, ) * qty), )
         else:
             print "unknown database access mode", access_mode
             return
@@ -1119,7 +1146,7 @@ class FlatPage(PageCommon):
         
         for path in paths:
             row = model[path]
-            yield row[8], row[7]
+            yield row[7]
 
     def _cb_fuzzysearch_changed(self, widget):
         if widget.get_text().strip():
@@ -1162,8 +1189,6 @@ class FlatPage(PageCommon):
             return False
         
         next_row = cursor.fetchone
-        ampache = self._db_type == AMPACHE
-        transform = self.transform
         append = self.list_store.append
 
         for i in xrange(100):
@@ -1177,18 +1202,7 @@ class FlatPage(PageCommon):
 
             if row:
                 found += 1
-                if ampache:
-                    # Split the file into path and filename
-                    try:
-                        path, fname = row[6].rsplit("/", 1)
-                    except IndexError:
-                        continue
-                
-                    append((found, ) + row[:6] + (fname, transform(path))
-                                                                    + row[8:])
-                else:
-                    append((found, ) + row[:7] + (transform(row[7]), )
-                                                                    + row[8:])
+                append((found, ) + row)
             else:
                 if found:
                     self.tree_cols[0].set_title("(%s)" % found)
@@ -1247,12 +1261,12 @@ class MediaPane(gtk.Frame):
             else:
                 target.set_col_widths(data)
 
-    def _dbtoggle(self, conn_data, transform):
+    def _dbtoggle(self, conn_data, trans_data):
         if conn_data:
             # Connect and discover the database type.
             self._acc1 = DBAccessor(**conn_data)
             self._acc2 = DBAccessor(**conn_data)
-            self._transform = transform
+            self._trans_data = trans_data
             self._acc1.request(('SHOW tables',), self._stage_1, self._fail_1)
         else:
             try:
@@ -1274,10 +1288,10 @@ class MediaPane(gtk.Frame):
 
     def _safe_disconnect(self):
         glib.idle_add(threadslock(self.prefs_controls.disconnect))
-           
+
     def _hand_over(self, database_name):
-        self._tree_page.activate(self._acc1, database_name, self._transform)
-        self._flat_page.activate(self._acc2, database_name, self._transform)
+        self._tree_page.activate(self._acc1, database_name, self._trans_data)
+        self._flat_page.activate(self._acc2, database_name, self._trans_data)
         glib.idle_add(threadslock(self.show))
             
     def _fail_1(self, exception, notify):
