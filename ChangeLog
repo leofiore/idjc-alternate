@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+IRC now supports manual connection starting as an option for when connecting at startup is undesirable.
+
 Added optional song database tree heirarchy album - artist - track.
 
 Improved metadata cancellation for stopped players.

@@ -955,8 +955,11 @@ class IRCPane(gtk.VBox):
             return ""
 
     def _m_read(self, model, path, iter, store):
-        line = tuple(model[path])
-        store.append((path, line))
+        row = IRCRowReference(model[path])
+        if row.type == 1 and row.active and row.manual:
+            row.active = 0
+
+        store.append((path, row))
 
     def unmarshall(self, data):
         """Set the TreeStore with data from a string."""
@@ -1091,7 +1094,12 @@ class IRCPane(gtk.VBox):
 
     @highlight
     def _add_server(self, d, model, parent_iter):
-        iter = model.insert(parent_iter, 0, (1, 1) + d.as_tuple() + ("", ))
+        # Check whether row initially needs to be switched off.
+        row = IRCRowReference(list((1, 1) + d.as_tuple() + ("", )))
+        if row.manual:
+            row.active = 0
+        
+        iter = model.insert(parent_iter, 0, row)
 
         # Add the subelements.
         for i, x in enumerate(xrange(2, 2 + len(MESSAGE_CATEGORIES) * 2, 2)):

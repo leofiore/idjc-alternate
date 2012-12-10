@@ -305,7 +305,7 @@ class HistoryEntry(gtk.ComboBoxEntry):
 
 
 
-class NamedTreeRowReference(object):
+class NamedTreeRowReference(list):
     """Provides named attribute access to gtk.TreeRowReference objects.
     
     This is a virtual base class.
@@ -317,7 +317,8 @@ class NamedTreeRowReference(object):
 
 
     def __init__(self, tree_row_ref):
-        object.__setattr__(self, "_tree_row_ref", tree_row_ref)
+        list.__init__(self, tree_row_ref)
+        list.__setattr__(self, "_tree_row_ref", tree_row_ref)
         
         
     @abstractmethod
@@ -346,6 +347,7 @@ class NamedTreeRowReference(object):
         
         
     def __setitem__(self, path, data):
+        list.__setitem__(self, path, data)
         self._tree_row_ref[path] = data
 
 
@@ -354,7 +356,9 @@ class NamedTreeRowReference(object):
 
 
     def __setattr__(self, name, data):
-        self._tree_row_ref[self._index_for_name(name)] = data
+        path = self._index_for_name(name)
+        list.__setitem__(self, path, data)
+        self._tree_row_ref[path] = data
 
 
 
