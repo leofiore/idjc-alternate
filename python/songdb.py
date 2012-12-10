@@ -1,4 +1,5 @@
-#   songdb.py: music database connectivity
+"""Music database connectivity and display."""
+
 #   Copyright (C) 2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #             (C) 2012 Brian Millham (bmillham@users.sourceforge.net)
 #
