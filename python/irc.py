@@ -92,8 +92,8 @@ class IRCEntry(gtk.Entry):  # pylint: disable=R0904
     Features pop-up menu and direct control character insertion.
     """
 
-    _control_keytable = {107:u"\u0003", 98:u"\u0002",
-                        117:u"\u001F", 111:u"\u000F"}
+    _control_keytable = {107: u"\u0003", 98: u"\u0002",
+                        117: u"\u001F", 111: u"\u000F"}
 
     def __init__(self, *args, **kwds):
         gtk.Entry.__init__(self, *args, **kwds)
@@ -412,6 +412,9 @@ class ServerDialog(gtk.Dialog):
         self.username = gtk.Entry()
         self.password = gtk.Entry()
         self.password.set_visibility(False)
+        self.manual_start = gtk.CheckButton(_("Manual start"))
+        set_tip(self.manual_start, 
+                            _('Off when restarting IDJC and off initially.'))
         self.nick1 = gtk.Entry()
         self.nick2 = gtk.Entry()
         self.nick3 = gtk.Entry()
@@ -426,10 +429,9 @@ class ServerDialog(gtk.Dialog):
         image = gtk.image_new_from_stock(
                                         gtk.STOCK_NETWORK, gtk.ICON_SIZE_DIALOG)
         image.set_alignment(0.5, 0)
-        table = gtk.Table(9, 2)
+        table = gtk.Table(10, 2)
         table.set_col_spacings(6)
         table.set_row_spacings(3)
-        table.set_row_spacing(5, 20)
         rvbox = gtk.VBox(True)
         hbox.pack_start(image, False, padding=20)
         hbox.pack_start(table, True)
@@ -442,7 +444,7 @@ class ServerDialog(gtk.Dialog):
                             # TC: TCP/IP port number label.
                             _("Port"), "",
                             _("User name"),
-                            _("Password"),
+                            _("Password"), "",
                             # TC: IRC nickname data entry label.
                             _("Nickname"),
                             # TC: Second choice of IRC nickname.
@@ -454,8 +456,8 @@ class ServerDialog(gtk.Dialog):
                             # TC: The NickServ password.
                             _("NickServ p/w")),
                 (self.network, self.hostname, self.port, self.ssl,
-                 self.username, self.password, self.nick1, self.nick2,
-                 self.nick3, self.realname, self.nickserv))):
+                 self.username, self.password, self.manual_start, self.nick1,
+                 self.nick2, self.nick3, self.realname, self.nickserv))):
             # TC: Tooltip to IRC 'User name' field.
             set_tip(self.username, _("Ideally set this to something even on "
                                 "servers that allow public anonymous access."))
@@ -485,7 +487,8 @@ class ServerDialog(gtk.Dialog):
     def as_tuple(self):
         """Data extraction method."""
 
-        return (self.port.get_value(), self.ssl.get_active(),
+        return (self.manual_start.get_active(),
+            self.port.get_value(), self.ssl.get_active(),
             self.network.get_text().strip(), self.hostname.get_text().strip(),
             self.username.get_text().strip(), self.password.get_text().strip(),
             self.nick1.get_text().strip(), self.nick2.get_text().strip(),
@@ -515,6 +518,7 @@ class EditServerDialog(ServerDialog, EditDialogMixin):
         """The data restore method."""
         
         n = iter(orig_data).next
+        self.manual_start.set_active(n())
         self.port.set_value(n())
         self.ssl.set_active(n())
         self.network.set_text(n())
@@ -793,7 +797,7 @@ class IRCTreeView(gtk.TreeView):
                 iter = model.get_iter(path[0])
                 mode = model.get_value(iter, 0)
                 if mode in (3, 5, 7, 9):
-                    message = model.get_value(iter, 5)
+                    message = model[model.get_path(iter)].message
                     irc_view = IRCView()
                     irc_view.set_text(message)
                     tooltip.set_custom(irc_view)
@@ -807,17 +811,17 @@ class IRCRowReference(NamedTreeRowReference):
     """
     
     _lookup = {
-        1: {"port":2, "ssl":3, "network":4, "hostname":5, "username":6,
-             "password":7, "nick1":8, "nick2":9, "nick3":10, "realname":11,
-             "nickserv":12, "nick":13},
+        1: {"manual":2, "port":3, "ssl":4, "network":5, "hostname":6, "username":7,
+             "password":8, "nick1":9, "nick2":10, "nick3":11, "realname":12,
+             "nickserv":13, "nick":14},
 
-        3: {"delay":3, "channels":4, "message":5},
+        3: {"delay":4, "channels":5, "message":6},
 
-        5: {"offset":2, "interval":3, "channels":4, "message":5, "issue":13},
+        5: {"offset":3, "interval":4, "channels":5, "message":6, "issue":14},
         
-        7: {"channels":4, "message":5},
+        7: {"channels":5, "message":6},
 
-        9: {"channels":4, "message":5}
+        9: {"channels":5, "message":6}
         }
 
     def get_index_for_name(self, tree_row_ref, name):
@@ -837,7 +841,7 @@ class IRCTreeStore(gtk.TreeStore):
 
     @property
     def data_format(self):
-        return (int,) * 4 + (str,) * 10
+        return (int, ) * 5 + (str, ) * 10
 
     def __init__(self):
         gtk.TreeStore.__init__(self, *self.data_format)
@@ -880,7 +884,7 @@ class IRCPane(gtk.VBox):
         self.set_border_width(8)
         self.set_spacing(3)
         self._treestore = IRCTreeStore()
-        self._treestore.insert(None, 0, (0, 1, 0, 0) + ("", ) * 10)
+        self._treestore.insert(None, 0, (0, 1, 0, 0, 0) + ("", ) * 10)
         self._treeview = IRCTreeView(self._treestore)
         
         col = gtk.TreeViewColumn()
@@ -1017,6 +1021,9 @@ class IRCPane(gtk.VBox):
                 if row.nickserv:
                     # TC: Indicator text: We interact with NickServ.
                     opt.append(_("NICKSERV"))
+                if row.manual:
+                    # TC: Indicator text: Server connection started manually.
+                    opt.append(_("MANUAL"))
                 if opt:
                     text += " " + ", ".join(opt)
             else:
@@ -1062,18 +1069,18 @@ class IRCPane(gtk.VBox):
     @glue
     def _on_edit(self, mode, model, iter, dialog):
         if mode == 1:
-            dialog(EditServerDialog(tuple(model[model.get_path(iter)])[2:13]),
+            dialog(EditServerDialog(tuple(model[model.get_path(iter)])[2:14]),
                                                     self._standard_edit, 2)
         if mode == 3:
             dialog(EditAnnounceMessageDialog(tuple(model[model.get_path(iter)])
-                                                [3:6]), self._standard_edit, 3)
+                                                [4:7]), self._standard_edit, 4)
         if mode == 5:
             dialog(EditTimerMessageDialog(tuple(model[model.get_path(iter)])
-                                                [2:6]), self._standard_edit, 2)
+                                                [3:7]), self._standard_edit, 3)
         if mode in (7, 9):
             title = self._dsu if mode == 7 else self._dsd
             dialog(EditMessageDialog(title, tuple(
-                model[model.get_path(iter)])[4:6]), self._standard_edit, 4)
+                model[model.get_path(iter)])[5:7]), self._standard_edit, 5)
 
     def _standard_edit(self, d, model, iter, start):
         model.row_changed_block()
@@ -1088,23 +1095,24 @@ class IRCPane(gtk.VBox):
 
         # Add the subelements.
         for i, x in enumerate(xrange(2, 2 + len(MESSAGE_CATEGORIES) * 2, 2)):
-            model.insert(iter, i, (x, 1, 0, 0) + ("", ) * 10)
+            model.insert(iter, i, (x, 1, 0, 0, 0) + ("", ) * 10)
 
         return iter
 
     @highlight
     def _add_announce(self, d, model, parent_iter):
-        return model.insert(parent_iter, 0, (3, 1, 0) + d.as_tuple()
+        return model.insert(parent_iter, 0, (3, 1, 0, 0) + d.as_tuple()
                                                                 + ("", ) * 8)
 
     @highlight
     def _add_timer(self, d, model, parent_iter):
-        return model.insert(parent_iter, 0, (5, 1) + d.as_tuple() + ("", ) * 8)
+        return model.insert(parent_iter, 0, (5, 1, 0) + d.as_tuple()
+                                                                + ("", ) * 8)
     
     @highlight
     def _add_message(self, d, model, parent_iter, mode):
-        return model.insert(parent_iter, 0, (mode + 1, 1, 0, 0) + d.as_tuple() +
-                                                                ("", ) * 8)
+        return model.insert(parent_iter, 0, (mode + 1, 1, 0, 0, 0) 
+                                                + d.as_tuple() + ("", ) * 8)
 
 
 class ConnectionsController(list):
