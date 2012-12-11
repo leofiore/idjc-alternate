@@ -959,7 +959,7 @@ class IRCPane(gtk.VBox):
         if row.type == 1 and row.active and row.manual:
             row.active = 0
 
-        store.append((path, row))
+        store.append((path, list(row)))
 
     def unmarshall(self, data):
         """Set the TreeStore with data from a string."""
@@ -987,10 +987,14 @@ class IRCPane(gtk.VBox):
 
     def _on_selection_changed(self, selection, edit, new):
         model, iter = selection.get_selected()
-        mode = model.get_value(iter, 0)
-        
-        edit.set_sensitive(mode % 2)
-        new.set_sensitive(not mode % 2)
+        if iter is not None:
+            mode = model.get_value(iter, 0)
+            
+            edit.set_sensitive(mode % 2)
+            new.set_sensitive(not mode % 2)
+        else:
+            edit.set_sensitive(False)
+            new.set_sensitive(False)          
 
     def _on_toggle(self, widget):
         model, iter = self._treeview.get_selection().get_selected()

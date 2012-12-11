@@ -46,8 +46,7 @@ class NotebookSR(gtk.Notebook):
 
 class LEDDict(dict):
     """Dictionary of pixbufs of LEDs."""
-    
-    
+        
     def __init__(self, size=10):
         names = "clear", "red", "green", "yellow"
         filenames = ("led_unlit_clear_border_64x64.png",
@@ -61,8 +60,7 @@ class LEDDict(dict):
 
 class CellRendererLED(gtk.CellRendererPixbuf):
     """A cell renderer that displays LEDs."""
-    
-    
+        
     __gproperties__ = {
             "active" : (gobject.TYPE_INT, "active", "active",
                             0, 1, 0, gobject.PARAM_WRITABLE),
@@ -70,13 +68,11 @@ class CellRendererLED(gtk.CellRendererPixbuf):
                             "clear", gobject.PARAM_WRITABLE)
     }
 
-                            
     def __init__(self, size=10, actives=("clear", "green")):
         gtk.CellRendererPixbuf.__init__(self)
         self._led = LEDDict(size)
         self._index = [self._led[key] for key in actives] 
 
-          
     def do_set_property(self, prop, value):
         if prop.name == "active":
             item = self._index[value]
@@ -86,7 +82,6 @@ class CellRendererLED(gtk.CellRendererPixbuf):
             raise AttributeError("unknown property %s" % prop.name)
             
         gtk.CellRendererPixbuf.set_property(self, "pixbuf", item)
-
 
 
 class CellRendererTime(gtk.CellRendererText):
@@ -112,7 +107,6 @@ class CellRendererTime(gtk.CellRendererText):
             raise AttributeError("unknown property %s" % prop.name)
             
         gtk.CellRendererText.set_property(self, "text", text)
-
 
 
 class StandardDialog(gtk.Dialog):
@@ -146,7 +140,6 @@ class StandardDialog(gtk.Dialog):
         aa.set_spacing(6)
 
 
-
 class ConfirmationDialog(StandardDialog):
     """This needs to be pulled out since it's generic."""
     
@@ -163,7 +156,6 @@ class ConfirmationDialog(StandardDialog):
         aa.pack_start(self.ok)
 
 
-
 class ErrorMessageDialog(StandardDialog):
     """This needs to be pulled out since it's generic."""
     
@@ -174,7 +166,6 @@ class ErrorMessageDialog(StandardDialog):
         b = gtk.Button(stock=gtk.STOCK_CLOSE)
         b.connect("clicked", lambda w: self.destroy())
         self.get_action_area().add(b)
-
 
 
 def threadslock(f):
@@ -189,7 +180,6 @@ def threadslock(f):
             gtk.gdk.threads_leave()
         return r
     return newf
-
 
 
 class DefaultEntry(gtk.Entry):
@@ -251,10 +241,8 @@ class DefaultEntry(gtk.Entry):
                 pass
 
 
-
 class HistoryEntry(gtk.ComboBoxEntry):
     """Combobox which performs history function."""
-    
 
     def __init__(self, max_size=6, initial_text=("",), store_blank=True):
         self.max_size = max_size
@@ -269,7 +257,6 @@ class HistoryEntry(gtk.ComboBoxEntry):
         cell.props.wrap_width = geo[2] * 2 // 3
         cell.props.wrap_mode = pango.WRAP_CHAR
 
-
     def update_history(self, *args):
         text = self.child.get_text().strip()
         if self.store_blank or text:
@@ -282,44 +269,35 @@ class HistoryEntry(gtk.ComboBoxEntry):
             # History size is kept trimmed.
             if len(self.ls) > self.max_size:
                 del self.ls[-1]
-
     
     def get_text(self):
         return self.child.get_text()
 
-
     def set_text(self, text):
         self.update_history()
         self.child.set_text(text)
-
         
     def get_history(self):
         self.update_history()
         return "\x00".join([row[0] for row in self.ls])
 
-        
     def set_history(self, hist):
         self.ls.clear()
         for text in reversed(hist.split("\x00")):
             self.set_text(text)
 
 
-
-class NamedTreeRowReference(list):
+class NamedTreeRowReference(object):
     """Provides named attribute access to gtk.TreeRowReference objects.
     
     This is a virtual base class.
     Virtual method 'get_index_for_name()' must be provided in a subclass.
     """
-    
-    
+
     __metaclass__ = ABCMeta
 
-
     def __init__(self, tree_row_ref):
-        list.__init__(self, tree_row_ref)
-        list.__setattr__(self, "_tree_row_ref", tree_row_ref)
-        
+        object.__setattr__(self, "_tree_row_ref", tree_row_ref)        
         
     @abstractmethod
     def get_index_for_name(self, tree_row_ref, name):
@@ -333,7 +311,6 @@ class NamedTreeRowReference(list):
         
         pass
 
-
     def _index_for_name(self, name):
         try:
             return self.get_index_for_name(self._tree_row_ref, name)
@@ -341,30 +318,29 @@ class NamedTreeRowReference(list):
             raise AttributeError("%s has no attribute: %s" %
                                             (repr(self._tree_row_ref), name))
 
+    def __iter__(self):
+        return iter(self._tree_row_ref)
+        
+    def __len__(self):
+        return len(self._tree_row_ref)
 
     def __getitem__(self, path):
         return self._tree_row_ref[path]
         
-        
     def __setitem__(self, path, data):
-        list.__setitem__(self, path, data)
         self._tree_row_ref[path] = data
-
 
     def __getattr__(self, name):
         return self._tree_row_ref.__getitem__(self._index_for_name(name))
 
-
     def __setattr__(self, name, data):
-        path = self._index_for_name(name)
-        list.__setitem__(self, path, data)
-        self._tree_row_ref[path] = data
+        self._tree_row_ref[self._index_for_name(name)] = data
 
+NamedTreeRowReference.register(list)
 
 
 class WindowSizeTracker(object):
     """This class will monitor the un-maximized size of a window."""
-
 
     def __init__(self, window, tracking=True):
         self._window = window
@@ -374,32 +350,25 @@ class WindowSizeTracker(object):
         window.connect("configure-event", self._on_configure_event)
         window.connect("window-state-event", self._on_window_state_event)
         
-        
     def set_tracking(self, tracking):
         self._is_tracking = tracking
-        
         
     def get_tracking(self):
         return self._is_tracking
 
-
     def get_x(self):
         return self._x
-
 
     def get_y(self):
         return self._y
 
-
     def get_max(self):
         return self._max
-
 
     def get_text(self):
         """Marshalling function for save settings."""
         
         return json.dumps((self._x, self._y, self._max))
-        
         
     def set_text(self, s):
         """Unmarshalling function for load settings."""
@@ -409,25 +378,21 @@ class WindowSizeTracker(object):
         except StandardError:
             pass
 
-
     def apply(self):
         self._window.unmaximize()
         self._window.resize(self._x, self._y)
         if self._max:
             gobject.idle_add(threadslock(self._window.maximize))
-        
 
     def _on_configure_event(self, widget, event):
         if self._is_tracking and not self._max:
             self._x = event.width
             self._y = event.height
 
-
     def _on_window_state_event(self, widget, event): 
         if self._is_tracking:
             self._max = event.new_window_state & \
                                         gtk.gdk.WINDOW_STATE_MAXIMIZED != 0
-
 
 
 class IconChooserButton(gtk.Button):
@@ -468,7 +433,6 @@ class IconChooserButton(gtk.Button):
         self._label = label
         self.set_filename(dialog.get_filename())
 
-
     def set_filename(self, f):
         try:
             disp = glib.filename_display_name(f)
@@ -485,10 +449,8 @@ class IconChooserButton(gtk.Button):
             self._dialog.set_filename(f)
         self.emit("filename-changed", self._filename)
 
-
     def get_filename(self):
         return self._filename
-
 
     def _cb_clicked(self, button, dialog):
         response = dialog.run()
@@ -501,13 +463,11 @@ class IconChooserButton(gtk.Button):
             self.set_filename(None)
         dialog.hide()
 
-
     def __getattr__(self, attr):
         if attr in gtk.FileChooser.__dict__:
             return getattr(self._dialog, attr)
         raise AttributeError("%s has no attribute, %s" % (
                                             self, attr))
-        
 
 
 class IconPreviewFileChooserDialog(gtk.FileChooserDialog):
@@ -530,7 +490,6 @@ class IconPreviewFileChooserDialog(gtk.FileChooserDialog):
         self.set_preview_widget_active(False)
         self.connect("update-preview", self._cb_update_preview, image)
         vbox.show_all()
-        
         
     def _cb_update_preview(self, dialog, image):
         f = self.get_preview_filename()
