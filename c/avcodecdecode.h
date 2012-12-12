@@ -39,8 +39,10 @@ struct avcodecdecode_vars
     {
     AVCodec *codec;
     AVPacket pkt;
+    AVPacket pktcopy;
     AVCodecContext *c;
     AVFormatContext *ic;
+    int size;
     int resample;
     unsigned int stream;
     AVFrame *frame;

@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Fix to pause feature when decoding audio using libavcodec.
+
 IRC now supports manual connection starting as an option for when connecting at startup is undesirable.
 
 Added optional song database tree heirarchy album - artist - track.

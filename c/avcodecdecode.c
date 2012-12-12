@@ -112,44 +112,52 @@ fprintf(stderr, "avcodecdecode_init: completed\n");
 static void avcodecdecode_play(struct xlplayer *xlplayer)
     {
     struct avcodecdecode_vars *self = xlplayer->dec_data;
-    AVPacket pkt, pktcopy;
-    int size, len, frames, channels = self->c->channels, ret, delay;
+    int channels = self->c->channels;
     SRC_DATA *src_data = &xlplayer->src_data;
-    struct chapter *chapter;
     
-    if ((ret = av_read_frame(self->ic, &pkt)) < 0 || (size = pkt.size) == 0)
+    if (xlplayer->write_deferred)
         {
-        if (pkt.data)
-            av_free_packet(&pkt);
-
-        if (self->resample)       /* flush the resampler */
+        xlplayer_write_channel_data(xlplayer);
+        return;
+        }
+    
+    if (self->size <= 0)
+        {
+        if (av_read_frame(self->ic, &self->pkt) < 0 || (self->size = self->pkt.size) == 0)
             {
-            src_data->end_of_input = TRUE;
-            src_data->input_frames = 0;
-            if (src_process(xlplayer->src_state, src_data))
+            if (self->pkt.data)
+                av_free_packet(&self->pkt);
+
+            if (self->resample)       /* flush the resampler */
                 {
-                fprintf(stderr, "avcodecdecode_play: error occured during resampling\n");
-                xlplayer->playmode = PM_EJECTING;
-                return;
+                src_data->end_of_input = TRUE;
+                src_data->input_frames = 0;
+                if (src_process(xlplayer->src_state, src_data))
+                    {
+                    fprintf(stderr, "avcodecdecode_play: error occured during resampling\n");
+                    xlplayer->playmode = PM_EJECTING;
+                    return;
+                    }
+                xlplayer_demux_channel_data(xlplayer, src_data->data_out, src_data->output_frames_gen, channels, 1.f);
+                xlplayer_write_channel_data(xlplayer);
                 }
-            xlplayer_demux_channel_data(xlplayer, src_data->data_out, src_data->output_frames_gen, channels, 1.f);
-            xlplayer_write_channel_data(xlplayer);
+            xlplayer->playmode = PM_EJECTING;
+            return;
             }
-        xlplayer->playmode = PM_EJECTING;
-        return;
-        }
-    pktcopy = pkt;
-
-    if (pkt.stream_index != (int)self->stream)
-        {
-        if (pkt.data)
-            av_free_packet(&pkt);
-        return;
+        self->pktcopy = self->pkt;
         }
 
-    while(size > 0 && xlplayer->command != CMD_EJECT)
+    if (self->pkt.stream_index != (int)self->stream)
         {
-        int got_frame = 0;
+        if (self->pkt.data)
+            av_free_packet(&self->pkt);
+        self->size = 0;
+        return;
+        }
+
+    do
+        {
+        int len, frames, got_frame = 0;
         
         if (!self->frame)
             {
@@ -164,7 +172,7 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
 
         while (pthread_mutex_trylock(&g.avc_mutex))
             nanosleep(&time_delay, NULL);
-        len = avcodec_decode_audio4(self->c, self->frame, &got_frame, &pktcopy);
+        len = avcodec_decode_audio4(self->c, self->frame, &got_frame, &self->pktcopy);
         pthread_mutex_unlock(&g.avc_mutex);
 
         if (len < 0)
@@ -173,9 +181,9 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
             break;
             }
 
-        pktcopy.data += len;
-        pktcopy.size -= len;
-        size -= len;
+        self->pktcopy.data += len;
+        self->pktcopy.size -= len;
+        self->size -= len;
 
         if (!got_frame)
             {
@@ -219,24 +227,23 @@ static void avcodecdecode_play(struct xlplayer *xlplayer)
         if (self->drop > 0)
             self->drop -= frames / (float)xlplayer->samplerate;
         else
+            xlplayer_write_channel_data(xlplayer);
+        } while (!xlplayer->write_deferred && self->size > 0);
+
+    if (self->size <= 0)
+        {
+        if (self->pkt.data)
+            av_free_packet(&self->pkt);
+        int delay = xlplayer_calc_rbdelay(xlplayer);
+        struct chapter *chapter = mp3_tag_chapter_scan(&self->taginfo, xlplayer->play_progress_ms + delay);
+        if (chapter && chapter != self->current_chapter)
             {
-            do {
-                xlplayer_write_channel_data(xlplayer);
-                } while(xlplayer->write_deferred && xlplayer->command != CMD_EJECT);
+            self->current_chapter = chapter;
+            xlplayer_set_dynamic_metadata(xlplayer, dynamic_metadata_form[chapter->title.encoding], chapter->artist.text, chapter->title.text, chapter->album.text, delay);
             }
         }
-
-    if (pkt.data)
-        av_free_packet(&pkt);
-    delay = xlplayer_calc_rbdelay(xlplayer);
-    chapter = mp3_tag_chapter_scan(&self->taginfo, xlplayer->play_progress_ms + delay);
-    if (chapter && chapter != self->current_chapter)
-        {
-        self->current_chapter = chapter;
-        xlplayer_set_dynamic_metadata(xlplayer, dynamic_metadata_form[chapter->title.encoding], chapter->artist.text, chapter->title.text, chapter->album.text, delay);
-        }
     }
-    
+
 int avcodecdecode_reg(struct xlplayer *xlplayer)
     {
     struct avcodecdecode_vars *self;
