@@ -102,6 +102,20 @@ CueSheetTrack = namedtuple("CueSheetTrack",
 class CueSheetListStore(gtk.ListStore):
     _columns = (str, int, int, int, str, str, int, int, float)
     assert len(_columns) == len(CueSheetTrack._fields)
+
+    def __init__(self):
+        gtk.ListStore.__init__(self, *self._columns)
+
+    def element(self, offset):
+        """The element given an offset in seconds."""
+
+        offset *= 75
+        for each in self:
+            if offset <= each.offset and each.play:
+                return each
+        else:
+            return None
+
     def __nonzero__(self):
         return len(self) != 0
 
@@ -118,8 +132,6 @@ class CueSheetListStore(gtk.ListStore):
             yield val
             i += 1
 
-    def __init__(self):
-        gtk.ListStore.__init__(self, *self._columns)
 
 
 
@@ -689,6 +701,14 @@ class CueSheet(object):
 
         """
         for i, line in enumerate(iterable):
+            try:
+                line.decode("utf-8")
+            except UnicodeDecodeError:
+                try:
+                    line = line.decode("iso8859-15").encode("utf-8")
+                except UnicodeDecodeError:
+                    pass
+
             line = line.strip() + " "
             match = cls._quoted(line)
             if match:
@@ -1504,6 +1524,16 @@ class IDJC_Media_Player:
         self.model_playing = model
         self.max_seek = rt
         self.silence_count = 0
+
+        cuesheet = model.get_value(iter, 8)
+        if cuesheet:
+            print "There is a cuesheet"
+            
+            # Skip to first element that can be played.
+            element = cuesheet.element(self.start_time)
+            self.start_time = max(element.offset, self.start_time * 75) // 75
+            self.progressadj.set_value(self.start_time)
+            self.music_filename = element.pathname
 
         if self.music_filename != "":
             self.parent.mixer_write(
