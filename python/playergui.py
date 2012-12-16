@@ -98,6 +98,22 @@ CueSheetTrack = namedtuple("CueSheetTrack",
     "pathname play tracknum index performer title offset duration replaygain")
 
 
+class IndexingIterator(object):
+    def __init__(self, iteree):
+        self.index = 0
+        self.iteree = iteree
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        try:
+            val = self.iteree[self.index]
+        except IndexError:
+            raise StopIteration
+        self.index += 1
+        return val
+
 
 class CueSheetListStore(gtk.ListStore):
     _columns = (str, int, int, int, str, str, int, int, float)
@@ -111,10 +127,19 @@ class CueSheetListStore(gtk.ListStore):
 
         offset *= 75
         for each in self:
-            if offset <= each.offset and each.play:
+            if offset < each.offset + each.duration and each.play:
                 return each
         else:
             return None
+
+    def next_element(self, element):
+        iterator = iter(self)
+        for each in iterator:
+            if element is each:
+                try:
+                    return iterator.next()
+                except StopIteration:
+                    return None
 
     def __nonzero__(self):
         return len(self) != 0
@@ -123,16 +148,7 @@ class CueSheetListStore(gtk.ListStore):
         return CueSheetTrack(*gtk.ListStore.__getitem__(self, i))
 
     def __iter__(self):
-        i = 0
-        while 1:
-            try:
-                val = self[i]
-            except IndexError:
-                break
-            yield val
-            i += 1
-
-
+        return IndexingIterator(self)
 
 
 class NumberedLabel(gtk.Label):
@@ -174,19 +190,6 @@ class CellRendererDuration(gtk.CellRendererText):
 
 
 class CuesheetPlaylist(gtk.Frame):
-    def description_col_func(self, column, cell, model, iter):
-        line = model[model.get_path(iter)[0]]
-        desc = " - ".join(x for x in (line.performer, line.title) if x)
-        desc = desc or os.path.splitext(os.path.split(line.pathname)[1])[0]
-        cell.props.text = desc
-
-    def play_clicked(self, cellrenderer, path):
-        model = self.treeview.get_model()
-        iter = model.get_iter(path)
-        col = CueSheetTrack._fields.index("play")
-        val = model.get_value(iter, col)
-        model.set_value(iter, col, not val)
-
     def __init__(self):
         gtk.Frame.__init__(self, " %s " % _('Cuesheet Playlist'))
         self.set_border_width(3)
@@ -229,15 +232,15 @@ class CuesheetPlaylist(gtk.Frame):
             box.pack_start(next)
             next.show()
             box.show()
-            return box, prev, next
+            return box, prev, next, numbered
 
         # TC: Cuesheet term.
-        box_t, self.prev_track, self.next_track = nextprev_unit(_('Track'))
+        #box_t, self.prev_track, self.next_track, self.track = nextprev_unit(_('Track'))
         # TC: Cuesheet term.
-        box_i, self.prev_index, self.next_index = nextprev_unit(_('Index'))
-        hbox.pack_start(box_t, fill=False)
-        hbox.pack_start(box_i, fill=False)
-        hbox.show()
+        #box_i, self.prev_index, self.next_index, self.index = nextprev_unit(_('Index'))
+        #hbox.pack_start(box_t, fill=False)
+        #hbox.pack_start(box_i, fill=False)
+        #hbox.show()
 
         scrolled = gtk.ScrolledWindow()
         scrolled.set_size_request(-1, 117)
@@ -252,7 +255,7 @@ class CuesheetPlaylist(gtk.Frame):
         #self.treeview.set_fixed_height_mode(True)
 
         renderer_toggle = gtk.CellRendererToggle()
-        renderer_toggle.connect("toggled", self.play_clicked)
+        renderer_toggle.connect("toggled", self._play_clicked)
         renderer_text_desc = gtk.CellRendererText()
         renderer_text_desc.set_property("ellipsize", pango.ELLIPSIZE_END)
         renderer_text_rjust = gtk.CellRendererText()
@@ -271,12 +274,30 @@ class CuesheetPlaylist(gtk.Frame):
         description = gtk.TreeViewColumn(_('Description'), renderer_text_desc)
         description.set_expand(True)
         description.set_cell_data_func(renderer_text_desc,
-                                                    self.description_col_func)
+                                                    self._description_col_func)
         self.treeview.append_column(description)
         # TC: Playback time.
         duration = gtk.TreeViewColumn(_('Duration'), renderer_duration)
         duration.add_attribute(renderer_duration, "duration", 7)
         self.treeview.append_column(duration)
+
+    def set(self, track, index):
+        self.track.set_value(track)
+        self.index.set_value(index)
+
+    def _description_col_func(self, column, cell, model, iter):
+        line = model[model.get_path(iter)[0]]
+        desc = " - ".join(x for x in (line.performer, line.title) if x)
+        desc = desc or os.path.splitext(os.path.split(line.pathname)[1])[0]
+        cell.props.text = desc
+
+    def _play_clicked(self, cellrenderer, path):
+        model = self.treeview.get_model()
+        iter = model.get_iter(path)
+        col = CueSheetTrack._fields.index("play")
+        val = model.get_value(iter, col)
+        model.set_value(iter, col, not val)
+
 
 class ButtonFrame(gtk.Frame):
     def __init__(self, title):
@@ -1178,8 +1199,8 @@ class IDJC_Media_Player:
                     item[i] = newdata[i]
         if active is not None:
             self.songname = active[3]         # update metadata on server
-            self.title = active[5].encode("utf-8")
-            self.artist = active[6].encode("utf-8")
+            self.title = self.cuesheet_track_title or active[5].encode("utf-8")
+            self.artist = self.cuesheet_track_performer or active[6].encode("utf-8")
             self.album = active[9].encode("utf-8")
             self.player_restart()
             self.parent.send_new_mixer_stats()
@@ -1187,6 +1208,7 @@ class IDJC_Media_Player:
     def expire_metadata(self):
         if not self.is_playing:
             self.songname = self.title = self.artist = self.album = ""
+            self.cuesheet_track_title = self.cuesheet_track_performer = None
 
     # Shut down our media players when we exit.
     def cleanup(self):
@@ -1494,16 +1516,6 @@ class IDJC_Media_Player:
             self.start_time = rt    # Seek to the end when file is missing.
         print "Seek time is %d seconds" % self.start_time
 
-        if self.parent.prefs_window.rg_adjust.get_active():
-            self.gain = model.get_value(iter, 7)
-            if self.gain == RGDEF:
-                self.gain = self.parent.prefs_window.rg_defaultgain.get_value()
-            self.gain += self.parent.prefs_window.rg_boost.get_value()
-            print "final gain value of %f dB" % self.gain
-        else:
-            self.gain = 0.0
-            print "not using replay gain"
-
         # Now we recalibrate the progress bar to the current song length
         self.digiprogress_f = True
         self.progressadj.set_all(float (self.start_time) , 0.0, rt, rt/1000.0,
@@ -1525,15 +1537,32 @@ class IDJC_Media_Player:
         self.max_seek = rt
         self.silence_count = 0
 
-        cuesheet = model.get_value(iter, 8)
+        cuesheet = self.cuesheet = model.get_value(iter, 8)
         if cuesheet:
             print "There is a cuesheet"
             
             # Skip to first element that can be played.
-            element = cuesheet.element(self.start_time)
-            self.start_time = max(element.offset, self.start_time * 75) // 75
-            self.progressadj.set_value(self.start_time)
-            self.music_filename = element.pathname
+            element = self.element = cuesheet.element(self.start_time)
+            if element:
+                self.start_time = max(element.offset, self.start_time * 75) // 75
+                self.progressadj.set_value(self.start_time)
+                self.music_filename = element.pathname
+                self.gain = element.replaygain
+                self.cuesheet_track_title = element.title
+                self.cuesheet_track_performer = element.performer
+        else:
+            self.gain = model.get_value(iter, 7)
+            self.element = None
+            self.cuesheet_track_title = self.cuesheet_track_performer = None
+
+        if self.parent.prefs_window.rg_adjust.get_active():
+            if self.gain == RGDEF:
+                self.gain = self.parent.prefs_window.rg_defaultgain.get_value()
+            self.gain += self.parent.prefs_window.rg_boost.get_value()
+            print "final gain value of %f dB" % self.gain
+        else:
+            self.gain = 0.0
+            print "not using replay gain"
 
         if self.music_filename != "":
             self.parent.mixer_write(
@@ -1608,6 +1637,38 @@ class IDJC_Media_Player:
         gobject.source_remove(self.timeout_source_id)
         self.start_time = int (self.progressadj.get_value())
         self.silence_count = 0
+
+        model = self.model_playing
+        iter = self.iter_playing
+        cuesheet = self.cuesheet = model.get_value(iter, 8)
+        if cuesheet:
+            print "There is a cuesheet" 
+            # Skip to first element that can be played.
+            element = self.element = cuesheet.element(self.start_time)
+            if element:
+                self.start_time = max(element.offset, self.start_time * 75) // 75
+                self.cuesheet_track_title = element.title
+                self.cuesheet_track_performer = element.performer
+                self.music_filename = element.pathname
+                self.gain = element.replaygain
+            else:
+                # Skip to end.
+                self.element = cuesheet[-1]
+                self.start_time = self.progressadj.props.upper
+            self.progressadj.set_value(self.start_time)
+            
+            if self.parent.prefs_window.rg_adjust.get_active():
+                if self.gain == RGDEF:
+                    self.gain = self.parent.prefs_window.rg_defaultgain.get_value()
+                self.gain += self.parent.prefs_window.rg_boost.get_value()
+                print "final gain value of %f dB" % self.gain
+            else:
+                self.gain = 0.0
+                print "not using replay gain"
+        else:
+            self.element = None
+            self.cuesheet_track_title = self.cuesheet_track_performer = None
+        
         self.parent.mixer_write("PLRP=%s\nSEEK=%d\nACTN=play%s\nend\n" % (
                         self.music_filename, self.start_time, self.playername))
         while 1:
@@ -2098,6 +2159,24 @@ class IDJC_Media_Player:
                     self.set_fade_mode(fade)
                     self.invoke_end_of_track_policy()
                     self.set_fade_mode(0)
+
+        if self.cuesheet:
+            cuesheet = self.cuesheet
+            current_element = cuesheet.element(self.progress_current_figure)
+            if self.element != current_element:
+                print "Cuesheet bump"
+                if cuesheet.next_element(self.element) != current_element or \
+                            current_element is None or \
+                            current_element.pathname != self.music_filename:
+                    print "Cuesheet discontinuous"
+                    self.player_restart()
+                    return True
+                else:
+                    print "cuesheet continuous"
+                    element = self.element = current_element
+                    self.cuesheet_track_title = element.title
+                    self.cuesheet_track_performer = element.performer
+                    self.parent.send_new_mixer_stats()
 
         return True
 
@@ -3591,7 +3670,8 @@ class IDJC_Media_Player:
         trackscount = 0
         tracknum = 0
         if self.artist and self.title and self.album:
-            tracktitle = "%s - %s" % (self.artist, self.title)
+            tracktitle = "%s - %s" % (self.cuesheet_track_performer or self.artist,
+                                        self.cuesheet_track_title or self.title)
         else:
             tracktitle = self.songname
         duration = 0
@@ -4371,6 +4451,8 @@ class IDJC_Media_Player:
         self.title = ""
         self.artist = ""
         self.album = ""
+        self.cueshet = self.element = None
+        self.cuesheet_track_title = self.cuesheet_track_performer = None
         self.gapless = False
         self.seek_file_valid = False
         self.digiprogress_type = 0

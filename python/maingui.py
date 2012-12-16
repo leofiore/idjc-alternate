@@ -1982,43 +1982,42 @@ class MainWindow(dbus.service.Object):
             meta = 2
 
         # get metadata from left (meta == 0) or right (meta == 1) player
-        if meta == 0:
-            self.songname = self.player_left.songname
-            self.artist = self.player_left.artist
-            self.title = self.player_left.title
-            self.album = self.player_left.album
-            self.meta_context = self.player_left, self.player_left.player_cid
-            self.music_filename = self.player_left.music_filename
-        elif meta == 1:
-            self.songname = self.player_right.songname
-            self.artist = self.player_right.artist
-            self.title = self.player_right.title
-            self.album = self.player_right.album
-            self.meta_context = self.player_right, self.player_right.player_cid
-            self.music_filename = self.player_right.music_filename
-        elif meta == 2:
-            self.songname = self.jingles.interlude.songname
-            self.artist = self.jingles.interlude.artist
-            self.title = self.jingles.interlude.title
-            self.album = self.jingles.interlude.album
-            self.meta_context = self.jingles.interlude, self.jingles.interlude.player_cid
-            self.music_filename = self.jingles.interlude.music_filename
-        elif meta == -1:
-            self.songname = ""
-            self.artist = ""
-            self.title = ""
-            self.album = ""
+        target = (self.player_left, self.player_right,
+                                            self.jingles.interlude, None)[meta]
+        if target is None:
+            self.songname = self.artist = self.title = self.album = ""
             self.meta_context = None
             self.music_filename = ""
-
-       
+            self.cuesheet_track_title = self.cuesheet_track_performer = ""
+            self.cs_element = None
+        else:
+            self.songname = target.songname
+            self.artist = target.artist
+            self.title = target.title
+            self.album = target.album
+            self.cs_element = target.element
+            self.cuesheet_track_title = target.cuesheet_track_title
+            self.cuesheet_track_performer = target.cuesheet_track_performer
+            self.meta_context = target, target.player_cid, \
+                                                self.cuesheet_track_title, \
+                                                self.cuesheet_track_performer
+            self.music_filename = self.player_left.music_filename
+      
         # update metadata on stream if it has changed
         if self.meta_context != self.old_meta_context:
             self.old_meta_context = self.meta_context
-            print "song title: %s\n" % self.songname
-            if self.songname != u"":
-                self.window.set_title("%s :: IDJC%s" % (
-                                                self.songname, pm.title_extra))
+            if self.songname:
+                if self.title and self.cuesheet_track_title and \
+                                                self.cuesheet_track_performer:
+                    if "(" in self.title or ")" in self.title:
+                        form = "%s - %s - [%s]"
+                    else:
+                        form = "%s - %s - (%s)"
+                    self.songname = form % (self.cuesheet_track_performer,
+                                        self.cuesheet_track_title, self.title)
+
+                self.window.set_title("%s :: IDJC%s" % (self.songname,
+                                                            pm.title_extra))
                 tm = time.localtime()
                 ts = "%02d:%02d :: " % (tm[3], tm[4])  # hours and minutes
                 tstext = self.songname.encode("utf-8")
@@ -2038,10 +2037,16 @@ class MainWindow(dbus.service.Object):
                         print "unable to append to file \"history.log\""
                     file.close()
 
-                self._track_metadata_changed(self.artist, self.title,
-                                self.album, self.songname, self.music_filename)
+                self._track_metadata_changed(
+                                self.cuesheet_track_performer or self.artist,
+                                self.cuesheet_track_title or self.title,
+                                self.title if self.cs_element else self.album,
+                                self.songname, self.music_filename)
             else:
                 self.window.set_title(self.appname + pm.title_extra)
+
+            print "song title: %s\n" % self.songname
+
 
     def _track_metadata_changed(self, *args):
         if self._old_metadata_2 == args:
