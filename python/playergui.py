@@ -134,12 +134,13 @@ class CueSheetListStore(gtk.ListStore):
 
     def next_element(self, element):
         iterator = iter(self)
-        for each in iterator:
-            if element is each:
-                try:
-                    return iterator.next()
-                except StopIteration:
-                    return None
+        try:
+            item = iterator.next()
+            while item != element:
+                item = iterator.next()
+            return iterator.next()
+        except StopIteration:
+            return None
 
     def __nonzero__(self):
         return len(self) != 0
@@ -953,6 +954,7 @@ class IDJC_Media_Player:
         artist_retval = u""
         title_retval = u""
         album_retval = u""
+        cuesheet = None
 
         # Strip away any file:// prefix
         if filename.count("file://", 0, 7):
@@ -963,11 +965,6 @@ class IDJC_Media_Player:
         filext = supported.check_media(filename)
         if filext == False or os.path.isfile(filename) == False:
             return NOTVALID._replace(filename=filename)
-
-        if filext in (".cue", ".txt"):
-            return self.make_cuesheet_playlist_entry(filename)
-        else:
-            cuesheet = None
 
         # Use this name for metadata when we can't get anything from tags.
         # The name will also appear grey to indicate a tagless state.
@@ -2166,8 +2163,7 @@ class IDJC_Media_Player:
             if self.element != current_element:
                 print "Cuesheet bump"
                 if cuesheet.next_element(self.element) != current_element or \
-                            current_element is None or \
-                            current_element.pathname != self.music_filename:
+                            current_element is None:
                     print "Cuesheet discontinuous"
                     self.player_restart()
                     return True
@@ -2177,6 +2173,13 @@ class IDJC_Media_Player:
                     self.cuesheet_track_title = element.title
                     self.cuesheet_track_performer = element.performer
                     self.parent.send_new_mixer_stats()
+            else:
+                # IDJC is a bit behind on the metadata.
+                next_element = cuesheet.next_element(self.element)
+                if next_element is not None and next_element.offset - 75 < self.progress_current_figure * 75:
+                    if not next_element.play:
+                        self.progressadj.set_value(self.progress_current_figure + 1)
+                        self.player_restart()
 
         return True
 
@@ -2654,6 +2657,8 @@ class IDJC_Media_Player:
         l = len(pathnames)
         if l == 1:
             ext = os.path.splitext(pathnames[0])[1]
+            if ext in (".cue", ".txt"):
+                return self.get_elements_from_cue(pathnames[0])
             if ext == ".m3u":
                 return self.get_elements_from_m3u(pathnames[0])
             elif ext == ".pls":
@@ -2669,6 +2674,19 @@ class IDJC_Media_Player:
             meta = self.get_media_metadata(each)
             if meta:
                 yield meta
+
+    def get_elements_from_cue(self, filename):
+        cuesheet_entry = self.make_cuesheet_playlist_entry(filename)
+        pathnames = list(x.pathname for x in cuesheet_entry.cuesheet if x.index == 1)
+        # Multi file cue sheet adds as content files.        
+        if len(set(pathnames)) > 1:
+            for each in pathnames:
+                meta = self.get_media_metadata(each)
+                if meta:
+                    yield meta
+        else:
+            if any(pathnames):
+                yield cuesheet_entry
 
     def get_elements_from_directory(self, chosendir, depth=1, visited=None):
         depth -= 1
