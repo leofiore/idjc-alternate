@@ -1034,7 +1034,7 @@ class FlatPage(PageCommon):
             ("(0)", 0, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
             (_('Artist'), 1, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
             (_('Album'), 2, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
-            (_('Disk'), 9, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
+            (_('Disk'), 8, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
             (_('Track'), 3, self._cell_ralign, -1, pango.ELLIPSIZE_NONE),
             (_('Title'), 4, self._cell_show_unknown, 100, pango.ELLIPSIZE_END),
             (_('Duration'), 5, self._cell_secs_to_h_m_s, -1, pango.ELLIPSIZE_NONE),
