@@ -42,7 +42,7 @@ from mutagen.mp3 import MP3
 from mutagen.flac import FLAC
 from mutagen.mp4 import MP4
 from mutagen.easyid3 import EasyID3
-from mutagen.apev2 import APEv2
+from mutagen.apev2 import APEv2, APETextValue
 from mutagen.asf import ASF
 from mutagen.id3 import ID3
 
@@ -1139,23 +1139,25 @@ class IDJC_Media_Player:
         if isinstance(album, list):
             album = u"/".join(album)
 
-        if isinstance(artist, str):
+        if isinstance(artist, (str, APETextValue)):
             try:
-                artist = artist.decode("utf-8", "strict")
+                artist = str(artist).decode("utf-8", "strict")
             except:
-                artist = artist.decode("latin1", "replace")
+                artist = str(artist).decode("latin1", "replace")
 
-        if isinstance(title, str):
+        if isinstance(title, (str, APETextValue)):
             try:
-                title = title.decode("utf-8", "strict")
+                title = str(title).decode("utf-8", "strict")
             except:
-                title = title.decode("latin1", "replace")
+                title = str(title).decode("latin1", "replace")
 
-        if isinstance(album, str):
+        if isinstance(album, (str, APETextValue)):
             try:
-                album = album.decode("utf-8", "strict")
+                album = str(album).decode("utf-8", "strict")
             except:
-                album = album.decode("latin1", "replace")
+                album = str(album).decode("latin1", "replace")
+
+        print type(artist), album
 
         assert(isinstance(artist, unicode))
         assert(isinstance(title, unicode))
