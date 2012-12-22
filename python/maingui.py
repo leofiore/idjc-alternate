@@ -2001,7 +2001,7 @@ class MainWindow(dbus.service.Object):
             self.meta_context = target, target.player_cid, \
                                                 self.cuesheet_track_title, \
                                                 self.cuesheet_track_performer
-            self.music_filename = self.player_left.music_filename
+            self.music_filename = target.music_filename
       
         # update metadata on stream if it has changed
         if self.meta_context != self.old_meta_context:
