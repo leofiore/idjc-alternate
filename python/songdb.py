@@ -1336,10 +1336,14 @@ class MediaPane(gtk.Frame):
             notify(_('Found Prokyon 3 schema'))
             # Try to add a FULLTEXT database.
             request(("""ALTER TABLE tracks ADD FULLTEXT artist (artist,title,
-                        album,filename)""",), self._stage_3, self._fail_2)
+                        album,filename)""",), self._stage_2a, self._fail_2)
         else:
             notify(_('Unrecognised database'))
             self._safe_disconnect()
+
+    def _stage_2a(self, acc, request, cursor, notify, rows):
+        request(("ALTER TABLE albums ADD INDEX idjc (name)",),
+                self._stage_3, self._fail_2)
 
     def _stage_3(self, acc, request, cursor, notify, rows):
         self._hand_over(PROKYON_3)
