@@ -142,6 +142,23 @@ class CueSheetListStore(gtk.ListStore):
         except StopIteration:
             return None
 
+    def time_remaining(self, offset):
+        """Play time remaining given a whole file time offset in seconds."""
+
+        sectors = 0.0
+        offset *= 75
+        for each in self:
+            if offset >= each.offset + each.duration:
+                continue
+
+            if each.play:
+                if offset > each.offset:
+                    sectors += each.offset + each.duration - offset
+                else:
+                    sectors += each.duration
+
+        return sectors / 75.0
+
     def __nonzero__(self):
         return len(self) != 0
 
@@ -1157,8 +1174,6 @@ class IDJC_Media_Player:
             except:
                 album = str(album).decode("latin1", "replace")
 
-        print type(artist), album
-
         assert(isinstance(artist, unicode))
         assert(isinstance(title, unicode))
         assert(isinstance(album, unicode))
@@ -1916,6 +1931,9 @@ class IDJC_Media_Player:
                 if text == ">normalspeed":
                     speedfactor = 1.0
             if length >= 0:
+                cuesheet = self.liststore.get_value(iter, 8)
+                if cuesheet is not None:
+                    length = cuesheet.time_remaining(0.0)
                 size += int(length / speedfactor)
             iter = self.liststore.iter_next(iter)
         return size
@@ -1929,7 +1947,11 @@ class IDJC_Media_Player:
         if self.pl_mode.get_active() != 0:
             return
         if self.player_is_playing:
-            tr = int((self.max_seek - self.progressadj.value)
+            if self.cuesheet:
+                tr = self.cuesheet.time_remaining(self.progressadj.value) \
+                                                        / self.pbspeedfactor
+            else:
+                tr = int((self.max_seek - self.progressadj.value)
                                                         / self.pbspeedfactor)
             model = self.model_playing
             iter = model.iter_next(self.iter_playing)
@@ -1950,8 +1972,8 @@ class IDJC_Media_Player:
                     bs = 0
                 else:
                     bs = self.get_pl_block_size(iter)
-            except:
-                print "Playlist data is fucked up"
+            except Exception as e:
+                print "Playlist data is fucked up", e
                 bs = 0
         bsm, bss = divmod(bs, 60)
         if self.is_playing:
@@ -2026,6 +2048,7 @@ class IDJC_Media_Player:
             else:
                 self.reselect_please = True
             self.reselect_cursor_please = False
+
         if self.reselect_please:
             print "Set cursor on track playing"
             # This code reselects the playing track after a drag operation.
@@ -2035,6 +2058,7 @@ class IDJC_Media_Player:
             except:
                 print "Iter was cancelled probably due to song dragging"
             self.reselect_please = False
+
         if self.progress_press == False:
             if self.runout.value and self.is_paused == False and \
                                         self.mixer_cid.value > self.player_cid:
@@ -2074,6 +2098,83 @@ class IDJC_Media_Player:
                     self.parent.files_played_offline[self.music_filename
                                                                 ] = time.time()
 
+                pl_mode = self.pl_mode.get_active()
+
+                if not self.cuesheet:
+                    # Check if it is fade time.
+                    rem = self.progress_stop_figure - self.progress_current_figure
+                    if (rem == 5 or rem == 10) and not self.crossfader_initiated and not \
+                                                                    self.parent.simplemixer:
+                        next = self.model_playing.iter_next(self.iter_playing)
+                        if next is not None:
+                            nextval = self.model_playing.get_value(next, 0)
+                        else:
+                            nextval = ""
+                        if pl_mode == 0 and nextval.startswith(">"):
+                            if rem == 5 and nextval == ">fade5":
+                                fade = 1
+                            elif rem == 10 and nextval == ">fade10":
+                                fade = 2
+                            else:
+                                fade = 0
+                            if (fade):
+                                self.set_fade_mode(fade)
+                                self.stop.clicked()
+                                treeselection = self.treeview.get_selection()
+                                next = self.model_playing.iter_next(next)
+                                if next is not None:
+                                    path = self.model_playing.get_path(next)
+                                    treeselection.select_path(path)
+                                    self.play.clicked()
+                                else:
+                                    treeselection.select_path(0)
+                                self.set_fade_mode(0)
+                        else:
+                            fade = self.pl_delay.get_active()
+                            if (fade == 1 and rem == 10) or (fade == 2 and rem == 5) or \
+                                                pl_mode in (3, 4, 6) or \
+                                                (pl_mode == 0 and self.islastinplaylist()):
+                                fade = 0
+                            if fade:
+                                self.set_fade_mode(fade)
+                                self.invoke_end_of_track_policy()
+                                self.set_fade_mode(0)
+                                
+                # Calclulate whether to sound the DJ alarm (end of music notification)
+                if self.playername in ("left", "right"):
+                    if self.progress_current_figure >= self.progress_stop_figure -10 \
+                            and self.progressadj.upper > 11 and self.alarm_cid != cid \
+                            and self.parent.prefs_window.djalarm.get_active():
+                        # DJ Alarm is on and we are at the correct play position.
+                        # The alarm has not sounded yet.
+                        fader = "left" if self.parent.crossadj.value < 50.0 else "right"
+                        
+                        if self.playername == fader and (pl_mode in (3, 4) or
+                                                (pl_mode == 0 and self.stop_inspect())):
+                            self.parent.freewheel_button.set_active(False)
+                            gobject.timeout_add(1000, self.deferred_alarm)
+                            self.alarm_cid = cid
+
+                    # Check if the crossfade needs scheduling.
+                    if pl_mode == 7 or (pl_mode == 0 and self.fade_inspect()):
+                        eot_crosstime = int(self.progress_stop_figure) - \
+                                            self.parent.passspeed_adj.props.value - \
+                                            int(self.progress_current_figure)
+                        # Start other player.
+                        if not self.other_player_initiated and eot_crosstime <= 1:
+                            if self.playername == "left":
+                                self.parent.player_right.play.clicked()
+                            else:
+                                self.parent.player_left.play.clicked()
+                            self.other_player_initiated = True
+                        # Now do the crossfade
+                        if not self.crossfader_initiated and eot_crosstime <= 0:
+                            self.parent.passbutton.clicked()
+                            self.crossfader_initiated = True
+                            desired_direction = (self.playername == "left")
+                            if desired_direction != self.parent.crossdirection:
+                                self.parent.passbutton.clicked()              
+
             self.progress_current_figure = self.playtime_elapsed.value
             self.progressadj.set_value(self.playtime_elapsed.value)
             if self.max_seek == 0:
@@ -2082,82 +2183,6 @@ class IDJC_Media_Player:
         else:
             # Cease running the timeout. It will not resume.
             return False
-        
-        pl_mode = self.pl_mode.get_active()
-        
-        # Calclulate whether to sound the DJ alarm (end of music notification)
-        if self.playername in ("left", "right"):
-            if self.progress_current_figure >= self.progress_stop_figure -10 \
-                    and self.progressadj.upper > 11 and self.alarm_cid != cid \
-                    and self.parent.prefs_window.djalarm.get_active():
-                # DJ Alarm is on and we are at the correct play position.
-                # The alarm has not sounded yet.
-                fader = "left" if self.parent.crossadj.value < 50.0 else "right"
-                
-                if self.playername == fader and (pl_mode in (3, 4) or
-                                        (pl_mode == 0 and self.stop_inspect())):
-                    self.parent.freewheel_button.set_active(False)
-                    gobject.timeout_add(1000, self.deferred_alarm)
-                    self.alarm_cid = cid
-
-            # Check if the crossfade needs scheduling.
-            if pl_mode == 7 or (pl_mode == 0 and self.fade_inspect()):
-                eot_crosstime = int(self.progress_stop_figure) - \
-                                    self.parent.passspeed_adj.props.value - \
-                                    int(self.progress_current_figure)
-                # Start other player.
-                if not self.other_player_initiated and eot_crosstime <= 1:
-                    if self.playername == "left":
-                        self.parent.player_right.play.clicked()
-                    else:
-                        self.parent.player_left.play.clicked()
-                    self.other_player_initiated = True
-                # Now do the crossfade
-                if not self.crossfader_initiated and eot_crosstime <= 0:
-                    self.parent.passbutton.clicked()
-                    self.crossfader_initiated = True
-                    desired_direction = (self.playername == "left")
-                    if desired_direction != self.parent.crossdirection:
-                        self.parent.passbutton.clicked()
-
-        # Check if it is fade time.
-        rem = self.progress_stop_figure - self.progress_current_figure
-        if (rem == 5 or rem == 10) and not self.crossfader_initiated and not \
-                                                        self.parent.simplemixer:
-            next = self.model_playing.iter_next(self.iter_playing)
-            if next is not None:
-                nextval = self.model_playing.get_value(next, 0)
-            else:
-                nextval = ""
-            if pl_mode == 0 and nextval.startswith(">"):
-                if rem == 5 and nextval == ">fade5":
-                    fade = 1
-                elif rem == 10 and nextval == ">fade10":
-                    fade = 2
-                else:
-                    fade = 0
-                if (fade):
-                    self.set_fade_mode(fade)
-                    self.stop.clicked()
-                    treeselection = self.treeview.get_selection()
-                    next = self.model_playing.iter_next(next)
-                    if next is not None:
-                        path = self.model_playing.get_path(next)
-                        treeselection.select_path(path)
-                        self.play.clicked()
-                    else:
-                        treeselection.select_path(0)
-                    self.set_fade_mode(0)
-            else:
-                fade = self.pl_delay.get_active()
-                if (fade == 1 and rem == 10) or (fade == 2 and rem == 5) or \
-                                    pl_mode in (3, 4, 6) or \
-                                    (pl_mode == 0 and self.islastinplaylist()):
-                    fade = 0
-                if fade:
-                    self.set_fade_mode(fade)
-                    self.invoke_end_of_track_policy()
-                    self.set_fade_mode(0)
 
         if self.cuesheet:
             cuesheet = self.cuesheet
