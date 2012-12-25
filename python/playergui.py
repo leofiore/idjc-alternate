@@ -3285,9 +3285,14 @@ class IDJC_Media_Player:
                 path = path -1
 
         if text == "Duplicate" and iter != None:
-            row = list(model[model.get_path(iter)])
-            if row[0][:3] == "<b>":                  # strip off any bold tags
-                row[0] = row[0][3:-4]
+            pathname, cuesheet = model.get(iter, 1, 8)
+            if cuesheet is not None:
+                row = self.make_cuesheet_playlist_entry(pathname)
+            else:
+                row = list(model[model.get_path(iter)])
+                if row[0][:3] == "<b>":              # strip off any bold tags
+                    row[0] = row[0][3:-4]
+
             model.insert_after(iter, row)
 
         if text == "Playlist Exchange":
