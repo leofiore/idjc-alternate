@@ -208,6 +208,10 @@ class CellRendererDuration(gtk.CellRendererText):
 
 
 class CuesheetPlaylist(gtk.Frame):
+    __gsignals__ = { "playitem" : (
+                        gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                            (gobject.TYPE_PYOBJECT, gobject.TYPE_PYOBJECT, ))}
+
     def __init__(self):
         gtk.Frame.__init__(self, " %s " % _('Cuesheet Playlist'))
         self.set_border_width(3)
@@ -267,10 +271,9 @@ class CuesheetPlaylist(gtk.Frame):
         vbox.pack_start(scrolled)
         scrolled.show()
         self.treeview = gtk.TreeView()
-        #self.treeview.set_headers_visible(True)
+        self.treeview.connect("row-activated", self._cb_doubleclick)
         scrolled.add(self.treeview)
         self.treeview.show()
-        #self.treeview.set_fixed_height_mode(True)
 
         renderer_toggle = gtk.CellRendererToggle()
         renderer_toggle.connect("toggled", self._play_clicked)
@@ -298,6 +301,9 @@ class CuesheetPlaylist(gtk.Frame):
         duration = gtk.TreeViewColumn(_('Duration'), renderer_duration)
         duration.add_attribute(renderer_duration, "duration", 7)
         self.treeview.append_column(duration)
+
+    def _cb_doubleclick(self, widget, path, column):
+        self.emit("playitem", self.treeview.get_model(), path)
 
     def set(self, track, index):
         self.track.set_value(track)
@@ -2033,7 +2039,6 @@ class IDJC_Media_Player:
     def cb_play_progress_timeout(self, cid):
         """The mover of the play progress bar among other things."""
         
-        
         if cid % 2 == 0:
             # player started at end of track
             self.invoke_end_of_track_policy()
@@ -3044,6 +3049,18 @@ class IDJC_Media_Player:
         ('text/uri-list', 0, 4)
         ]
 
+    def _cb_cuesheet_item(self, widget, cue_model, cue_path):
+        treeselection = self.treeview.get_selection()
+        (model, iter) = treeselection.get_selected()
+        
+        if self.is_playing:
+            self.stop.clicked()
+
+        self.max_seek = model.get_value(iter, 2)
+        self.progressadj.set_upper(self.max_seek)
+        self.progressadj.set_value(cue_model[cue_path].offset // 75 + 1)
+        self.play.clicked()
+
     def cb_doubleclick(self, treeview, path, tvcolumn, user_data):
         if self.is_playing:
             self.new_title = True
@@ -3910,6 +3927,7 @@ class IDJC_Media_Player:
         # Cue sheet playlist controls.
 
         self.cuesheet_playlist = CuesheetPlaylist()
+        self.cuesheet_playlist.connect("playitem", self._cb_cuesheet_item)
         plvbox.pack_start(self.cuesheet_playlist)
 
         # External playlist control unit
