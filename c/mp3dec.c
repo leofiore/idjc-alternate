@@ -61,17 +61,6 @@ static void mp3decode_eject(struct xlplayer *xlplayer)
 
 static void mp3decode_init(struct xlplayer *xlplayer)
     {
-    struct mp3decode_vars *self = xlplayer->dec_data;
-
-    if (xlplayer->seek_s)
-        if (mpg123_seek(self->mh, (off_t)xlplayer->samplerate * xlplayer->seek_s, SEEK_SET) < 0)
-            {
-            fprintf(stderr, "mp3decode_init: seek failed\n");
-            mp3decode_eject(xlplayer);
-            xlplayer->playmode = PM_STOPPED;
-            xlplayer->command = CMD_COMPLETE;
-            return;
-            }
     }
 
 
@@ -200,7 +189,7 @@ int mp3decode_reg(struct xlplayer *xlplayer)
         }
 #endif
 
-    if (mpg123_param(self->mh, MPG123_ADD_FLAGS, MPG123_FORCE_STEREO | MPG123_FUZZY, 0.0) != MPG123_OK)
+    if (mpg123_param(self->mh, MPG123_ADD_FLAGS, MPG123_FORCE_STEREO, 0.0) != MPG123_OK)
         {
         fprintf(stderr, "mpgdecode_reg: failed to set flags");
         goto rej_;
@@ -282,6 +271,15 @@ int mp3decode_reg(struct xlplayer *xlplayer)
         xlplayer_set_dynamic_metadata(xlplayer, dynamic_metadata_form[chapter->title.encoding], chapter->artist.text, chapter->title.text, chapter->album.text, 0);
         }
 
+    if (xlplayer->seek_s)
+        if (mpg123_seek(self->mh, (off_t)rate * xlplayer->seek_s, SEEK_SET) < 0)
+            {
+            fprintf(stderr, "mp3decode_init: seek failed\n");
+            mp3decode_eject(xlplayer);
+            xlplayer->playmode = PM_STOPPED;
+            xlplayer->command = CMD_COMPLETE;
+            return;
+            }
 
     return ACCEPTED;
 
