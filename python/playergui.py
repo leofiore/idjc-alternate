@@ -121,16 +121,25 @@ class CueSheetListStore(gtk.ListStore):
 
     def __init__(self):
         gtk.ListStore.__init__(self, *self._columns)
+        self.playing_index = None
 
     def element(self, offset):
         """The element given an offset in seconds."""
 
+        ret = None
         offset *= 75
-        for each in self:
-            if offset < each.offset + each.duration and each.play:
-                return each
-        else:
-            return None
+        playing_index = self.playing_index
+        for i, each in enumerate(self):
+            if each.play:
+                if ret is None and offset < each.offset + each.duration:
+                    ret = each
+                    if self.playing_index != i:
+                        self.playing_index = i
+
+        if playing_index != self.playing_index:
+            self.invalidate()
+
+        return ret
 
     def next_element(self, element):
         iterator = iter(self)
@@ -138,9 +147,14 @@ class CueSheetListStore(gtk.ListStore):
             item = iterator.next()
             while item != element:
                 item = iterator.next()
-            return iterator.next()
+            next_item = iterator.next()
+            return next_item
         except StopIteration:
             return None
+            
+    def non_playing(self):
+        self.playing_index = None
+        self.invalidate()
 
     def time_remaining(self, offset):
         """Play time remaining given a whole file time offset in seconds."""
@@ -158,6 +172,13 @@ class CueSheetListStore(gtk.ListStore):
                     sectors += each.duration
 
         return sectors / 75.0
+
+    def invalidate(self):
+        for i in xrange(len(self)):
+            # There should be an invalidate row signal (oh well).
+            row = gtk.ListStore.__getitem__(self, i)
+            title = row[5]
+            row[5] = title
 
     def __nonzero__(self):
         return len(self) != 0
@@ -310,10 +331,15 @@ class CuesheetPlaylist(gtk.Frame):
         self.index.set_value(index)
 
     def _description_col_func(self, column, cell, model, iter):
-        line = model[model.get_path(iter)[0]]
+        index = model.get_path(iter)[0]
+        line = model[index]
         desc = " - ".join(x for x in (line.performer, line.title) if x)
         desc = desc or os.path.splitext(os.path.split(line.pathname)[1])[0]
         cell.props.text = desc
+        if index == model.playing_index:
+            cell.props.weight = pango.WEIGHT_BOLD   
+        else:
+            cell.props.weight = pango.WEIGHT_NORMAL
 
     def _play_clicked(self, cellrenderer, path):
         model = self.treeview.get_model()
@@ -1619,6 +1645,9 @@ class IDJC_Media_Player:
     def player_shutdown(self):
         print "player shutdown code was called"
 
+        if self.cuesheet is not None:
+            self.cuesheet.non_playing()
+
         if self.iter_playing:
             # Unhighlight this track
             text = self.model_playing.get_value(self.iter_playing, 0)
@@ -1664,6 +1693,7 @@ class IDJC_Media_Player:
         if cuesheet:
             print "There is a cuesheet" 
             # Skip to first element that can be played.
+            cuesheet.non_playing()
             element = self.element = cuesheet.element(self.start_time)
             if element:
                 self.start_time = max(element.offset, self.start_time * 75) // 75
