@@ -2210,8 +2210,7 @@ class IDJC_Media_Player:
                 next_element = cuesheet.next_element(self.element)
                 if next_element is not None and next_element.offset - 75 < self.progress_current_figure * 75:
                     if not next_element.play:
-                        self.progressadj.set_value(self.progress_current_figure + 1)
-                        self.player_restart()
+                        self.invoke_end_of_track_policy()
 
         return True
 
