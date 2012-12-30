@@ -151,7 +151,7 @@ class CueSheetListStore(gtk.ListStore):
             return next_item
         except StopIteration:
             return None
-            
+           
     def non_playing(self):
         self.playing_index = None
         self.invalidate()
@@ -979,10 +979,15 @@ class IDJC_Media_Player:
                                                 frames, duration, replaygain)
                         cuesheet_liststore.append(element)
 
+        summary = _('%d Audio Tracks') % track
         if global_cue_performer and global_cue_title:
-            metadata = global_cue_performer + " - " + global_cue_title
+            if "(" in global_cue_title or ")" in global_cue_title:
+                fmt = "%s - %s - [%s]"
+            else:
+                fmt = "%s - %s - (%s)"
+            metadata = fmt % (global_cue_performer, summary, global_cue_title)
         else:
-            metadata = global_cue_performer or global_cue_title
+            metadata = "%s - %s" % (global_cue_performer or global_cue_title, summary)
         # TC: Missing metadata text.
         metadata = metadata or _('Unknown')
 
@@ -2135,45 +2140,47 @@ class IDJC_Media_Player:
 
                 pl_mode = self.pl_mode.get_active()
 
-                if not self.cuesheet:
-                    # Check if it is fade time.
+                # Check if it is fade time.
+                if self.cuesheet:
+                    rem = int(self.cuesheet.time_remaining(self.progress_current_figure))
+                else:
                     rem = self.progress_stop_figure - self.progress_current_figure
-                    if (rem == 5 or rem == 10) and not self.crossfader_initiated and not \
-                                                                    self.parent.simplemixer:
-                        next = self.model_playing.iter_next(self.iter_playing)
-                        if next is not None:
-                            nextval = self.model_playing.get_value(next, 0)
+                if (rem == 5 or rem == 10) and not self.crossfader_initiated and not \
+                                                                self.parent.simplemixer:
+                    next = self.model_playing.iter_next(self.iter_playing)
+                    if next is not None:
+                        nextval = self.model_playing.get_value(next, 0)
+                    else:
+                        nextval = ""
+                    if pl_mode == 0 and nextval.startswith(">"):
+                        if rem == 5 and nextval == ">fade5":
+                            fade = 1
+                        elif rem == 10 and nextval == ">fade10":
+                            fade = 2
                         else:
-                            nextval = ""
-                        if pl_mode == 0 and nextval.startswith(">"):
-                            if rem == 5 and nextval == ">fade5":
-                                fade = 1
-                            elif rem == 10 and nextval == ">fade10":
-                                fade = 2
+                            fade = 0
+                        if (fade):
+                            self.set_fade_mode(fade)
+                            self.stop.clicked()
+                            treeselection = self.treeview.get_selection()
+                            next = self.model_playing.iter_next(next)
+                            if next is not None:
+                                path = self.model_playing.get_path(next)
+                                treeselection.select_path(path)
+                                self.play.clicked()
                             else:
-                                fade = 0
-                            if (fade):
-                                self.set_fade_mode(fade)
-                                self.stop.clicked()
-                                treeselection = self.treeview.get_selection()
-                                next = self.model_playing.iter_next(next)
-                                if next is not None:
-                                    path = self.model_playing.get_path(next)
-                                    treeselection.select_path(path)
-                                    self.play.clicked()
-                                else:
-                                    treeselection.select_path(0)
-                                self.set_fade_mode(0)
-                        else:
-                            fade = self.pl_delay.get_active()
-                            if (fade == 1 and rem == 10) or (fade == 2 and rem == 5) or \
-                                                pl_mode in (3, 4, 6) or \
-                                                (pl_mode == 0 and self.islastinplaylist()):
-                                fade = 0
-                            if fade:
-                                self.set_fade_mode(fade)
-                                self.invoke_end_of_track_policy()
-                                self.set_fade_mode(0)
+                                treeselection.select_path(0)
+                            self.set_fade_mode(0)
+                    else:
+                        fade = self.pl_delay.get_active()
+                        if (fade == 1 and rem == 10) or (fade == 2 and rem == 5) or \
+                                            pl_mode in (3, 4, 6) or \
+                                            (pl_mode == 0 and self.islastinplaylist()):
+                            fade = 0
+                        if fade:
+                            self.set_fade_mode(fade)
+                            self.invoke_end_of_track_policy()
+                            self.set_fade_mode(0)
                                 
                 # Calclulate whether to sound the DJ alarm (end of music notification)
                 if self.playername in ("left", "right"):
@@ -2221,13 +2228,19 @@ class IDJC_Media_Player:
 
         if self.cuesheet:
             cuesheet = self.cuesheet
-            current_element = cuesheet.element(self.progress_current_figure)
+            current_element = cuesheet.element(self.progress_current_figure + 1)
             if self.element != current_element:
                 print "Cuesheet bump"
                 if cuesheet.next_element(self.element) != current_element or \
                             current_element is None:
                     print "Cuesheet discontinuous"
-                    self.player_restart()
+                    self.set_fade_mode(4)
+                    if current_element is not None:
+                        self.progressadj.set_value((current_element.offset + 38) // 75)
+                        self.player_restart()
+                    else:
+                        self.invoke_end_of_track_policy()
+                    self.set_fade_mode(0)
                     return True
                 else:
                     print "cuesheet continuous"
@@ -2235,12 +2248,6 @@ class IDJC_Media_Player:
                     self.cuesheet_track_title = element.title
                     self.cuesheet_track_performer = element.performer
                     self.parent.send_new_mixer_stats()
-            else:
-                # IDJC is a bit behind on the metadata.
-                next_element = cuesheet.next_element(self.element)
-                if next_element is not None and next_element.offset - 75 < self.progress_current_figure * 75:
-                    if not next_element.play:
-                        self.invoke_end_of_track_policy()
 
         return True
 

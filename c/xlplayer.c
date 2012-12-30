@@ -708,8 +708,8 @@ void xlplayer_eject(struct xlplayer *self)
 
 void xlplayer_set_fadesteps(struct xlplayer *self, int fade_mode)
     {
-    static float a[] = { 1.0f, 5.0f, 10.0f, 0.1f };
-    static float b[] = { 1.0f/20.0f, 5.0f, 10.0f, 0.0f };
+    static float a[] = {1.0f, 5.0f, 10.0f, 0.1f, 0.05f};
+    static float b[] = {0.05f, 5.0f, 10.0f, 0.0f, 0.05f};
     fade_set(self->fadeout, FADE_SET_SAME, a[fade_mode], FADE_DIRECTION_UNCHANGED);
     fade_set(self->fadein, FADE_SET_SAME, b[fade_mode], FADE_DIRECTION_UNCHANGED);
     }
