@@ -1,6 +1,6 @@
 /* -*- c-basic-offset: 8; -*- */
 /* ogg.c: Generic ogg data handler
- * $Id: ogg.c 18174 2012-02-02 00:16:36Z giles $
+ * $Id: ogg.c 18306 2012-05-24 18:12:46Z gmaxwell $
  *
  *  Copyright (C) 2002-2004 the Icecast team <team@icecast.org>
  *
@@ -57,6 +57,7 @@ static codec_open_t codecs[] = {
 #ifdef HAVE_THEORA
 	_shout_open_theora,
 #endif
+	_shout_open_opus,
 #ifdef HAVE_SPEEX
 	_shout_open_speex,
 #endif

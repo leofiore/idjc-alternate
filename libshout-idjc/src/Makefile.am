@@ -18,7 +18,7 @@ libshout_idjc_la_LDFLAGS = -version-info 5:0:2
 
 EXTRA_DIST = speex.c
 noinst_HEADERS = shout_ogg.h shout_private.h util.h
-libshout_idjc_la_SOURCES = shout.c util.c ogg.c vorbis.c mpeg.c webm.c $(MAYBE_SPEEX)
+libshout_idjc_la_SOURCES = shout.c util.c ogg.c vorbis.c mpeg.c webm.c opus.c $(MAYBE_SPEEX)
 AM_CFLAGS = @XIPH_CFLAGS@
 
 libshout_idjc_la_LIBADD = net/libicenet.la timing/libicetiming.la avl/libiceavl.la\

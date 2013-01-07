@@ -17,7 +17,7 @@
  *  License along with this library; if not, write to the Free
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: shout.c 18174 2012-02-02 00:16:36Z giles $
+ * $Id: shout.c 18310 2012-05-24 20:25:30Z giles $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -276,7 +276,6 @@ int shout_delay(shout_t *self)
 	if (self->senttime == 0)
 		return 0;
 
-	/* Is this cast to double needed? */
 	return self->senttime / 1000 - (timing_get_time() - self->starttime);
 }
   

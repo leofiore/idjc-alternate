@@ -1,6 +1,6 @@
 /* -*- c-basic-offset: 8; -*- */
 /* shout_ogg.h: Internal shout interface to Ogg codec handlers
- * $Id: shout_ogg.h 18174 2012-02-02 00:16:36Z giles $
+ * $Id: shout_ogg.h 18306 2012-05-24 18:12:46Z gmaxwell $
  *
  *  Copyright (C) 2004 the Icecast team <team@icecast.org>
  *
@@ -51,5 +51,6 @@ int _shout_open_theora(ogg_codec_t *codec, ogg_page *page);
 #ifdef HAVE_SPEEX
 int _shout_open_speex(ogg_codec_t *codec, ogg_page *page);
 #endif
+int _shout_open_opus(ogg_codec_t *codec, ogg_page *page);
 
 #endif

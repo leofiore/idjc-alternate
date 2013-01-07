@@ -1,9 +1,9 @@
 # Process this file with autoconf to produce a configure script.
-# $Id: configure.ac 18170 2012-02-01 23:59:25Z giles $
+# $Id: configure.ac 18320 2012-05-25 15:32:16Z giles $
 
 m4_define(libshout_major, 2)
 m4_define(libshout_minor, 3)
-m4_define(libshout_micro, 0)
+m4_define(libshout_micro, 1)
 m4_define(libshout_version, libshout_major.libshout_minor.libshout_micro)
 
 AC_INIT([libshout-idjc], libshout_version, [s-fairchild@users.sourceforge.net])

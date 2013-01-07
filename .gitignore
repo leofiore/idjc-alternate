@@ -55,6 +55,8 @@ libshout-idjc/src/httpp/libicehttpp_la-httpp.o
 libshout-idjc/src/libshout-idjc.la
 libshout-idjc/src/mpeg.lo
 libshout-idjc/src/mpeg.o
+libshout-idjc/src/opus.lo
+libshout-idjc/src/opus.o
 libshout-idjc/src/webm.lo
 libshout-idjc/src/webm.o
 libshout-idjc/src/net/.deps/*
