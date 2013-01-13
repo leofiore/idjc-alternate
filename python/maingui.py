@@ -1999,8 +1999,7 @@ class MainWindow(dbus.service.Object):
             self.cuesheet_track_title = target.cuesheet_track_title
             self.cuesheet_track_performer = target.cuesheet_track_performer
             self.meta_context = target, target.player_cid, \
-                                                self.cuesheet_track_title, \
-                                                self.cuesheet_track_performer
+                    self.cuesheet_track_title, self.cuesheet_track_performer
             self.music_filename = target.music_filename
       
         # update metadata on stream if it has changed

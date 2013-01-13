@@ -277,14 +277,6 @@ class CuesheetPlaylist(gtk.Frame):
             box.show()
             return box, prev, next, numbered
 
-        # TC: Cuesheet term.
-        #box_t, self.prev_track, self.next_track, self.track = nextprev_unit(_('Track'))
-        # TC: Cuesheet term.
-        #box_i, self.prev_index, self.next_index, self.index = nextprev_unit(_('Index'))
-        #hbox.pack_start(box_t, fill=False)
-        #hbox.pack_start(box_i, fill=False)
-        #hbox.show()
-
         scrolled = gtk.ScrolledWindow()
         scrolled.set_size_request(-1, 117)
         scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
@@ -2138,85 +2130,6 @@ class IDJC_Media_Player:
                     self.parent.files_played_offline[self.music_filename
                                                                 ] = time.time()
 
-                pl_mode = self.pl_mode.get_active()
-
-                # Check if it is fade time.
-                if self.cuesheet:
-                    rem = int(self.cuesheet.time_remaining(self.progress_current_figure))
-                else:
-                    rem = self.progress_stop_figure - self.progress_current_figure
-                if (rem == 5 or rem == 10) and not self.crossfader_initiated and not \
-                                                                self.parent.simplemixer:
-                    next = self.model_playing.iter_next(self.iter_playing)
-                    if next is not None:
-                        nextval = self.model_playing.get_value(next, 0)
-                    else:
-                        nextval = ""
-                    if pl_mode == 0 and nextval.startswith(">"):
-                        if rem == 5 and nextval == ">fade5":
-                            fade = 1
-                        elif rem == 10 and nextval == ">fade10":
-                            fade = 2
-                        else:
-                            fade = 0
-                        if (fade):
-                            self.set_fade_mode(fade)
-                            self.stop.clicked()
-                            treeselection = self.treeview.get_selection()
-                            next = self.model_playing.iter_next(next)
-                            if next is not None:
-                                path = self.model_playing.get_path(next)
-                                treeselection.select_path(path)
-                                self.play.clicked()
-                            else:
-                                treeselection.select_path(0)
-                            self.set_fade_mode(0)
-                    else:
-                        fade = self.pl_delay.get_active()
-                        if (fade == 1 and rem == 10) or (fade == 2 and rem == 5) or \
-                                            pl_mode in (3, 4, 6) or \
-                                            (pl_mode == 0 and self.islastinplaylist()):
-                            fade = 0
-                        if fade:
-                            self.set_fade_mode(fade)
-                            self.invoke_end_of_track_policy()
-                            self.set_fade_mode(0)
-                                
-                # Calclulate whether to sound the DJ alarm (end of music notification)
-                if self.playername in ("left", "right"):
-                    if self.progress_current_figure >= self.progress_stop_figure -10 \
-                            and self.progressadj.upper > 11 and self.alarm_cid != cid \
-                            and self.parent.prefs_window.djalarm.get_active():
-                        # DJ Alarm is on and we are at the correct play position.
-                        # The alarm has not sounded yet.
-                        fader = "left" if self.parent.crossadj.value < 50.0 else "right"
-                        
-                        if self.playername == fader and (pl_mode in (3, 4) or
-                                                (pl_mode == 0 and self.stop_inspect())):
-                            self.parent.freewheel_button.set_active(False)
-                            gobject.timeout_add(1000, self.deferred_alarm)
-                            self.alarm_cid = cid
-
-                    # Check if the crossfade needs scheduling.
-                    if pl_mode == 7 or (pl_mode == 0 and self.fade_inspect()):
-                        eot_crosstime = int(self.progress_stop_figure) - \
-                                            self.parent.passspeed_adj.props.value - \
-                                            int(self.progress_current_figure)
-                        # Start other player.
-                        if not self.other_player_initiated and eot_crosstime <= 1:
-                            if self.playername == "left":
-                                self.parent.player_right.play.clicked()
-                            else:
-                                self.parent.player_left.play.clicked()
-                            self.other_player_initiated = True
-                        # Now do the crossfade
-                        if not self.crossfader_initiated and eot_crosstime <= 0:
-                            self.parent.passbutton.clicked()
-                            self.crossfader_initiated = True
-                            desired_direction = (self.playername == "left")
-                            if desired_direction != self.parent.crossdirection:
-                                self.parent.passbutton.clicked()              
-
             self.progress_current_figure = self.playtime_elapsed.value
             self.progressadj.set_value(self.playtime_elapsed.value)
             if self.max_seek == 0:
@@ -2228,6 +2141,7 @@ class IDJC_Media_Player:
 
         if self.cuesheet:
             cuesheet = self.cuesheet
+            rem = int(cuesheet.time_remaining(self.progress_current_figure))
             current_element = cuesheet.element(self.progress_current_figure + 1)
             if self.element != current_element:
                 print "Cuesheet bump"
@@ -2248,6 +2162,81 @@ class IDJC_Media_Player:
                     self.cuesheet_track_title = element.title
                     self.cuesheet_track_performer = element.performer
                     self.parent.send_new_mixer_stats()
+        else:
+            rem = self.progress_stop_figure - self.progress_current_figure
+
+        pl_mode = self.pl_mode.get_active()
+        if (rem == 5 or rem == 10) and not self.crossfader_initiated and not \
+                                                        self.parent.simplemixer:
+            next = self.model_playing.iter_next(self.iter_playing)
+            if next is not None:
+                nextval = self.model_playing.get_value(next, 0)
+            else:
+                nextval = ""
+            if pl_mode == 0 and nextval.startswith(">"):
+                if rem == 5 and nextval == ">fade5":
+                    fade = 1
+                elif rem == 10 and nextval == ">fade10":
+                    fade = 2
+                else:
+                    fade = 0
+                if (fade):
+                    self.set_fade_mode(fade)
+                    self.stop.clicked()
+                    treeselection = self.treeview.get_selection()
+                    next = self.model_playing.iter_next(next)
+                    if next is not None:
+                        path = self.model_playing.get_path(next)
+                        treeselection.select_path(path)
+                        self.play.clicked()
+                    else:
+                        treeselection.select_path(0)
+                    self.set_fade_mode(0)
+            else:
+                fade = self.pl_delay.get_active()
+                if (fade == 1 and rem == 10) or (fade == 2 and rem == 5) or \
+                                    pl_mode in (3, 4, 6) or \
+                                    (pl_mode == 0 and self.islastinplaylist()):
+                    fade = 0
+                if fade:
+                    self.set_fade_mode(fade)
+                    self.invoke_end_of_track_policy()
+                    self.set_fade_mode(0)
+
+        # Calclulate whether to sound the DJ alarm (end of music notification)
+        if self.playername in ("left", "right"):
+            if rem == 10 and self.progressadj.upper > 11 and \
+                                self.alarm_cid != cid and \
+                                self.parent.prefs_window.djalarm.get_active():
+                # DJ Alarm is on and we are at the correct play position.
+                # The alarm has not sounded yet.
+                fader = "left" if self.parent.crossadj.value < 50.0 else "right"
+                
+                if self.playername == fader and (pl_mode in (3, 4) or
+                                        (pl_mode == 0 and self.stop_inspect())):
+                    self.parent.freewheel_button.set_active(False)
+                    gobject.timeout_add(1000, self.deferred_alarm)
+                    self.alarm_cid = cid
+
+            # Check if the crossfade needs scheduling.
+            if pl_mode == 7 or (pl_mode == 0 and self.fade_inspect()):
+                eot_crosstime = int(self.progress_stop_figure) - \
+                                    self.parent.passspeed_adj.props.value - \
+                                    int(self.progress_current_figure)
+                # Start other player.
+                if not self.other_player_initiated and eot_crosstime <= 1:
+                    if self.playername == "left":
+                        self.parent.player_right.play.clicked()
+                    else:
+                        self.parent.player_left.play.clicked()
+                    self.other_player_initiated = True
+                # Now do the crossfade
+                if not self.crossfader_initiated and eot_crosstime <= 0:
+                    self.parent.passbutton.clicked()
+                    self.crossfader_initiated = True
+                    desired_direction = (self.playername == "left")
+                    if desired_direction != self.parent.crossdirection:
+                        self.parent.passbutton.clicked()
 
         return True
 
