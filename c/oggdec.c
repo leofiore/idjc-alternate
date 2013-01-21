@@ -1,6 +1,6 @@
 /*
 #   oggdec.c: ogg file parser for xlplayer
-#   Copyright (C) 2008-2009 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2008-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -38,6 +38,185 @@
                                     ((buf[base+2]<<16)&0xff0000)| \
                                     ((buf[base+1]<<8)&0xff00)| \
                                      (buf[base]&0xff))
+
+static int comment_count(char *comments, int length, char *match_string)
+    {
+    char *c=comments;
+    int len, i, nb_fields, count = 0;
+    char *end;
+
+    if (length < 8)
+        {
+        fprintf (stderr, "Invalid/corrupted comments\n");
+        return -1;
+        }
+    
+    end = c + length;
+    len = readint(c, 0);
+    c += 4;
+    
+    if (c + len > end)
+        {
+        fprintf (stderr, "Invalid/corrupted comments\n");
+        return -1;
+        }
+
+    c += len;
+    if (c + 4 > end)
+        {
+        fprintf (stderr, "Invalid/corrupted comments\n");
+        return -1;
+        }
+
+    nb_fields = readint(c, 0);
+    c += 4;
+    for (i = 0; i < nb_fields; i++)
+        {
+        if (c + 4 > end)
+            {
+            fprintf (stderr, "Invalid/corrupted comments\n");
+            return -1;
+            }
+        
+        len = readint(c, 0);
+        c += 4;
+        if (c + len > end)
+            {
+            fprintf (stderr, "Invalid/corrupted comments\n");
+            return -1;
+            }
+        
+        if (!strncasecmp(c, match_string, strlen(match_string)))
+            count += 1;
+        c += len;
+        }
+    return count;
+    }
+
+/* vorbis comment block parser */
+static void get_comments(struct oggdec_vars *self, char *comments, int length)
+    {
+    char *c=comments;
+    int len, i, nb_fields, use_alt;
+    char *end;
+
+    use_alt = comment_count(comments, length, "trk-title") ? TRUE : FALSE;
+    if (use_alt)
+        fprintf(stderr, "using alternative tags\n");
+    else
+        fprintf(stderr, "using regular tags\n");
+
+    void handle_keyval(char *key, char *val, char **target, char *match, int multiple)
+        {
+        char *old;
+
+        if (!strcasecmp(key, match))
+            {
+            if (*target && *target[0] && multiple)
+                {
+                old = strdup(*target);
+                *target = realloc(*target, strlen(old) + strlen(val) + 2);
+                sprintf(*target, "%s/%s", old, val);
+                free(old);
+                }
+            else
+                {
+                *target = realloc(*target, strlen(val) + 1);
+                strcpy(*target, val);
+                }
+            }
+        }
+  
+    void handle_comment(char *comment, int comment_length)
+        {
+        char *key = malloc(comment_length + 1);
+        char *val;
+        
+        memcpy(key, comment, comment_length);
+        key[comment_length] = '\0';
+        val = strchr(key, '=');
+        if (!val)
+            {
+            fprintf(stderr, "Invalid/corrupted comments\n");
+            free(key);
+            return;
+            }
+        *val++ = '\0';
+
+        if (use_alt)
+            {
+            handle_keyval(key, val, &self->artist[self->ix], "trk-author", TRUE);
+            handle_keyval(key, val, &self->artist[self->ix], "trk-artist", TRUE);
+            handle_keyval(key, val, &self->title[self->ix], "trk-title", TRUE);
+            handle_keyval(key, val, &self->album[self->ix], "trk-album", TRUE);
+            }
+        else
+            {
+            handle_keyval(key, val, &self->artist[self->ix], "author", TRUE);
+            handle_keyval(key, val, &self->artist[self->ix], "artist", TRUE);
+            handle_keyval(key, val, &self->title[self->ix], "title", TRUE);
+            handle_keyval(key, val, &self->album[self->ix], "album", TRUE);
+            }
+        handle_keyval(key, val, &self->replaygain[self->ix], "replaygain_track_gain", FALSE);
+        free(key);
+        }
+    
+    self->artist[self->ix] = NULL;
+    self->title[self->ix] = NULL;
+    self->album[self->ix] = NULL;
+    
+    if (length < 8)
+        {
+        fprintf (stderr, "Invalid/corrupted comments\n");
+        return;
+        }
+    
+    end = c + length;
+    len = readint(c, 0);
+    c += 4;
+    
+    if (c + len > end)
+        {
+        fprintf (stderr, "Invalid/corrupted comments\n");
+        return;
+        }
+
+    c += len;
+    if (c + 4 > end)
+        {
+        fprintf (stderr, "Invalid/corrupted comments\n");
+        return;
+        }
+
+    nb_fields = readint(c, 0);
+    c += 4;
+    for (i = 0; i < nb_fields; i++)
+        {
+        if (c + 4 > end)
+            {
+            fprintf (stderr, "Invalid/corrupted comments\n");
+            return;
+            }
+        
+        len = readint(c, 0);
+        c += 4;
+        if (c + len > end)
+            {
+            fprintf (stderr, "Invalid/corrupted comments\n");
+            return;
+            }
+        
+        handle_comment(c, len);
+        c += len;
+        }
+        
+    if (self->artist[self->ix] == NULL)
+        self->artist[self->ix] = strdup("");
+    if (self->title[self->ix] == NULL)
+        self->title[self->ix] = strdup("");
+    if (self->album[self->ix] == NULL)
+        self->album[self->ix] = strdup("");
+    }
 
 int oggdec_get_next_packet(struct oggdec_vars *self)
     {
@@ -416,184 +595,6 @@ static int flac_get_samplerate(struct oggdec_vars *self)
 
 #ifdef HAVE_SPEEX
 
-static int speex_comment_count(char *comments, int length, char *match_string)
-    {
-    char *c=comments;
-    int len, i, nb_fields, count = 0;
-    char *end;
-
-    if (length < 8)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return -1;
-        }
-    
-    end = c + length;
-    len = readint(c, 0);
-    c += 4;
-    
-    if (c + len > end)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return -1;
-        }
-
-    c += len;
-    if (c + 4 > end)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return -1;
-        }
-
-    nb_fields = readint(c, 0);
-    c += 4;
-    for (i = 0; i < nb_fields; i++)
-        {
-        if (c + 4 > end)
-            {
-            fprintf (stderr, "Invalid/corrupted comments\n");
-            return -1;
-            }
-        
-        len = readint(c, 0);
-        c += 4;
-        if (c + len > end)
-            {
-            fprintf (stderr, "Invalid/corrupted comments\n");
-            return -1;
-            }
-        
-        if (!strncasecmp(c, match_string, strlen(match_string)))
-            count += 1;
-        c += len;
-        }
-    return count;
-    }
-
-static void speex_get_comments(struct oggdec_vars *self, char *comments, int length)
-    {
-    char *c=comments;
-    int len, i, nb_fields, use_alt;
-    char *end;
-
-    use_alt = speex_comment_count(comments, length, "trk-title") ? TRUE : FALSE;
-    if (use_alt)
-        fprintf(stderr, "using alternative speex tags\n");
-    else
-        fprintf(stderr, "using regular speex tags\n");
-
-    void handle_keyval(char *key, char *val, char **target, char *match, int multiple)
-        {
-        char *old;
-
-        if (!strcasecmp(key, match))
-            {
-            if (*target && *target[0] && multiple)
-                {
-                old = strdup(*target);
-                *target = realloc(*target, strlen(old) + strlen(val) + 2);
-                sprintf(*target, "%s/%s", old, val);
-                free(old);
-                }
-            else
-                {
-                *target = realloc(*target, strlen(val) + 1);
-                strcpy(*target, val);
-                }
-            }
-        }
-  
-    void handle_comment(char *comment, int comment_length)
-        {
-        char *key = malloc(comment_length + 1);
-        char *val;
-        
-        memcpy(key, comment, comment_length);
-        key[comment_length] = '\0';
-        val = strchr(key, '=');
-        if (!val)
-            {
-            fprintf(stderr, "Invalid/corrupted comments\n");
-            free(key);
-            return;
-            }
-        *val++ = '\0';
-
-        if (use_alt)
-            {
-            handle_keyval(key, val, &self->artist[self->ix], "trk-author", TRUE);
-            handle_keyval(key, val, &self->artist[self->ix], "trk-artist", TRUE);
-            handle_keyval(key, val, &self->title[self->ix], "trk-title", TRUE);
-            handle_keyval(key, val, &self->album[self->ix], "trk-album", TRUE);
-            }
-        else
-            {
-            handle_keyval(key, val, &self->artist[self->ix], "author", TRUE);
-            handle_keyval(key, val, &self->artist[self->ix], "artist", TRUE);
-            handle_keyval(key, val, &self->title[self->ix], "title", TRUE);
-            handle_keyval(key, val, &self->album[self->ix], "album", TRUE);
-            }
-        handle_keyval(key, val, &self->replaygain[self->ix], "replaygain_track_gain", FALSE);
-        free(key);
-        }
-    
-    self->artist[self->ix] = NULL;
-    self->title[self->ix] = NULL;
-    self->album[self->ix] = NULL;
-    
-    if (length < 8)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return;
-        }
-    
-    end = c + length;
-    len = readint(c, 0);
-    c += 4;
-    
-    if (c + len > end)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return;
-        }
-
-    c += len;
-    if (c + 4 > end)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return;
-        }
-
-    nb_fields = readint(c, 0);
-    c += 4;
-    for (i = 0; i < nb_fields; i++)
-        {
-        if (c + 4 > end)
-            {
-            fprintf (stderr, "Invalid/corrupted comments\n");
-            return;
-            }
-        
-        len = readint(c, 0);
-        c += 4;
-        if (c + len > end)
-            {
-            fprintf (stderr, "Invalid/corrupted comments\n");
-            return;
-            }
-        
-        handle_comment(c, len);
-        c += len;
-        }
-        
-    if (self->artist[self->ix] == NULL)
-        self->artist[self->ix] = strdup("");
-    if (self->title[self->ix] == NULL)
-        self->title[self->ix] = strdup("");
-    if (self->album[self->ix] == NULL)
-        self->album[self->ix] = strdup("");
-    }
-
 static int speex_get_samplerate(struct oggdec_vars *self)
     {
     SpeexHeader *h;
@@ -608,9 +609,7 @@ static int speex_get_samplerate(struct oggdec_vars *self)
                 self->samplerate[self->ix] = h->rate;
                 speex_header_free(h);
                 if (oggdec_get_next_packet(self) && ogg_stream_packetout(&self->os, &self->op) == 0)
-                    {
-                    speex_get_comments(self, (char *)self->op.packet, self->op.bytes);
-                    }
+                    get_comments(self, (char *)self->op.packet, self->op.bytes);
                 else
                     return 0;
                 
@@ -627,7 +626,36 @@ static int speex_get_samplerate(struct oggdec_vars *self)
         return 0;
         }
     }
+
 #endif /* HAVE_SPEEX */
+
+#ifdef HAVE_OPUS
+
+static int opus_get_samplerate(struct oggdec_vars *self)
+    {
+    if (oggdec_get_next_packet(self) && ogg_stream_packetout(&self->os, &self->op) == 0)
+        {
+        /* we already peeked at this packet and it's legit -- moving on... */
+        if (oggdec_get_next_packet(self) && ogg_stream_packetout(&self->os, &self->op) == 0)
+            {
+            if (self->op.bytes >= 8 && !memcmp(self->op.packet, "OpusTags", 8))
+                get_comments(self, (char *)self->op.packet + 8, self->op.bytes - 8);
+            else goto error;
+            }
+        else
+            goto error;
+        }
+    else
+        goto error;
+
+    self->channels[self->ix] = 2;     /* let Opus API perform mix to stereo */
+    self->samplerate[self->ix] = 48000;
+    return 48000;           /* opus streams are always internally 48000Hz */
+    error:
+        return 0;
+    }
+
+#endif /* HAVE_OPUS */
 
 /* oggscan_eos: perform a binary search on the ogg file for the e_o_s page
  * and log details of the current logical stream when it is found */
@@ -847,42 +875,43 @@ static struct oggdec_vars *oggdecode_get_metadata(char *pathname)
         ogg_stream_pagein(&self->os, &self->og);
         ogg_stream_packetpeek(&self->os, &self->op);
 
-        if (self->op.bytes >= 7 && !memcmp(self->op.packet, "\x01vorbis", 7))
-            self->streamtype[i] = ST_VORBIS;
-        else
-            {
-            if (self->op.bytes >= 5 && !memcmp(self->op.packet, "\x7F""FLAC", 5))
-                self->streamtype[i] = ST_FLAC;
-            else
+        do {
+            if (self->op.bytes >= 7 && !memcmp(self->op.packet, "\x01vorbis", 7))
                 {
-                if (self->op.bytes >= 5 && !memcmp(self->op.packet, "Speex", 5))
-                    self->streamtype[i] = ST_SPEEX;
-                else
-                    self->streamtype[i] = ST_UNHANDLED;
-                }
-            }
- 
-        switch (self->streamtype[i])
-            {
-            case ST_VORBIS:
+                self->streamtype[i] = ST_VORBIS;
                 samplerate = vorbis_get_samplerate(self);
                 break;
-            case ST_FLAC:
+                }
+
 #ifdef HAVE_OGGFLAC
+            if (self->op.bytes >= 5 && !memcmp(self->op.packet, "\x7F""FLAC", 5))
+                {
+                self->streamtype[i] = ST_FLAC;
                 fseeko(self->fp, self->bos_offset[i], SEEK_SET);
                 samplerate = flac_get_samplerate(self);
-#endif
                 break;
-            case ST_SPEEX:
+                }
+#endif /* HAVE_OGGFLAC */
 #ifdef HAVE_SPEEX
+            if (self->op.bytes >= 5 && !memcmp(self->op.packet, "Speex", 5))
+                {
+                self->streamtype[i] = ST_SPEEX;
                 samplerate = speex_get_samplerate(self);
-#endif
                 break;
-            case ST_UNHANDLED:
-            default:
-                fprintf(stderr, "??? unknown stream type ???\n");
+                }
+#endif /* HAVE_SPEEX */
+#ifdef HAVE_OPUS
+            if (self->op.bytes >= 8 && !memcmp(self->op.packet, "OpusHead", 8))
+                {
+                self->streamtype[i] = ST_OPUS;
+                samplerate = opus_get_samplerate(self);
                 break;
-            }
+                }
+#endif /* HAVE_OPUS */
+
+            self->streamtype[i] = ST_UNHANDLED;
+            fprintf(stderr, "??? unhandled ogg stream type ???\n");
+            } while (0);
 
         self->start_time[i] = start_time;
         if (samplerate == 0)
@@ -1036,6 +1065,11 @@ void oggdecode_dynamic_dispatcher(struct xlplayer *xlplayer)
             case ST_SPEEX:
 #ifdef HAVE_SPEEX
                 success = ogg_speexdec_init(xlplayer);
+#endif
+                break;
+            case ST_OPUS:
+#ifdef HAVE_OPUS
+                success = ogg_opusdec_init(xlplayer);
 #endif
                 break;
             case ST_UNHANDLED:

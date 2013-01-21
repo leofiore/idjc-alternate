@@ -672,6 +672,8 @@ class Supported(object):
             self.media.append(".flac")
         if FGlobs.speexenabled:
             self.media.append(".spx")
+        if FGlobs.opusenabled:
+            self.media.append(".opus")
 
 supported = Supported()
 

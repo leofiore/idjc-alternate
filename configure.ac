@@ -195,6 +195,26 @@ else
    AC_SUBST([HAVE_TWOLAME],[0])
 fi
 
+AC_ARG_ENABLE([opus],
+   AC_HELP_STRING([--disable-opus],[remove capability to play/stream in opus format]),
+   [makeopus=$enableval],[makeopus="maybe"])
+
+if test $makeopus != "no" ; then
+   PKG_CHECK_MODULES([OPUS], [opus],
+            [
+            AC_DEFINE(HAVE_OPUS, 1, [Set if libopus was found])
+            AC_SUBST(HAVE_OPUS, 1)],
+            [AC_SUBST(HAVE_OPUS, 0),
+
+            if test $makeopus = "yes" ; then
+               AC_MSG_ERROR([libopus not detected but specifically requested in configure options])
+            else
+               AC_MSG_WARN([IDJC will be built without opus playback or streaming support])
+            fi])
+else
+   AC_SUBST([HAVE_OPUS],[0])
+fi
+
 AC_CHECK_LIB([pthread], [pthread_create], :, AC_MSG_ERROR("libpthread not detected"))
 
 # Conditionally include libm.  Some standard libraries could have inbuilt math stuff.

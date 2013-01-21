@@ -635,7 +635,7 @@ class ApeTagger(MutagenTagger):
 
 class MutagenGUI:
     ext2name = {"aac": "AAC", "mp3": "ID3", "mp2": "ID3", "mp4": "MP4", "m4a": "MP4", "spx": "Speex",
-                "flac": "FLAC", "ogg": "Ogg Vorbis", "oga": "XIPH Ogg audio",
+                "flac": "FLAC", "ogg": "Ogg Vorbis", "oga": "XIPH Ogg audio", "opus": "Ogg Opus",
                 "m4b": "MP4", "m4p": "MP4", "wma": "Windows Media Audio"}
 
     
@@ -659,6 +659,8 @@ class MutagenGUI:
             supported.append("flac")
         if FGlobs.speexenabled:
             supported.append("spx")
+        if FGlobs.opusenabled:
+            supported.append("opus")
         extension = os.path.splitext(pathname)[1][1:].lower()
         if supported.count(extension) != 1:
             if extension:

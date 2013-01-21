@@ -21,7 +21,7 @@
 #include <ogg/ogg.h>
 #include "xlplayer.h"
 
-enum streamtype_t { ST_UNHANDLED, ST_VORBIS, ST_FLAC, ST_SPEEX };
+enum streamtype_t { ST_UNHANDLED, ST_VORBIS, ST_FLAC, ST_SPEEX, ST_OPUS };
 
 struct oggdec_vars
     {

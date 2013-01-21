@@ -3,7 +3,7 @@
 Generated from file __init__.py.in.in -- edit the original.
 """
 
-#   Copyright (C) 2011 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2011, 2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation, either version 2 of the License, or
@@ -37,7 +37,6 @@ from .utils import PathStr
 # namespace classes typically have no public methods
 
 
-
 def lib_probe(at_runtime, names):
     if at_runtime:
         for name in names.split():
@@ -56,12 +55,10 @@ def lib_probe(at_runtime, names):
 class FGlobs(object):
     """Namespace class of variables which cannot be altered.
 
-
     These are set by the build process.
     """
 
     __metaclass__ = FixedAttributes
-
 
     datarootdir = PathStr("""@datarootdir@""")
     libdir = PathStr("""@libdir@""")
@@ -72,6 +69,7 @@ class FGlobs(object):
     avcodec = @HAVE_AVCODEC@
     flacenabled = @HAVE_FLAC@
     oggflacenabled = @HAVE_OGGFLAC@
+    opusenabled = @HAVE_OPUS@
     speexenabled = @HAVE_SPEEX@
     twolameenabled = @HAVE_TWOLAME@
     
@@ -86,18 +84,14 @@ class FGlobs(object):
     backend = PathStr("""@libdir@""") / """@PACKAGE_NAME@.so.0"""
 
 
-
 _ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
                                                         fallback=True).gettext
-
 
 
 class PGlobs(object):
     """Values which cannot be changed once they have been read."""
       
-
     __metaclass__ = PolicedAttributes
-
 
     config_dir = PathStr(glib.get_user_config_dir()) / FGlobs.package_name
     #config_dir = PathStr(os.path.expanduser("~")) / ("." + FGlobs.package_name)
@@ -117,10 +111,8 @@ class PGlobs(object):
     num_effects = 24
 
 
-
 def main():
     """Package execution entry point."""
-
 
     from .prelims import ProfileManager  # pylint: disable=W0404
     ProfileManager()

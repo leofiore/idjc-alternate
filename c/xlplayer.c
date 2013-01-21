@@ -334,6 +334,9 @@ static void *xlplayer_main(struct xlplayer *self)
 #ifdef HAVE_SPEEX
                           || (!strcmp(extension, "spx") && oggdecode_reg(self))
 #endif
+#ifdef HAVE_OPUS
+                          || (!strcmp(extension, "opus") && oggdecode_reg(self))
+#endif
 #ifdef HAVE_FLAC
                           || (!strcmp(extension, "flac") && flacdecode_reg(self))
 #endif
