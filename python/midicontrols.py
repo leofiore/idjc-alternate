@@ -776,6 +776,9 @@ class Controls(object):
     def p_prep(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
+        if player not in (self.owner.player_left, self.owner.player_right):
+            print "player unsupported for this binding"
+            return
         other= self.owner.player_left if player is self.owner.player_right \
                                                 else self.owner.player_right
         prep= player.stream.get_active() if isd else v>=0x40
