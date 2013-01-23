@@ -908,7 +908,7 @@ class Controls(object):
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def x_pitch(self, n, v, isd):
         checkbox= self.owner.prefs_window.speed_variance
-        checkbox.set_active(not checkbox.get_active if isd else v>=0x40)
+        checkbox.set_active(not checkbox.get_active() if isd else v>=0x40)
 
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def x_focus(self, n, v, isd):
