@@ -42,7 +42,9 @@ pm = ProfileManager()
 
 control_methods= {
     # TC: Control method. Please keep it as Target:Action.
-    'c_tips': _('Prefs enable tooltips'),
+    'c_tips': _('Tooltips enable'),
+    # TC: Control method. Please keep it as Target:Action.
+    'c_sdjmix': _('DJ-mix monitor'),
 
     # TC: Control method. Please keep it as Target:Action.
     'p_pp': _('Player play/pause'),
@@ -694,7 +696,7 @@ class Controls(object):
     # methods in order, so the order they are defined in this code dictates the
     # order they'll appear in in the UI.
 
-    # Preferences
+    # Miscellaneous
     #
     @action_method(Binding.MODE_PULSE, Binding.MODE_SET)
     def c_tips(self, n, v, isd):
@@ -702,6 +704,14 @@ class Controls(object):
         if isd:
             v= 0 if control.get_active() else 127
         control.set_active(v>=64)
+
+    @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT)
+    def c_sdjmix(self, n, v, isd):
+        active= not self.owner.listen_dj.get_active() if isd else v>=0x40
+        if active:
+            self.owner.listen_dj.set_active(True)
+        else:
+            self.owner.listen_stream.set_active(True)
 
     # Player
     #
@@ -1209,7 +1219,7 @@ class BindingEditor(gtk.Dialog):
    
     control_method_groups= {
         # TC: binding editor, action pane, first row, toplevel menu.
-        'c': _('Preferences'),
+        'c': _('Miscellaneous'),
         # TC: binding editor, action pane, first row, toplevel menu.
         'p': _('Player'),
         # TC: binding editor, action pane, first row, toplevel menu.
