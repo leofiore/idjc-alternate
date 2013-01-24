@@ -25,6 +25,13 @@
 
 struct opusdec_vars
     {
+    int resample;    
+        
+    /* header values */
+    uint16_t preskip;
+    uint32_t origsr;
+    int16_t opgain;
+    int channelmap;
     };
 
 int ogg_opusdec_init(struct xlplayer *xlplayer);

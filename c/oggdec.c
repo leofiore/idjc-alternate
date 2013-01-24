@@ -635,7 +635,8 @@ static int opus_get_samplerate(struct oggdec_vars *self)
     {
     if (oggdec_get_next_packet(self) && ogg_stream_packetout(&self->os, &self->op) == 0)
         {
-        /* we already peeked at this packet and it's legit -- moving on... */
+        if (!(self->channels[self->ix] = (unsigned char *)self->op.packet[9]))
+            goto error;
         if (oggdec_get_next_packet(self) && ogg_stream_packetout(&self->os, &self->op) == 0)
             {
             if (self->op.bytes >= 8 && !memcmp(self->op.packet, "OpusTags", 8))
@@ -648,9 +649,8 @@ static int opus_get_samplerate(struct oggdec_vars *self)
     else
         goto error;
 
-    self->channels[self->ix] = 2;     /* let Opus API perform mix to stereo */
-    self->samplerate[self->ix] = 48000;
-    return 48000;           /* opus streams are always internally 48000Hz */
+    return self->samplerate[self->ix] = 48000;  /* Opus always uses this rate */
+
     error:
         return 0;
     }
