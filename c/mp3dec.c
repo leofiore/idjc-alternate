@@ -278,7 +278,6 @@ int mp3decode_reg(struct xlplayer *xlplayer)
             mp3decode_eject(xlplayer);
             xlplayer->playmode = PM_STOPPED;
             xlplayer->command = CMD_COMPLETE;
-            return;
             }
 
     return ACCEPTED;
