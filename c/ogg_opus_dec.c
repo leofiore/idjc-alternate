@@ -33,23 +33,22 @@
 #define REJECTED 0
 #define TRUE 1
 #define FALSE 0
+#define MAX_FRAME_SIZE 5760
 
 static void ogg_opusdec_cleanup(struct xlplayer *xlplayer)
     {
     struct oggdec_vars *od = xlplayer->dec_data;
     struct opusdec_vars *self = od->dec_data;
 
+    free(self->pcm);
+    if (self->do_down)
+        free(self->down);
+
     opus_multistream_decoder_destroy(self->odms);
 
     fprintf(stderr, "ogg_opusdec_cleanup was called\n");
     if (self->resample)
-        {
-        if (xlplayer->src_data.data_in)
-            free(xlplayer->src_data.data_in);
-        if (xlplayer->src_data.data_out)
-            free(xlplayer->src_data.data_out);
         xlplayer->src_state = src_delete(xlplayer->src_state);
-        }
         
     free(self);
     /* prevent double free or continued codec use */
@@ -58,9 +57,49 @@ static void ogg_opusdec_cleanup(struct xlplayer *xlplayer)
     }
 
 static void ogg_opusdec_play(struct xlplayer *xlplayer)
-    {
-    oggdecode_playnext(xlplayer);
-    return;
+    {    
+    struct oggdec_vars *od = xlplayer->dec_data;
+    struct opusdec_vars *self = od->dec_data;
+    int error;
+    int samples;
+
+    if (!(oggdec_get_next_packet(od)))
+        {
+        fprintf(stderr, "oggdec_get_next_packet says no more packets\n"); 
+        oggdecode_playnext(xlplayer);
+        return;
+        }
+
+    samples = opus_multistream_decode_float(self->odms, od->op.packet, od->op.bytes, self->pcm, MAX_FRAME_SIZE, 1);
+    
+    if (self->do_down)
+        {
+        fprintf(stderr, "#### need downmix\n");
+        /* ToDo: downmix to 2 channels */
+        }
+        
+    if (self->resample)
+        {
+        xlplayer->src_data.input_frames = samples;
+        xlplayer->src_data.end_of_input = od->op.e_o_s;
+        if ((error = src_process(xlplayer->src_state, &xlplayer->src_data)))
+            {
+            fprintf(stderr, "ogg_opusdec_play: %s src_process reports - %s\n", xlplayer->playername, src_strerror(error));
+            oggdecode_playnext(xlplayer);
+            return;
+            }
+
+        xlplayer_demux_channel_data(xlplayer, xlplayer->src_data.data_out, xlplayer->src_data.output_frames_gen, od->channels[od->ix], self->opgain);
+        }
+    else
+        xlplayer_demux_channel_data(xlplayer, self->down, samples, od->channels[od->ix], self->opgain);
+        
+    xlplayer_write_channel_data(xlplayer);
+    if (od->op.e_o_s)
+        {
+        fprintf(stderr, "end of stream\n");
+        oggdecode_playnext(xlplayer);
+        }
     }
 
 int ogg_opusdec_init(struct xlplayer *xlplayer)
@@ -70,6 +109,7 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
     unsigned char *pkt;
     float opgain_db;
     int error;
+    size_t down_siz = MAX_FRAME_SIZE * sizeof (float) * od->channels[od->ix];
         
     fprintf(stderr, "ogg_opusdec_init was called\n");
 
@@ -78,7 +118,7 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
     ogg_sync_reset(&od->oy);
 
     /* sanity checking was pre-done in opus_get_samplerate() */
-    if (!(oggdec_get_next_packet(od) && ogg_stream_packetout(&od->os, &od->op) == 0))
+    if (!(oggdec_get_next_packet(od)))
         {
         fprintf(stderr, "ogg_opusdec_init: failed to get opus header\n");
         goto cleanup1;
@@ -116,10 +156,7 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
             goto cleanup2;
         }
         
-    if (!(oggdec_get_next_packet(od) &&
-                ogg_stream_packetout(&od->os, &od->op) == 0 &&
-                od->op.bytes >= 9 &&
-                !memcmp("OpusTags", (pkt = od->op.packet), 8)))
+    if (!(oggdec_get_next_packet(od)))
         {
         fprintf(stderr, "ogg_opusdec_init: missing OpusTags packet\n");
         goto cleanup2;
@@ -136,29 +173,53 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
         oggdecode_seek_to_packet(od);
         }
 
-    if (od->samplerate[od->ix] != xlplayer->samplerate)
-        {
-        fprintf(stderr, "ogg_opusdec_init: configuring resampler\n");
-        xlplayer->src_state = src_new(xlplayer->rsqual, od->channels[od->ix], &error);
-        if (error)
-            {
-            fprintf(stderr, "ogg_vorbisdec_init: src_new reports %s\n", src_strerror(error));
-            goto cleanup2;
-            }
-
-        xlplayer->src_data.output_frames = 0;
-        xlplayer->src_data.data_in = xlplayer->src_data.data_out = NULL;
-        xlplayer->src_data.src_ratio = (double)xlplayer->samplerate / (double)od->samplerate[od->ix];
-        xlplayer->src_data.end_of_input = 0;
-        self->resample = TRUE;
-        }
-
     if (!(self->odms = opus_multistream_decoder_create(48000, self->channel_count,
                     self->stream_count, self->stream_count_2c, self->channel_map, &error)))
         {
         fprintf(stderr, "ogg_opusdec_init: failed to create multistream decoder: %s\n", opus_strerror(error));
-        
+        goto cleanup2;
+        }
+
+    if (!(self->pcm = malloc(MAX_FRAME_SIZE * sizeof (float) * self->channel_count)))
+        {
+        fprintf(stderr, "ogg_opusdec_init: malloc failure -- pcm\n");
         goto cleanup3;
+        }
+
+    if ((self->do_down = od->channels[od->ix] != self->channel_count))
+        {
+        if (!(self->down = malloc(down_siz)))
+            {
+            fprintf(stderr, "ogg_opusdec_init: malloc failure -- down\n");
+            goto cleanup4;
+            }
+        }
+    else
+        self->down = self->pcm;     /* no need to downmix for mono/stereo */
+
+    if (od->samplerate[od->ix] != xlplayer->samplerate)
+        {
+        fprintf(stderr, "ogg_opusdec_init: configuring resampler\n");
+        self->resample = TRUE;
+        xlplayer->src_state = src_new(xlplayer->rsqual, od->channels[od->ix], &error);
+        if (error)
+            {
+            fprintf(stderr, "ogg_opusdec_init: src_new reports %s\n", src_strerror(error));
+            goto cleanup5;
+            }
+
+        xlplayer->src_data.data_in = self->down;
+        xlplayer->src_data.src_ratio = (double)xlplayer->samplerate / (double)od->samplerate[od->ix];
+        xlplayer->src_data.end_of_input = 0;
+        
+        size_t opframes = MAX_FRAME_SIZE * xlplayer->src_data.src_ratio + 4096;
+        
+        xlplayer->src_data.output_frames = opframes;
+        if (!(xlplayer->src_data.data_out = malloc(opframes * sizeof (float) * od->channels[od->ix])))
+            {
+            fprintf(stderr, "ogg_opusdec_init: malloc failure -- data_out\n");
+            goto cleanup6;
+            }
         }
 
     od->dec_data = self;
@@ -167,9 +228,16 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
 
     return ACCEPTED;
 
-    cleanup3:
+    cleanup6:
         if (self->resample)
             xlplayer->src_state = src_delete(xlplayer->src_state);
+    cleanup5:
+        if (self->do_down)
+            free(self->down);
+    cleanup4:
+        free(self->pcm);
+    cleanup3:
+        opus_multistream_decoder_destroy(self->odms);
     cleanup2:
         free(self);
     cleanup1:

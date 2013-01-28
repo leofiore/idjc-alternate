@@ -26,15 +26,18 @@
 
 struct opusdec_vars
     {
-    int resample;    
-    uint16_t preskip;
-    float opgain;
-    int channel_count;
+    int resample;       /* do we need to resample? */
+    int do_down;        /* do we need to downmix? */
+    float *pcm;         /* decoder reads to here */
+    float *down;        /* downmix buffer -- possible alias of pcm */
+    uint16_t preskip;   /* dump this many samples from stream start */
+    float opgain;       /* apply this much gain to all samples */
+    int channel_count;  /* number of stream channels */
     int channelmap_family;
-    int stream_count;
-    int stream_count_2c;
+    int stream_count;           /* total stream count */
+    int stream_count_2c;        /* qty stereo streams */
     unsigned char channel_map[8];
-    OpusMSDecoder *odms;
+    OpusMSDecoder *odms;        /* decoder handle */
     };
 
 int ogg_opusdec_init(struct xlplayer *xlplayer);
