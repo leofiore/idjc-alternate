@@ -21,17 +21,20 @@
 
 #ifdef HAVE_OPUS
 
+#include <opus/opus_multistream.h>
 #include "xlplayer.h"
 
 struct opusdec_vars
     {
     int resample;    
-        
-    /* header values */
     uint16_t preskip;
-    uint32_t origsr;
-    int16_t opgain;
-    int channelmap;
+    float opgain;
+    int channel_count;
+    int channelmap_family;
+    int stream_count;
+    int stream_count_2c;
+    unsigned char channel_map[8];
+    OpusMSDecoder *odms;
     };
 
 int ogg_opusdec_init(struct xlplayer *xlplayer);

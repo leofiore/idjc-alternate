@@ -26,6 +26,7 @@
 #include "xlplayer.h"
 #include "oggdec.h"
 #include "ogg_vorbis_dec.h"
+#include "ogg_opus_dec.h"
 #include "ogg_flac_dec.h"
 #include "ogg_speex_dec.h"
 
@@ -633,25 +634,87 @@ static int speex_get_samplerate(struct oggdec_vars *self)
 
 static int opus_get_samplerate(struct oggdec_vars *self)
     {
+    int channels, chanmap, streamcount, streamcount_2c;
+    unsigned granule_count;
+    uint16_t preskip;
+    char *reason;
+    
+    #define FAIL(x) do {reason = x; goto fail_point;} while(0)
+
+    if ((granule_count = self->granule_count[self->ix]) == 0)
+        FAIL("stream final packet granule count is zero");
+
     if (oggdec_get_next_packet(self) && ogg_stream_packetout(&self->os, &self->op) == 0)
         {
-        if (!(self->channels[self->ix] = (unsigned char *)self->op.packet[9]))
-            goto error;
+        if (ogg_page_granulepos(&self->og) != 0)
+            FAIL("non zero granule position");
+
+        if (ogg_page_packets(&self->og) != 1 || ogg_page_continued(&self->og) || ogg_page_pageno(&self->og) != 0)
+            FAIL("bad header page alignment");
+
+        if (self->op.bytes < 19)
+            FAIL("packet too small to be version 1");
+            
+        if (self->op.packet[8] != 1)
+            FAIL("encapsulation version not equal to 1");
+            
+        if ((channels = ((unsigned char *)self->op.packet)[9]) == 0)
+            FAIL("number of channels is zero");
+        
+        self->channels[self->ix] = (channels == 1) ? 1 : 2;
+        chanmap = ((unsigned char *)self->op.packet)[18];
+
+        if (chanmap > 1)
+            FAIL("unsupported channel map");
+
+        if ((chanmap == 0 && channels > 2) || (chanmap == 1 && channels > 8))
+            FAIL("too many channels for given channel mapping");
+
+        if (chanmap == 0 && self->op.bytes != 19)
+            FAIL("OpusHead packet size wrong");
+
+        if (chanmap == 1)
+            {
+            if (self->op.bytes != 21 + channels)
+                FAIL("OpusHead packet size wrong");
+            
+            streamcount = ((unsigned char *)self->op.packet)[19];
+            streamcount_2c = ((unsigned char *)self->op.packet)[20];
+            if (streamcount_2c > streamcount)
+                FAIL("two channel streamcount > total streamcount");
+            if (streamcount_2c + streamcount > 255)
+                FAIL("combined streamcount quantity exceeds 255");
+            }
+
+        preskip = self->op.packet[10] | (uint16_t)((unsigned char *)self->op.packet)[11] << 8;
+        if (preskip >= granule_count)
+            FAIL("no samples to decode after preskip");
+
         if (oggdec_get_next_packet(self) && ogg_stream_packetout(&self->os, &self->op) == 0)
             {
+            if (ogg_page_packets(&self->og) != 1 || ogg_page_continued(&self->og) || ogg_page_pageno(&self->og) < 1)
+                FAIL("bad header page alignment");
+
+            if (ogg_page_granulepos(&self->og) != 0)
+                FAIL("non zero granule position");
+
             if (self->op.bytes >= 8 && !memcmp(self->op.packet, "OpusTags", 8))
                 get_comments(self, (char *)self->op.packet + 8, self->op.bytes - 8);
-            else goto error;
+            else
+                FAIL("bad or missing OpusTags packet");
             }
         else
-            goto error;
+            FAIL("failed to get OpusTags packet");
         }
     else
-        goto error;
+        FAIL("failed to get OpusHead packet");
 
     return self->samplerate[self->ix] = 48000;  /* Opus always uses this rate */
 
-    error:
+    #undef FAIL
+
+    fail_point:
+        fprintf(stderr, "opus_get_samplerate: opus header sanity check failed: %s\n", reason);
         return 0;
     }
 

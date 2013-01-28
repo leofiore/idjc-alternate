@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "oggdec.h"
 #include "ogg_opus_dec.h"
@@ -37,6 +38,8 @@ static void ogg_opusdec_cleanup(struct xlplayer *xlplayer)
     {
     struct oggdec_vars *od = xlplayer->dec_data;
     struct opusdec_vars *self = od->dec_data;
+
+    opus_multistream_decoder_destroy(self->odms);
 
     fprintf(stderr, "ogg_opusdec_cleanup was called\n");
     if (self->resample)
@@ -65,7 +68,8 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
     struct oggdec_vars *od = xlplayer->dec_data;
     struct opusdec_vars *self;
     unsigned char *pkt;
-    int src_error;
+    float opgain_db;
+    int error;
         
     fprintf(stderr, "ogg_opusdec_init was called\n");
 
@@ -73,18 +77,10 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
     fseeko(od->fp, od->bos_offset[od->ix], SEEK_SET);
     ogg_sync_reset(&od->oy);
 
-    if (!(oggdec_get_next_packet(od) &&
-                ogg_stream_packetout(&od->os, &od->op) == 0 &&
-                od->op.bytes >= 19 &&
-                !memcmp("OpusHead", (pkt = od->op.packet), 8)))
+    /* sanity checking was pre-done in opus_get_samplerate() */
+    if (!(oggdec_get_next_packet(od) && ogg_stream_packetout(&od->os, &od->op) == 0))
         {
         fprintf(stderr, "ogg_opusdec_init: failed to get opus header\n");
-        goto cleanup1;
-        }
-
-    if (pkt[8] != 1)
-        {
-        fprintf(stderr, "ogg_opusdec_init: unsupported encapsulation version != 1\n");
         goto cleanup1;
         }
 
@@ -94,18 +90,30 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
         goto cleanup1;
         }
 
+    pkt = od->op.packet;
+
+    self->channel_count = pkt[9];
     self->preskip = pkt[10] | (uint16_t)pkt[11] << 8;
     fprintf(stderr, "preskip %hd samples\n", self->preskip);
-    self->origsr = pkt[12] | (uint32_t)pkt[13] << 8 |
-                    (uint32_t)pkt[14] << 16 | (uint32_t)pkt[15] << 24;
-    fprintf(stderr, "source material sample rate %d\n", self->origsr);
-    self->opgain = (uint16_t)pkt[16] | (uint16_t)pkt[17] << 8;
-    fprintf(stderr, "output gain %d\n", self->opgain);
+    opgain_db = ((uint16_t)pkt[16] | (uint16_t)pkt[17] << 8) / 256.0f;
+    fprintf(stderr, "output gain %0.1lf (dB)\n", opgain_db);
+    self->opgain = powf(10.0f, opgain_db / 20.0f); 
 
-    if ((self->channelmap = pkt[18]))
+    switch ((self->channelmap_family = pkt[18]))
         {
-        fprintf(stderr, "ogg_opusdec_init: channel map > 0 unsupported\n");
-        goto cleanup2;
+        case 0:    
+            self->stream_count = 1;
+            self->stream_count_2c = self->channel_count - 1;
+            self->channel_map[0] = 0;
+            self->channel_map[1] = 1;
+            break;
+        case 1:
+            self->stream_count = pkt[19];
+            self->stream_count_2c = pkt[20];
+            memcpy(self->channel_map, pkt + 21, self->channel_count);
+            break;
+        default:
+            goto cleanup2;
         }
         
     if (!(oggdec_get_next_packet(od) &&
@@ -119,7 +127,6 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
 
     if (od->seek_s)
         {
-        /* seeked streams with less than 0.1 seconds left to be skipped */
         if (od->seek_s > (od->duration[od->ix] - 0.5))
             {
             fprintf(stderr, "ogg_opusdec_init: seeked stream virtually over - skipping\n");
@@ -132,10 +139,10 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
     if (od->samplerate[od->ix] != xlplayer->samplerate)
         {
         fprintf(stderr, "ogg_opusdec_init: configuring resampler\n");
-        xlplayer->src_state = src_new(xlplayer->rsqual, (od->channels[od->ix] > 1) ? 2 : 1, &src_error);
-        if (src_error)
+        xlplayer->src_state = src_new(xlplayer->rsqual, od->channels[od->ix], &error);
+        if (error)
             {
-            fprintf(stderr, "ogg_vorbisdec_init: src_new reports %s\n", src_strerror(src_error));
+            fprintf(stderr, "ogg_vorbisdec_init: src_new reports %s\n", src_strerror(error));
             goto cleanup2;
             }
 
@@ -146,12 +153,23 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
         self->resample = TRUE;
         }
 
+    if (!(self->odms = opus_multistream_decoder_create(48000, self->channel_count,
+                    self->stream_count, self->stream_count_2c, self->channel_map, &error)))
+        {
+        fprintf(stderr, "ogg_opusdec_init: failed to create multistream decoder: %s\n", opus_strerror(error));
+        
+        goto cleanup3;
+        }
+
     od->dec_data = self;
     od->dec_cleanup = ogg_opusdec_cleanup;
     xlplayer->dec_play = ogg_opusdec_play;
 
     return ACCEPTED;
 
+    cleanup3:
+        if (self->resample)
+            xlplayer->src_state = src_delete(xlplayer->src_state);
     cleanup2:
         free(self);
     cleanup1:
