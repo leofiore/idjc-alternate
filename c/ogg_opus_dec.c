@@ -74,8 +74,36 @@ static void ogg_opusdec_play(struct xlplayer *xlplayer)
     
     if (self->do_down)
         {
-        fprintf(stderr, "#### need downmix\n");
-        /* ToDo: downmix to 2 channels */
+        static const float table[6][8][2] =
+            {
+                {{0.5f, 0.0f}, {0.5f, 0.5f}, {0.0f, 0.5f}},
+                {{0.5f, 0.0f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}},
+                {{0.5f, 0.0f}, {0.5f, 0.5f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}},
+                {{0.5f, 0.0f}, {0.5f, 0.5f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}, {0.3f, 0.3f}},
+                {{0.5f, 0.0f}, {0.5f, 0.5f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}, {0.5f, 0.5f}, {0.3f, 0.3f}},
+                {{0.5f, 0.0f}, {0.5f, 0.5f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}, {0.3f, 0.3f}}
+            };
+            
+            
+        int cc = self->channel_count;    
+        float *p = self->pcm;
+        float *d = self->down;
+        float sample, lc, rc;
+            
+        for (int i = 0; i < samples; ++i)
+            {
+            lc = rc = 0.0;
+
+            for (int j = 0; j < cc; ++j)
+                {
+                sample = *p++;
+                lc += sample * table[cc - 3][j][0];
+                rc += sample * table[cc - 3][j][1];
+                }
+            
+            *d++ = lc;
+            *d++ = rc;
+            }
         }
         
     if (self->resample)
