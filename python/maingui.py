@@ -2113,9 +2113,9 @@ class MainWindow(dbus.service.Object):
                 if artist and title and album:
                     song = fmt(artist, title, album)
                 elif artist and title:
-                    song = u" - ".join(artist, title)
+                    song = u" - ".join((artist, title))
             elif not album:
-                song = u" - ".join(artist, title)
+                song = u" - ".join((artist, title))
             else:
                 song = fmt(artist, title, album)
 
