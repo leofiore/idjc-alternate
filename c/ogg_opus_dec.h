@@ -21,6 +21,7 @@
 
 #ifdef HAVE_OPUS
 
+#include <opus/opus.h>
 #include <opus/opus_multistream.h>
 #include "xlplayer.h"
 
@@ -38,6 +39,9 @@ struct opusdec_vars
     int stream_count_2c;        /* qty stereo streams */
     unsigned char channel_map[8];
     OpusMSDecoder *odms;        /* decoder handle */
+    int64_t gf_gp;              /* granule position values */
+    int64_t f_gp;
+    int64_t gp;
     };
 
 int ogg_opusdec_init(struct xlplayer *xlplayer);

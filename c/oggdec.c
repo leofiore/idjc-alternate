@@ -634,7 +634,7 @@ static int speex_get_samplerate(struct oggdec_vars *self)
 
 static int opus_get_samplerate(struct oggdec_vars *self)
     {
-    int channels, chanmap, streamcount, streamcount_2c;
+    int channels, chanmap, streamcount, streamcount_2c, frames;
     unsigned granule_count;
     uint16_t preskip;
     char *reason;
@@ -684,6 +684,15 @@ static int opus_get_samplerate(struct oggdec_vars *self)
                 FAIL("two channel streamcount > total streamcount");
             if (streamcount_2c + streamcount > 255)
                 FAIL("combined streamcount quantity exceeds 255");
+                
+            unsigned char *cm = self->op.packet + 21;
+            int index;
+            for (int i = 0; i < channels; ++i)
+                {
+                index = *cm++;
+                if (index != 255 && index >= streamcount + streamcount_2c)
+                    FAIL("bad channel map");
+                }
             }
 
         preskip = self->op.packet[10] | (uint16_t)((unsigned char *)self->op.packet)[11] << 8;
@@ -705,6 +714,20 @@ static int opus_get_samplerate(struct oggdec_vars *self)
             }
         else
             FAIL("failed to get OpusTags packet");
+            
+        if (oggdec_get_next_packet(self))
+            {
+            while (self->op.granulepos == -1)
+                oggdec_get_next_packet(self);
+
+            if ((frames = opus_packet_get_nb_frames(self->op.packet, self->op.bytes)) < 1)
+                FAIL("first packet has no frames");
+                                            
+            if (opus_packet_get_samples_per_frame(self->op.packet, 48000) * frames > self->op.granulepos)
+                FAIL("first packet sample count granule pos mismatch");
+            }
+        else
+            FAIL("failed to get first data packet");
         }
     else
         FAIL("failed to get OpusHead packet");

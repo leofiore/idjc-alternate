@@ -62,6 +62,8 @@ static void ogg_opusdec_play(struct xlplayer *xlplayer)
     struct opusdec_vars *self = od->dec_data;
     int error;
     int samples;
+    int end_trim = 0;
+    int preskip = 0;
 
     if (!(oggdec_get_next_packet(od)))
         {
@@ -70,59 +72,92 @@ static void ogg_opusdec_play(struct xlplayer *xlplayer)
         return;
         }
 
-    samples = opus_multistream_decode_float(self->odms, od->op.packet, od->op.bytes, self->pcm, MAX_FRAME_SIZE, 0);
-    
-    if (self->do_down)
+    if (od->op.granulepos != -1)
         {
-        static const float table[6][8][2] =
+        self->gf_gp = self->f_gp;
+        self->f_gp = self->gp;
+        self->gp = od->op.granulepos;
+        if (od->op.e_o_s)
             {
-                {{0.5f, 0.0f}, {0.5f, 0.5f}, {0.0f, 0.5f}},
-                {{0.5f, 0.0f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}},
-                {{0.5f, 0.0f}, {0.5f, 0.5f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}},
-                {{0.5f, 0.0f}, {0.5f, 0.5f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}, {0.3f, 0.3f}},
-                {{0.5f, 0.0f}, {0.5f, 0.5f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}, {0.5f, 0.5f}, {0.3f, 0.3f}},
-                {{0.5f, 0.0f}, {0.5f, 0.5f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}, {0.5f, 0.0f}, {0.0f, 0.5f}, {0.3f, 0.3f}}
-            };
-            
-            
-        int cc = self->channel_count;    
-        float *p = self->pcm;
-        float *d = self->down;
-        float sample, lc, rc;
-            
-        for (int i = 0; i < samples; ++i)
-            {
-            lc = rc = 0.0;
+            end_trim = self->f_gp - self->gf_gp - (self->gp - self->f_gp);
+            fprintf(stderr, "%d end trim\n", end_trim);
+            }
+        }
 
-            for (int j = 0; j < cc; ++j)
+    samples = opus_multistream_decode_float(self->odms, od->op.packet, od->op.bytes, self->pcm, MAX_FRAME_SIZE, 0) - end_trim;
+
+    if (self->preskip)
+        {
+        if (samples > self->preskip)
+            {
+            samples -= self->preskip;
+            preskip = self->preskip;
+            self->preskip = 0;
+            }
+        else
+            {
+            self->preskip -= samples; 
+            samples = 0;
+            }
+        }
+
+    if (samples > 0)
+        {
+        memmove(self->pcm, self->pcm + preskip * self->channel_count, samples * sizeof (float) * self->channel_count);
+            
+        if (self->do_down)
+            {
+            static const float table[6][8][2] =
                 {
-                sample = *p++;
-                lc += sample * table[cc - 3][j][0];
-                rc += sample * table[cc - 3][j][1];
-                }
-            
-            *d++ = lc;
-            *d++ = rc;
-            }
-        }
-        
-    if (self->resample)
-        {
-        xlplayer->src_data.input_frames = samples;
-        xlplayer->src_data.end_of_input = od->op.e_o_s;
-        if ((error = src_process(xlplayer->src_state, &xlplayer->src_data)))
-            {
-            fprintf(stderr, "ogg_opusdec_play: %s src_process reports - %s\n", xlplayer->playername, src_strerror(error));
-            oggdecode_playnext(xlplayer);
-            return;
-            }
+                    {{0.7f, 0.0f}, {0.7f, 0.7f}, {0.0f, 0.7f}},
+                    {{0.7f, 0.0f}, {0.0f, 0.7f}, {0.7f, 0.0f}, {0.0f, 0.7f}},
+                    {{0.7f, 0.0f}, {0.7f, 0.7f}, {0.0f, 0.7f}, {0.7f, 0.0f}, {0.0f, 0.7f}},
+                    {{0.7f, 0.0f}, {0.7f, 0.7f}, {0.0f, 0.7f}, {0.7f, 0.0f}, {0.0f, 0.7f}, {0.5f, 0.5f}},
+                    {{0.7f, 0.0f}, {0.7f, 0.7f}, {0.0f, 0.7f}, {0.7f, 0.0f}, {0.0f, 0.7f}, {0.7f, 0.7f}, {0.5f, 0.5f}},
+                    {{0.7f, 0.0f}, {0.7f, 0.7f}, {0.0f, 0.7f}, {0.7f, 0.0f}, {0.0f, 0.7f}, {0.7f, 0.0f}, {0.0f, 0.7f}, {0.5f, 0.5f}}
+                };
+                
+                
+            int cc = self->channel_count;    
+            float *p = self->pcm;
+            float *d = self->down;
+            float sample, lc, rc;
+                
+            for (int i = 0; i < samples; ++i)
+                {
+                lc = rc = 0.0;
 
-        xlplayer_demux_channel_data(xlplayer, xlplayer->src_data.data_out, xlplayer->src_data.output_frames_gen, od->channels[od->ix], self->opgain);
+                for (int j = 0; j < cc; ++j)
+                    {
+                    sample = *p++;
+                    lc += sample * table[cc - 3][j][0];
+                    rc += sample * table[cc - 3][j][1];
+                    }
+                
+                *d++ = lc;
+                *d++ = rc;
+                }
+            }
+            
+        if (self->resample)
+            {
+            xlplayer->src_data.input_frames = samples;
+            xlplayer->src_data.end_of_input = od->op.e_o_s;
+            if ((error = src_process(xlplayer->src_state, &xlplayer->src_data)))
+                {
+                fprintf(stderr, "ogg_opusdec_play: %s src_process reports - %s\n", xlplayer->playername, src_strerror(error));
+                oggdecode_playnext(xlplayer);
+                return;
+                }
+
+            xlplayer_demux_channel_data(xlplayer, xlplayer->src_data.data_out, xlplayer->src_data.output_frames_gen, od->channels[od->ix], self->opgain);
+            }
+        else
+            xlplayer_demux_channel_data(xlplayer, self->down, samples, od->channels[od->ix], self->opgain);
+            
+        xlplayer_write_channel_data(xlplayer);
         }
-    else
-        xlplayer_demux_channel_data(xlplayer, self->down, samples, od->channels[od->ix], self->opgain);
-        
-    xlplayer_write_channel_data(xlplayer);
+
     if (od->op.e_o_s)
         {
         fprintf(stderr, "end of stream\n");
@@ -162,8 +197,8 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
 
     self->channel_count = pkt[9];
     self->preskip = pkt[10] | (uint16_t)pkt[11] << 8;
-    fprintf(stderr, "preskip %hd samples\n", self->preskip);
-    opgain_db = ((uint16_t)pkt[16] | (uint16_t)pkt[17] << 8) / 256.0f;
+    fprintf(stderr, "preskip %hu samples\n", self->preskip);
+    opgain_db = (int16_t)((uint16_t)pkt[16] | ((uint16_t)((unsigned char *)pkt)[17] << 8)) / 256.0f;
     fprintf(stderr, "output gain %0.1lf (dB)\n", opgain_db);
     self->opgain = powf(10.0f, opgain_db / 20.0f); 
 
