@@ -70,7 +70,7 @@ static void ogg_opusdec_play(struct xlplayer *xlplayer)
         return;
         }
 
-    samples = opus_multistream_decode_float(self->odms, od->op.packet, od->op.bytes, self->pcm, MAX_FRAME_SIZE, 1);
+    samples = opus_multistream_decode_float(self->odms, od->op.packet, od->op.bytes, self->pcm, MAX_FRAME_SIZE, 0);
     
     if (self->do_down)
         {
