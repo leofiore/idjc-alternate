@@ -42,6 +42,7 @@ struct opusdec_vars
     int64_t gf_gp;              /* granule position values */
     int64_t f_gp;
     int64_t gp;
+    int64_t dec_samples;
     };
 
 int ogg_opusdec_init(struct xlplayer *xlplayer);

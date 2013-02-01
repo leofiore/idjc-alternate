@@ -63,7 +63,6 @@ static void ogg_opusdec_play(struct xlplayer *xlplayer)
     int error;
     int samples;
     int end_trim = 0;
-    int preskip = 0;
 
     if (!(oggdec_get_next_packet(od)))
         {
@@ -71,27 +70,36 @@ static void ogg_opusdec_play(struct xlplayer *xlplayer)
         oggdecode_playnext(xlplayer);
         return;
         }
+        
+    samples = opus_multistream_decode_float(self->odms, od->op.packet, od->op.bytes, self->pcm, MAX_FRAME_SIZE, 0);
+    self->dec_samples += samples;
 
     if (od->op.granulepos != -1)
         {
         self->gf_gp = self->f_gp;
         self->f_gp = self->gp;
         self->gp = od->op.granulepos;
+        
         if (od->op.e_o_s)
             {
-            end_trim = self->f_gp - self->gf_gp - (self->gp - self->f_gp);
-            fprintf(stderr, "%d end trim\n", end_trim);
+            if (self->f_gp)
+                end_trim = self->f_gp - self->gf_gp - (self->gp - self->f_gp);
+            else
+                end_trim = self->dec_samples - self->gp;
+
+            if (end_trim < 0)
+                end_trim = 0;
             }
         }
 
-    samples = opus_multistream_decode_float(self->odms, od->op.packet, od->op.bytes, self->pcm, MAX_FRAME_SIZE, 0) - end_trim;
+    samples -= end_trim;
 
     if (self->preskip)
         {
         if (samples > self->preskip)
             {
             samples -= self->preskip;
-            preskip = self->preskip;
+            memmove(self->pcm, self->pcm + self->preskip * self->channel_count, samples * sizeof (float) * self->channel_count);
             self->preskip = 0;
             }
         else
@@ -103,8 +111,6 @@ static void ogg_opusdec_play(struct xlplayer *xlplayer)
 
     if (samples > 0)
         {
-        memmove(self->pcm, self->pcm + preskip * self->channel_count, samples * sizeof (float) * self->channel_count);
-            
         if (self->do_down)
             {
             static const float table[6][8][2] =

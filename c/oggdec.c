@@ -634,7 +634,7 @@ static int speex_get_samplerate(struct oggdec_vars *self)
 
 static int opus_get_samplerate(struct oggdec_vars *self)
     {
-    int channels, chanmap, streamcount, streamcount_2c, frames;
+    int channels, chanmap, streamcount, streamcount_2c, frames, samples;
     unsigned granule_count;
     uint16_t preskip;
     char *reason;
@@ -655,8 +655,8 @@ static int opus_get_samplerate(struct oggdec_vars *self)
         if (self->op.bytes < 19)
             FAIL("packet too small to be version 1");
             
-        if (self->op.packet[8] != 1)
-            FAIL("encapsulation version not equal to 1");
+        if (self->op.packet[8] == 0 || self->op.packet[8] > 15)
+            FAIL("encapsulation version unsupported");
             
         if ((channels = ((unsigned char *)self->op.packet)[9]) == 0)
             FAIL("number of channels is zero");
@@ -680,6 +680,8 @@ static int opus_get_samplerate(struct oggdec_vars *self)
             
             streamcount = ((unsigned char *)self->op.packet)[19];
             streamcount_2c = ((unsigned char *)self->op.packet)[20];
+            if (streamcount == 0)
+                FAIL("streamcount is zero");
             if (streamcount_2c > streamcount)
                 FAIL("two channel streamcount > total streamcount");
             if (streamcount_2c + streamcount > 255)
@@ -717,14 +719,21 @@ static int opus_get_samplerate(struct oggdec_vars *self)
             
         if (oggdec_get_next_packet(self))
             {
-            while (self->op.granulepos == -1)
-                oggdec_get_next_packet(self);
-
             if ((frames = opus_packet_get_nb_frames(self->op.packet, self->op.bytes)) < 1)
                 FAIL("first packet has no frames");
+            samples = opus_packet_get_samples_per_frame(self->op.packet, 48000) * frames;
+
+            while (self->op.granulepos == -1)
+                {
+                oggdec_get_next_packet(self);
+                if ((frames = opus_packet_get_nb_frames(self->op.packet, self->op.bytes)) < 1)
+                    FAIL("packet with no frames detected");
+                
+                samples += opus_packet_get_samples_per_frame(self->op.packet, 48000) * frames;
+                }
                                             
-            if (opus_packet_get_samples_per_frame(self->op.packet, 48000) * frames > self->op.granulepos)
-                FAIL("first packet sample count granule pos mismatch");
+            if (self->op.granulepos < samples && !self->op.e_o_s)
+                FAIL("first page granule position less than number of samples, end of stream not set");
             }
         else
             FAIL("failed to get first data packet");
