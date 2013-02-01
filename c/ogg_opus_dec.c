@@ -80,6 +80,13 @@ static void ogg_opusdec_play(struct xlplayer *xlplayer)
         self->f_gp = self->gp;
         self->gp = od->op.granulepos;
         
+        if (self->gp < self->f_gp)
+            {
+            fprintf(stderr, "ogg_opusdec_play: bad granule pos\n");
+            oggdecode_playnext(xlplayer);
+            return;
+            }
+        
         if (od->op.e_o_s)
             {
             if (self->f_gp)

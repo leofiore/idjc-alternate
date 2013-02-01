@@ -655,7 +655,7 @@ static int opus_get_samplerate(struct oggdec_vars *self)
         if (self->op.bytes < 19)
             FAIL("packet too small to be version 1");
             
-        if (self->op.packet[8] == 0 || self->op.packet[8] > 15)
+        if (self->op.packet[8] > 15)
             FAIL("encapsulation version unsupported");
             
         if ((channels = ((unsigned char *)self->op.packet)[9]) == 0)
