@@ -29,195 +29,10 @@
 #include "ogg_opus_dec.h"
 #include "ogg_flac_dec.h"
 #include "ogg_speex_dec.h"
+#include "vorbistagparse.h"
 
-#define TRUE 1
-#define FALSE 0
 #define ACCEPTED 1
 #define REJECTED 0
-
-#define readint(buf, base) (((buf[base+3]<<24)&0xff000000)| \
-                                    ((buf[base+2]<<16)&0xff0000)| \
-                                    ((buf[base+1]<<8)&0xff00)| \
-                                     (buf[base]&0xff))
-
-static int comment_count(char *comments, int length, char *match_string)
-    {
-    char *c=comments;
-    int len, i, nb_fields, count = 0;
-    char *end;
-
-    if (length < 8)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return -1;
-        }
-    
-    end = c + length;
-    len = readint(c, 0);
-    c += 4;
-    
-    if (c + len > end)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return -1;
-        }
-
-    c += len;
-    if (c + 4 > end)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return -1;
-        }
-
-    nb_fields = readint(c, 0);
-    c += 4;
-    for (i = 0; i < nb_fields; i++)
-        {
-        if (c + 4 > end)
-            {
-            fprintf (stderr, "Invalid/corrupted comments\n");
-            return -1;
-            }
-        
-        len = readint(c, 0);
-        c += 4;
-        if (c + len > end)
-            {
-            fprintf (stderr, "Invalid/corrupted comments\n");
-            return -1;
-            }
-        
-        if (!strncasecmp(c, match_string, strlen(match_string)))
-            count += 1;
-        c += len;
-        }
-    return count;
-    }
-
-/* vorbis comment block parser */
-static void get_comments(struct oggdec_vars *self, char *comments, int length)
-    {
-    char *c=comments;
-    int len, i, nb_fields, use_alt;
-    char *end;
-
-    use_alt = comment_count(comments, length, "trk-title") ? TRUE : FALSE;
-    if (use_alt)
-        fprintf(stderr, "using alternative tags\n");
-    else
-        fprintf(stderr, "using regular tags\n");
-
-    void handle_keyval(char *key, char *val, char **target, char *match, int multiple)
-        {
-        char *old;
-
-        if (!strcasecmp(key, match))
-            {
-            if (*target && *target[0] && multiple)
-                {
-                old = strdup(*target);
-                *target = realloc(*target, strlen(old) + strlen(val) + 2);
-                sprintf(*target, "%s/%s", old, val);
-                free(old);
-                }
-            else
-                {
-                *target = realloc(*target, strlen(val) + 1);
-                strcpy(*target, val);
-                }
-            }
-        }
-  
-    void handle_comment(char *comment, int comment_length)
-        {
-        char *key = malloc(comment_length + 1);
-        char *val;
-        
-        memcpy(key, comment, comment_length);
-        key[comment_length] = '\0';
-        val = strchr(key, '=');
-        if (!val)
-            {
-            fprintf(stderr, "Invalid/corrupted comments\n");
-            free(key);
-            return;
-            }
-        *val++ = '\0';
-
-        if (use_alt)
-            {
-            handle_keyval(key, val, &self->artist[self->ix], "trk-author", TRUE);
-            handle_keyval(key, val, &self->artist[self->ix], "trk-artist", TRUE);
-            handle_keyval(key, val, &self->title[self->ix], "trk-title", TRUE);
-            handle_keyval(key, val, &self->album[self->ix], "trk-album", TRUE);
-            }
-        else
-            {
-            handle_keyval(key, val, &self->artist[self->ix], "author", TRUE);
-            handle_keyval(key, val, &self->artist[self->ix], "artist", TRUE);
-            handle_keyval(key, val, &self->title[self->ix], "title", TRUE);
-            handle_keyval(key, val, &self->album[self->ix], "album", TRUE);
-            }
-        handle_keyval(key, val, &self->replaygain[self->ix], "replaygain_track_gain", FALSE);
-        free(key);
-        }
-    
-    self->artist[self->ix] = NULL;
-    self->title[self->ix] = NULL;
-    self->album[self->ix] = NULL;
-    
-    if (length < 8)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return;
-        }
-    
-    end = c + length;
-    len = readint(c, 0);
-    c += 4;
-    
-    if (c + len > end)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return;
-        }
-
-    c += len;
-    if (c + 4 > end)
-        {
-        fprintf (stderr, "Invalid/corrupted comments\n");
-        return;
-        }
-
-    nb_fields = readint(c, 0);
-    c += 4;
-    for (i = 0; i < nb_fields; i++)
-        {
-        if (c + 4 > end)
-            {
-            fprintf (stderr, "Invalid/corrupted comments\n");
-            return;
-            }
-        
-        len = readint(c, 0);
-        c += 4;
-        if (c + len > end)
-            {
-            fprintf (stderr, "Invalid/corrupted comments\n");
-            return;
-            }
-        
-        handle_comment(c, len);
-        c += len;
-        }
-        
-    if (self->artist[self->ix] == NULL)
-        self->artist[self->ix] = strdup("");
-    if (self->title[self->ix] == NULL)
-        self->title[self->ix] = strdup("");
-    if (self->album[self->ix] == NULL)
-        self->album[self->ix] = strdup("");
-    }
 
 int oggdec_get_next_packet(struct oggdec_vars *self)
     {
@@ -610,7 +425,32 @@ static int speex_get_samplerate(struct oggdec_vars *self)
                 self->samplerate[self->ix] = h->rate;
                 speex_header_free(h);
                 if (oggdec_get_next_packet(self) && ogg_stream_packetout(&self->os, &self->op) == 0)
-                    get_comments(self, (char *)self->op.packet, self->op.bytes);
+                    {
+                    struct vtag *tag;
+                    int error;
+
+                    if ((tag = vtag_parse((char *)self->op.packet, self->op.bytes, &error)))
+                        {
+                        if (!(self->artist[self->ix] = vtag_lookup(tag, "trk-author", VLM_MERGE, "/")))
+                            if (!(self->artist[self->ix] = vtag_lookup(tag, "trk-artist", VLM_MERGE, "/")))
+                                if (!(self->artist[self->ix] = vtag_lookup(tag, "author", VLM_MERGE, "/")))
+                                    if (!(self->artist[self->ix] = vtag_lookup(tag, "artist", VLM_MERGE, "/")))
+                                        self->artist[self->ix] = strdup("");
+                        if (!(self->title[self->ix] = vtag_lookup(tag, "trk-title", VLM_MERGE, "/")))
+                            if (!(self->title[self->ix] = vtag_lookup(tag, "title", VLM_MERGE, "/")))
+                                self->title[self->ix] = strdup("");
+                        if (!(self->album[self->ix] = vtag_lookup(tag, "trk-album", VLM_MERGE, "/")))
+                            if (!(self->album[self->ix] = vtag_lookup(tag, "album", VLM_MERGE, "/")))
+                                self->album[self->ix] = strdup("");
+
+                        vtag_cleanup(tag);
+                        }
+                    else
+                        {
+                        fprintf(stderr, "%s\n", vtag_error_string(error));
+                        return 0;
+                        }
+                    }
                 else
                     return 0;
                 
@@ -637,7 +477,7 @@ static int opus_get_samplerate(struct oggdec_vars *self)
     int channels, chanmap, streamcount, streamcount_2c, frames, samples;
     unsigned granule_count;
     uint16_t preskip;
-    char *reason;
+    char const *reason;
     
     #define FAIL(x) do {reason = x; goto fail_point;} while(0)
 
@@ -710,7 +550,29 @@ static int opus_get_samplerate(struct oggdec_vars *self)
                 FAIL("non zero granule position");
 
             if (self->op.bytes >= 8 && !memcmp(self->op.packet, "OpusTags", 8))
-                get_comments(self, (char *)self->op.packet + 8, self->op.bytes - 8);
+                {
+                struct vtag *tag;
+                int error;
+
+                if ((tag = vtag_parse((char *)self->op.packet + 8, self->op.bytes - 8, &error)))
+                    {
+                    if (!(self->artist[self->ix] = vtag_lookup(tag, "trk-author", VLM_MERGE, "/")))
+                        if (!(self->artist[self->ix] = vtag_lookup(tag, "trk-artist", VLM_MERGE, "/")))
+                            if (!(self->artist[self->ix] = vtag_lookup(tag, "author", VLM_MERGE, "/")))
+                                if (!(self->artist[self->ix] = vtag_lookup(tag, "artist", VLM_MERGE, "/")))
+                                    self->artist[self->ix] = strdup("");
+                    if (!(self->title[self->ix] = vtag_lookup(tag, "trk-title", VLM_MERGE, "/")))
+                        if (!(self->title[self->ix] = vtag_lookup(tag, "title", VLM_MERGE, "/")))
+                            self->title[self->ix] = strdup("");
+                    if (!(self->album[self->ix] = vtag_lookup(tag, "trk-album", VLM_MERGE, "/")))
+                        if (!(self->album[self->ix] = vtag_lookup(tag, "album", VLM_MERGE, "/")))
+                            self->album[self->ix] = strdup("");
+
+                    vtag_cleanup(tag);
+                    }
+                else
+                    FAIL(vtag_error_string(error));
+                }
             else
                 FAIL("bad or missing OpusTags packet");
             }

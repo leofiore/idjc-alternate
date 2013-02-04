@@ -22,7 +22,7 @@ idjc_la_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecd
 			\
 				avcodec_encoder.c avcodec_encoder.h smoothing.c smoothing.h dyn_mpg123.c dyn_mpg123.h mpg123.h \
 			\
-				ogg_opus_dec.c ogg_opus_dec.h
+				ogg_opus_dec.c ogg_opus_dec.h vorbistagparse.c vorbistagparse.h
 
 idjc_la_CFLAGS = ${GLIB_CFLAGS} ${LIBAVCODEC_CFLAGS} ${LIBAVFORMAT_CFLAGS} ${LIBAVUTIL_CFLAGS} ${LIBFLAC_CFLAGS}		\
 			\

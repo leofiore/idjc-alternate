@@ -21,25 +21,31 @@
 
 struct vtag;
 
-enum vtag_error = {VE_OK, VE_ALLOCATION, VE_CROPPED, VE_TRAILING,
+enum vtag_error {VE_OK, VE_ALLOCATION, VE_CROPPED, VE_TRAILING,
                     VE_SHORT_COMMENT, VE_MISSING_SEPARATOR,
                     VE_MISSING_VALUE, VE_INVALID_KEY};
 
-enum vtag_lookup_mode = {VLM_FIRST, /* the first tag of given key */
-                         VLM_LAST,  /* last tag of a given key */
-                         VLM_MERGE  /* combine like key data into one string */
+enum vtag_lookup_mode {VLM_FIRST, /* the first tag of given key */
+                        VLM_LAST,  /* last tag of a given key */
+                        VLM_MERGE  /* combine like key data into one string */
 };
 
-/* vtag_parse: parse a vorbis tag data chunk */
+/* vtag_parse: parse a vorbis tag data chunk
+ * the data chunk must be framed exactly to not be rejected
+ * all tags within must be of key=value form and keys
+ * must only contain legal characters
+ * error: optional, can point to NULL
+ */
 struct vtag *vtag_parse(void *data, size_t bytes, int *error);
 
 /* vtag_lookup: look up a tag by its key
+ * key: this is case independent
  * mode: how to handle multiple keys
  * sep: separator string in VLM_MERGE mode or NULL
  * return value: the tag data requested or NULL -- the caller is
  * responsible for freeing the returned data
  */
-char *vtag_lookup(struct vtag *vtag, char *key, enum vtag_lookup_mode mode, char *sep);
+char *vtag_lookup(struct vtag *s, char const *key, enum vtag_lookup_mode mode, char *sep);
 
 /* vtag_encoder: returns the vendor string of the vorbis tag */
 char const *vtag_vendor_string(struct vtag *);
@@ -50,4 +56,4 @@ void vtag_cleanup(struct vtag *);
 /* vtag_error_string:
  * return value: human readable form of the error code
  */
-char *vtag_error_string(int error);
+char const *vtag_error_string(int error);
