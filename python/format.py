@@ -935,7 +935,7 @@ class FormatCodecVorbisBitRate(FormatSpin):
         sr = int(dict_["samplerate"])
         bounds = er.bitrate_bounds(channels, sr)
         FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
-            (128000,) + bounds + (1, 10), 0, " Hz", "FormatCodecVorbisVariability",
+            (128000,) + bounds + (1, 10), 0, " b/s", "FormatCodecVorbisVariability",
             er.good_bitrates(channels, sr))
 
 
@@ -985,6 +985,51 @@ class FormatCodecVorbisMode(FormatDropdown):
 
 
 
+class FormatCodecOpusPostGain(FormatDropdown):
+    """Level adjustment for audio before hitting the codec."""
+    
+    def __init__(self, prev_object):
+        codec = format_collate(prev_object)["codec"]
+        
+        FormatDropdown.__init__(self, prev_object, _('Postgain'), "postgain", (
+            dict(display_text=_('3.0 dB'), value="1.412", chain="FormatMetadataUTF8"),
+            dict(display_text=_('2.5 dB'), value="1.333", chain="FormatMetadataUTF8"),
+            dict(display_text=_('2.0 dB'), value="1.259", chain="FormatMetadataUTF8"),
+            dict(display_text=_('1.5 dB'), value="1.189", chain="FormatMetadataUTF8"),
+            dict(display_text=_('1.0 dB'), value="1.122", chain="FormatMetadataUTF8"),
+            dict(display_text=_('0.5 dB'), value="1.059", chain="FormatMetadataUTF8"),
+            dict(display_text=_('0 dB'), value="1.0", default=True, chain="FormatMetadataUTF8"),
+            dict(display_text=_('-0.5 dB'), value="0.944", chain="FormatMetadataUTF8"),
+            dict(display_text=_('-1.0 dB'), value="0.891", chain="FormatMetadataUTF8"),
+            dict(display_text=_('-1.5 dB'), value="0.841", chain="FormatMetadataUTF8"),
+            dict(display_text=_('-2.0 dB'), value="0.794", chain="FormatMetadataUTF8"),
+            dict(display_text=_('-2.5 dB'), value="0.750", chain="FormatMetadataUTF8"),
+            dict(display_text=_('-3.0 dB'), value="0.708", chain="FormatMetadataUTF8")), 0,
+            _("A gain adjustment for the player to apply."))
+
+
+class FormatCodecOpusBitRate(FormatSpin):
+    """Opus bit rate selection for stereo."""
+    
+    def __init__(self, prev_object):
+        dict_ = format_collate(prev_object)
+        channels = 1 if dict_["mode"] == "mono" else 2
+        bounds = (6 * channels, 256 * channels)
+        FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
+            (64 * channels,) + bounds + (1, 10), 0, " kb/s", "FormatCodecOpusPostGain",
+            (256 * channels, 128 * channels, 64 * channels, 32 * channels, 16 * channels))
+
+
+class FormatCodecOpusMode(FormatDropdown):
+    """Opus mode selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Mode'), "mode", (
+            dict(display_text=_("Mono"), value="mono", chain="FormatCodecOpusBitRate"),
+            dict(display_text=_("Stereo"), value="stereo", default=True, chain="FormatCodecOpusBitRate")), 0)
+
+
+
 class FormatCodecXiphOgg(FormatDropdown):
     """Ogg codec selection."""
     
@@ -992,9 +1037,11 @@ class FormatCodecXiphOgg(FormatDropdown):
         FormatDropdown.__init__(self, prev_object, _('Codec'), "codec", (
             dict(display_text=_('Vorbis'), value="vorbis", chain="FormatCodecVorbisMode"),
             dict(display_text=_('FLAC'), value="flac", chain="FormatCodecFLACMode", sensitive=FGlobs.oggflacenabled),
-            dict(display_text=_('Speex'), value="speex", chain="FormatCodecSpeexMode", sensitive=FGlobs.speexenabled)), 0,
+            dict(display_text=_('Speex'), value="speex", chain="FormatCodecSpeexMode", sensitive=FGlobs.speexenabled),
+            dict(display_text=_('Opus'), value="opus", chain="FormatCodecOpusMode", sensitive=FGlobs.opusenabled),
+            
+            ), 0,
             _('Codecs of the Ogg container.'))
-
 
 
 
@@ -1252,7 +1299,9 @@ class FormatControl(gtk.VBox):
                 "flac":
                     {"shoutcast": False, "icecast": True, "recordable": True},
                 "speex":
-                    {"shoutcast": False, "icecast": True, "recordable": True}
+                    {"shoutcast": False, "icecast": True, "recordable": True},
+                "opus":
+                    {"shoutcast": False, "icecast": True, "recordable": True},
             },
             "mpeg":
             {

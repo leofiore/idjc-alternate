@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Added Ogg/Opus playback support.
+
 Fixed mp3 seek accuracy bug.
 
 Added cuesheet (.cue .txt) playback support. Multi-file cuesheets are treated as regular playlists.
