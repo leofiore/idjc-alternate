@@ -18,11 +18,13 @@ idjc_la_SOURCES = agc.c agc.h audio_feed.c audio_feed.h avcodecdecode.c avcodecd
 			\
 				sndfiledecode.c sndfiledecode.h sndfileinfo.c sndfileinfo.h sourceclient.c sourceclient.h speextag.c	\
 			\
-				speextag.h streamer.c streamer.h xlplayer.c xlplayer.h live_mp2_encoder.c live_mp2_encoder.h \
+				speextag.h streamer.c streamer.h xlplayer.c xlplayer.h live_mp2_encoder.c live_mp2_encoder.h			\
 			\
-				avcodec_encoder.c avcodec_encoder.h smoothing.c smoothing.h dyn_mpg123.c dyn_mpg123.h mpg123.h \
+				avcodec_encoder.c avcodec_encoder.h smoothing.c smoothing.h dyn_mpg123.c dyn_mpg123.h mpg123.h			\
 			\
-				ogg_opus_dec.c ogg_opus_dec.h vorbistagparse.c vorbistagparse.h
+				ogg_opus_dec.c ogg_opus_dec.h vorbistagparse.c vorbistagparse.h live_oggopus_encoder.c					\
+			\
+				live_oggopus_encoder.h
 
 idjc_la_CFLAGS = ${GLIB_CFLAGS} ${LIBAVCODEC_CFLAGS} ${LIBAVFORMAT_CFLAGS} ${LIBAVUTIL_CFLAGS} ${LIBFLAC_CFLAGS}		\
 			\

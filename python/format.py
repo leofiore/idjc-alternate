@@ -935,7 +935,7 @@ class FormatCodecVorbisBitRate(FormatSpin):
         sr = int(dict_["samplerate"])
         bounds = er.bitrate_bounds(channels, sr)
         FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
-            (128000,) + bounds + (1, 10), 0, " b/s", "FormatCodecVorbisVariability",
+            (128000,) + bounds + (1, 10), 0, " bps", "FormatCodecVorbisVariability",
             er.good_bitrates(channels, sr))
 
 
@@ -989,8 +989,6 @@ class FormatCodecOpusPostGain(FormatDropdown):
     """Level adjustment for audio before hitting the codec."""
     
     def __init__(self, prev_object):
-        codec = format_collate(prev_object)["codec"]
-        
         FormatDropdown.__init__(self, prev_object, _('Postgain'), "postgain", (
             dict(display_text=_('3.0 dB'), value="1.412", chain="FormatMetadataUTF8"),
             dict(display_text=_('2.5 dB'), value="1.333", chain="FormatMetadataUTF8"),
@@ -1004,8 +1002,29 @@ class FormatCodecOpusPostGain(FormatDropdown):
             dict(display_text=_('-1.5 dB'), value="0.841", chain="FormatMetadataUTF8"),
             dict(display_text=_('-2.0 dB'), value="0.794", chain="FormatMetadataUTF8"),
             dict(display_text=_('-2.5 dB'), value="0.750", chain="FormatMetadataUTF8"),
-            dict(display_text=_('-3.0 dB'), value="0.708", chain="FormatMetadataUTF8")), 0,
+            dict(display_text=_('-3.0 dB'), value="0.708", chain="FormatMetadataUTF8")), 1,
             _("A gain adjustment for the player to apply."))
+
+
+class FormatCodecOpusFrameSize(FormatDropdown):
+    """Size of Opus frames in milliseconds."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Frame Size'), "framesize", (
+            dict(display_text=_('60 ms'), value="60", chain="FormatCodecOpusPostGain"),
+            dict(display_text=_('40 ms'), value="40", chain="FormatCodecOpusPostGain"),
+            dict(display_text=_('20 ms'), value="20", default=True, chain="FormatCodecOpusPostGain")), 0,
+            _("A higher frame size may sound better on very low bitrates."))
+
+
+class FormatCodecOpusComplexity(FormatDropdown):
+    """Opus cpu usage selection."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Complexity'), "complexity", 
+            tuple(dict(display_text=str(x), value=str(x), chain="FormatCodecOpusFrameSize", default=(x==5))
+                                                            for x in range(10, -1, -1)), 0,
+            _('A quality setting that affects how heavily the CPU is used.'))
 
 
 class FormatCodecOpusBitRate(FormatSpin):
@@ -1016,7 +1035,7 @@ class FormatCodecOpusBitRate(FormatSpin):
         channels = 1 if dict_["mode"] == "mono" else 2
         bounds = (6 * channels, 256 * channels)
         FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
-            (64 * channels,) + bounds + (1, 10), 0, " kb/s", "FormatCodecOpusPostGain",
+            ((64, 96)[channels - 1],) + bounds + (1, 10), 0, " kbps", "FormatCodecOpusComplexity",
             (256 * channels, 128 * channels, 64 * channels, 32 * channels, 16 * channels))
 
 
@@ -1233,9 +1252,9 @@ class FormatControl(gtk.VBox):
         apply_button.add(image)
         button_box.add(apply_button)
 
-        #test_button = gtk.ToggleButton("Test")
-        #button_box.add(test_button)
-        #test_button.connect("toggled", self._on_test)
+        test_button = gtk.ToggleButton("Test")
+        button_box.add(test_button)
+        test_button.connect("toggled", self._on_test)
         
         elem_box[-1].pack_end(button_frame, True)
         self.show_all()

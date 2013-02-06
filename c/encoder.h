@@ -31,7 +31,7 @@ enum jack_dataflow { JD_OFF, JD_ON, JD_FLUSH };
 enum performance_warning { PW_OK, PW_AUDIO_DATA_DROPPED };
 enum encoder_source {ENCODER_SOURCE_UNHANDLED, ENCODER_SOURCE_JACK, ENCODER_SOURCE_FILE};
 enum encoder_family {ENCODER_FAMILY_UNHANDLED, ENCODER_FAMILY_MPEG, ENCODER_FAMILY_OGG};
-enum encoder_codec {ENCODER_CODEC_UNHANDLED, ENCODER_CODEC_MP3, ENCODER_CODEC_VORBIS, ENCODER_CODEC_FLAC, ENCODER_CODEC_SPEEX, ENCODER_CODEC_MP2, ENCODER_CODEC_AAC, ENCODER_CODEC_AACPLUSV2};
+enum encoder_codec {ENCODER_CODEC_UNHANDLED, ENCODER_CODEC_MP3, ENCODER_CODEC_VORBIS, ENCODER_CODEC_FLAC, ENCODER_CODEC_SPEEX, ENCODER_CODEC_OPUS, ENCODER_CODEC_MP2, ENCODER_CODEC_AAC, ENCODER_CODEC_AACPLUSV2};
 enum encoder_state { ES_STOPPED, ES_STARTING, ES_RUNNING, ES_STOPPING, ES_PAUSED };
 enum packet_flags {     PF_UNSET    = 0x00,
                                 PF_INITIAL  = 0x01, 
@@ -56,10 +56,12 @@ struct encoder_vars
     char *bitwidth;
     char *quality;
     char *complexity;
+    char *framesize;
     char *mode;
     char *metadata_mode;
     char *standard;
     char *pregain;
+    char *postgain;
     char *filename;              /* for streaming a pre-recorded file */
     char *offset;
     char *custom_meta;           /* extra/replacement information to use for metadata */

@@ -1344,107 +1344,6 @@ class StreamTab(Tab):
         elif command == ENCODER_STOP:
             self.format_control.stop_encoder_rc()
 
-
-    def start_encoder(self, command = "encoder_start"):
-        self.metadata_update.clicked()
-        if self.format_page == 0:
-            self.encoder = "mp3"
-            self.send("format=mp3\nencode_source=jack\nsample_rate=%d\n"
-            "resample_quality=%s\nbit_rate=%d\nstereo=%s\nencode_quality=%s\n"
-            "freeformat_mp3=%s\ncommand=%s\n" %   (
-                                    self.stream_resample_frame.resample_rate,
-                                    self.stream_resample_frame.resample_quality,
-                                    self.mp3_bitrate, 
-                                    self.mp3_stereo_type,
-                                    self.mp3_encode_quality,
-                                    self.mp3_freeformat,
-                                    command))
-            if self.receive() == "succeeded":
-                self.format_info_bar.push(1, "mp3   %dHz    %dkbps  %s" % (
-                                    self.stream_resample_frame.resample_rate,
-                                    self.mp3_bitrate, self.mp3_stereo_type))
-            else:
-                self.format_info_bar.push(1, "")
-        elif self.format_page == 1:
-            self.encoder = "ogg"
-            if self.subformat_page == 0:  # vorbis
-                vorbis_bitrate = self.vorbis_encoding_nominal.get_value()
-                vorbis_min = self.vorbis_encoding_lower.get_cooked_value()
-                vorbis_max = self.vorbis_encoding_upper.get_cooked_value()
-                vorbis_channels = ("mono", "stereo")[
-                                            self.vorbis_stereo_rb.get_active()]
-                self.send("format=ogg\nsubformat=vorbis\nencode_source=jack\n"
-                "sample_rate=%d\nresample_quality=%s\nbit_rate=%d\n"
-                "bit_rate_min=%d\nbit_rate_max=%d\nstereo=%s\ncommand=%s\n" % (
-                                    self.stream_resample_frame.resample_rate, 
-                                    self.stream_resample_frame.resample_quality,
-                                    vorbis_bitrate, vorbis_min, vorbis_max,
-                                    vorbis_channels, command))
-                if self.receive() == "succeeded":
-                    if vorbis_min == vorbis_max == -1:
-                        managed = ""
-                    else:
-                        managed = " managed"
-                    self.format_info_bar.push(1, 
-                                    "Ogg Vorbis    %dHz    %dkbps  %s%s" % (
-                                    self.stream_resample_frame.resample_rate,
-                                    vorbis_bitrate, vorbis_channels, managed))
-                else:
-                    self.format_info_bar.push(1, "")
-            elif self.subformat_page == 1: # OggFLAC
-                flac_channels = ("mono", "stereo")[self.flacstereo.get_active()]
-                flac_bitwidth = ("16", "20", "24")[
-                                        (self.flac20bit.get_active() and 1) + (
-                                        self.flac24bit.get_active() and 2)]
-                self.send("format=ogg\nsubformat=flac\nencode_source=jack\n"
-                        "sample_rate=%d\nresample_quality=%s\nbit_width=%s\n"
-                        "stereo=%s\nuse_metadata=%d\ncommand=%s\n" % (
-                        self.stream_resample_frame.resample_rate,
-                        self.stream_resample_frame.resample_quality,
-                        flac_bitwidth, flac_channels,
-                        self.flacmetadata.get_active(), command))
-                if self.receive() == "succeeded":
-                    self.format_info_bar.push(1, "Ogg FLAC  %s bit  %s" % (
-                                                flac_bitwidth, flac_channels))
-                else:
-                    self.format_info_bar.push(1, "")
-            elif self.subformat_page == 2: # speex
-                speex_srate = (32000, 16000, 8000)[
-                                                self.speex_mode.get_active()]
-                speex_channels = ("mono", "stereo")[
-                                                self.speex_stereo.get_active()]
-                self.send("format=ogg\nsubformat=speex\nencode_source=jack\n"
-                    "sample_rate=%d\nresample_quality=%s\nspeex_mode=%d\n"
-                    "stereo=%s\nuse_metadata=%d\nspeex_quality=%s\n"
-                    "speex_complexity=%s\ncommand=%s\n" % (speex_srate,
-                    self.stream_resample_frame.resample_quality,
-                    self.speex_mode.get_active(), speex_channels,
-                    self.speex_metadata.get_active(),
-                    self.speex_quality.get_active_text(),
-                    self.speex_complexity.get_active_text(), command))
-                metatext = ("-Meta", "+Meta")[self.speex_metadata.get_active()]
-                if self.receive() == "succeeded":
-                    self.format_info_bar.push(1, "Speex %s  %s  Q%s C%s %s" % (
-                        self.speex_mode.get_active_text(),
-                        speex_channels.capitalize(),
-                        self.speex_quality.get_active_text(),
-                        self.speex_complexity.get_active_text(), metatext))
-                else:
-                    self.format_info_bar.push(1, "")
-        else:
-            if self.file_dialog.get_filename().endswith(".mp3"):
-                self.encoder = "mp3"
-            else:
-                self.encoder = "ogg"
-            self.send("format=%s\nencode_source=file\nfilename=%s\noffset=%d\n"
-                                    "command=%s\n" %   (self.encoder,
-                                    self.file_dialog.get_filename(),
-                                    self.file_offset_adj.get_value(), command))
-            if self.receive() == "succeeded":
-                self.format_info_bar.push(1, self.file_dialog.get_filename())
-            else:
-                self.format_info_bar.push(1, "")
-
     
     def server_type_cell_data_func(self, celllayout, cell, model, iter):
         text = model.get_value(iter, 0)
@@ -1452,6 +1351,7 @@ class StreamTab(Tab):
             cell.set_property("sensitive", False)
         else:
             cell.set_property("sensitive", True)
+
     
     def cb_metadata(self, widget):
         if self.format_control.finalised:

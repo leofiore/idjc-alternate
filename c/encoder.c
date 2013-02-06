@@ -32,13 +32,14 @@
 #include "live_mp2_encoder.h"
 #include "live_oggflac_encoder.h"
 #include "live_oggspeex_encoder.h"
+#include "live_oggopus_encoder.h"
 #include "avcodec_encoder.h"
 #include "bsdcompat.h"
 #include "main.h"
 #ifdef DYN_LAME
 #include "dyn_lame.h"
 #endif
-    
+
 #define RS_INPUT_SAMPLES 512
 
 typedef jack_default_audio_sample_t sample_t;
@@ -107,6 +108,9 @@ static struct encoder_data_format encoder_lex_format(char *source, char *family,
     if (!strcmp(codec, "speex"))
         df.codec = ENCODER_CODEC_SPEEX;
         
+    if (!strcmp(codec, "opus"))
+        df.codec = ENCODER_CODEC_OPUS;
+
     if (df.source == ENCODER_SOURCE_UNHANDLED)
         warning("encoder source is not recognised", source);
     
@@ -586,6 +590,17 @@ int encoder_start(struct threads_info *ti, struct universal_vars *uv, void *othe
                         case ENCODER_CODEC_SPEEX:
 #ifdef HAVE_SPEEX
                             encoder_init = live_oggspeex_encoder_init;
+#endif
+                            break;
+                        case ENCODER_CODEC_OPUS:
+#ifdef HAVE_OPUS
+                            if ((ev->samplerate = realloc(ev->samplerate, 6)))
+                                {
+                                strcpy(ev->samplerate, "48000");
+                                encoder_init = live_oggopus_encoder_init;
+                                }
+                            else
+                                goto failed;
 #endif
                             break;
                         case ENCODER_CODEC_UNHANDLED:
