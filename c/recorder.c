@@ -815,6 +815,9 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
                         case ENCODER_CODEC_FLAC:
                         case ENCODER_CODEC_SPEEX:
                             file_extension = ".oga";
+                            break;
+                        case ENCODER_CODEC_OPUS:
+                            file_extension = ".opus";
                         case ENCODER_CODEC_UNHANDLED:
                         default:
                             break;

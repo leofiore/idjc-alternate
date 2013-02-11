@@ -57,15 +57,9 @@ static void stereomix(float *l, float *r, float *m, size_t n)
     {
     while (n--)
         {
-        *m++ = *l++;
-        *m++ = *r++;
+        *m++ = *l++ * 16777216;
+        *m++ = *r++ * 16777216;
         }
-    }
-
-/* empty input buffer for codec purge */
-static void silentmix(struct local_data *s, int channels)
-    {
-    memset(s->inbuf, '\0', sizeof (float) * s->framesamples * channels);
     }
 
 static void live_oggopus_encoder_main(struct encoder *encoder)
@@ -242,10 +236,10 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
                 if (++s->pagepackets == s->pagepackets_max || op.e_o_s)
                     {
                     s->pagepackets = 0;
-                    paging_function = ogg_stream_pageout;
+                    paging_function = ogg_stream_flush;
                     }
                 else
-                    paging_function = ogg_stream_flush;
+                    paging_function = ogg_stream_pageout;
                 
                 while (paging_function(&s->os, &og))
                     {
@@ -268,15 +262,73 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
 
     if (encoder->encoder_state == ES_STOPPING)
         {
-        fprintf(stderr, "live_oggopus_encoder_main: last pass of the encoder\n");
-        ogg_stream_clear(&s->os);
-        // other cleanup here
+        opus_int32 enc_bytes;
+        int (*paging_function)(ogg_stream_state *, ogg_page *);
+        fprintf(stderr, "live_oggopus_encoder_main: flushing out\n");
 
-        fprintf(stderr, "live_oggopus_encoder_main: libvorbis structures freed\n");
+        /* fill input buffer with silence */
+        memset(s->inbuf, '\0', sizeof (float) * s->framesamples * encoder->n_channels);
+
+        do
+            {
+            enc_bytes = opus_encode_float(s->enc_st, s->inbuf, s->framesamples, s->outbuf, s->outbuf_siz);
+            if (enc_bytes > 0)
+                {
+                if (s->framesamples < s->lookahead)
+                    {
+                    op.granulepos += s->framesamples;
+                    op.e_o_s = 0;
+                    s->lookahead -= s->framesamples;
+                    }
+                else
+                    {
+                    op.granulepos += s->lookahead;
+                    op.e_o_s = 1;
+                    s->lookahead = 0;
+                    s->pflags |= PF_FINAL;
+                    }
+                    
+                op.packet = s->outbuf;
+                op.bytes = enc_bytes;
+                op.b_o_s = 0;
+                op.granulepos = s->granulepos += s->framesamples;
+                op.packetno = s->packetno++;
+                ogg_stream_packetin(&s->os, &op);
+                
+                if (++s->pagepackets == s->pagepackets_max || op.e_o_s)
+                    {
+                    s->pagepackets = 0;
+                    paging_function = ogg_stream_flush;
+                    }
+                else
+                    paging_function = ogg_stream_pageout;
+                
+                while (paging_function(&s->os, &og))
+                    {
+                    if (!live_ogg_write_packet(encoder, &og, s->pflags))
+                        {
+                        fprintf(stderr, "live_oggopus_encoder_main: failed to write packet\n");
+                        goto bailout;
+                        }
+                    }
+                }
+            else
+                {
+                fprintf(stderr, "live_oggopus_encoder_main: failed to encode packet: %s\n", opus_strerror(enc_bytes));
+                goto bailout; 
+                }
+            } while (!op.e_o_s);
+
+        
         if (!encoder->run_request_f)
             goto bailout;
         else
+            {
+            opus_encoder_destroy(s->enc_st);
+            ogg_stream_clear(&s->os);
+            fprintf(stderr, "live_oggopus_encoder_main: minimal clean up\n");
             encoder->encoder_state = ES_STARTING;
+            }
 
         return;
         }
