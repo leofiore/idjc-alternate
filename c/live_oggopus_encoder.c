@@ -39,93 +39,34 @@ struct local_data {
     OpusEncoder *enc_st;
     int complexity;
     int postgain;
-    opus_int32 lookahead;
+    int framesamples;
+    int lookahead;
+    opus_int32 pagepackets;
+    opus_int32 pagepackets_max;
+    ogg_int64_t granulepos;
+    ogg_int64_t packetno;
     ogg_stream_state os;
     int pflags;
-
+    float *inbuf;
+    size_t outbuf_siz;
+    unsigned char *outbuf;
 };
 
-#if 0
-#define readint(buf, base) (((buf[base+3]<<24)&0xff000000)| \
-                                    ((buf[base+2]<<16)&0xff0000)| \
-                                    ((buf[base+1]<<8)&0xff00)| \
-                                     (buf[base]&0xff))
-
-#define writeint(buf, base, val) do{ buf[base+3]=((val)>>24)&0xff; \
-                                                 buf[base+2]=((val)>>16)&0xff; \
-                                                 buf[base+1]=((val)>>8)&0xff; \
-                                                 buf[base]=(val)&0xff; \
-                                            }while(0)
-
-static char *prepend(char *before, char *after)
+/* create a multiplexed pcm stream */
+static void stereomix(float *l, float *r, float *m, size_t n)
     {
-    char *new;
-    
-    if (!(new = malloc(strlen(before) + strlen(after) + 1)))
+    while (n--)
         {
-        fprintf(stderr, "malloc failure\n");
-        return NULL;
+        *m++ = *l++;
+        *m++ = *r++;
         }
-        
-    strcpy(new, before);
-    strcat(new, after);
-    free(after);
-    return new;
     }
 
-#define PREPEND(b, a) do {a = prepend(b, a); items++; s->metadata_vclen += (4 + strlen(a));} while (0)
-#define CPREPEND(b, a) do {if (a && a[0]) { PREPEND(b, a); }} while (0)
-#define APPEND(a) do {if (a && a[0]) { writeint(s->metadata_vc, base, (len = strlen(a))); memcpy(s->metadata_vc + base + 4, a, len); base += 4 + len; }} while (0)
-
-static void live_oggopus_build_metadata(struct encoder *encoder, struct local_data *s)
+/* empty input buffer for codec purge */
+static void silentmix(struct local_data *s, int channels)
     {
-    int len;
-    int items = 0;
-    size_t base;
-    struct ogg_tag_data *t = &s->tag_data;
-
-    /* build a vorbis comment block */
-    s->metadata_vclen = 8 + s->vs_len;
-    if (encoder->new_metadata)
-        live_ogg_capture_metadata(encoder, t);
-
-    if (t->custom && t->custom[0])
-        {
-        PREPEND("title=", t->custom);
-        CPREPEND("trk-artist=", t->artist);
-        CPREPEND("trk-title=", t->title);
-        CPREPEND("trk-album=", t->album);
-        }
-    else
-        {
-        CPREPEND("artist=", t->artist);
-        CPREPEND("title=", t->title);
-        CPREPEND("album=", t->album);
-        }
-
-    if (!(s->metadata_vc = realloc(s->metadata_vc, s->metadata_vclen)))
-        {
-        fprintf(stderr, "live_oggopus_build_metadata: malloc failure\n");
-        s->metadata_vclen = 0;
-        return;
-        }
-
-    writeint(s->metadata_vc, 0, s->vs_len);
-    memcpy(s->metadata_vc + 4, s->vendor_string, s->vs_len);
-    writeint(s->metadata_vc, 4 + s->vs_len, items);
-    base = 8 + s->vs_len;
-    
-    APPEND(t->custom);
-    APPEND(t->artist);
-    APPEND(t->title);
-    APPEND(t->album);
-    
-    if (base != s->metadata_vclen)
-        fprintf(stderr, "live_oggopus_build_metadata: incorrect size assumption %d, %d\n", base, s->metadata_vclen);
-    else
-        fprintf(stderr, "vorbis comment created successfully\n");
+    memset(s->inbuf, '\0', sizeof (float) * s->framesamples * channels);
     }
-#endif /* 0 */
 
 static void live_oggopus_encoder_main(struct encoder *encoder)
     {
@@ -184,7 +125,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
         op.b_o_s = 1;
         op.e_o_s = 0;
         op.granulepos = 0;
-        op.packetno = 0;
+        op.packetno = s->packetno++;
         ogg_stream_packetin(&s->os, &op);
         s->pflags = PF_INITIAL | PF_OGG | PF_HEADER;
 
@@ -232,7 +173,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
         live_ogg_free_metadata(t);
         char *tags_packet_data;
         size_t tags_packet_size;
-        
+
         if ((error = vtag_serialize(tag, &tags_packet_data, &tags_packet_size, "OpusTags")))
             {
             fprintf(stderr, "live_oggopus_encoder_main: vtag_serialize failed: %s\n", vtag_error_string(error));
@@ -246,8 +187,9 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
         op.b_o_s = 0;
         op.e_o_s = 0;
         op.granulepos = 0;
-        op.packetno = 1;
+        op.packetno = s->packetno++;
         ogg_stream_packetin(&s->os, &op);
+        free(tags_packet_data);
 
         while (ogg_stream_flush(&s->os, &og))
             {
@@ -259,34 +201,67 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
 
             s->pflags = PF_OGG;
             }
-
-        goto bailout;
        
-
-#if 0
-        while (ogg_stream_flush(&s->os, &s->og))
-            {
-            if (!(live_ogg_write_packet(encoder, &s->og, packet_flags)))
-                {
-                fprintf(stderr, "live_ogg_encoder_main: failed writing header to stream\n");
-                encoder->run_request_f = FALSE;
-                encoder->encoder_state = ES_STOPPING;
-                return;
-                }
-
-            packet_flags = PF_OGG | PF_HEADER;
-            }
-
-        s->pagesamples = 0;
-        s->owf = ogg_stream_pageout;
-#endif
         encoder->encoder_state = ES_RUNNING;
-
         return;
         }
 
     if (encoder->encoder_state == ES_RUNNING)
         {
+        struct encoder_ip_data *id;
+        opus_int32 enc_bytes;
+        int (*paging_function)(ogg_stream_state *, ogg_page *);
+        float *inbuf;
+
+        if (encoder->new_metadata || !encoder->run_request_f || encoder->flush)
+            {
+            encoder->flush = FALSE;
+            encoder->encoder_state = ES_STOPPING;
+            return;
+            }
+
+        if((id = encoder_get_input_data(encoder, s->framesamples, s->framesamples, NULL)))
+            {
+            if (encoder->n_channels == 2)
+                stereomix(id->buffer[0], id->buffer[1], inbuf = s->inbuf, s->framesamples);
+            else
+                inbuf = id->buffer[0];
+            enc_bytes = opus_encode_float(s->enc_st, inbuf, s->framesamples, s->outbuf, s->outbuf_siz);
+            encoder_ip_data_free(id);
+
+            if (enc_bytes > 0)
+                {
+                op.packet = s->outbuf;
+                op.bytes = enc_bytes;
+                op.b_o_s = 0;
+                op.e_o_s = 0;
+                op.granulepos = s->granulepos += s->framesamples;
+                op.packetno = s->packetno++;
+                ogg_stream_packetin(&s->os, &op);
+                
+                if (++s->pagepackets == s->pagepackets_max || op.e_o_s)
+                    {
+                    s->pagepackets = 0;
+                    paging_function = ogg_stream_pageout;
+                    }
+                else
+                    paging_function = ogg_stream_flush;
+                
+                while (paging_function(&s->os, &og))
+                    {
+                    if (!live_ogg_write_packet(encoder, &og, s->pflags))
+                        {
+                        fprintf(stderr, "live_oggopus_encoder_main: failed to write packet\n");
+                        goto bailout;
+                        }
+                    }
+                }
+            else
+                {
+                fprintf(stderr, "live_oggopus_encoder_main: failed to encode packet: %s\n", opus_strerror(enc_bytes));
+                goto bailout;
+                }
+            }
 
         return;
         }
@@ -336,6 +311,26 @@ int live_oggopus_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         
     s->complexity = atoi(ev->complexity);
     s->postgain = atoi(ev->postgain);
+    s->framesamples = atoi(ev->framesize) * 48;
+    s->pagepackets_max = 48000 / s->framesamples;
+    
+    if (!(s->inbuf = malloc(sizeof (float) * encoder->n_channels * s->framesamples)))
+        {
+        fprintf(stderr, "live_oggopus_encoder: malloc failure\n");
+        free(s);
+        return FAILED;
+        }
+
+    /* output buffer multiplier of 276 allows for a 100% bitrate burst in vbr mode */
+    s->outbuf_siz = encoder->bitrate * 276 / s->pagepackets_max;
+    if (!(s->outbuf = malloc(s->outbuf_siz)))
+        {
+        fprintf(stderr, "live_oggopus_encoder: malloc failure\n");
+        free(s->inbuf);
+        free(s);
+        return FAILED;
+        }
+    
     encoder->encoder_private = s;
     encoder->run_encoder = live_oggopus_encoder_main;
     return SUCCEEDED;
