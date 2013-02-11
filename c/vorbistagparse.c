@@ -29,6 +29,10 @@
 #define READINT(p)          (p += 4, GET(p, -1, 24) | GET(p, -2, 16) | \
                                     GET(p, -3, 8) | GET(p, -4, 0))
 
+#define SET(p, ind, shift, v)   do {((unsigned char *)p)[ind] = v >> shift;} while (0)
+#define WRITEINT(p, v)      do {p += 4; SET(p, -1, 24, v); SET(p, -2, 16, v); \
+                                SET(p, -3, 8, v); SET(p, -4, 0, v);} while (0)
+
 struct vtag {
     GHashTable *hash_table; /* table of g_slists of key=value pairs */
     char *vendor_string;
@@ -37,13 +41,21 @@ struct vtag {
 static int
 key_valid(char const *key, size_t n)
     {
+    if (n == 0)
+        return 0;
+        
     while (n--)
+        {
         if (*key < 0x20 || *key > 0x7D || *key == '=')
             return 0;
+        ++key;
+        }
+
     return !0;
     }
 
-static char *strlwr(char *s)
+static char *
+strlwr(char *s)
     {
     if (s == NULL)
         return NULL;
@@ -51,6 +63,23 @@ static char *strlwr(char *s)
     for (char *p = s; *p; ++p)
         *p = tolower(*p);
     return s;
+    }
+
+/* key and value must be dedicated copies and heap allocated */
+static void
+insert_value(GHashTable *hash_table, char *key, char *value)
+    {
+    GSList *slist = NULL;
+    gpointer orig_key = NULL;
+    
+    if (g_hash_table_lookup_extended(hash_table, key, &orig_key, (gpointer *)&slist))
+        {
+        g_hash_table_steal(hash_table, key);
+        free(orig_key);
+        }
+    
+    slist = g_slist_append(slist, (gpointer)value);
+    g_hash_table_insert(hash_table, key, (gpointer)slist);
     }
 
 static enum vtag_error
@@ -105,16 +134,7 @@ parse(struct vtag *s, char const * const data, size_t bytes)
                     return VE_ALLOCATION;
                     }
 
-                GSList *slist = NULL;
-                gpointer orig_key = NULL;
-                if (g_hash_table_lookup_extended(s->hash_table, key, &orig_key, (gpointer *)&slist))
-                    {
-                    g_hash_table_steal(s->hash_table, key);
-                    free(orig_key);
-                    }
-                
-                slist = g_slist_append(slist, (gpointer)value);
-                g_hash_table_insert(s->hash_table, key, (gpointer)slist);
+                insert_value(s->hash_table, key, value);
                 }
             }
         p += len;
@@ -123,9 +143,32 @@ parse(struct vtag *s, char const * const data, size_t bytes)
     return VE_OK;
     }
 
-static void free_value(GSList *slist)
+static void
+free_slist_value(GSList *slist)
     {
     g_slist_free_full(slist, free);
+    }
+
+static struct vtag *
+vtag_create(int *error)
+    {
+    struct vtag *s;
+    
+    if (!(s = calloc(1, sizeof (struct vtag))))
+        {
+        *error = VE_ALLOCATION;
+        return NULL;
+        }
+    
+    if (!(s->hash_table = g_hash_table_new_full(g_str_hash, g_str_equal,
+                                    free, (GDestroyNotify)free_slist_value)))
+        {
+        free(s);
+        *error = VE_ALLOCATION;
+        return NULL;
+        }
+        
+    return s;
     }
 
 struct vtag *
@@ -136,22 +179,9 @@ vtag_parse(void *data, size_t bytes, int *error)
     
     if (!error)
         error = &error_;
-    
-    if (!(s = calloc(1, sizeof (struct vtag))))
-        {
-        fprintf(stderr, "vtag_parse: malloc failure\n");
-        *error = VE_ALLOCATION;
+
+    if (!(s = vtag_create(error)))
         return NULL;
-        }
-    
-    if (!(s->hash_table = g_hash_table_new_full(g_str_hash, g_str_equal,
-                                        free, (GDestroyNotify)free_value)))
-        {
-        fprintf(stderr, "vtag_parse: failed to create new hash table\n");
-        free(s);
-        *error = VE_ALLOCATION;
-        return NULL;
-        }
 
     *error = parse(s, data, bytes);
     if (*error != VE_OK)
@@ -163,12 +193,118 @@ vtag_parse(void *data, size_t bytes, int *error)
     return s;
     }
 
+struct vtag *
+vtag_new(const char *vendor_string, int *error)
+    {
+    struct vtag *s;
+    int error_;
+    
+    if (!error)
+        error = &error_;
+    
+    if (!(s = vtag_create(error)))
+        return NULL;
+
+    if (!(s->vendor_string = strdup(vendor_string)))
+        {
+        vtag_cleanup(s);
+        *error = VE_ALLOCATION;
+        return NULL;
+        }
+
+    return s;
+    }
+
 struct valuestore {
     size_t length;
     int count;
 };
 
-static void slist_data_length(gpointer data1, gpointer data2)
+static void
+slist_storage_calc(gpointer data, gpointer user_data)
+    {
+    struct valuestore *vs = user_data;
+    
+    vs->length += strlen(data);
+    ++vs->count;
+    }
+
+static void
+ht_storage_calc(gpointer key, gpointer value, gpointer user_data)
+    {
+    struct valuestore *vs = user_data;
+    int count = vs->count;
+    GSList *slist = value;
+
+    g_slist_foreach(slist, slist_storage_calc, vs);
+    vs->length += (vs->count - count) * (5 + strlen(key));
+    }
+
+struct valuestore2 {
+    char **p;
+    char *key;
+};
+
+static void
+slist_dump(gpointer data, gpointer user_data)
+    {
+    struct valuestore2 *vs = user_data;
+    char **p = vs->p;
+    size_t len1, len2;
+    
+    len1 = strlen(vs->key);
+    len2 = strlen(data);
+    WRITEINT((*p), (len1 + 1 + len2)); 
+    strncpy(*p, vs->key, len1);
+    *p += len1;
+    *(*p)++ = '=';
+    strncpy(*p, data, len2);
+    *p += len2;
+    }
+
+static void
+ht_dump(gpointer key, gpointer value, gpointer user_data)
+    {
+    GSList *slist = value;
+    struct valuestore2 vs = {user_data, key};
+    
+    g_slist_foreach(slist, slist_dump, &vs);
+    }
+
+int
+vtag_serialize(struct vtag *s, char **data, size_t *bytes, char const *prefix)
+    {
+    size_t len;
+    char *p;
+    struct valuestore vs = {0, 0};
+    
+    if (!prefix)
+        prefix = "";
+    
+    /* determine how much space to allocate */
+    g_hash_table_foreach(s->hash_table, ht_storage_calc, &vs);
+    len = vs.length + 8 + strlen(s->vendor_string) + strlen(prefix);
+
+    if (!(p = malloc(len)))
+        return VE_ALLOCATION;
+        
+    *data = p;
+    *bytes = len;
+    strncpy(p, prefix, len = strlen(prefix));
+    p += len;
+    len = strlen(s->vendor_string);
+    WRITEINT(p, len);
+    strncpy(p, s->vendor_string, len);
+    p += len;
+    WRITEINT(p, vs.count);
+    
+    g_hash_table_foreach(s->hash_table, ht_dump, &p);
+
+    return VE_OK;
+    }
+
+static void
+slist_data_length(gpointer data1, gpointer data2)
     {
     struct valuestore *vs = (struct valuestore *)data2;    
         
@@ -225,6 +361,28 @@ vtag_lookup(struct vtag *s, char const *key, enum vtag_lookup_mode mode, char *s
         }
 
     return NULL;
+    }
+
+int
+vtag_append(struct vtag *s, char const *key, char const *value)
+    {
+    char *lcase_key, *value_copy;
+
+    if (!key_valid(key, strlen(key)))
+            return VE_INVALID_KEY;
+            
+    if (strlen(value) == 0)
+        return VE_MISSING_VALUE;
+        
+    if (!(lcase_key = strlwr(strdup(key))))
+        return VE_ALLOCATION;
+        
+    if (!(value_copy = strdup(value)))
+        return VE_ALLOCATION;
+
+    insert_value(s->hash_table, lcase_key, value_copy);
+
+    return VE_OK;
     }
 
 char const *

@@ -22,6 +22,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <vorbis/vorbisenc.h>
 #include <jack/ringbuffer.h>
 #include "sourceclient.h"
 #include "live_ogg_encoder.h"
@@ -29,6 +30,22 @@
 #define READSIZE 1024
 
 typedef jack_default_audio_sample_t sample_t;
+
+struct loe_data
+    {
+    struct ogg_tag_data tag_data;
+    long max_bitrate;            /* ogg upper and lower bitrate settings */
+    long min_bitrate;
+    vorbis_info      vi;
+    vorbis_block     vb;
+    vorbis_dsp_state vd;
+    vorbis_comment   vc;
+    ogg_stream_state os;
+    ogg_page         og;
+    ogg_packet       op;
+    int pagesamples;
+    int (*owf)(ogg_stream_state *os, ogg_page *og);
+    };
 
 void live_ogg_capture_metadata(struct encoder *e, struct ogg_tag_data *t)
     {

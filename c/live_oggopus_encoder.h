@@ -19,10 +19,9 @@
 
 #include "../config.h"
 
+#include "encoder.h"
+
 #ifdef HAVE_OPUS
-
-
-
 
 int live_oggopus_encoder_init(struct encoder *, struct encoder_vars *);
 

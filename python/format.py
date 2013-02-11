@@ -990,19 +990,19 @@ class FormatCodecOpusPostGain(FormatDropdown):
     
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Postgain'), "postgain", (
-            dict(display_text=_('3.0 dB'), value="1.412", chain="FormatMetadataUTF8"),
-            dict(display_text=_('2.5 dB'), value="1.333", chain="FormatMetadataUTF8"),
-            dict(display_text=_('2.0 dB'), value="1.259", chain="FormatMetadataUTF8"),
-            dict(display_text=_('1.5 dB'), value="1.189", chain="FormatMetadataUTF8"),
-            dict(display_text=_('1.0 dB'), value="1.122", chain="FormatMetadataUTF8"),
-            dict(display_text=_('0.5 dB'), value="1.059", chain="FormatMetadataUTF8"),
-            dict(display_text=_('0 dB'), value="1.0", default=True, chain="FormatMetadataUTF8"),
-            dict(display_text=_('-0.5 dB'), value="0.944", chain="FormatMetadataUTF8"),
-            dict(display_text=_('-1.0 dB'), value="0.891", chain="FormatMetadataUTF8"),
-            dict(display_text=_('-1.5 dB'), value="0.841", chain="FormatMetadataUTF8"),
-            dict(display_text=_('-2.0 dB'), value="0.794", chain="FormatMetadataUTF8"),
-            dict(display_text=_('-2.5 dB'), value="0.750", chain="FormatMetadataUTF8"),
-            dict(display_text=_('-3.0 dB'), value="0.708", chain="FormatMetadataUTF8")), 1,
+            dict(display_text=_('3.0 dB'), value="768", chain="FormatMetadataUTF8"),
+            dict(display_text=_('2.5 dB'), value="640", chain="FormatMetadataUTF8"),
+            dict(display_text=_('2.0 dB'), value="512", chain="FormatMetadataUTF8"),
+            dict(display_text=_('1.5 dB'), value="384", chain="FormatMetadataUTF8"),
+            dict(display_text=_('1.0 dB'), value="256", chain="FormatMetadataUTF8"),
+            dict(display_text=_('0.5 dB'), value="128", chain="FormatMetadataUTF8"),
+            dict(display_text=_('0 dB'), value="0", default=True, chain="FormatMetadataUTF8"),
+            dict(display_text=_('-0.5 dB'), value="-128", chain="FormatMetadataUTF8"),
+            dict(display_text=_('-1.0 dB'), value="-256", chain="FormatMetadataUTF8"),
+            dict(display_text=_('-1.5 dB'), value="-384", chain="FormatMetadataUTF8"),
+            dict(display_text=_('-2.0 dB'), value="-512", chain="FormatMetadataUTF8"),
+            dict(display_text=_('-2.5 dB'), value="-640", chain="FormatMetadataUTF8"),
+            dict(display_text=_('-3.0 dB'), value="-768", chain="FormatMetadataUTF8")), 1,
             _("A gain adjustment for the player to apply."))
 
 

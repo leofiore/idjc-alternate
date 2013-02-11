@@ -20,8 +20,7 @@
 #ifndef HAVE_OGGENC
 #define HAVE_OGGENC
 
-#include <vorbis/vorbisenc.h>
-#include <jack/jack.h>
+#include <ogg/ogg.h>
 #include "sourceclient.h"
 
 struct ogg_tag_data
@@ -30,22 +29,6 @@ struct ogg_tag_data
     char *artist;
     char *title;
     char *album;
-    };
-
-struct loe_data
-    {
-    struct ogg_tag_data tag_data;
-    long max_bitrate;            /* ogg upper and lower bitrate settings */
-    long min_bitrate;
-    vorbis_info      vi;
-    vorbis_block     vb;
-    vorbis_dsp_state vd;
-    vorbis_comment   vc;
-    ogg_stream_state os;
-    ogg_page         og;
-    ogg_packet       op;
-    int pagesamples;
-    int (*owf)(ogg_stream_state *os, ogg_page *og);
     };
 
 int live_ogg_encoder_init(struct encoder *encoder, struct encoder_vars *ev);

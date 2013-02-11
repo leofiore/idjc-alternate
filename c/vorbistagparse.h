@@ -30,6 +30,12 @@ enum vtag_lookup_mode {VLM_FIRST, /* the first tag of given key */
                         VLM_MERGE  /* combine like key data into one string */
 };
 
+/* vtag_new: a new empty vorbis tag
+ * vendor_string: the vendor string of course
+ * error: optional, can point to NULL
+ */
+struct vtag *vtag_new(const char *vendor_string, int *error);
+
 /* vtag_parse: parse a vorbis tag data chunk
  * the data chunk must be framed exactly to not be rejected
  * all tags within must be of key=value form and keys
@@ -46,6 +52,21 @@ struct vtag *vtag_parse(void *data, size_t bytes, int *error);
  * responsible for freeing the returned data
  */
 char *vtag_lookup(struct vtag *s, char const *key, enum vtag_lookup_mode mode, char *sep);
+
+/* vtag_append: append a new key=value comment
+ * key: must consist of the printable ASCII characters 0x20 to 0x7D inclusive
+ * value: a string that must not have zero length
+ */
+int vtag_append(struct vtag *s, char const *key, char const *value);
+
+/* vtag_serialize: constructs a new vorbis comment block
+ * data: address of a pointer to point at the new data block
+ * bytes: address of an integer to set to the length
+ * prefix: optional prefix string for the data block e.g. OpusTags
+ * return value: VE_OK or VE_ALLOCATION
+ */
+int
+vtag_serialize(struct vtag *s, char **data, size_t *bytes, char const *prefix);
 
 /* vtag_encoder: returns the vendor string of the vorbis tag */
 char const *vtag_vendor_string(struct vtag *);
