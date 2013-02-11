@@ -57,8 +57,8 @@ static void stereomix(float *l, float *r, float *m, size_t n)
     {
     while (n--)
         {
-        *m++ = *l++ * 16777216;
-        *m++ = *r++ * 16777216;
+        *m++ = *l++;
+        *m++ = *r++;
         }
     }
 
@@ -84,12 +84,12 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
             goto bailout;
             }
 
-        if (opus_encoder_ctl(s->enc_st, OPUS_SET_BITRATE(1000 * encoder->bitrate) != OPUS_OK))
+        if (opus_encoder_ctl(s->enc_st, OPUS_SET_BITRATE(encoder->bitrate * 1000)) != OPUS_OK)
             {
             fprintf(stderr, "live_oggopus_encoder_main: failure: failed to set bitrate\n");
             goto bailout;
             }
-            
+           
         if (opus_encoder_ctl(s->enc_st, OPUS_SET_VBR(0)) != OPUS_OK)
             {
             fprintf(stderr, "live_oggopus_encoder_main: failure: failed to set cbr/vbr\n");
@@ -98,7 +98,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
             
         if (opus_encoder_ctl(s->enc_st, OPUS_SET_COMPLEXITY(s->complexity)) != OPUS_OK)
             fprintf(stderr, "live_oggopus_encoder_main: warning: failed to set complexity\n");
-            
+
         if (opus_encoder_ctl(s->enc_st, OPUS_GET_LOOKAHEAD(&s->lookahead)) != OPUS_OK)
             {
             fprintf(stderr, "live_oggopus_encoder_main: warning: failed to get lookahead value -- using %d\n", la_fallback);
@@ -107,7 +107,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
 
         char header_packet_data[20];
         size_t header_packet_size = snprintf(header_packet_data, sizeof header_packet_data,
-            "OpusHead\x1%c%c%c%c%c\xb0\xbb%c%c%c",
+            "OpusHead\x1%c%c%c\x80\xbb%c%c%c%c%c",
             encoder->n_channels,
             s->lookahead & 0xFF, (s->lookahead >> 8) & 0xFF,
             '\0', '\0',
@@ -148,23 +148,27 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
             fprintf(stderr, "live_oggopus_encoder_main: error: failed to initialise empty vtag: %s\n", vtag_error_string(error));
             goto bailout;
             }
-            
-        live_ogg_capture_metadata(encoder, t);
-        if (t->custom && t->custom[0])
+        
+        if (encoder->use_metadata)
             {
-            vtag_append(tag, "title", t->custom);
-            vtag_append(tag, "trk-artist", t->artist);
-            vtag_append(tag, "trk-title", t->title);
-            vtag_append(tag, "trk-album", t->album);
-            }
-        else
-            {
-            vtag_append(tag, "artist", t->artist);
-            vtag_append(tag, "title", t->title);
-            vtag_append(tag, "album", t->album);
+            live_ogg_capture_metadata(encoder, t);
+            if (t->custom && t->custom[0])
+                {
+                vtag_append(tag, "title", t->custom);
+                vtag_append(tag, "trk-artist", t->artist);
+                vtag_append(tag, "trk-title", t->title);
+                vtag_append(tag, "trk-album", t->album);
+                }
+            else
+                {
+                vtag_append(tag, "artist", t->artist);
+                vtag_append(tag, "title", t->title);
+                vtag_append(tag, "album", t->album);
+                }
+
+            live_ogg_free_metadata(t);
             }
 
-        live_ogg_free_metadata(t);
         char *tags_packet_data;
         size_t tags_packet_size;
 
@@ -229,7 +233,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
                 op.bytes = enc_bytes;
                 op.b_o_s = 0;
                 op.e_o_s = 0;
-                op.granulepos = s->granulepos += s->framesamples;
+                op.granulepos = (s->granulepos += s->framesamples);
                 op.packetno = s->packetno++;
                 ogg_stream_packetin(&s->os, &op);
                 
@@ -291,7 +295,6 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
                 op.packet = s->outbuf;
                 op.bytes = enc_bytes;
                 op.b_o_s = 0;
-                op.granulepos = s->granulepos += s->framesamples;
                 op.packetno = s->packetno++;
                 ogg_stream_packetin(&s->os, &op);
                 
@@ -382,7 +385,9 @@ int live_oggopus_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         free(s);
         return FAILED;
         }
-    
+
+    encoder->use_metadata = strcmp(ev->metadata_mode, "suppressed") ? 1 : 0;
+    encoder->samplerate = atoi(ev->samplerate);
     encoder->encoder_private = s;
     encoder->run_encoder = live_oggopus_encoder_main;
     return SUCCEEDED;

@@ -1252,9 +1252,9 @@ class FormatControl(gtk.VBox):
         apply_button.add(image)
         button_box.add(apply_button)
 
-        test_button = gtk.ToggleButton("Test")
-        button_box.add(test_button)
-        test_button.connect("toggled", self._on_test)
+        #test_button = gtk.ToggleButton("Test")
+        #button_box.add(test_button)
+        #test_button.connect("toggled", self._on_test)
         
         elem_box[-1].pack_end(button_frame, True)
         self.show_all()
