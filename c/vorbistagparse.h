@@ -60,9 +60,10 @@ char *vtag_lookup(struct vtag *s, char const *key, enum vtag_lookup_mode mode, c
 int vtag_append(struct vtag *s, char const *key, char const *value);
 
 /* vtag_serialize: constructs a new vorbis comment block
- * data: address of a pointer to point at the new data block
- * bytes: address of an integer to set to the length
- * prefix: optional prefix string for the data block e.g. OpusTags
+ * 
+ * data: address of a pointer initially set to NULL or to an allocated block
+ * bytes: the size of the data block pointed to by data
+ * prefix: optional prefix string for the data block e.g. OpusTags or NULL
  * return value: VE_OK or VE_ALLOCATION
  */
 int

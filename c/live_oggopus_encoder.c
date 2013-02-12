@@ -50,6 +50,8 @@ struct local_data {
     float *inbuf;
     size_t outbuf_siz;
     unsigned char *outbuf;
+    size_t tagbuf_siz;
+    char *tagbuf;
 };
 
 /* create a multiplexed pcm stream */
@@ -73,7 +75,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
         const opus_int32 la_fallback = 196;
         int error;
             
-        fprintf(stderr, "live_ogg_encoder_main: info: first pass of the encoder\n");
+        fprintf(stderr, "live_ogg_encoder_main: info: writing headers\n");
 
         encoder->timestamp = 0.0;
         ogg_stream_init(&s->os, ++encoder->oggserial);
@@ -140,54 +142,61 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
             s->pflags = PF_OGG | PF_HEADER;
             }
             
-        struct vtag *tag;
-        struct ogg_tag_data *t = &s->tag_data;
-        
-        if (!(tag = vtag_new(opus_get_version_string(), &error)))
+        if (encoder->new_metadata || !s->tagbuf)
             {
-            fprintf(stderr, "live_oggopus_encoder_main: error: failed to initialise empty vtag: %s\n", vtag_error_string(error));
-            goto bailout;
-            }
-        
-        if (encoder->use_metadata)
-            {
-            live_ogg_capture_metadata(encoder, t);
-            if (t->custom && t->custom[0])
+            struct vtag *tag;
+            struct ogg_tag_data *t = &s->tag_data;
+            
+            if (!(tag = vtag_new(opus_get_version_string(), &error)))
                 {
-                vtag_append(tag, "title", t->custom);
-                vtag_append(tag, "trk-artist", t->artist);
-                vtag_append(tag, "trk-title", t->title);
-                vtag_append(tag, "trk-album", t->album);
+                fprintf(stderr, "live_oggopus_encoder_main: error: failed to initialise empty vtag: %s\n", vtag_error_string(error));
+                goto bailout;
+                }
+            
+            vtag_append(tag, "encoder", getenv("app_name"));
+                        
+            if (encoder->use_metadata)
+                {
+                fprintf(stderr, "live_oggopus_encoder_main: info: making metadata\n");
+                live_ogg_capture_metadata(encoder, t);
+                if (t->custom && t->custom[0])
+                    {
+                    vtag_append(tag, "title", t->custom);
+                    vtag_append(tag, "trk-artist", t->artist);
+                    vtag_append(tag, "trk-title", t->title);
+                    vtag_append(tag, "trk-album", t->album);
+                    }
+                else
+                    {
+                    vtag_append(tag, "artist", t->artist);
+                    vtag_append(tag, "title", t->title);
+                    vtag_append(tag, "album", t->album);
+                    }
+
+                live_ogg_free_metadata(t);
                 }
             else
+                fprintf(stderr, "live_oggopus_encoder_main: info: making bare-bones metadata\n");
+
+            if ((error = vtag_serialize(tag, &s->tagbuf, &s->tagbuf_siz, "OpusTags")))
                 {
-                vtag_append(tag, "artist", t->artist);
-                vtag_append(tag, "title", t->title);
-                vtag_append(tag, "album", t->album);
+                fprintf(stderr, "live_oggopus_encoder_main: vtag_serialize failed: %s\n", vtag_error_string(error));
+                goto bailout;
                 }
 
-            live_ogg_free_metadata(t);
+            vtag_cleanup(tag);
             }
+        else
+            fprintf(stderr, "live_oggopus_encoder_main: info: using previous metadata\n");
 
-        char *tags_packet_data;
-        size_t tags_packet_size;
 
-        if ((error = vtag_serialize(tag, &tags_packet_data, &tags_packet_size, "OpusTags")))
-            {
-            fprintf(stderr, "live_oggopus_encoder_main: vtag_serialize failed: %s\n", vtag_error_string(error));
-            goto bailout;
-            }
-
-        vtag_cleanup(tag);
-
-        op.packet = (unsigned char *)tags_packet_data;
-        op.bytes = tags_packet_size;
+        op.packet = (unsigned char *)s->tagbuf;
+        op.bytes = s->tagbuf_siz;
         op.b_o_s = 0;
         op.e_o_s = 0;
         op.granulepos = 0;
         op.packetno = s->packetno++;
         ogg_stream_packetin(&s->os, &op);
-        free(tags_packet_data);
 
         while (ogg_stream_flush(&s->os, &og))
             {
@@ -201,6 +210,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
             }
        
         encoder->encoder_state = ES_RUNNING;
+        fprintf(stderr, "live_ogg_encoder_main: info: encoding\n");
         return;
         }
 
@@ -268,7 +278,8 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
         {
         opus_int32 enc_bytes;
         int (*paging_function)(ogg_stream_state *, ogg_page *);
-        fprintf(stderr, "live_oggopus_encoder_main: flushing out\n");
+
+        fprintf(stderr, "live_oggopus_encoder_main: flushing\n");
 
         /* fill input buffer with silence */
         memset(s->inbuf, '\0', sizeof (float) * s->framesamples * encoder->n_channels);
@@ -340,15 +351,19 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
     return;
 
     bailout:
-    fprintf(stderr, "live_oggopus_encoder_main: performing cleanup\n");
+    fprintf(stderr, "live_oggopus_encoder_main: cleanup\n");
     encoder->run_request_f = FALSE;
     encoder->encoder_state = ES_STOPPED;
     encoder->run_encoder = NULL;
     encoder->flush = FALSE;
     encoder->encoder_private = NULL;
+    if (s->tagbuf)
+        free(s->tagbuf);
     if (s->enc_st)
         opus_encoder_destroy(s->enc_st);
     ogg_stream_clear(&s->os);
+    free(s->inbuf);
+    free(s->outbuf);
     free(s);
     fprintf(stderr, "live_oggopus_encoder_main: finished cleanup\n");
     return;
@@ -376,8 +391,7 @@ int live_oggopus_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         return FAILED;
         }
 
-    /* output buffer multiplier of 276 allows for a 100% bitrate burst in vbr mode */
-    s->outbuf_siz = encoder->bitrate * 276 / s->pagepackets_max;
+    s->outbuf_siz = encoder->bitrate * s->framesamples / 174;
     if (!(s->outbuf = malloc(s->outbuf_siz)))
         {
         fprintf(stderr, "live_oggopus_encoder: malloc failure\n");
@@ -386,8 +400,6 @@ int live_oggopus_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         return FAILED;
         }
 
-    encoder->use_metadata = strcmp(ev->metadata_mode, "suppressed") ? 1 : 0;
-    encoder->samplerate = atoi(ev->samplerate);
     encoder->encoder_private = s;
     encoder->run_encoder = live_oggopus_encoder_main;
     return SUCCEEDED;

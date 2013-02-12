@@ -2954,7 +2954,10 @@ class MainWindow(dbus.service.Object):
         else:
             # Client ID is by session type and name.
             client_id = "idjc_%s_%s" % (pm.session_type, pm.session_name)
-            
+
+        os.environ["app_name"] = "%s (%s) %s" % (PGlobs.app_longform,
+                                                FGlobs.package_name,
+                                                FGlobs.package_version)
         os.environ["client_id"] = client_id
         os.environ["mic_qty"] = str(PGlobs.num_micpairs * 2)
         os.environ["num_streamers"] = str(PGlobs.num_streamers)

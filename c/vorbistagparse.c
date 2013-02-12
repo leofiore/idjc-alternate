@@ -285,10 +285,14 @@ vtag_serialize(struct vtag *s, char **data, size_t *bytes, char const *prefix)
     g_hash_table_foreach(s->hash_table, ht_storage_calc, &vs);
     len = vs.length + 8 + strlen(s->vendor_string) + strlen(prefix);
 
-    if (!(p = malloc(len)))
-        return VE_ALLOCATION;
-        
-    *data = p;
+    /* try to reuse old buffer */
+    if (!*data || *bytes < len)
+        if (!(*data = p = realloc(*data, len)))
+            {
+            *bytes = 0;
+            return VE_ALLOCATION;
+            }
+
     *bytes = len;
     strncpy(p, prefix, len = strlen(prefix));
     p += len;

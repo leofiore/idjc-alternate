@@ -373,7 +373,6 @@ int live_oggspeex_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
     s->vs_len = strlen(s->vendor_string);
     s->quality = atoi(ev->quality);
     s->complexity = atoi(ev->complexity);
-    encoder->use_metadata = strcmp(ev->metadata_mode, "suppressed") ? 1 : 0;
     encoder->samplerate = atoi(ev->samplerate);
     encoder->encoder_private = s;
     encoder->run_encoder = live_oggspeex_encoder_main;
