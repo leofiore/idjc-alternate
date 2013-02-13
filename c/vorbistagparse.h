@@ -20,6 +20,13 @@
 #include <glib.h>
 
 struct vtag;
+struct vtag_block_private;
+
+struct vtag_block {
+    char *data;
+    size_t length;
+    struct vtag_block_private *private;
+};
 
 enum vtag_error {VE_OK, VE_ALLOCATION, VE_CROPPED, VE_TRAILING,
                     VE_SHORT_COMMENT, VE_MISSING_SEPARATOR,
@@ -59,15 +66,20 @@ char *vtag_lookup(struct vtag *s, char const *key, enum vtag_lookup_mode mode, c
  */
 int vtag_append(struct vtag *s, char const *key, char const *value);
 
+/* vtag_block_init: initialise output data structure for vtag_serialize
+ * return value: 0 if failure, otherwise success */
+int vtag_block_init(struct vtag_block *block);
+
+/* vtag_block_cleanup: frees memory */
+void vtag_block_cleanup(struct vtag_block *block);
+
 /* vtag_serialize: constructs a new vorbis comment block
  * 
- * data: address of a pointer initially set to NULL or to an allocated block
- * bytes: the size of the data block pointed to by data
+ * block: the output data structure initialised with vtag_block_init
  * prefix: optional prefix string for the data block e.g. OpusTags or NULL
  * return value: VE_OK or VE_ALLOCATION
  */
-int
-vtag_serialize(struct vtag *s, char **data, size_t *bytes, char const *prefix);
+int vtag_serialize(struct vtag *s, struct vtag_block *block, char const *prefix);
 
 /* vtag_encoder: returns the vendor string of the vorbis tag */
 char const *vtag_vendor_string(struct vtag *);

@@ -35,7 +35,6 @@
 
 
 struct local_data {
-    struct ogg_tag_data tag_data;
     OpusEncoder *enc_st;
     int complexity;
     int postgain;
@@ -50,8 +49,7 @@ struct local_data {
     float *inbuf;
     size_t outbuf_siz;
     unsigned char *outbuf;
-    size_t tagbuf_siz;
-    char *tagbuf;
+    struct vtag_block metadata_block;
 };
 
 /* create a multiplexed pcm stream */
@@ -141,11 +139,10 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
 
             s->pflags = PF_OGG | PF_HEADER;
             }
-            
-        if (encoder->new_metadata || !s->tagbuf)
+
+        if (encoder->new_metadata || !s->metadata_block.data)
             {
             struct vtag *tag;
-            struct ogg_tag_data *t = &s->tag_data;
             
             if (!(tag = vtag_new(opus_get_version_string(), &error)))
                 {
@@ -154,44 +151,46 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
                 }
             
             vtag_append(tag, "encoder", getenv("app_name"));
-                        
+
             if (encoder->use_metadata)
                 {
+                struct ogg_tag_data t = {};
+                    
                 fprintf(stderr, "live_oggopus_encoder_main: info: making metadata\n");
-                live_ogg_capture_metadata(encoder, t);
-                if (t->custom && t->custom[0])
+                live_ogg_capture_metadata(encoder, &t);
+                if (t.custom && t.custom[0])
                     {
-                    vtag_append(tag, "title", t->custom);
-                    vtag_append(tag, "trk-artist", t->artist);
-                    vtag_append(tag, "trk-title", t->title);
-                    vtag_append(tag, "trk-album", t->album);
+                    vtag_append(tag, "title", t.custom);
+                    vtag_append(tag, "trk-artist", t.artist);
+                    vtag_append(tag, "trk-title", t.title);
+                    vtag_append(tag, "trk-album", t.album);
                     }
                 else
                     {
-                    vtag_append(tag, "artist", t->artist);
-                    vtag_append(tag, "title", t->title);
-                    vtag_append(tag, "album", t->album);
+                    vtag_append(tag, "artist", t.artist);
+                    vtag_append(tag, "title", t.title);
+                    vtag_append(tag, "album", t.album);
                     }
 
-                live_ogg_free_metadata(t);
+                live_ogg_free_metadata(&t);
                 }
             else
                 fprintf(stderr, "live_oggopus_encoder_main: info: making bare-bones metadata\n");
 
-            if ((error = vtag_serialize(tag, &s->tagbuf, &s->tagbuf_siz, "OpusTags")))
+            if ((error = vtag_serialize(tag, &s->metadata_block, "OpusTags")))
                 {
                 fprintf(stderr, "live_oggopus_encoder_main: vtag_serialize failed: %s\n", vtag_error_string(error));
                 goto bailout;
                 }
 
             vtag_cleanup(tag);
+            encoder->new_metadata = FALSE;
             }
         else
             fprintf(stderr, "live_oggopus_encoder_main: info: using previous metadata\n");
 
-
-        op.packet = (unsigned char *)s->tagbuf;
-        op.bytes = s->tagbuf_siz;
+        op.packet = (unsigned char *)s->metadata_block.data;
+        op.bytes = s->metadata_block.length;
         op.b_o_s = 0;
         op.e_o_s = 0;
         op.granulepos = 0;
@@ -357,8 +356,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
     encoder->run_encoder = NULL;
     encoder->flush = FALSE;
     encoder->encoder_private = NULL;
-    if (s->tagbuf)
-        free(s->tagbuf);
+    vtag_block_cleanup(&s->metadata_block);
     if (s->enc_st)
         opus_encoder_destroy(s->enc_st);
     ogg_stream_clear(&s->os);
@@ -395,6 +393,15 @@ int live_oggopus_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
     if (!(s->outbuf = malloc(s->outbuf_siz)))
         {
         fprintf(stderr, "live_oggopus_encoder: malloc failure\n");
+        free(s->inbuf);
+        free(s);
+        return FAILED;
+        }
+        
+    if (!vtag_block_init(&s->metadata_block))
+        {
+        fprintf(stderr, "live_oggopus_encoder: malloc failure\n");
+        free(s->outbuf);
         free(s->inbuf);
         free(s);
         return FAILED;

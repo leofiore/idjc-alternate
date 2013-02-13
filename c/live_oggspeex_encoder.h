@@ -21,40 +21,7 @@
 
 #ifdef HAVE_SPEEX
 
-#include "sourceclient.h"
-#include <speex/speex.h>
-#include <speex/speex_header.h>
-#include <speex/speex_stereo.h>
-#include <ogg/ogg.h>
-#include "live_ogg_encoder.h"
-
-enum speex_mode { SM_UWB, SM_WB, SM_NB };
-
-struct lose_data
-    {
-    struct ogg_tag_data tag_data;
-    void *enc_state;
-    SpeexBits bits;
-    int fsamples;              /* number of samples in a frame */
-    float *inbuf;
-    ogg_stream_state os;
-    int pflags;
-    int packetno;
-    int frame;
-    int frames_encoded;
-    int total_samples;
-    int samples_encoded;
-    int lookahead;
-    int eos;
-    char vendor_string[64];
-    size_t vs_len;
-    struct SpeexMode const *mode;
-    int quality;
-    int complexity;
-    char *metadata_vc;
-    size_t metadata_vclen;
-    enum packet_flags flags;
-    };
+#include "encoder.h"
 
 int live_oggspeex_encoder_init(struct encoder *encoder, struct encoder_vars *ev);
 

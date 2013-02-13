@@ -38,6 +38,10 @@ struct vtag {
     char *vendor_string;
 };
 
+struct vtag_block_private {
+    size_t blocklen;
+};
+
 static int
 key_valid(char const *key, size_t n)
     {
@@ -255,10 +259,10 @@ slist_dump(gpointer data, gpointer user_data)
     len1 = strlen(vs->key);
     len2 = strlen(data);
     WRITEINT((*p), (len1 + 1 + len2)); 
-    strncpy(*p, vs->key, len1);
+    memcpy(*p, vs->key, len1);
     *p += len1;
     *(*p)++ = '=';
-    strncpy(*p, data, len2);
+    memcpy(*p, data, len2);
     *p += len2;
     }
 
@@ -272,7 +276,29 @@ ht_dump(gpointer key, gpointer value, gpointer user_data)
     }
 
 int
-vtag_serialize(struct vtag *s, char **data, size_t *bytes, char const *prefix)
+vtag_block_init(struct vtag_block *block)
+    {
+    block->data = NULL;
+    block->length = 0;
+    if (!(block->private = malloc(sizeof (struct vtag_block_private))))
+        {
+        fprintf(stderr, "malloc failure\n");
+        return 0;
+        }
+    block->private->blocklen = 0;
+    return 1;
+    }
+
+void
+vtag_block_cleanup(struct vtag_block *block)
+    {
+    if (block->data)
+        free(block->data);
+    free(block->private);
+    };
+
+int
+vtag_serialize(struct vtag *s, struct vtag_block *block, char const *prefix)
     {
     size_t len;
     char *p;
@@ -285,15 +311,16 @@ vtag_serialize(struct vtag *s, char **data, size_t *bytes, char const *prefix)
     g_hash_table_foreach(s->hash_table, ht_storage_calc, &vs);
     len = vs.length + 8 + strlen(s->vendor_string) + strlen(prefix);
 
-    /* try to reuse old buffer */
-    if (!*data || *bytes < len)
-        if (!(*data = p = realloc(*data, len)))
-            {
-            *bytes = 0;
+    if (len > block->private->blocklen)
+        {
+        if (!(block->data = realloc(block->data, len)))
             return VE_ALLOCATION;
-            }
+        block->private->blocklen = len;
+        }
+    
+    block->length = len;
+    p = block->data;
 
-    *bytes = len;
     strncpy(p, prefix, len = strlen(prefix));
     p += len;
     len = strlen(s->vendor_string);
@@ -301,7 +328,7 @@ vtag_serialize(struct vtag *s, char **data, size_t *bytes, char const *prefix)
     strncpy(p, s->vendor_string, len);
     p += len;
     WRITEINT(p, vs.count);
-    
+
     g_hash_table_foreach(s->hash_table, ht_dump, &p);
 
     return VE_OK;
@@ -428,3 +455,34 @@ vtag_error_string(int error)
             return "unknown error code";
         }
     }
+
+#if 0
+int main(void)
+    {
+    struct vtag *vt;
+    struct vtag_block vb;
+    int error;
+    
+    vtag_block_init(&vb);
+    
+    for (int i = 0; i < 1000000; ++i)
+        {
+        if (!(vt = vtag_new("vendor string", &error)))
+            {
+            perror("vtag_new failed");
+            return 5;
+            }
+            
+        vtag_append(vt, "artist", "the smiths");
+        vtag_append(vt, "album", "the queen is dead");
+        vtag_serialize(vt, &vb, NULL);
+        vtag_cleanup(vt);
+        printf("pass %d completed\n", i);
+        }
+        
+    vtag_block_cleanup(&vb);
+        
+    printf("completed\n");
+    return 0;
+    }
+#endif

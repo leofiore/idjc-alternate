@@ -17,98 +17,52 @@
 #   If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "live_oggspeex_encoder.h"
-#include "live_ogg_encoder.h"
+#include "../config.h"
 
 #ifdef HAVE_SPEEX
 
 #include <stdio.h>
 #include <string.h>
+#include <speex/speex.h>
+#include <speex/speex_header.h>
+#include <speex/speex_stereo.h>
+#include <ogg/ogg.h>
 
-#define TRUE 1
-#define FALSE 0
+#include "sourceclient.h"
+#include "live_ogg_encoder.h"
+#include "live_oggspeex_encoder.h"
+#include "vorbistagparse.h"
+
 #define SUCCEEDED 1
 #define FAILED 0
-
 #define MAX_FRAME_BYTES 2000
 
-#define readint(buf, base) (((buf[base+3]<<24)&0xff000000)| \
-                                    ((buf[base+2]<<16)&0xff0000)| \
-                                    ((buf[base+1]<<8)&0xff00)| \
-                                     (buf[base]&0xff))
-#define writeint(buf, base, val) do{ buf[base+3]=((val)>>24)&0xff; \
-                                                 buf[base+2]=((val)>>16)&0xff; \
-                                                 buf[base+1]=((val)>>8)&0xff; \
-                                                 buf[base]=(val)&0xff; \
-                                            }while(0)
+enum speex_mode { SM_UWB, SM_WB, SM_NB };
 
-static char *prepend(char *before, char *after)
+struct lose_data
     {
-    char *new;
-    
-    if (!(new = malloc(strlen(before) + strlen(after) + 1)))
-        {
-        fprintf(stderr, "malloc failure\n");
-        return NULL;
-        }
-        
-    strcpy(new, before);
-    strcat(new, after);
-    free(after);
-    return new;
-    }
-
-#define PREPEND(b, a) a = prepend(b, a); items++; s->metadata_vclen += (4 + strlen(a));
-#define CPREPEND(b, a) if (a && a[0]) { PREPEND(b, a); }
-#define APPEND(a) if (a && a[0]) { writeint(s->metadata_vc, base, (len = strlen(a))); memcpy(s->metadata_vc + base + 4, a, len); base += 4 + len; }
-
-static void live_oggspeex_build_metadata(struct encoder *encoder, struct lose_data *s)
-    {
-    int len;
-    int items = 0;
-    size_t base;
-    struct ogg_tag_data *t = &s->tag_data;
-
-    /* build a vorbis comment block */
-    s->metadata_vclen = 8 + s->vs_len;
-    live_ogg_capture_metadata(encoder, t);
-
-    if (t->custom && t->custom[0])
-        {
-        PREPEND("title=", t->custom)
-        CPREPEND("trk-author=", t->artist)
-        CPREPEND("trk-title=", t->title)
-        CPREPEND("trk-album=", t->album)
-        }
-    else
-        {
-        CPREPEND("author=", t->artist)
-        CPREPEND("title=", t->title)
-        CPREPEND("album=", t->album)
-        }
-        
-    if (!(s->metadata_vc = realloc(s->metadata_vc, s->metadata_vclen)))
-        {
-        fprintf(stderr, "live_oggspeex_build_metadata: malloc failure\n");
-        s->metadata_vclen = 0;
-        return;
-        }
-        
-    writeint(s->metadata_vc, 0, s->vs_len);
-    memcpy(s->metadata_vc + 4, s->vendor_string, s->vs_len);
-    writeint(s->metadata_vc, 4 + s->vs_len, items);
-    base = 8 + s->vs_len;
-    
-    APPEND(t->custom);
-    APPEND(t->artist);
-    APPEND(t->title);
-    APPEND(t->album);
-    
-    if (base != s->metadata_vclen)
-        fprintf(stderr, "live_oggspeex_build_metadata: incorrect size assumption %d, %d\n", base, s->metadata_vclen);
-    else
-        fprintf(stderr, "vorbis comment created successfully\n");
-    }
+    struct ogg_tag_data tag_data;
+    void *enc_state;
+    SpeexBits bits;
+    int fsamples;              /* number of samples in a frame */
+    float *inbuf;
+    ogg_stream_state os;
+    int pflags;
+    int packetno;
+    int frame;
+    int frames_encoded;
+    int total_samples;
+    int samples_encoded;
+    int lookahead;
+    int eos;
+    char vendor_string[64];
+    size_t vs_len;
+    struct SpeexMode const *mode;
+    int quality;
+    int complexity;
+    struct vtag_block metadata_block;
+    enum packet_flags flags;
+    };
 
 static void live_oggspeex_encoder_monomix(float *in, float *out, size_t n)
     {
@@ -136,6 +90,7 @@ static void live_oggspeex_encoder_main(struct encoder *encoder)
         SpeexHeader header;
         char *packet;
         int packet_size;
+        int error;
         
         speex_bits_init(&s->bits);
         if (!(s->enc_state = speex_encoder_init(s->mode)))
@@ -155,7 +110,7 @@ static void live_oggspeex_encoder_main(struct encoder *encoder)
             goto bailout;
             }
         
-        speex_init_header(&header, encoder->samplerate, encoder->n_channels, s->mode);
+        speex_init_header(&header, encoder->target_samplerate, encoder->n_channels, s->mode);
         header.frames_per_packet = 1;
         if (!(packet = speex_header_to_packet(&header, &packet_size)))
             {
@@ -184,29 +139,57 @@ static void live_oggspeex_encoder_main(struct encoder *encoder)
             s->pflags = PF_OGG | PF_HEADER;
             }
 
-        if (encoder->use_metadata)
+        if (encoder->new_metadata || !s->metadata_block.data)
             {
-            if (encoder->new_metadata)
-                live_oggspeex_build_metadata(encoder, s);
-            }
-        else
-            {
-            /* make a bare-bones vorbis comment block */
-            fprintf(stderr, "making bare-bones comment block\n");
-            if (!(s->metadata_vc = realloc(s->metadata_vc, s->metadata_vclen = s->vs_len + 8)))
+            struct vtag *tag;
+            
+            if (!(tag = vtag_new(s->vendor_string, &error)))
                 {
-                fprintf(stderr, "live_ogg_write_packet: malloc failure\n");
+                fprintf(stderr, "live_oggspeex_encoder_main: error: failed to initialise empty vtag: %s\n", vtag_error_string(error));
                 goto bailout;
                 }
             
-            writeint(s->metadata_vc, 0, s->vs_len);
-            memcpy(s->metadata_vc + 4, s->vendor_string, s->vs_len);
-            writeint(s->metadata_vc, 4 + s->vs_len, 0);
-            }
+            vtag_append(tag, "encoder", getenv("app_name"));
+                        
+            if (encoder->use_metadata)
+                {
+                struct ogg_tag_data t = {};
 
-        encoder->new_metadata = FALSE;
-        op.packet = (unsigned char *)s->metadata_vc;
-        op.bytes = s->metadata_vclen;
+                fprintf(stderr, "live_oggspeex_encoder_main: info: making metadata\n");
+                live_ogg_capture_metadata(encoder, &t);
+                if (t.custom && t.custom[0])
+                    {
+                    vtag_append(tag, "title", t.custom);
+                    vtag_append(tag, "trk-author", t.artist);
+                    vtag_append(tag, "trk-title", t.title);
+                    vtag_append(tag, "trk-album", t.album);
+                    }
+                else
+                    {
+                    vtag_append(tag, "author", t.artist);
+                    vtag_append(tag, "title", t.title);
+                    vtag_append(tag, "album", t.album);
+                    }
+
+                live_ogg_free_metadata(&t);
+                }
+            else
+                fprintf(stderr, "live_oggspeex_encoder_main: info: making bare-bones metadata\n");
+
+            if ((error = vtag_serialize(tag, &s->metadata_block, NULL)))
+                {
+                fprintf(stderr, "live_oggspeex_encoder_main: vtag_serialize failed: %s\n", vtag_error_string(error));
+                goto bailout;
+                }
+
+            vtag_cleanup(tag);
+            encoder->new_metadata = FALSE;
+            }
+        else
+            fprintf(stderr, "live_oggspeex_encoder_main: info: using previous metadata\n");
+
+        op.packet = (unsigned char *)s->metadata_block.data;
+        op.bytes = s->metadata_block.length;
         op.b_o_s = 0;
         op.e_o_s = 0;
         op.granulepos = 0;
@@ -349,9 +332,7 @@ static void live_oggspeex_encoder_main(struct encoder *encoder)
         
     if (s->inbuf)
         free(s->inbuf);
-    if (s->metadata_vc)
-        free(s->metadata_vc);
-    live_ogg_free_metadata(&s->tag_data);
+    vtag_block_cleanup(&s->metadata_block);
     free(s);
     fprintf(stderr, "live_oggspeex_encoder_main: finished cleanup\n");
     return;
@@ -368,16 +349,20 @@ int live_oggspeex_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         return FAILED;
         }
 
+    if (!vtag_block_init(&s->metadata_block))
+        {
+        fprintf(stderr, "live_oggspeex_encoder: malloc failure\n");
+        free(s);
+        return FAILED;
+        }
+
     speex_lib_ctl(SPEEX_LIB_GET_VERSION_STRING, (void *)&speex_version);
     snprintf(s->vendor_string, sizeof(s->vendor_string), "Encoded with Speex %s", speex_version); 
     s->vs_len = strlen(s->vendor_string);
     s->quality = atoi(ev->quality);
     s->complexity = atoi(ev->complexity);
-    encoder->samplerate = atoi(ev->samplerate);
-    encoder->encoder_private = s;
-    encoder->run_encoder = live_oggspeex_encoder_main;
 
-    switch (encoder->samplerate) {
+    switch (encoder->target_samplerate) {
         case 32000:
             s->mode = &speex_uwb_mode;
             break;
@@ -388,10 +373,14 @@ int live_oggspeex_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
             s->mode = &speex_nb_mode;
             break;
         default:
-            fprintf(stderr, "unsupported sample rate %s\n", ev->samplerate);
+            fprintf(stderr, "unsupported sample rate\n");
+            vtag_block_cleanup(&s->metadata_block);
+            free(s);
             return FAILED;
         }
 
+    encoder->encoder_private = s;
+    encoder->run_encoder = live_oggspeex_encoder_main;
     return SUCCEEDED;
     }
 
