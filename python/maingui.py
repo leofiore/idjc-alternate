@@ -1998,10 +1998,11 @@ class MainWindow(dbus.service.Object):
             self.cs_element = target.element
             self.cuesheet_track_title = target.cuesheet_track_title
             self.cuesheet_track_performer = target.cuesheet_track_performer
-            self.meta_context = target, target.player_cid, \
-                    self.cuesheet_track_title, self.cuesheet_track_performer
             self.music_filename = target.music_filename
-      
+            self.meta_context = target, target.player_cid, \
+                    self.cuesheet_track_title, self.cuesheet_track_performer, \
+                    self.artist, self.title, self.album, self.music_filename
+                                
         # update metadata on stream if it has changed
         if self.meta_context != self.old_meta_context:
             self.old_meta_context = self.meta_context
