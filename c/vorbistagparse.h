@@ -87,7 +87,7 @@ char const *vtag_vendor_string(struct vtag *);
 /* vtag_cleanup: dispose of data structure returned by vtag_parse */
 void vtag_cleanup(struct vtag *);
 
-/* vtag_error_string:
+/* vtag_strerror:
  * return value: human readable form of the error code
  */
-char const *vtag_error_string(int error);
+char const *vtag_strerror(int error);

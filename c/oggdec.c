@@ -447,7 +447,7 @@ static int speex_get_samplerate(struct oggdec_vars *self)
                         }
                     else
                         {
-                        fprintf(stderr, "%s\n", vtag_error_string(error));
+                        fprintf(stderr, "%s\n", vtag_strerror(error));
                         return 0;
                         }
                     }
@@ -571,7 +571,7 @@ static int opus_get_samplerate(struct oggdec_vars *self)
                     vtag_cleanup(tag);
                     }
                 else
-                    FAIL(vtag_error_string(error));
+                    FAIL(vtag_strerror(error));
                 }
             else
                 FAIL("bad or missing OpusTags packet");

@@ -146,7 +146,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
             
             if (!(tag = vtag_new(opus_get_version_string(), &error)))
                 {
-                fprintf(stderr, "live_oggopus_encoder_main: error: failed to initialise empty vtag: %s\n", vtag_error_string(error));
+                fprintf(stderr, "live_oggopus_encoder_main: error: failed to initialise empty vtag: %s\n", vtag_strerror(error));
                 goto bailout;
                 }
             
@@ -179,7 +179,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
 
             if ((error = vtag_serialize(tag, &s->metadata_block, "OpusTags")))
                 {
-                fprintf(stderr, "live_oggopus_encoder_main: vtag_serialize failed: %s\n", vtag_error_string(error));
+                fprintf(stderr, "live_oggopus_encoder_main: vtag_serialize failed: %s\n", vtag_strerror(error));
                 goto bailout;
                 }
 

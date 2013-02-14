@@ -432,7 +432,7 @@ vtag_cleanup(struct vtag *s)
     }
 
 char const *
-vtag_error_string(int error)
+vtag_strerror(int error)
     {
     switch ((enum vtag_error) error) {
         case VE_OK:
@@ -455,34 +455,3 @@ vtag_error_string(int error)
             return "unknown error code";
         }
     }
-
-#if 0
-int main(void)
-    {
-    struct vtag *vt;
-    struct vtag_block vb;
-    int error;
-    
-    vtag_block_init(&vb);
-    
-    for (int i = 0; i < 1000000; ++i)
-        {
-        if (!(vt = vtag_new("vendor string", &error)))
-            {
-            perror("vtag_new failed");
-            return 5;
-            }
-            
-        vtag_append(vt, "artist", "the smiths");
-        vtag_append(vt, "album", "the queen is dead");
-        vtag_serialize(vt, &vb, NULL);
-        vtag_cleanup(vt);
-        printf("pass %d completed\n", i);
-        }
-        
-    vtag_block_cleanup(&vb);
-        
-    printf("completed\n");
-    return 0;
-    }
-#endif
