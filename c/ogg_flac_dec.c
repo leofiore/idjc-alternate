@@ -73,7 +73,7 @@ ogg_flacdec_write_resample_callback(const FLAC__StreamDecoder *dec, const FLAC__
             }
         else
             {
-            if (frame->header.number.sample_number + frame->header.blocksize == od->granule_count[od->ix])
+            if (frame->header.number.sample_number + frame->header.blocksize == od->final_granulepos[od->ix])
                 src_data->end_of_input = TRUE;
             }
 

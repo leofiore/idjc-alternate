@@ -44,7 +44,8 @@ struct oggdec_vars
     /* stream info */
 
     off_t  *bos_offset;      /* file position where each stream starts */
-    unsigned *granule_count;   /* number of samples in this stream */
+    unsigned *initial_granulepos;
+    unsigned *final_granulepos;
     int    *serial;          /* the ogg serial numbers */
     unsigned *samplerate;    /* sample rate per channel */
     int    *channels;        /* number of audio channels */

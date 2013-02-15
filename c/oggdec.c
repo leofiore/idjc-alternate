@@ -1,6 +1,6 @@
 /*
 #   oggdec.c: ogg file parser for xlplayer
-#   Copyright (C) 2008-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#   Copyright (C) 2008-2013 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -475,13 +475,13 @@ static int speex_get_samplerate(struct oggdec_vars *self)
 static int opus_get_samplerate(struct oggdec_vars *self)
     {
     int channels, chanmap, streamcount, streamcount_2c, frames, samples;
-    unsigned granule_count;
+    unsigned initial_granulepos, final_granulepos;
     uint16_t preskip;
     char const *reason;
     
     #define FAIL(x) do {reason = x; goto fail_point;} while(0)
 
-    if ((granule_count = self->granule_count[self->ix]) == 0)
+    if ((final_granulepos = self->final_granulepos[self->ix]) == 0)
         FAIL("stream final packet granule count is zero");
 
     if (oggdec_get_next_packet(self) && ogg_stream_packetout(&self->os, &self->op) == 0)
@@ -538,7 +538,7 @@ static int opus_get_samplerate(struct oggdec_vars *self)
             }
 
         preskip = self->op.packet[10] | (uint16_t)((unsigned char *)self->op.packet)[11] << 8;
-        if (preskip >= granule_count)
+        if (preskip >= final_granulepos)
             FAIL("no samples to decode after preskip");
 
         if (oggdec_get_next_packet(self) && ogg_stream_packetout(&self->os, &self->op) == 0)
@@ -596,6 +596,23 @@ static int opus_get_samplerate(struct oggdec_vars *self)
                                             
             if (self->op.granulepos < samples && !self->op.e_o_s)
                 FAIL("first page granule position less than number of samples, end of stream not set");
+                
+            if ((initial_granulepos = self->initial_granulepos[self->ix] = self->op.granulepos - samples))
+                {
+                if (preskip >= final_granulepos - initial_granulepos)
+                    FAIL("no samples to decode after accounting for initial granulepos");
+                if (initial_granulepos % samples)
+                    fprintf(stderr, "can't assign initial granulepos to a specific page\n");
+                else
+                    {
+                    unsigned int pages_missing = initial_granulepos / samples;
+                    
+                    if (ogg_page_pageno(&self->og) - pages_missing != 2)
+                        fprintf(stderr, "ogg page numbering appears to be messed up\n");
+                    else
+                        fprintf(stderr, "there are %u ogg pages missing -- this is normal for a captured stream\n", pages_missing);
+                    }
+                }
             }
         else
             FAIL("failed to get first data packet");
@@ -668,7 +685,8 @@ static off_t oggscan_eos(struct oggdec_vars *self, off_t offset, off_t offset_en
             /* make space for data about this logical stream */
             self->n_streams++;
             self->bos_offset = realloc(self->bos_offset, self->n_streams * sizeof (off_t));
-            self->granule_count = realloc(self->granule_count, self->n_streams * sizeof (unsigned));
+            self->initial_granulepos = realloc(self->initial_granulepos, self->n_streams * sizeof (unsigned));
+            self->final_granulepos = realloc(self->final_granulepos, self->n_streams * sizeof (unsigned));
             self->samplerate = realloc(self->samplerate, self->n_streams * sizeof (int));
             self->channels = realloc(self->channels, self->n_streams * sizeof (int));
             self->serial = realloc(self->serial, self->n_streams * sizeof (int));
@@ -683,14 +701,15 @@ static off_t oggscan_eos(struct oggdec_vars *self, off_t offset, off_t offset_en
             self->streamtype = realloc(self->streamtype, self->n_streams * sizeof (enum streamtype_t));
             self->start_time = realloc(self->start_time, self->n_streams * sizeof (double));
             self->duration = realloc(self->duration, self->n_streams * sizeof (double));
-            if (!(self->bos_offset && self->granule_count && self->serial))
+            if (!(self->bos_offset && self->initial_granulepos && self->final_granulepos && self->serial))
                 {
                 fprintf(stderr, "oggscan_eos: malloc failure\n");
                 self->n_streams = 0;
                 return -1;
                 }
           
-            self->granule_count[self->n_streams - 1] = ogg_page_granulepos(&self->og);
+            self->initial_granulepos[self->n_streams - 1] = 0;
+            self->final_granulepos[self->n_streams - 1] = ogg_page_granulepos(&self->og);
             self->serial[self->n_streams - 1] = serial; 
             if (!eos)
                 fprintf(stderr, "oggscan_eos: an unterminated stream was detected\n");
@@ -878,14 +897,15 @@ static struct oggdec_vars *oggdecode_get_metadata(char *pathname)
             }
         else
             {
-            start_time += self->duration[i] = self->granule_count[i] / (double)samplerate;
+            start_time += self->duration[i] = (self->final_granulepos[i] - self->initial_granulepos[i]) / (double)samplerate;
             self->total_duration += self->duration[i];
             }
 #if 0
         fprintf(stderr,
             "#####################\n"
             "beginning offset %d\n"
-            "granule_count    %d\n"
+            "initial_granulepos    %d\n"
+            "final_granulepos    %d\n"
             "serial number    %d\n"
             "artist           %s\n"
             "title            %s\n"
@@ -894,7 +914,9 @@ static struct oggdec_vars *oggdecode_get_metadata(char *pathname)
             "channels         %d\n"
             "start time (s)   %lf\n"
             "duration (s)     %lf\n",
-            (int)self->bos_offset[i], self->granule_count[i],
+            (int)self->bos_offset[i],
+            self->initial_granulepos[i],
+            self->final_granulepos[i],
             self->serial[i], self->artist[i], self->title[i], self->album[i], samplerate,
             self->channels[i], self->start_time[i], self->duration[i]);
 #endif
@@ -923,7 +945,8 @@ static void oggdecode_free_metadata(struct oggdec_vars *self)
             }
             
         free(self->bos_offset);
-        free(self->granule_count);
+        free(self->initial_granulepos);
+        free(self->final_granulepos);
         free(self->serial);
         free(self->artist);
         free(self->title);
