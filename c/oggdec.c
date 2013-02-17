@@ -568,7 +568,37 @@ static int opus_get_samplerate(struct oggdec_vars *self)
                         if (!(self->album[self->ix] = vtag_lookup(tag, "album", VLM_MERGE, "/")))
                             self->album[self->ix] = strdup("");
 
+                    int track_gain_tags = vtag_comment_count(tag, "R128_TRACK_GAIN");
+                    char *track_gain_text = vtag_lookup(tag, "R128_TRACK_GAIN", VLM_FIRST, NULL);
                     vtag_cleanup(tag);
+                    
+                    switch (track_gain_tags)
+                        {
+                        case 0:
+                            break;
+                        case 1:
+                            if (!track_gain_text)
+                                FAIL("vtag lookup failure");
+                            
+                            if (isspace(track_gain_text[0]))
+                                FAIL("R128_TRACK_GAIN contains whitespace at start");
+
+                            char *endp;
+                            long value = strtol(track_gain_text, &endp, 10);
+                            int endchar = *endp;
+                            free(track_gain_text);
+                            
+                            if (endchar)
+                                FAIL("R128_TRACK_GAIN contains non digit data");
+                                
+                            if (endp - track_gain_text > 6 || value < -32768 || value > 32767)
+                                FAIL("R128_TRACK_GAIN value out of range");
+
+                            break;
+                        default:
+                            free(track_gain_text);
+                            FAIL("too many R128_TRACK_GAIN tags");
+                        }
                     }
                 else
                     FAIL(vtag_strerror(error));
@@ -1006,7 +1036,7 @@ void oggdecode_seek_to_packet(struct oggdec_vars *self)
                     }
                 }
 
-            if ((granulepos = ogg_page_granulepos(&self->og)) >= 0)
+            if ((granulepos = ogg_page_granulepos(&self->og) - self->initial_granulepos[self->ix]) >= 0)
                 break;
             }
 
