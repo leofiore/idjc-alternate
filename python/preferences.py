@@ -948,7 +948,7 @@ class mixprefs:
         
         # ReplayGain controls
         
-        frame = gtk.Frame(" %s " % _('ReplayGain'))
+        frame = gtk.Frame(" %s " % _('Music Loudness Compensation'))
         frame.set_border_width(3)
         outervbox.pack_start(frame, False, False, 0)
         vbox = gtk.VBox()
@@ -959,55 +959,45 @@ class mixprefs:
         vbox.show()
         
         self.rg_indicate = gtk.CheckButton(
-                            _('Indicate which tracks have ReplayGain values'))
+                            _('Indicate which tracks have loudness metadata'))
         set_tip(self.rg_indicate,
-                        _('Show a marker in the playlists next to each track.'))
+                        _('Shows a marker in the playlists next to each track. Either a green circle or a red triangle.'))
         self.rg_indicate.connect("toggled", self.cb_rg_indicate)
         vbox.pack_start(self.rg_indicate, False, False, 0)
         self.rg_indicate.show()
         
-        self.rg_adjust = gtk.CheckButton(_('Adjust playback volume'))
+        
+        
+        self.rg_adjust = gtk.CheckButton(_('Adjust playback volume in dB'))
         set_tip(self.rg_adjust, _('Effective only on newly started tracks.'))
         vbox.pack_start(self.rg_adjust, False, False, 0)
         self.rg_adjust.show()
         
-        hbox = gtk.HBox()
-        hbox.set_spacing(3)
-        spacer = gtk.HBox()
-        hbox.pack_start(spacer, False, False, 16)
-        spacer.show()
-        label = gtk.Label(_('Unmarked tracks assumed gain value'))
-        hbox.pack_start(label, False, False, 0)
-        label.show()
-        rg_defaultgainadj = gtk.Adjustment(-8.0, -20.0, 10.0, 0.1)
+        table = gtk.Table(1, 6)
+        table.set_col_spacings(3)
+        label = gtk.Label(_('Untagged'))
+        label.set_alignment(1.0, 0.5)
+        rg_defaultgainadj = gtk.Adjustment(-8.0, -30.0, 10.0, 0.1)
         self.rg_defaultgain = gtk.SpinButton(rg_defaultgainadj, 0.0, 1)
-        set_tip(hbox, _('Set this to the typical track gain values you would '
-        'expect for the programme material you are currently playing. For pop '
-        'and rock music (especially modern studio recordings) this should be'
-        ' about a -8 or -9 and classical music around zero.'))
-        hbox.pack_start(self.rg_defaultgain, False, False, 0)
-        self.rg_defaultgain.show()
-        vbox.pack_start(hbox, False, False, 0)
-        hbox.show()
-
-        hbox = gtk.HBox()
-        hbox.set_spacing(3)
-        spacer = gtk.HBox()
-        hbox.pack_start(spacer, False, False, 16)
-        spacer.show()
-        label = gtk.Label(_('Further gain adjustment'))
-        hbox.pack_start(label, False, False, 0)
-        label.show()
-        rg_boostadj = gtk.Adjustment(6.0, -5.0, 15.5, 0.5)
+        set_tip(self.rg_defaultgain, _('Set this so that any unmarked tracks are playing at a roughly similar loudness level as the marked ones.'))
+        table.attach(label, 0, 1, 0, 1)
+        table.attach(self.rg_defaultgain, 1, 2, 0, 1, gtk.SHRINK)
+        label = gtk.Label(_('ReplayGain'))
+        rg_boostadj = gtk.Adjustment(0.0, -10.0, 20.5, 0.5)
         self.rg_boost = gtk.SpinButton(rg_boostadj, 0.0, 1)
-        set_tip(hbox, _('For material that is generally loud it is recommended '
-        'to set this between 4 and 8 dB however going too high will result in a'
-        ' loss of dynamic range. The Str Peak meter is a useful guide for '
-        'getting this right.'))
-        hbox.pack_start(self.rg_boost, False, False, 0)
-        self.rg_boost.show()
-        vbox.pack_start(hbox, False, False, 0)
-        hbox.show()
+        set_tip(self.rg_boost, _('It may not be desirable to use the default level since it is rather quiet. This should be set 4 or 5 dB lower than the R128 setting.'))
+        table.attach(label, 2, 3, 0, 1, gtk.SHRINK)
+        table.attach(self.rg_boost, 3, 4, 0, 1, gtk.SHRINK)
+        label = gtk.Label(_('R128'))
+        r128_boostadj = gtk.Adjustment(4.0, -5.0, 25.5, 0.5)
+        self.r128_boost = gtk.SpinButton(r128_boostadj, 0.0, 1)
+        set_tip(self.r128_boost, _('It may not be desirable to use the default level since it is rather quiet. This should be set 4 or 5 dB higher than the ReplayGain setting.'))
+        table.attach(label, 4, 5, 0, 1, gtk.SHRINK)
+        table.attach(self.r128_boost, 5, 6, 0, 1, gtk.SHRINK)
+        vbox.pack_start(table, False)
+        table.set_col_spacing(1, 8)
+        table.set_col_spacing(3, 8)
+        table.show_all()
 
         # Miscellaneous Features
         
@@ -1459,6 +1449,7 @@ class mixprefs:
             "djvolume"      : self.dj_aud_adj,
             "rg_default"    : self.rg_defaultgain,
             "rg_boost"      : self.rg_boost,
+            "r128_boost"    : self.r128_boost,
             }
 
         for each in itertools.chain(mic_controls, (opener_settings,

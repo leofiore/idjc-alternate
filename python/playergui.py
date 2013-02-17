@@ -88,7 +88,7 @@ class PlayerRow(namedtuple("PlayerRow",
 NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None, "", "")
 
 # ReplayGain value to indicate default.
-RGDEF = 100.0
+RGDEF = "0 DEFAULT"
 
 # Delay in milliseconds between progress bar updates.
 PROGRESS_TIMEOUT = 200
@@ -1034,7 +1034,7 @@ class IDJC_Media_Player:
             artist = title = ""
         else:
             try:
-                rg = float(audio["REPLAYGAIN_TRACK_GAIN"][0].rstrip(" dB"))
+                rg = str(audio["REPLAYGAIN_TRACK_GAIN"][0].rstrip(" dB")) + " RG"
             except:
                 rg = RGDEF
             artist = audio.get("ARTIST", [u""])
@@ -1047,7 +1047,7 @@ class IDJC_Media_Player:
             pass
         else:
             try:
-                rg = float(audio["replaygain_track_gain"][0].rstrip(" dB"))
+                rg = str(audio["replaygain_track_gain"][0].rstrip(" dB")) + " RG"
             except:
                 pass
             try:
@@ -1103,7 +1103,7 @@ class IDJC_Media_Player:
                     length = int(float(line[11:].strip()))
                 if line.startswith("OIR:REPLAYGAIN_TRACK_GAIN="):
                     try:
-                        rg = float(line[26:].rstrip(" dB\n"))
+                        rg = line[26:].rstrip(" dB\n") + " RG"
                     except:
                         rg = RGDEF
                 if line == "OIR:end\n":
@@ -1146,7 +1146,7 @@ class IDJC_Media_Player:
                     # due to it frequently being based on the source audio.
                     if rg == RGDEF:
                         try:
-                            rg = audio.info.track_gain
+                            rg = str(audio.info.track_gain) + " RG"
                         except:
                             pass
                         else:
@@ -1173,10 +1173,16 @@ class IDJC_Media_Player:
                         album = "/".join((unicode(y) for y in x))
 
                     try:
-                        rg = float(unicode(audio["replaygain_track_gain"][-1]
-                                                                ).rstrip(" dB"))
+                        rg = str(unicode(audio["replaygain_track_gain"][-1]
+                                                    ).rstrip(" dB")) + " RG"
                     except:
                         pass
+
+                    try:
+                        rg = str(float(unicode(audio["r128_track_gain"][-1])) / 256.0) + " R128"
+                    except:
+                        pass
+
 
         if isinstance(artist, list):
             artist = u"/".join(artist)
@@ -1592,18 +1598,27 @@ class IDJC_Media_Player:
                 self.start_time = max(element.offset, self.start_time * 75) // 75
                 self.progressadj.set_value(self.start_time)
                 self.music_filename = element.pathname
-                self.gain = element.replaygain
                 self.cuesheet_track_title = element.title
                 self.cuesheet_track_performer = element.performer
         else:
-            self.gain = model.get_value(iter, 7)
             self.element = None
             self.cuesheet_track_title = self.cuesheet_track_performer = None
 
+        self.gain = model.get_value(iter, 7).split(" ")
+        if len(self.gain) == 2:
+            self.gaintype = self.gain[1]
+            self.gain = float(self.gain[0])
+        else:
+            self.gaintype = "DEFAULT"
+            self.gain = 0.0
+        
         if self.parent.prefs_window.rg_adjust.get_active():
-            if self.gain == RGDEF:
-                self.gain = self.parent.prefs_window.rg_defaultgain.get_value()
-            self.gain += self.parent.prefs_window.rg_boost.get_value()
+            if self.gaintype == "DEFAULT":
+                self.gain += self.parent.prefs_window.rg_defaultgain.get_value()
+            if self.gaintype == "RG":
+                self.gain += self.parent.prefs_window.rg_boost.get_value()
+            if self.gaintype == "R128":
+                self.gain += self.parent.prefs_window.r128_boost.get_value()
             print "final gain value of %f dB" % self.gain
         else:
             self.gain = 0.0
@@ -3900,9 +3915,9 @@ class IDJC_Media_Player:
         self.scrolllist.set_shadow_type(gtk.SHADOW_IN)
         # A liststore object for our playlist
         self.liststore = gtk.ListStore(str, str, int, str, str, str,
-                                str, float, CueSheetListStore, str, str)
+                                str, str, CueSheetListStore, str, str)
         self.templist = gtk.ListStore(str, str, int, str, str, str,
-                                str, float, CueSheetListStore, str, str)
+                                str, str, CueSheetListStore, str, str)
         self.treeview = gtk.TreeView(self.liststore)
         self.rgcellrender = gtk.CellRendererText()
         self.playtimecellrender = gtk.CellRendererText()
