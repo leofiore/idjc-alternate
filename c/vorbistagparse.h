@@ -51,6 +51,11 @@ struct vtag *vtag_new(const char *vendor_string, int *error);
  */
 struct vtag *vtag_parse(void *data, size_t bytes, int *error);
 
+/* vtag_comment_count:
+ * return value: the number of comments attached to a given key, key
+ */
+int vtag_comment_count(struct vtag *s, char const *key);
+
 /* vtag_lookup: look up a tag by its key
  * key: this is case independent
  * mode: how to handle multiple keys

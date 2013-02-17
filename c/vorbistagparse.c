@@ -343,23 +343,47 @@ slist_data_length(gpointer data1, gpointer data2)
     ++vs->count;
     }
 
+static GSList *
+slist_lookup(struct vtag *s, char const *key)
+    {
+    GSList *slist;
+    char *lcase_key;
+    
+    if (!(lcase_key = strlwr(strdup(key))))
+        {
+        fprintf(stderr, "slist_lookup: malloc failure\n");
+        return NULL;
+        }
+
+    slist = g_hash_table_lookup(s->hash_table, lcase_key);
+    free(lcase_key);
+    return slist;
+    }
+
+int
+vtag_comment_count(struct vtag *s, char const *key)
+    {
+    GSList *slist;
+    struct valuestore vs = {0, 0};
+    
+    if (!(slist = slist_lookup(s, key)))
+        return 0;
+    
+    g_slist_foreach(slist, slist_data_length, &vs);
+    return vs.count;
+    }
+
 char *
 vtag_lookup(struct vtag *s, char const *key, enum vtag_lookup_mode mode, char *sep)
     {
-    char *value, *lcase_key;
+    char *value;
     GSList *slist;
     size_t length = 0;
     struct valuestore vs = {0, 0};
 
-    if (!(lcase_key = strlwr(strdup(key))))
-        {
-        fprintf(stderr, "vtag_lookup: malloc failure\n");
+    if (!(slist = slist_lookup(s, key)))
         return NULL;
-        }
 
-    if ((slist = g_hash_table_lookup(s->hash_table, lcase_key)) == NULL)
-        return NULL;
-        
     switch (mode) {
         case VLM_FIRST:
             return strdup(slist->data);
