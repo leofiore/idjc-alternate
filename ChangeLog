@@ -1,5 +1,11 @@
 * Changes in version 0.8.9 *
 
+The DJ audio level control is now at the top of the Prefs->General page.
+
+The DJ alarm now has a dedicated JACK port and level control.
+
+Added support for R128_TRACK_GAIN tags.
+
 Added Ogg/Opus streaming and recording support.
 
 Added Ogg/Opus playback support.

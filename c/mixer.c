@@ -118,7 +118,10 @@ static int reset_vu_stats_f;                   /* when set the mixer will reset 
 static float dfmod;                            /* used to reduce the ducking factor */
 static float dj_audio_level;                   /* used to reduce the level of dj audio */
 static float dj_audio_gain = 1.0;              /* same as above but not in dB */
+static float alarm_audio_level;                /* used to reduce the level of alarm audio */
+static float alarm_audio_gain = 1.0;           /* same as above but not in dB */
 static float current_dj_audio_level = 0.0;
+static float current_alarm_audio_level = 0.0;
 
 static struct compressor stream_limiter =
     {
@@ -259,6 +262,12 @@ static void update_smoothed_volumes()
         current_dj_audio_level = dj_audio_level;
         dj_audio_gain = db2level(dj_audio_level);
         }
+
+    if (alarm_audio_level != current_alarm_audio_level)
+        {
+        current_alarm_audio_level = alarm_audio_level;
+        alarm_audio_gain = db2level(alarm_audio_level);
+        }
     
     if (crossfade != current_crossfade || crosspattern != current_crosspattern)
         {
@@ -392,8 +401,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
     /* index values for reading from a table of fade gain values */
     static jack_nframes_t alarm_index = 0;
     /* pointers to buffers provided by JACK */
-    sample_t *lap, *rap, *lsp, *rsp, *lpsp, *rpsp, *lprp, *rprp;
-    sample_t *la_buffer, *ra_buffer, *ls_buffer, *rs_buffer, *lps_buffer, *rps_buffer;
+    sample_t *aap, *lap, *rap, *lsp, *rsp, *lpsp, *rpsp, *lprp, *rprp;
+    sample_t *al_buffer, *la_buffer, *ra_buffer, *ls_buffer, *rs_buffer, *lps_buffer, *rps_buffer;
     sample_t *dolp, *dorp, *dilp, *dirp;
     sample_t *plolp, *plorp, *prolp, *prorp, *piolp, *piorp, *pjolp, *pjorp;
     sample_t *plilp, *plirp, *prilp, *prirp, *piilp, *piirp, *pjilp, *pjirp;
@@ -465,6 +474,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
     {
         struct jack_ports *p = &g.port;
         
+        al_buffer = aap = (sample_t *) jack_port_get_buffer(p->alarm_out, nframes);
         la_buffer = lap = (sample_t *) jack_port_get_buffer(p->dj_out_l, nframes);
         ra_buffer = rap = (sample_t *) jack_port_get_buffer(p->dj_out_r, nframes);
         ls_buffer = lsp = (sample_t *) jack_port_get_buffer(p->str_out_l, nframes);
@@ -514,7 +524,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
         memset(lps_buffer, 0, nframes * sizeof (sample_t)); /* send silence to VOIP */
         memset(rps_buffer, 0, nframes * sizeof (sample_t));
         for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++,
-                    dilp++, dirp++, dolp++, dorp++,
+                    dilp++, dirp++, dolp++, dorp++, aap++,
                     plolp++, plorp++, prolp++, prorp++, piolp++, piorp++, pjolp++, pjorp++,
                     plilp++, plirp++, prilp++, prirp++, piilp++, piirp++, pjilp++, pjirp++)
             {       
@@ -614,23 +624,6 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 
             #define COMMON_MIX3() \
                 do  { \
-                    if (eot_alarm_f) /* mix in the end-of-track alarm tone */ \
-                        { \
-                        if (alarm_index >= alarm_size) \
-                            { \
-                            alarm_index = 0; \
-                            eot_alarm_f = 0; \
-                            } \
-                        else \
-                            { \
-                            *lap += eot_alarm_table[alarm_index]; \
-                            *lap *= 0.5; \
-                            *rap += eot_alarm_table[alarm_index]; \
-                            *rap *= 0.5; \
-                            alarm_index++; \
-                            } \
-                        } \
-                    \
                     /* apply dj audio sound level */ \
                     *lap *= dj_audio_gain; \
                     *rap *= dj_audio_gain; \
@@ -643,7 +636,24 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                     str_l_tally += *lsp * *lsp; \
                     str_r_tally += *rsp * *rsp; \
                     rms_tally_count++; \
-                }while(0)
+                    \
+                    if (eot_alarm_f) /* end-of-track alarm tone */ \
+                        { \
+                        if (alarm_index >= alarm_size) \
+                            { \
+                            alarm_index = 0; \
+                            eot_alarm_f = 0; \
+                            } \
+                        else \
+                            { \
+                            *aap = eot_alarm_table[alarm_index] * alarm_audio_gain; \
+                            alarm_index++; \
+                            } \
+                        } \
+                    else \
+                        *aap = 0.0f; \
+                    \
+                } while(0)
                 
             COMMON_MIX3();
             }
@@ -653,7 +663,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
     else
         if (simple_mixer == FALSE && mixermode == PHONE_PUBLIC)
             {
-            for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++,
+            for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, aap++,
                     lpsp++, rpsp++, lprp++, rprp++, dilp++, dirp++, dolp++, dorp++,
                     plolp++, plorp++, prolp++, prorp++, piolp++, piorp++, pjolp++, pjorp++,
                     plilp++, plirp++, prilp++, prirp++, piilp++, piirp++, pjilp++, pjirp++)
@@ -721,7 +731,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
             if (simple_mixer == FALSE && mixermode == PHONE_PRIVATE && mic_on == 0)
                 {
                 for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++,
-                    lpsp++, rpsp++, lprp++, rprp++, dilp++, dirp++, dolp++, dorp++,
+                    lpsp++, rpsp++, lprp++, rprp++, dilp++, dirp++, dolp++, dorp++, aap++,
                     plolp++, plorp++, prolp++, prorp++, piolp++, piorp++, pjolp++, pjorp++,
                     plilp++, plirp++, prilp++, prirp++, piilp++, piirp++, pjilp++, pjirp++)
                     {         
@@ -785,7 +795,7 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                 if (simple_mixer == FALSE && mixermode == PHONE_PRIVATE) /* note: mic is on */
                     {
                     for(samples_todo = nframes; samples_todo--; lap++, rap++, lsp++, rsp++, 
-                            lpsp++, rpsp++, dilp++, dirp++, dolp++, dorp++,
+                            lpsp++, rpsp++, dilp++, dirp++, dolp++, dorp++, aap++,
                             plolp++, plorp++, prolp++, prorp++, piolp++, piorp++, pjolp++, pjorp++,
                             plilp++, plirp++, prilp++, prirp++, piilp++, piirp++, pjilp++, pjirp++)
                         {
@@ -874,6 +884,8 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                                     }
                                 }
                             }
+                            
+                        memset(al_buffer, 0, nframes * sizeof (sample_t));
                             
                         if (!la)
                             {
@@ -1338,13 +1350,13 @@ int mixer_main()
         if(sscanf(mixer_string,
                  ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d"
                  "%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:"
-                 "%1d:%1d:%1d:",
+                 "%1d:%1d:%1d:%f:",
                  &volume, &volume2, &crossfade, &jinglesvolume, &jinglesheadroom , &interludevol, &mixbackvol, &jingles_playing,
                  &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
                  &s.new_left_pause, &s.new_right_pause, &s.flush_left, &s.flush_right, &s.flush_jingles, &s.flush_interlude,
                  &simple_mixer, &eot_alarm_set, &mixermode, &s.fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed),
                  &speed_variance, &dj_audio_level, &crosspattern, &s.use_dsp, &s.new_inter_pause,
-                 &inter_stream, &inter_audio, &inter_force) !=34)
+                 &inter_stream, &inter_audio, &inter_force, &alarm_audio_level) !=35)
             {
             fprintf(stderr, "mixer got bad mixer string\n");
             return TRUE;

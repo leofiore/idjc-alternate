@@ -24,6 +24,7 @@
 
 struct jack_ports
     {
+    /* mixer ports */
     jack_port_t *dj_out_l;
     jack_port_t *dj_out_r;
     jack_port_t *dsp_out_l;
@@ -36,6 +37,7 @@ struct jack_ports
     jack_port_t *voip_out_r;
     jack_port_t *voip_in_l;
     jack_port_t *voip_in_r;
+    jack_port_t *alarm_out;
 
     /* player breakout ports */
     jack_port_t *pl_out_l;
@@ -57,6 +59,7 @@ struct jack_ports
     
     jack_port_t *midi_port;
         
+    /* streamer/recorder capture ports */
     jack_port_t *output_in_l;
     jack_port_t *output_in_r;
     };

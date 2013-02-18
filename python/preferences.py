@@ -585,7 +585,7 @@ class mixprefs:
         self.parent.mixer_write(string_to_send)
 
 
-    def cb_dj_aud(self, widget):
+    def cb_vol_changed(self, widget):
         self.parent.send_new_mixer_stats()
 
 
@@ -802,6 +802,94 @@ class mixprefs:
         generalwindow.add_with_viewport(outervbox)
         generalwindow.show()
         outervbox.set_border_width(3)
+
+        aud_rs_hbox = gtk.HBox()
+        
+        # User can use this to set the audio level in the headphones
+        
+        # TC: The DJ's sound level controller.
+        frame = gtk.Frame(" %s " % _('DJ Audio Level'))
+        frame.set_label_align(0.5, 0.5)
+        frame.set_border_width(3)
+        hbox = gtk.HBox()
+        hbox.set_border_width(5)
+        frame.add(hbox)
+        hbox.show()
+        self.dj_aud_adj = gtk.Adjustment(0.0, -60.0, 0.0, 0.5, 1.0)
+        dj_aud = gtk.SpinButton(self.dj_aud_adj, 1, 1)
+        dj_aud.connect("value-changed", self.cb_vol_changed)
+        hbox.pack_start(dj_aud, True, False, 0)
+        dj_aud.show()
+        set_tip(dj_aud, _('This adjusts the sound level of the DJ audio.'))
+        aud_rs_hbox.pack_start(frame, False, False, 0)
+        frame.show()
+
+        # TC: The alarm sound level.
+        frame = gtk.Frame(" %s " % _('Alarm Level'))
+        frame.set_label_align(0.5, 0.5)
+        frame.set_border_width(3)
+        hbox = gtk.HBox()
+        hbox.set_border_width(5)
+        frame.add(hbox)
+        hbox.show()
+        self.alarm_aud_adj = gtk.Adjustment(0.0, -60.0, 0.0, 0.5, 1.0)
+        alarm_aud = gtk.SpinButton(self.alarm_aud_adj, 1, 1)
+        alarm_aud.connect("value-changed", self.cb_vol_changed)
+        hbox.pack_start(alarm_aud, True, False, 0)
+        alarm_aud.show()
+        set_tip(alarm_aud, _('This adjusts the sound level of the DJ alarm. '
+        'Typically this should be set close to the dj audio level when using the \'%s\''
+        ' feature, otherwise a bit louder.' % _('Music Loudness Compensation')))
+        aud_rs_hbox.pack_start(frame, False, False, 0)
+        frame.show()
+
+        # User can use this to set the resampled sound quality
+        
+        frame = gtk.Frame(" %s " % _('Player Resample Quality'))
+        frame.set_label_align(0.5, 0.5)
+        frame.set_border_width(3)
+        hbox = gtk.HBox()
+        hbox.set_border_width(5)
+        set_tip(hbox,
+        _('This adjusts the quality of the audio resampling method '
+        'used whenever the sample rate of the music file currently playing does'
+        ' not match the sample rate of the JACK sound server. Best mode '
+        'offers the best sound quality but also uses the most CPU (not '
+        'recommended for systems built before 2006). All these modes provide '
+        'adequate sound quality.'))
+        frame.add(hbox)
+        hbox.show()
+        self.best_quality_resample = gtk.RadioButton(None, _('Best'))
+        self.best_quality_resample.connect(
+                                        "toggled", self.cb_resample_quality, 0)
+        rsbox = gtk.HBox()
+        rsbox.pack_start(self.best_quality_resample, True, False, 0)
+        rsbox.show()
+        hbox.add(rsbox)
+        self.best_quality_resample.show()
+        self.good_quality_resample = gtk.RadioButton(
+                                        self.best_quality_resample, _('Medium'))
+        self.good_quality_resample.connect(
+                                        "toggled", self.cb_resample_quality, 1) 
+        rsbox = gtk.HBox()
+        rsbox.pack_start(self.good_quality_resample, True, False, 0)
+        rsbox.show()
+        hbox.add(rsbox)
+        self.good_quality_resample.show()
+        self.fast_resample = gtk.RadioButton(
+                                        self.good_quality_resample, _('Fast'))
+        self.fast_resample.connect("toggled", self.cb_resample_quality, 2) 
+        rsbox = gtk.HBox()
+        rsbox.pack_start(self.fast_resample, True, False, 0)
+        rsbox.show()
+        hbox.add(rsbox)
+        self.fast_resample.show()
+
+        aud_rs_hbox.pack_start(frame, True, True, 0)
+        frame.show()
+        
+        outervbox.pack_start(aud_rs_hbox, False, False, 0)
+        aud_rs_hbox.show()
         
         # TC: the set of features - section heading.
         featuresframe = gtk.Frame(" %s " % _('Feature Set'))
@@ -1079,79 +1167,7 @@ class mixprefs:
         vbox.show()
 
         outervbox.pack_start(frame, False, False, 0)
-        
-        
-        aud_rs_hbox = gtk.HBox()
-        
-        # User can use this to set the audio level in the headphones
-        
-        # TC: The DJ's sound level controller.
-        frame = gtk.Frame(" " + _('DJ Audio Level') + " ")
-        frame.set_label_align(0.5, 0.5)
-        frame.set_border_width(3)
-        hbox = gtk.HBox()
-        hbox.set_border_width(5)
-        frame.add(hbox)
-        hbox.show()
-        
-        self.dj_aud_adj = gtk.Adjustment(0.0, -60.0, 0.0, 0.5, 1.0)
-        dj_aud = gtk.SpinButton(self.dj_aud_adj, 1, 1)
-        dj_aud.connect("value-changed", self.cb_dj_aud)
-        hbox.pack_start(dj_aud, True, False, 0)
-        dj_aud.show()
-        set_tip(dj_aud, _('This adjusts the sound level of the DJ audio.'))
-        
-        aud_rs_hbox.pack_start(frame, False, False, 0)
-        frame.show()
-        
-        # User can use this to set the resampled sound quality
-        
-        frame = gtk.Frame(" %s " % _('Player Resample Quality'))
-        frame.set_label_align(0.5, 0.5)
-        frame.set_border_width(3)
-        hbox = gtk.HBox()
-        hbox.set_border_width(5)
-        set_tip(hbox,
-        _('This adjusts the quality of the audio resampling method '
-        'used whenever the sample rate of the music file currently playing does'
-        ' not match the sample rate of the JACK sound server. Highest mode '
-        'offers the best sound quality but also uses the most CPU (not '
-        'recommended for systems built before 2006). All these modes provide '
-        'adequate sound quality.'))
-        frame.add(hbox)
-        hbox.show()
-        self.best_quality_resample = gtk.RadioButton(None, _('Highest'))
-        self.best_quality_resample.connect(
-                                        "toggled", self.cb_resample_quality, 0)
-        rsbox = gtk.HBox()
-        rsbox.pack_start(self.best_quality_resample, True, False, 0)
-        rsbox.show()
-        hbox.add(rsbox)
-        self.best_quality_resample.show()
-        self.good_quality_resample = gtk.RadioButton(
-                                        self.best_quality_resample, _('Medium'))
-        self.good_quality_resample.connect(
-                                        "toggled", self.cb_resample_quality, 1) 
-        rsbox = gtk.HBox()
-        rsbox.pack_start(self.good_quality_resample, True, False, 0)
-        rsbox.show()
-        hbox.add(rsbox)
-        self.good_quality_resample.show()
-        self.fast_resample = gtk.RadioButton(
-                                        self.good_quality_resample, _('Lowest'))
-        self.fast_resample.connect("toggled", self.cb_resample_quality, 2) 
-        rsbox = gtk.HBox()
-        rsbox.pack_start(self.fast_resample, True, False, 0)
-        rsbox.show()
-        hbox.add(rsbox)
-        self.fast_resample.show()
-
-        aud_rs_hbox.pack_start(frame, True, True, 0)
-        frame.show()
-        
-        outervbox.pack_start(aud_rs_hbox, False, False, 0)
-        aud_rs_hbox.show()
-        
+       
         # Song database preferences and connect button.
         self.songdbprefs = self.parent.topleftpane.prefs_controls
         self.parent.menu.songdbmenu_a.connect_proxy(self.songdbprefs.dbtoggle)
@@ -1447,6 +1463,7 @@ class mixprefs:
             "interlude_vol" : self.parent.jingles.ivol_adj,
             "passspeed"     : self.parent.passspeed_adj,
             "djvolume"      : self.dj_aud_adj,
+            "alarmvolume"   : self.alarm_aud_adj,
             "rg_default"    : self.rg_defaultgain,
             "rg_boost"      : self.rg_boost,
             "r128_boost"    : self.r128_boost,

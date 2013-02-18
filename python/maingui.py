@@ -421,6 +421,7 @@ class JackMenu(MenuMixin):
                     ["{client_id}:ch_in_2", ["system:capture_2"]],
                     ["{client_id}:dj_out_l", ["system:playback_1"]],
                     ["{client_id}:dj_out_r", ["system:playback_2"]],
+                    ["{client_id}:alarm_out", ["system:playback_1", "system:playback_2"]],
                     ["{client_id}:output_in_l", ["{client_id}:str_out_l"]],
                     ["{client_id}:output_in_r", ["{client_id}:str_out_r"]], """
 
@@ -1908,7 +1909,7 @@ class MainWindow(dbus.service.Object):
 
         string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:" \
                         "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:" \
-                        "%d:%d:%d:%d:" % (
+                        "%d:%d:%d:%d:%d:" % (
                         deckadj,
                         deck2adj,
                         self.crossadj.get_value(),
@@ -1943,7 +1944,8 @@ class MainWindow(dbus.service.Object):
                         self.jingles.interlude.pause.get_active(),
                         self.jingles.interlude.stream.get_active(),
                         self.jingles.interlude.listen.get_active(),
-                        self.jingles.interlude.force.get_active()
+                        self.jingles.interlude.force.get_active(),
+                        self.prefs_window.alarm_aud_adj.get_value()
                         )
         self.mixer_write("MIXR=%s\nACTN=mixstats\nend\n" % string_to_send)
 

@@ -222,6 +222,7 @@ static int backend_main()
         MK_AUDIO_OUTPUT(p->voip_out_r, "voip_out_r");
         MK_AUDIO_INPUT(p->voip_in_l, "voip_in_l");
         MK_AUDIO_INPUT(p->voip_in_r, "voip_in_r");
+        MK_AUDIO_OUTPUT(p->alarm_out, "alarm_out");
         /* Player related ports. */
         MK_AUDIO_OUTPUT(p->pl_out_l, "pl_out_l");
         MK_AUDIO_OUTPUT(p->pl_out_r, "pl_out_r");
