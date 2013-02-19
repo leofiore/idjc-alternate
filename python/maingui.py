@@ -242,6 +242,7 @@ class JackMenu(MenuMixin):
         for prefix in "pl pr pi pj".split():
             for each in zip((prefix,) * 4, out2_in2, lr):
                 self.add_port(self.playersmenu, "".join(each))
+        self.add_port(self.playersmenu, "alarm_out")
 
         for each in zip(("voip",) * 4, out2_in2, lr):
             self.add_port(self.voipmenu, "".join(each))
@@ -299,9 +300,9 @@ class JackMenu(MenuMixin):
     def cb_port_connections(self, mi, port, menu):
         reply = ""
         
-        if "_in_" in port:
+        if "_in_" in port or port.endswith("_in"):
             filter_ = "outputs"
-        elif "_out_" in port:
+        elif "_out_" in port or port.endswith("_out"):
             filter_ = "inputs"
         elif "midi" in port:
             filter_ = "midioutputs"
