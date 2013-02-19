@@ -89,7 +89,7 @@ static void ogg_opusdec_play(struct xlplayer *xlplayer)
         
         if (od->op.e_o_s)
             {
-            if (self->f_gp)
+            if (self->f_gp > self->gf_gp)
                 end_trim = self->f_gp - self->gf_gp - (self->gp - self->f_gp);
             else
                 end_trim = self->dec_samples - self->gp;
@@ -248,6 +248,8 @@ int ogg_opusdec_init(struct xlplayer *xlplayer)
 
         oggdecode_seek_to_packet(od);
         }
+    else
+        self->gf_gp = self->f_gp = self->gp = od->initial_granulepos[od->ix];
 
     if (!(self->odms = opus_multistream_decoder_create(48000, self->channel_count,
                     self->stream_count, self->stream_count_2c, self->channel_map, &error)))

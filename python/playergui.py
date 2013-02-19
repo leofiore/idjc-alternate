@@ -1102,9 +1102,10 @@ class IDJC_Media_Player:
                 if line.startswith("OIR:LENGTH="):
                     length = int(float(line[11:].strip()))
                 if line.startswith("OIR:REPLAYGAIN_TRACK_GAIN="):
-                    try:
+                    val = line[26:].rstrip(" dB\n")
+                    if val:
                         rg = line[26:].rstrip(" dB\n") + " RG"
-                    except:
+                    else:
                         rg = RGDEF
                 if line == "OIR:end\n":
                     break

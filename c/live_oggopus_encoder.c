@@ -339,6 +339,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
             {
             opus_encoder_destroy(s->enc_st);
             ogg_stream_clear(&s->os);
+            s->granulepos = s->packetno = 0;
             fprintf(stderr, "live_oggopus_encoder_main: minimal clean up\n");
             encoder->encoder_state = ES_STARTING;
             }

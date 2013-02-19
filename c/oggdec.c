@@ -474,12 +474,13 @@ static int speex_get_samplerate(struct oggdec_vars *self)
 
 static int opus_get_samplerate(struct oggdec_vars *self)
     {
-    int channels, chanmap, streamcount, streamcount_2c, frames, samples;
+    int channels, chanmap, streamcount, streamcount_2c, frames, samples, packetsamples;
     unsigned initial_granulepos, final_granulepos;
     uint16_t preskip;
     char const *reason;
     
     #define FAIL(x) do {reason = x; goto fail_point;} while(0)
+    #define WARN(x) do {fprintf(stderr, "opus_get_samplerate: warning: %s\n", x);} while (0)
 
     if ((final_granulepos = self->final_granulepos[self->ix]) == 0)
         FAIL("stream final packet granule count is zero");
@@ -568,6 +569,9 @@ static int opus_get_samplerate(struct oggdec_vars *self)
                         if (!(self->album[self->ix] = vtag_lookup(tag, "album", VLM_MERGE, "/")))
                             self->album[self->ix] = strdup("");
 
+                    if (!(self->artist || self->title || self->album))
+                        FAIL("malloc failure");
+
                     int track_gain_tags = vtag_comment_count(tag, "R128_TRACK_GAIN");
                     char *track_gain_text = vtag_lookup(tag, "R128_TRACK_GAIN", VLM_FIRST, NULL);
                     vtag_cleanup(tag);
@@ -613,7 +617,7 @@ static int opus_get_samplerate(struct oggdec_vars *self)
             {
             if ((frames = opus_packet_get_nb_frames(self->op.packet, self->op.bytes)) < 1)
                 FAIL("first packet has no frames");
-            samples = opus_packet_get_samples_per_frame(self->op.packet, 48000) * frames;
+            samples = packetsamples = opus_packet_get_samples_per_frame(self->op.packet, 48000) * frames;
 
             while (self->op.granulepos == -1)
                 {
@@ -623,24 +627,37 @@ static int opus_get_samplerate(struct oggdec_vars *self)
                 
                 samples += opus_packet_get_samples_per_frame(self->op.packet, 48000) * frames;
                 }
-                                            
-            if (self->op.granulepos < samples && !self->op.e_o_s)
-                FAIL("first page granule position less than number of samples, end of stream not set");
-                
-            if ((initial_granulepos = self->initial_granulepos[self->ix] = self->op.granulepos - samples))
+            
+            if (self->op.e_o_s)
                 {
-                if (preskip >= final_granulepos - initial_granulepos)
-                    FAIL("no samples to decode after accounting for initial granulepos");
-                if (initial_granulepos % samples)
-                    fprintf(stderr, "can't assign initial granulepos to a specific page\n");
-                else
+                if (samples - self->op.granulepos > packetsamples)
+                    WARN("end trimming > size of one packet");
+                }
+            else
+                {
+                if (self->op.granulepos < samples)
+                    FAIL("first page granule position less than number of samples, end of stream not set");
+
+                if ((initial_granulepos = self->initial_granulepos[self->ix] = self->op.granulepos - samples))
                     {
-                    unsigned int pages_missing = initial_granulepos / samples;
-                    
-                    if (ogg_page_pageno(&self->og) - pages_missing != 2)
-                        fprintf(stderr, "ogg page numbering appears to be messed up\n");
+                    if (preskip >= final_granulepos - initial_granulepos)
+                        FAIL("no samples to decode after accounting for initial granulepos");
+                    fprintf(stderr, "initial granulepos is %u, samples is %d\n", initial_granulepos, samples);
+                    fprintf(stderr, "first page pos is %u\n", self->op.granulepos);
+                    if (initial_granulepos % samples)
+                        WARN("can't assign initial granulepos to a specific page");
                     else
-                        fprintf(stderr, "there are %u ogg pages missing -- this is normal for a captured stream\n", pages_missing);
+                        {
+                        unsigned int pages_missing = initial_granulepos / samples;
+                        
+                        if (ogg_page_pageno(&self->og) - pages_missing != 2)
+                            WARN("opus_get_samplerate: ogg page numbering granulepos mismatch");
+                        else
+                            fprintf(stderr, "there are %u ogg pages missing -- this is normal for a captured stream\n", pages_missing);
+                        }
+                        
+                    if (samples - (final_granulepos - initial_granulepos) % samples > packetsamples)
+                        WARN("end trimming > size of one packet");
                     }
                 }
             }
@@ -653,6 +670,7 @@ static int opus_get_samplerate(struct oggdec_vars *self)
     return self->samplerate[self->ix] = 48000;  /* Opus always uses this rate */
 
     #undef FAIL
+    #undef WARN
 
     fail_point:
         fprintf(stderr, "opus_get_samplerate: opus header sanity check failed: %s\n", reason);
