@@ -1800,8 +1800,7 @@ class RecordTab(Tab):
                             num_id = -1
                         self.parentobject.send("record_source=%d\n"
                             "record_folder=%s\ncommand=recorder_start\n" % (
-                            num_id, sd.file_dialog.get_current_folder()))
-                        sd.file_dialog.response(gtk.RESPONSE_CLOSE)
+                            num_id, sd.file_chooser_button.folder))
                         sd.set_sensitive(False)
                         self.parentobject.time_indicator.set_sensitive(True)
                         self.recording = True
@@ -1940,7 +1939,8 @@ class RecordTab(Tab):
 
 
         def cb_new_folder(self, filechooser):
-            self.cansave = os.access(filechooser.get_current_folder(), os.W_OK)
+            filechooser.folder = filechooser.get_filename()
+            self.cansave = os.access(filechooser.folder, os.W_OK)
             self.source_combo.emit("changed")
 
 
@@ -1961,17 +1961,17 @@ class RecordTab(Tab):
             arrow = gtk.Arrow(gtk.ARROW_RIGHT, gtk.SHADOW_IN)
             hbox.pack_start(arrow, False, False, 0)
             arrow.show()
-            self.file_dialog = gtk.FileChooserDialog("", None,
+            file_dialog = gtk.FileChooserDialog("", None,
                     gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, (gtk.STOCK_CANCEL,
                     gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
-            self.file_dialog.set_do_overwrite_confirmation(True)
-            self.file_chooser_button = gtk.FileChooserButton(self.file_dialog)
             # TC: Dialog title bar text.
-            self.file_dialog.set_title(_('Select the folder to record to'
+            file_dialog.set_title(_('Select the folder to record to'
                                                             ) + pm.title_extra)
-            self.file_dialog.connect("current-folder-changed",
+            file_dialog.set_do_overwrite_confirmation(True)
+            self.file_chooser_button = gtk.FileChooserButton(file_dialog)
+            self.file_chooser_button.connect("current-folder-changed",
                                                             self.cb_new_folder)
-            self.file_dialog.set_current_folder(os.environ["HOME"])
+            self.file_chooser_button.set_filename(os.environ["HOME"])
             hbox.pack_start(self.file_chooser_button, True, True, 0)
             self.file_chooser_button.show()
             self.add(hbox)
@@ -2022,7 +2022,7 @@ class RecordTab(Tab):
         self.record_buttons.show()
         self.objects = {
             "recording_source": (self.source_dest.source_combo, "active"),
-            "recording_directory": (self.source_dest.file_dialog, "directory")
+            "recording_directory": (self.source_dest.file_chooser_button, "directory")
         }
 
 
@@ -2495,9 +2495,9 @@ class SourceClientGui(dbus.service.Object):
                             elif method == "current_page":
                                 rvalue = str(widget.get_current_page())
                             elif method == "directory":
-                                rvalue = widget.get_filename() or ""
+                                rvalue = widget.folder or ""
                             elif method == "filename":
-                                rvalue = widget.get_filename() or ""
+                                rvalue = widget.folder or ""
                             elif method == "marshall":
                                 rvalue = widget.marshall()
                             else:
