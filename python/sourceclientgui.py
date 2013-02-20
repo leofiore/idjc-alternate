@@ -1925,7 +1925,7 @@ class RecordTab(Tab):
                 sens(self.cansave and self.streamtab.format_control.props.cap_recordable)
             else:
                 self.streamtab = None
-                sens(self.source_store[self.source_combo.get_active()][1])
+                sens(self.cansave and self.source_store[self.source_combo.get_active()][1])
 
         def populate_stream_selector(self, text, tabs):
             self.streamtabs = tabs
