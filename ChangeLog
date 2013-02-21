@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Added level controls for each bank of 12 effect buttons.
+
 The DJ audio level control is now at the top of the Prefs->General page.
 
 The DJ alarm now has a dedicated JACK port and level control.

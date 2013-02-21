@@ -2436,8 +2436,7 @@ class MainWindow(dbus.service.Object):
 
         self.player_left.save_session(where)
         self.player_right.save_session(where)
-        self.jingles.interlude.save_session(where)
-        self.jingles.effects.save_session(where)
+        self.jingles.save_session(where)
         # JACK ports are saved at the moment of change, not here.
         
         return True  # This is also a timeout routine
@@ -2774,7 +2773,7 @@ class MainWindow(dbus.service.Object):
 
             ep = int(self.effects_playing)
             if ep != -1:
-                self.jingles.effects.update_leds(ep)
+                self.jingles.update_effect_leds(ep)
 
         except Exception:
             if locking:  # Ensure unlocking occurs when there is an exception.
@@ -3828,8 +3827,7 @@ class MainWindow(dbus.service.Object):
             print "Restoring previous session"
             self.player_left.restore_session()
             self.player_right.restore_session()
-            self.jingles.interlude.restore_session()
-            self.jingles.effects.restore_session()
+            self.jingles.restore_session()
             self.restore_session()
         self.session_loaded = True
          
