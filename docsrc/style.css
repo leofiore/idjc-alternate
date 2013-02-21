@@ -37,11 +37,14 @@
  pre{
   font-family:courier new, monospace;
   font-size:12px;
-  margin:0px;
+  margin:0px 0px 0px 0px;
   padding:6px;
   border:1px inset;
-  width:772px;
+  width:776px;
   overflow-x:auto;
+ }
+ pre.inset{
+  width:auto;
  }
  pre.reduced{
   width:92%;
@@ -91,6 +94,7 @@
  #dep-table{
   border:2px solid black;
   font-size:12px;
+  width:100%;
  }
  #dep-table th{
   border:1px outset;
