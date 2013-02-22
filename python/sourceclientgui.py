@@ -1971,7 +1971,7 @@ class RecordTab(Tab):
             self.file_chooser_button = gtk.FileChooserButton(file_dialog)
             self.file_chooser_button.connect("current-folder-changed",
                                                             self.cb_new_folder)
-            self.file_chooser_button.set_filename(os.environ["HOME"])
+            self.file_chooser_button.set_current_folder(os.environ["HOME"])
             hbox.pack_start(self.file_chooser_button, True, True, 0)
             self.file_chooser_button.show()
             self.add(hbox)
@@ -2667,7 +2667,7 @@ class SourceClientGui(dbus.service.Object):
                 stop = tab.record_buttons.stop_button
                 sens = rec.get_sensitive()
                 src = tab.source_dest.source_combo.get_active_text().strip()
-                dest = tab.source_dest.file_dialog.get_filename()
+                dest = tab.source_dest.file_chooser_button.get_filename()
                 mi = gtk.CheckMenuItem()
                 label = gtk.Label()
                 label.set_alignment(0.0, 0.5)
