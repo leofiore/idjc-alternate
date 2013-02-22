@@ -1458,8 +1458,10 @@ class mixprefs:
             self.activedict.update(each.activedict)
 
         self.valuesdict = {  # These widgets all have the get_value method.
-            "jingle_vol"    : self.parent.jingles.jvol_adj,
-            "jingle_muting" : self.parent.jingles.jmute_adj,
+            "effects1_vol"    : self.parent.jingles.jvol_adj[0],
+            "effects1_muting" : self.parent.jingles.jmute_adj[0],
+            "effects2_vol"    : self.parent.jingles.jvol_adj[1],
+            "effects2_muting" : self.parent.jingles.jmute_adj[1],
             "interlude_vol" : self.parent.jingles.ivol_adj,
             "passspeed"     : self.parent.passspeed_adj,
             "djvolume"      : self.dj_aud_adj,

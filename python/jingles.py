@@ -292,75 +292,88 @@ class EffectConfigDialog(gtk.FileChooserDialog):
             self.gain_adj.set_value(0.0)
 
 
+class EffectBank(gtk.Frame):
+    """A vertical stack of effects with level controls."""
 
-class EffectCluster(gtk.Frame):
-    """A frame containing columns of widget."""
-
-    session_pathname = "effects_session"
-
-    def __init__(self, label, qty, cols, widget, *args):
+    def __init__(self, label, qty, base, filename, parent, all_effects, vol_adj, mute_adj):
         gtk.Frame.__init__(self, label)
-        self.widgets = []
+        self.base = base
+        self.session_filename = filename
+        
         hbox = gtk.HBox()
+        hbox.set_spacing(1)
         self.add(hbox)
+        vbox = gtk.VBox()
+        hbox.pack_start(vbox)
+        
+        self.effects = []
+        self.all_effects = all_effects
+        
         count = 0
         
-        rows = (qty + cols - 1) // cols
-        for col in range(cols):
-            vbox = gtk.VBox(True)
-            hbox.pack_start(vbox)
-            
-            for row in range(rows):
-                self.widgets.append(widget(count, self.widgets, *args))
-                vbox.pack_start(self.widgets[-1])
-                count += 1
+        for row in range(qty):
+            effect = Effect(base + row, self.all_effects, parent)
+            self.effects.append(effect)
+            self.all_effects.append(effect)
+            vbox.pack_start(effect)
+            count += 1
 
+        level_vbox = gtk.VBox()
+        hbox.pack_start(level_vbox, False, padding=3)
+        
+        vol_image = gtk.image_new_from_file(FGlobs.pkgdatadir / "volume2.png")
+        vol = gtk.VScale(vol_adj)
+        vol.set_inverted(True)
+        vol.set_draw_value(False)
+        set_tip(vol, _('Effects volume.'))
+
+        pb = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "headroom.png")
+        mute_image = gtk.image_new_from_pixbuf(pb)
+        mute = gtk.VScale(mute_adj)
+        mute.set_inverted(True)
+        mute.set_draw_value(False)
+        set_tip(mute, _('Player headroom that is applied when an effect is playing.'))
+        
+        spc = gtk.VBox()
+        
+        for widget, expand in zip((vol_image, vol, spc, mute_image, mute), 
+                                    (False, True, False, False, True)):
+            level_vbox.pack_start(widget, expand, padding=2)
 
     def marshall(self):
-        return json.dumps([x.marshall() for x in self.widgets])
-
+        return json.dumps([x.marshall() for x in self.effects])
 
     def unmarshall(self, data):
-        for per_widget_data, widget in zip(json.loads(data), self.widgets):
+        for per_widget_data, widget in zip(json.loads(data), self.effects):
             widget.unmarshall(per_widget_data)
-   
    
     def restore_session(self):
         try:
-            with open(PM.basedir / self.session_pathname, "r") as f:
+            with open(PM.basedir / self.session_filename, "r") as f:
                 self.unmarshall(f.read())
         except IOError:
             print "failed to read effects session file"
 
-
     def save_session(self, where):
         try:
-            with open((where or PM.basedir) / self.session_pathname, "w") as f:
+            with open((where or PM.basedir) / self.session_filename, "w") as f:
                 f.write(self.marshall())
         except IOError:
             print "failed to write effects session file"
 
-
     def update_leds(self, bits):
-        bit = 0
-        effect = iter(self.widgets)
-        while bit < PGlobs.num_effects:
-            effect.next().update_led((1 << bit) & bits)
-            bit += 1
-            
-            
+        for bit, each in enumerate(self.effects):
+            each.update_led((1 << bit + self.base) & bits)
+
     def stop(self):
-        for each in self.widgets:
+        for each in self.effects:
             each.stop.clicked()
-                
-                
+
     def uuids(self):
         return (x.uuid for x in self.widgets)
-        
-        
+
     def pathnames(self):
         return (x.pathname for x in self.widgets)
-
 
 
 class ExtraPlayers(gtk.HBox):
@@ -381,44 +394,49 @@ class ExtraPlayers(gtk.HBox):
         estable.set_col_spacing(1, 8)
         esbox.pack_start(estable)
 
-        self.effects = EffectCluster(" %s " % _('Effects'), PGlobs.num_effects,
-                            2 if PGlobs.num_effects > 12 else 1, Effect, parent)
-        estable.attach(self.effects, 0, 2, 0, 1)
-        
-        self.jvol_adj = gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 10.0)
-        self.jmute_adj = gtk.Adjustment(100.0, 0.0, 127.0, 1.0, 10.0)
+        self.jvol_adj = (gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 10.0),
+                         gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 10.0))
+        self.jmute_adj = (gtk.Adjustment(100.0, 0.0, 127.0, 1.0, 10.0),
+                          gtk.Adjustment(100.0, 0.0, 127.0, 1.0, 10.0))
         self.ivol_adj = gtk.Adjustment(64.0, 0.0, 127.0, 1.0, 10.0)
-
-        for each in (self.jvol_adj, self.jmute_adj, self.ivol_adj):
+        for each in (self.jvol_adj[0], self.jvol_adj[1], self.ivol_adj,
+                                        self.jmute_adj[0], self.jmute_adj[1]):
             each.connect("value-changed",
                                 lambda w: parent.send_new_mixer_stats())
-        
-        volpb = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "volume2.png")
 
-        jlevel_vbox = gtk.VBox()
-        self.pack_start(jlevel_vbox, False)
-        
-        jvol_image = gtk.image_new_from_pixbuf(volpb.copy())
-        jvol = gtk.VScale(self.jvol_adj)
-        jvol.set_inverted(True)
-        jvol.set_draw_value(False)
-        set_tip(jvol, _('Effects volume.'))
+        effects_hbox = gtk.HBox(homogeneous=True)
+        effects_hbox.set_spacing(6)
+        effects = PGlobs.num_effects
+        base = 0
+        max_rows = 12
+        effect_cols = (effects + max_rows - 1) // max_rows
+        self.all_effects = []
+        self.effect_banks = []
+        for col in range(effect_cols):
+            self.effect_banks.append(
+                EffectBank(" %s " % (_('Effects %d') % (col + 1)),
+                min(effects - base, max_rows), base,
+                "effects%d_session" % (col + 1), parent, self.all_effects,
+                self.jvol_adj[col], self.jmute_adj[col]))
+            effects_hbox.pack_start(self.effect_banks[-1])
+            base += max_rows
 
-        pb = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "headroom.png")
-        jmute_image = gtk.image_new_from_pixbuf(pb)
-        jmute = gtk.VScale(self.jmute_adj)
-        jmute.set_inverted(True)
-        jmute.set_draw_value(False)
-        set_tip(jmute, _('Player headroom that is applied when an effect is playing.'))
+        estable.attach(effects_hbox, 0, 2, 0, 1)
         
-        for widget, expand in zip((jvol_image, jvol, jmute_image, jmute), 
-                                                itertools.cycle((False, True))):
-            jlevel_vbox.pack_start(widget, expand, padding=2)
-       
+        interlude_frame = gtk.Frame(" %s " % _('Background Tracks'))
+        self.pack_start(interlude_frame)
+        hbox = gtk.HBox()
+        hbox.set_spacing(1)
+        interlude_frame.add(hbox)
+        interlude_box = gtk.VBox()
+        hbox.pack_start(interlude_box)
+        self.interlude = IDJC_Media_Player(interlude_box, "interlude", parent)
+        interlude_box.set_no_show_all(True)
+
         ilevel_vbox = gtk.VBox()
-        self.pack_start(ilevel_vbox, False)
-        
-        ivol_image = gtk.image_new_from_pixbuf(volpb.copy())
+        hbox.pack_start(ilevel_vbox, False, padding=3)
+        volpb = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "volume2.png")
+        ivol_image = gtk.image_new_from_pixbuf(volpb)
         ilevel_vbox.pack_start(ivol_image, False, padding=2)
         ivol = gtk.VScale(self.ivol_adj)
         ivol.set_inverted(True)
@@ -426,47 +444,46 @@ class ExtraPlayers(gtk.HBox):
         ilevel_vbox.pack_start(ivol, padding=2)
         set_tip(ivol, _('Background Tracks volume.'))
 
-        interlude_frame = gtk.Frame(" %s " % _('Background Tracks'))
-        self.pack_start(interlude_frame)
-        interlude_box = gtk.VBox()
-        interlude_box.set_border_width(8)
-        interlude_frame.add(interlude_box)
-        self.interlude = IDJC_Media_Player(interlude_box, "interlude", parent)
-        interlude_box.set_no_show_all(True)
-
         self.show_all()
         interlude_box.show()
 
+    def restore_session(self):
+        for each in self.effect_banks:
+            each.restore_session()
+        self.interlude.restore_session()
+        
+    def save_session(self, where):
+        for each in self.effect_banks:
+            each.save_session(where)
+        self.interlude.save_session(where)
+
+    def update_effect_leds(self, ep):
+        for each in self.effect_banks:
+            each.update_leds(ep)
 
     def clear_indicators(self):
         """Set all LED indicators to off."""
         
         pass
 
-
     def cleanup(self):
         pass
-
 
     @property
     def playing(self):
         return False
-        
-    
+  
     @property
     def flush(self):
         return 0
-        
 
     @flush.setter
     def flush(self, value):
         pass
 
-
     @property
     def interludeflush(self):
         return 0
-
 
     @interludeflush.setter
     def interludeflush(self, value):

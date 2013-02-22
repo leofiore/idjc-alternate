@@ -72,7 +72,8 @@ typedef jack_default_audio_sample_t sample_t;
 unsigned long sr = 44100;
 
 /* values of the volume sliders in the GUI */
-static int volume, volume2, crossfade, jinglesvolume, jinglesheadroom, interludevol, mixbackvol, crosspattern;
+static int volume, volume2, crossfade, jinglesvolume1, jinglesheadroom1;
+static int jinglesvolume2, jinglesheadroom2, interludevol, mixbackvol, crosspattern;
 /* back and forth status indicators re. jingles */
 static int jingles_playing;
 /* the player audio feed buttons */
@@ -240,7 +241,7 @@ static void update_smoothed_volumes()
     float xprop, yprop;
     const float bias = 0.35386f;
     const float pat3 = 0.9504953575f;
-    int have_data_f = 0;
+    int hr[2] = {127, 127};
 
     xlplayer_smoothing_process_all(players);
     xlplayer_smoothing_process_all(plr_j);
@@ -249,12 +250,13 @@ static void update_smoothed_volumes()
         {
         if ((*p)->have_data_f)
             {
-            have_data_f = TRUE;
-            break;
+            int i = (p - plr_j) / 12;
+            
+            hr[i] = i ? jinglesheadroom2 : jinglesheadroom1;
             }
         }
 
-    jingles_headroom_control = have_data_f ? jinglesheadroom : 127;
+    jingles_headroom_control = (hr[0] < hr[1]) ? hr[0] : hr[1];
     smoothing_volume_process(&jingles_headroom_smoothing);
 
     if (dj_audio_level != current_dj_audio_level)
@@ -1061,7 +1063,9 @@ void mixer_init(void)
     
     for (int i = 0; i < ne; ++i)
         {
-        if (!(plr_j[i] = xlplayer_create(sr, 0.15f, "jingles", &g.app_shutdown, &jinglesvolume, 0, NULL, NULL, 0.0f)))
+        int *volct = (i < 12) ? &jinglesvolume1 : &jinglesvolume2;
+
+        if (!(plr_j[i] = xlplayer_create(sr, 0.15f, "jingles", &g.app_shutdown, volct, 0, NULL, NULL, 0.0f)))
             {
             fprintf(stderr, "failed to create jingles player module\n");
             exit(5);
@@ -1348,15 +1352,16 @@ int mixer_main()
     if (!strcmp(action, "mixstats"))
         {
         if(sscanf(mixer_string,
-                 ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d%1d%1d:%1d"
-                 "%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f:%d:%d:%d:"
-                 "%1d:%1d:%1d:%f:",
-                 &volume, &volume2, &crossfade, &jinglesvolume, &jinglesheadroom , &interludevol, &mixbackvol, &jingles_playing,
+                 ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d"
+                 "%1d%1d:%1d%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f"
+                 ":%d:%d:%d:%1d:%1d:%1d:%f:",
+                 &volume, &volume2, &crossfade, &jinglesvolume1, &jinglesheadroom1,
+                 &jinglesvolume2, &jinglesheadroom2 ,&interludevol, &mixbackvol, &jingles_playing,
                  &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
                  &s.new_left_pause, &s.new_right_pause, &s.flush_left, &s.flush_right, &s.flush_jingles, &s.flush_interlude,
                  &simple_mixer, &eot_alarm_set, &mixermode, &s.fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed),
                  &speed_variance, &dj_audio_level, &crosspattern, &s.use_dsp, &s.new_inter_pause,
-                 &inter_stream, &inter_audio, &inter_force, &alarm_audio_level) !=35)
+                 &inter_stream, &inter_audio, &inter_force, &alarm_audio_level) !=37)
             {
             fprintf(stderr, "mixer got bad mixer string\n");
             return TRUE;

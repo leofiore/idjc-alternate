@@ -1908,14 +1908,18 @@ class MainWindow(dbus.service.Object):
         if self.prefs_window.dual_volume.get_active():
              deck2adj = self.deck2adj.get_value()
 
-        string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:" \
-                        "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:" \
-                        "%d:%d:%d:%d:%d:" % (
+        string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:" \
+                        "%d:%d%d%d%d%d:%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:" \
+                        "%d:%f:%d:%d:%d:%d:%d:%d:%d:" % (
                         deckadj,
                         deck2adj,
                         self.crossadj.get_value(),
-                        self.jingles.jvol_adj.get_value(),
-                        self.jingles.jmute_adj.get_value(),
+                        self.jingles.jvol_adj[0].get_value(),
+                        self.jingles.jmute_adj[0].get_value(),
+
+                        self.jingles.jvol_adj[1].get_value(),
+                        self.jingles.jmute_adj[1].get_value(),
+
                         self.jingles.ivol_adj.get_value(),
                         self.mixbackadj.get_value(),
                         self.jingles.playing,
@@ -2436,8 +2440,7 @@ class MainWindow(dbus.service.Object):
 
         self.player_left.save_session(where)
         self.player_right.save_session(where)
-        self.jingles.interlude.save_session(where)
-        self.jingles.effects.save_session(where)
+        self.jingles.save_session(where)
         # JACK ports are saved at the moment of change, not here.
         
         return True  # This is also a timeout routine
@@ -2774,7 +2777,7 @@ class MainWindow(dbus.service.Object):
 
             ep = int(self.effects_playing)
             if ep != -1:
-                self.jingles.effects.update_leds(ep)
+                self.jingles.update_effect_leds(ep)
 
         except Exception:
             if locking:  # Ensure unlocking occurs when there is an exception.
@@ -3828,8 +3831,7 @@ class MainWindow(dbus.service.Object):
             print "Restoring previous session"
             self.player_left.restore_session()
             self.player_right.restore_session()
-            self.jingles.interlude.restore_session()
-            self.jingles.effects.restore_session()
+            self.jingles.restore_session()
             self.restore_session()
         self.session_loaded = True
          
