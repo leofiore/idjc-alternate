@@ -295,7 +295,7 @@ class EffectConfigDialog(gtk.FileChooserDialog):
 class EffectBank(gtk.Frame):
     """A vertical stack of effects with level controls."""
 
-    def __init__(self, label, qty, base, filename, parent, all_effects):
+    def __init__(self, label, qty, base, filename, parent, all_effects, vol_adj, mute_adj):
         gtk.Frame.__init__(self, label)
         self.base = base
         self.session_filename = filename
@@ -318,23 +318,18 @@ class EffectBank(gtk.Frame):
             vbox.pack_start(effect)
             count += 1
 
-        self.vol_adj = gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 10.0)
-        self.mute_adj = gtk.Adjustment(100.0, 0.0, 127.0, 1.0, 10.0)
-        for each in (self.vol_adj, self.mute_adj):
-            each.connect("value-changed", lambda w: parent.send_new_mixer_stats())
-
         level_vbox = gtk.VBox()
         hbox.pack_start(level_vbox, False, padding=3)
         
         vol_image = gtk.image_new_from_file(FGlobs.pkgdatadir / "volume2.png")
-        vol = gtk.VScale(self.vol_adj)
+        vol = gtk.VScale(vol_adj)
         vol.set_inverted(True)
         vol.set_draw_value(False)
         set_tip(vol, _('Effects volume.'))
 
         pb = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "headroom.png")
         mute_image = gtk.image_new_from_pixbuf(pb)
-        mute = gtk.VScale(self.mute_adj)
+        mute = gtk.VScale(mute_adj)
         mute.set_inverted(True)
         mute.set_draw_value(False)
         set_tip(mute, _('Player headroom that is applied when an effect is playing.'))
@@ -371,7 +366,7 @@ class EffectBank(gtk.Frame):
             each.update_led((1 << bit + self.base) & bits)
 
     def stop(self):
-        for each in self.widgets:
+        for each in self.effects:
             each.stop.clicked()
 
     def uuids(self):
@@ -399,6 +394,16 @@ class ExtraPlayers(gtk.HBox):
         estable.set_col_spacing(1, 8)
         esbox.pack_start(estable)
 
+        self.jvol_adj = (gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 10.0),
+                         gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 10.0))
+        self.jmute_adj = (gtk.Adjustment(100.0, 0.0, 127.0, 1.0, 10.0),
+                          gtk.Adjustment(100.0, 0.0, 127.0, 1.0, 10.0))
+        self.ivol_adj = gtk.Adjustment(64.0, 0.0, 127.0, 1.0, 10.0)
+        for each in (self.jvol_adj[0], self.jvol_adj[1], self.ivol_adj,
+                                        self.jmute_adj[0], self.jmute_adj[1]):
+            each.connect("value-changed",
+                                lambda w: parent.send_new_mixer_stats())
+
         effects_hbox = gtk.HBox(homogeneous=True)
         effects_hbox.set_spacing(6)
         effects = PGlobs.num_effects
@@ -411,20 +416,13 @@ class ExtraPlayers(gtk.HBox):
             self.effect_banks.append(
                 EffectBank(" %s " % (_('Effects %d') % (col + 1)),
                 min(effects - base, max_rows), base,
-                "effects%d_session" % (col + 1), parent, self.all_effects))
+                "effects%d_session" % (col + 1), parent, self.all_effects,
+                self.jvol_adj[col], self.jmute_adj[col]))
             effects_hbox.pack_start(self.effect_banks[-1])
             base += max_rows
 
         estable.attach(effects_hbox, 0, 2, 0, 1)
         
-        self.jvol_adj = gtk.Adjustment(127.0, 0.0, 127.0, 1.0, 10.0)
-        self.jmute_adj = gtk.Adjustment(100.0, 0.0, 127.0, 1.0, 10.0)
-        self.ivol_adj = gtk.Adjustment(64.0, 0.0, 127.0, 1.0, 10.0)
-
-        for each in (self.jvol_adj, self.jmute_adj, self.ivol_adj):
-            each.connect("value-changed",
-                                lambda w: parent.send_new_mixer_stats())
-
         interlude_frame = gtk.Frame(" %s " % _('Background Tracks'))
         self.pack_start(interlude_frame)
         hbox = gtk.HBox()

@@ -127,13 +127,11 @@ control_methods= {
     'k_fire': _('Effect play from start'),
 
     # TC: Control method. Please keep it as Target:Action.
-    'j_stop': _('Effects stop all'),
+    'b_stop': _('Effects stop many'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_vol1': _('Effects set volume'),
+    'b_vol1': _('Effects set volume'),
     # TC: Control method. Please keep it as Target:Action.
-    'j_vol2': _('Effects set headroom'),
-    # TC: Control method. Please keep it as Target:Action.
-    'j_ivol': _('Background tracks set volume'),
+    'b_vol2': _('Effects set headroom'),
 
     # TC: Control method. Please keep it as Target:Action.
     's_on': _('Stream set connected'),
@@ -157,9 +155,15 @@ control_targets_players= (
     _('Right player'),
     _('Background player'),
     _('Focused player'),
-    _('Fadered player'),
+    _('Fadered player')
 )
 
+
+control_targets_effects_bank= (
+    _('Effects bank 1'),
+    _('Effects bank 2'),
+    _('All effects')
+)
 
 
 class Binding(tuple):
@@ -359,6 +363,8 @@ class Binding(tuple):
         group= self.method[0]
         if group=='p':
             return control_targets_players[self.target]
+        if group=='b':
+            return control_targets_effects_bank[self.target]
         if group in control_targets:
             return '%s %d' % (control_targets[group], self.target+1)
         return ''
@@ -560,7 +566,7 @@ class Controls(object):
             Binding('k0.ffc7:pk_fire.9.127'),
             Binding('k0.ffc8:pk_fire.a.127'),
             Binding('k0.ffc9:pk_fire.b.127'),
-            Binding('k0.ff1b:pj_stop.b.127'), # Esc stop effects
+            Binding('k0.ff1b:pb_stop.2.127'), # Esc stop effects
             Binding('k0.31:sx_fade.b.0'), # 1-2 xfader sides
             Binding('k0.32:sx_fade.b.127'),
             Binding('k0.63:px_pass.0.127'), # C, pass xfader
@@ -812,8 +818,11 @@ class Controls(object):
     def p_vol(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
-        deckadj= self.owner.deck2adj if player is self.owner.player_right \
+        if player.playername in ("left", "right"):
+            deckadj= self.owner.deck2adj if player is self.owner.player_right \
                                                         else self.owner.deckadj
+        elif player.playername == "interlude":
+            deckadj = self.owner.jingles.ivol_adj
         cross= deckadj.get_value()+v if isd else v
         deckadj.set_value(cross)
 
@@ -988,31 +997,39 @@ class Controls(object):
     #
     @action_method(Binding.MODE_PULSE)
     def k_fire(self, n, v, isd):
-        self.owner.jingles.effects.widgets[n].trigger.clicked()
+        self.owner.jingles.all_effects[n].trigger.clicked()
 
     # Jingles player in general
     #
     @action_method(Binding.MODE_PULSE)
-    def j_stop(self, n, v, isd):
-        self.owner.jingles.effects.stop()
+    def b_stop(self, n, v, isd):
+        if n < 2:
+            self.owner.jingles.effect_banks[n].stop()
+        else:
+            banks = self.owner.jingles.effect_banks
+            banks[0].stop()
+            if len(banks) > 1:
+                banks[1].stop()
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
-    def j_vol1(self, n, v, isd):
-        fader= self.owner.jingles.jvol_adj
-        vol= fader.get_value()+v if isd else v
-        fader.set_value(vol)
+    def b_vol1(self, n, v, isd):
+        if n < 2:
+            fader= self.owner.jingles.jvol_adj[n]
+            vol= fader.get_value()+v if isd else v
+            fader.set_value(vol)
+        else:
+            self.b_vol1(0, v, isd)
+            self.b_vol1(1, v, isd)
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
-    def j_vol2(self, n, v, isd):
-        fader= self.owner.jingles.jmute_adj
-        vol= fader.get_value()+v if isd else v
-        fader.set_value(vol)
-
-    @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
-    def j_ivol(self, n, v, isd):
-        fader= self.owner.jingles.ivol_adj
-        vol= fader.get_value()+v if isd else v
-        fader.set_value(vol)
+    def b_vol2(self, n, v, isd):
+        if n < 2:
+            fader= self.owner.jingles.jmute_adj[n]
+            vol= fader.get_value()+v if isd else v
+            fader.set_value(vol)
+        else:
+            self.b_vol2(0, v, isd)
+            self.b_vol2(1, v, isd)
 
     # Stream connection
     #
@@ -1231,7 +1248,7 @@ class BindingEditor(gtk.Dialog):
         # TC: binding editor, action pane, first row, toplevel menu.
         'k': _('Single effect'),
         # TC: binding editor, action pane, first row, toplevel menu.
-        'j': _('Jingles players'),
+        'b': _('Effects bank'),
         # TC: binding editor, action pane, first row, toplevel menu.
         's': _('Stream'),
         # TC: binding editor, action pane, first row, toplevel menu.
@@ -1512,6 +1529,8 @@ class BindingEditor(gtk.Dialog):
         group= method[:1]
         if group=='p':
             self.target_field.set_adjustment(PlayerAdjustment())
+        if group=='b':
+            self.target_field.set_adjustment(EffectsBankAdjustment())
         elif group in 'mksr':
             self.target_field.set_adjustment(TargetAdjustment(group))
         else:
@@ -1654,6 +1673,13 @@ class PlayerAdjustment(CustomAdjustment):
         return control_targets_players.index(text)
     def write_output(self, value):
         return control_targets_players[max(min(int(value), 4), 0)]
+class EffectsBankAdjustment(CustomAdjustment):
+    def __init__(self, value= 0):
+        CustomAdjustment.__init__(self, value, 0, 2, 1)
+    def read_input(self, text):
+        return control_targets_effects_bank.index(text)
+    def write_output(self, value):
+        return control_targets_effects_bank[max(min(int(value), 2), 0)]
 class TargetAdjustment(CustomAdjustment):
     def __init__(self, group, value= 0):
         CustomAdjustment.__init__(self, value, 0, {

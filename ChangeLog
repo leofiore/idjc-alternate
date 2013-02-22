@@ -1,6 +1,8 @@
 * Changes in version 0.8.9 *
 
-Added level controls for each bank of 12 effect buttons.
+The player bindings now work for the background tracks volume control.
+
+Added level controls for each bank of 12 effect buttons. Key bindings updated.
 
 The DJ audio level control is now at the top of the Prefs->General page.
 

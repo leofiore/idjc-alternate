@@ -1908,14 +1908,18 @@ class MainWindow(dbus.service.Object):
         if self.prefs_window.dual_volume.get_active():
              deck2adj = self.deck2adj.get_value()
 
-        string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%d%d%d%d%d:" \
-                        "%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:%d:%f:%d:%d:" \
-                        "%d:%d:%d:%d:%d:" % (
+        string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:" \
+                        "%d:%d%d%d%d%d:%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:" \
+                        "%d:%f:%d:%d:%d:%d:%d:%d:%d:" % (
                         deckadj,
                         deck2adj,
                         self.crossadj.get_value(),
-                        self.jingles.jvol_adj.get_value(),
-                        self.jingles.jmute_adj.get_value(),
+                        self.jingles.jvol_adj[0].get_value(),
+                        self.jingles.jmute_adj[0].get_value(),
+
+                        self.jingles.jvol_adj[1].get_value(),
+                        self.jingles.jmute_adj[1].get_value(),
+
                         self.jingles.ivol_adj.get_value(),
                         self.mixbackadj.get_value(),
                         self.jingles.playing,
