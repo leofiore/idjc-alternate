@@ -1166,12 +1166,18 @@ class mixprefs:
         
         vbox.show()
 
-        outervbox.pack_start(frame, False, False, 0)
+        outervbox.pack_start(frame, False)
        
         # Song database preferences and connect button.
         self.songdbprefs = self.parent.topleftpane.prefs_controls
         self.parent.menu.songdbmenu_a.connect_proxy(self.songdbprefs.dbtoggle)
         outervbox.pack_start(self.songdbprefs, False)
+        
+        # Widget for user interface label renaming.
+        label_subst = self.parent.label_subst
+        outervbox.pack_start(label_subst, False)
+        label_subst.set_border_width(3)
+        label_subst.show_all()
         
         # Session to be saved, or initial settings preferences.
         frame = gtk.Frame(" %s " % _('Player Settings At Startup'))
@@ -1237,7 +1243,7 @@ class mixprefs:
         self.restore_session_option.connect("toggled", self.cb_restore_session)
         self.restore_session_option.set_active(True)
       
-        outervbox.pack_start(frame, False, False, 0)
+        outervbox.pack_start(frame, False)
         frame.show() 
                 
         # TC: A heading label for miscellaneous settings.
@@ -1454,7 +1460,8 @@ class mixprefs:
             
         for each in itertools.chain(mic_controls, 
                             (self.parent.freewheel_button, self.songdbprefs,
-                            self.lpconfig, self.rpconfig, opener_settings)):
+                            self.lpconfig, self.rpconfig, opener_settings,
+                            label_subst)):
             self.activedict.update(each.activedict)
 
         self.valuesdict = {  # These widgets all have the get_value method.
@@ -1484,7 +1491,7 @@ class mixprefs:
             }
 
         for each in itertools.chain(mic_controls, (opener_settings,
-                                                            self.songdbprefs)):
+                                            label_subst, self.songdbprefs)):
             self.textdict.update(each.textdict)
 
         self.rangewidgets = (self.parent.deckadj,)

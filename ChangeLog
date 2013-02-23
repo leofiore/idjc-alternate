@@ -1,5 +1,13 @@
 * Changes in version 0.8.9 *
 
+Playlist mode list in background tracks no longer shows unusable modes. This saves screen space.
+
+Player mixer frame removed to save screen space.
+
+Players now have renameable labels.
+
+Fix for background tracks finish time not updating when not playing.
+
 The player bindings now work for the background tracks volume control.
 
 Added level controls for each bank of 12 effect buttons. Key bindings updated.

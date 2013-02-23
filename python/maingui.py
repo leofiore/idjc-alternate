@@ -52,6 +52,7 @@ from .utils import LinkUUIDRegistry
 from .utils import PathStr
 from .gtkstuff import threadslock, WindowSizeTracker, ConfirmationDialog
 from .gtkstuff import IconChooserButton, IconPreviewFileChooserDialog, LEDDict
+from .gtkstuff import LabelSubst
 from . import midicontrols
 from .tooltips import set_tip
 from . import songdb
@@ -224,16 +225,16 @@ class JackMenu(MenuMixin):
 
         mkitems = self.build(menu.jackmenu)
         mkitems(zip(
-                    "channels players voip dsp mix midi output".split(), (
+                    "channels players voip dsp mix output other".split(), (
                     _('Channels'), _('Players'),
-                    _('VoIP'), _('DSP'), _('Mix'), _('MIDI'), _('Output'))))
+                    _('VoIP'), _('DSP'), _('Mix'), _('Output'), _('Misc'))))
         self.submenu(self.channelsmenu_i, "channels")
         self.submenu(self.playersmenu_i, "players")
         self.submenu(self.voipmenu_i, "voip")
         self.submenu(self.dspmenu_i, "dsp")
         self.submenu(self.mixmenu_i, "mix")
-        self.submenu(self.midimenu_i, "midi")
         self.submenu(self.outputmenu_i, "output")
+        self.submenu(self.othermenu_i, "other")
         
         out2_in2 = itertools.cycle(("_out_",)*2 + ("_in_",)*2)
         lr = itertools.cycle("lr")
@@ -242,7 +243,6 @@ class JackMenu(MenuMixin):
         for prefix in "pl pr pi pj".split():
             for each in zip((prefix,) * 4, out2_in2, lr):
                 self.add_port(self.playersmenu, "".join(each))
-        self.add_port(self.playersmenu, "alarm_out")
 
         for each in zip(("voip",) * 4, out2_in2, lr):
             self.add_port(self.voipmenu, "".join(each))
@@ -253,13 +253,14 @@ class JackMenu(MenuMixin):
         for each in zip(dj2_str2, ("_out_",)*4, lr):
             self.add_port(self.mixmenu, "".join(each))
             
-        self.add_port(self.midimenu, "midi_control")
-        
         for i in range(1, PGlobs.num_micpairs * 2 + 1):
             self.add_port(self.channelsmenu, "ch_in_" + str(i))
 
         for each in zip(("output_in_",) * 2, lr):
             self.add_port(self.outputmenu, "".join(each))
+
+        self.add_port(self.othermenu, "midi_control")
+        self.add_port(self.othermenu, "alarm_out")
             
         self._port_data = []
         
@@ -2659,7 +2660,8 @@ class MainWindow(dbus.service.Object):
                     self.send_new_mixer_stats()
                     self.prefs_window.fixup_mic_controls()
                     self.player_left.next.clicked()
-                    self.player_right.next.clicked()                  
+                    self.player_right.next.clicked()
+                    self.jingles.interlude.next.clicked()                  
                     self.server_window.source_client_open()
                     self.comms_reply_pending = False
                     self.server_window.restart_streams_and_recorders()
@@ -2840,14 +2842,13 @@ class MainWindow(dbus.service.Object):
 
     @threadslock 
     def stats_update(self):
-        if not self.player_left.player_is_playing:
-            self.player_left.update_time_stats()
-        else:
-            self.player_left.check_mixer_signal()
-        if not self.player_right.player_is_playing:
-            self.player_right.update_time_stats()
-        else:
-            self.player_right.check_mixer_signal()
+        players = self.player_left, self.player_right, self.jingles.interlude
+        for player in players:
+            if player.player_is_playing:
+                player.check_mixer_signal()
+            elif player.pl_mode.get_active() == 0:
+                player.update_time_stats()
+                
         return True
 
 
@@ -3011,7 +3012,10 @@ class MainWindow(dbus.service.Object):
         self.leftpane.pack1(self.topleftpane)
         self.topleftpane.connect_object("show", gtk.VPaned.show, self.leftpane)
         self.topleftpane.connect_object("hide", self.cb_panehide, self.leftpane)
-        
+
+        # Facility for widget label renaming by the user.
+        self.label_subst = LabelSubst(_('Renameable Labels'))
+
         # Expand features by adding something useful here
         # a dummy widget is needed to prevent a segfault when F8 is pressed
         self.bottomleftpane = gtk.Button("Bottom")
@@ -3039,7 +3043,8 @@ class MainWindow(dbus.service.Object):
         
         self.player_nb = gtk.Notebook()
         self.player_nb.set_border_width(6)
-        main_label = gtk.Label(_('Main Players'))
+        main_label = gtk.Label()
+        self.label_subst.add_widget(main_label, "mainplayerslabel", _('Main Players'))
         self.vbox6 = gtk.VBox(False, 0)
         self.player_nb.append_page(self.vbox6, main_label)
         main_label.show()
@@ -3359,9 +3364,9 @@ class MainWindow(dbus.service.Object):
         label.show()
         self.metadata_source = gtk.combo_box_new_text()
         # TC: The chosen source of track metadata.
-        self.metadata_source.append_text(_('Left Player'))
+        self.metadata_source.append_text(_('Playlist 1'))
         # TC: The chosen source of track metadata.
-        self.metadata_source.append_text(_('Right Player'))
+        self.metadata_source.append_text(_('Playlist 2'))
         # TC: The chosen source of track metadata.
         self.metadata_source.append_text(_('Last Played'))
         # TC: The chosen source of track metadata.
@@ -3369,12 +3374,12 @@ class MainWindow(dbus.service.Object):
         # TC: The chosen source of track metadata. In this case no metadata.
         self.metadata_source.append_text(_('None'))
         # TC: The chosen source of track metadata. In this case no metadata.
-        self.metadata_source.append_text(_('Background'))
+        self.metadata_source.append_text(_('Playlist 3'))
         self.metadata_source.set_active(3)
         cross_sizegroup.add_widget(self.metadata_source)
         self.metadata_source.connect("changed", self.cb_metadata_source)
         set_tip(self.metadata_source,
-        _('Select which Deck is responsible for the metadata on the stream.'))
+        _('Select the origin for the playing track metadata on the stream.'))
         mvbox.add(self.metadata_source)
         self.metadata_source.show()
         self.crossbox.pack_start(mvbox, False, False, 0)
@@ -3663,9 +3668,7 @@ class MainWindow(dbus.service.Object):
         
         # Aux players initialisation.
         self.jingles = ExtraPlayers(self)
-        extra_label = gtk.Label(_('Jingles'))
-        self.player_nb.append_page(self.jingles, extra_label)
-        extra_label.show()
+        self.player_nb.append_page(self.jingles, self.jingles.nb_label)
         self.player_nb.set_page(0)
 
         # Variable initialisation

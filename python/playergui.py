@@ -3747,6 +3747,7 @@ class IDJC_Media_Player:
     def cb_playlist_mode(self, widget):
         self.pl_delay.set_sensitive(self.pl_mode.get_active() in (0, 1, 2, 5))
         if widget.get_active() == 0:
+            self.update_time_stats()
             self.pl_statusbar.show()
         else:
             self.pl_statusbar.hide()
@@ -3837,11 +3838,6 @@ class IDJC_Media_Player:
         
         return self.pl_menu.flags() & gtk.MAPPED
 
-    def pl_mode_data_function(self, celllayout, cell, model, iter):
-        cell.props.text = _(model.get_value(iter, 0))
-        if self.playername == "interlude":
-            cell.props.sensitive = model.get_path(iter)[0] in range(6)
-            
 
     def __init__(self, pbox, name, parent):
         self.parent = parent
@@ -4042,13 +4038,10 @@ class IDJC_Media_Player:
                             _('This sets the playback speed back to normal.'))
 
         # The box for the mute widgets.
-        self.hbox2 = gtk.HBox(False, 0)
-        self.hbox2.set_border_width(4)
-        self.hbox2.set_spacing(4)
-        frame = gtk.Frame()
-        frame.set_border_width(4)
-        frame.add(self.hbox2)
-        pbox.pack_start(frame, False, False, 0)
+        self.hbox2 = gtk.HBox()
+        self.hbox2.set_border_width(2)
+        self.hbox2.set_spacing(2)
+        pbox.pack_start(self.hbox2, False)
         frame.show()
 
         image = gtk.Image()
@@ -4121,22 +4114,23 @@ class IDJC_Media_Player:
         # The playlist mode dropdown menu.
 
         frame = ButtonFrame(_('Playlist Mode'))
-        self.hbox2.pack_start(frame, True, True, 0)
+        self.hbox2.pack_start(frame)
         frame.show()
 
         self.pl_mode = gtk.combo_box_new_text()
-        self.pl_mode.set_cell_data_func(
-                        self.pl_mode.get_cells()[0], self.pl_mode_data_function)
         self.pl_mode.append_text(N_('Play All'))
         self.pl_mode.append_text(N_('Loop All'))
         self.pl_mode.append_text(N_('Random'))
         self.pl_mode.append_text(N_('Manual'))
         self.pl_mode.append_text(N_('Cue Up'))
         self.pl_mode.append_text(N_('External'))
-        self.pl_mode.append_text(N_('Alternate'))
-        self.pl_mode.append_text(N_('Fade Over'))
-        self.pl_mode.append_text(N_('Random Hop'))
-        self.pl_mode.set_active(1 if self.playername == "interlude" else 0)
+        if self.playername != "interlude":
+            self.pl_mode.append_text(N_('Alternate'))
+            self.pl_mode.append_text(N_('Fade Over'))
+            self.pl_mode.append_text(N_('Random Hop'))
+            self.pl_mode.set_active(1)
+        else:
+            self.pl_mode.set_active(0)
         self.pl_mode.connect("changed", self.cb_playlist_mode)
         set_tip(self.pl_mode, _("This sets the playlist mode which defines "
         "player behaviour after a track has finished playing.\n\n'Play All' is"
@@ -4158,12 +4152,12 @@ class IDJC_Media_Player:
         " player at the end of every track.\n\n'Random Hop' will pick a track"
         " at random from the other playlist."))
 
-        frame.hbox.pack_start(self.pl_mode, True, True, 0)
+        frame.hbox.pack_start(self.pl_mode)
         self.pl_mode.show()
 
         # TC: Fade time heading.
         frame = ButtonFrame(_('Fade'))
-        self.hbox2.pack_start(frame, True, True, 0)
+        self.hbox2.pack_start(frame)
         frame.show()
 
         self.pl_delay = gtk.combo_box_new_text()

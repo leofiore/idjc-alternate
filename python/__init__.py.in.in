@@ -102,7 +102,7 @@ class PGlobs(object):
     app_longform = "Internet DJ Console"
     default_icon = FGlobs.pkgdatadir / "icon.png"
     autoload_profile_pathname = config_dir / "autoload-profile"
-    copyright = _("Copyright 2005-2012 Stephen Fairchild and others.")
+    copyright = _("Copyright 2005-2013 Stephen Fairchild and others.")
     license = _("Released under the GNU General Public License V2.0 or later.")
     num_micpairs = 2
     num_streamers = 6

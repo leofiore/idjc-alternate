@@ -501,3 +501,62 @@ class IconPreviewFileChooserDialog(gtk.FileChooserDialog):
             active = True
             image.set_from_pixbuf(pb)
         self.set_preview_widget_active(active)
+
+
+class LabelSubst(gtk.Frame):
+    """User interface label substitution widget -- by the user."""
+
+    def __init__(self, heading):
+        gtk.Frame.__init__(self, " %s " % heading)
+        self.vbox = gtk.VBox()
+        self.vbox.set_border_width(2)
+        self.vbox.set_spacing(2)
+        self.add(self.vbox)
+        self.textdict = {}
+        self.activedict = {}
+
+    def add_widget(self, widget, ui_name, default_text):
+        frame = gtk.Frame(" %s " % default_text)
+        frame.set_label_align(0.5, 0.5)
+        frame.set_border_width(3)
+        self.vbox.pack_start(frame)
+        hbox = gtk.HBox()
+        hbox.set_spacing(3)
+        frame.add(hbox)
+        hbox.set_border_width(2)
+        use_supplied = gtk.RadioButton(None, _("Alternative"))
+        use_default = gtk.RadioButton(use_supplied, _('Default'))
+        self.activedict[ui_name + "_use_supplied"] = use_supplied
+        hbox.pack_start(use_default, False)
+        hbox.pack_start(use_supplied, False)
+        entry = gtk.Entry()
+        self.textdict[ui_name + "_text"] = entry
+        hbox.pack_start(entry)
+        
+        if isinstance(widget, gtk.Frame):
+            def set_text(new_text):
+                new_text = new_text.strip()
+                if new_text:
+                    new_text = " %s " % new_text
+                widget.set_label(new_text or None)
+            widget.set_text = set_text
+
+        entry.connect("changed", self.cb_entry_changed, widget, use_supplied)
+        args = default_text, entry, widget
+        use_default.connect("toggled", self.cb_radio_default, *args)
+        use_supplied.connect_object("toggled", self.cb_radio_default,
+                                                            use_default, *args)
+        use_default.set_active(True)
+        
+    def cb_entry_changed(self, entry, widget, use_supplied):
+        if use_supplied.get_active():
+            widget.set_text(entry.get_text())
+        elif entry.has_focus():
+            use_supplied.set_active(True)
+        
+    def cb_radio_default(self, use_default, default_text, entry, widget):
+        if use_default.get_active():
+            widget.set_text(default_text)
+        else:
+            widget.set_text(entry.get_text())
+            entry.grab_focus()
