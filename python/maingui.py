@@ -390,9 +390,10 @@ class JackMenu(MenuMixin):
     def _save(self, data, where=None):
         if where is not None:
             where = os.path.join(where, os.path.split(self.pathname)[1])
+        client_id = "\"%s:" % os.environ["client_id"]
         try:
             with open(where or self.pathname, "w") as f:
-                json.dump(data, f)
+                f.write(json.dumps(data).replace(client_id, "\"{client_id}:"))
         except Exception as e:
             print "problem writing", self.pathname
         else:
@@ -403,7 +404,7 @@ class JackMenu(MenuMixin):
         try:
             where = self.pathname if where is None else where
             with open(where) as f:
-                cons = json.load(f)
+                cons = f.read()
         except Exception:
             if where:
                 print "problem reading JACK connections files,", where
@@ -440,11 +441,14 @@ class JackMenu(MenuMixin):
                     ["{client_id}:str_out_r",
                         ["system:playback_6", "{client_id}:output_in_r"]]] """
 
-                cons = eval(cons.format(client_id=os.environ["client_id"]))
-
-        self._port_data = cons
-        if not startup or not args.no_jack_connections:
-            self.restore(cons)
+        try:
+            cons = json.loads(cons.format(client_id=os.environ["client_id"]))
+        except ValueError:
+            print "jack port connections file is empty"
+        else:
+            self._port_data = cons
+            if not startup or not args.no_jack_connections:
+                self.restore(cons)
 
 
     def restore(self, cons=None, restrict=""):

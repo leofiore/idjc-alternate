@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Copying profiles now copies the port connections.
+
 Playlist mode list in background tracks no longer shows unusable modes. This saves screen space.
 
 Player mixer frame removed to save screen space.
