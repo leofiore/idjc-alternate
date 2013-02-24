@@ -1620,6 +1620,7 @@ class IDJC_Media_Player:
                 self.gain += self.parent.prefs_window.rg_boost.get_value()
             if self.gaintype == "R128":
                 self.gain += self.parent.prefs_window.r128_boost.get_value()
+            self.gain += self.parent.prefs_window.all_boost.get_value()
             print "final gain value of %f dB" % self.gain
         else:
             self.gain = 0.0

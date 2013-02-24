@@ -964,7 +964,8 @@ class mixprefs:
             hbox.show()
             return hbox
 
-        self.more_effects = gtk.RadioButton(None, _('Reserve 24 sound effects slots'))
+        self.more_effects = gtk.RadioButton(None, 
+                                        _('Reserve 24 sound effects slots'))
         fewer_effects = gtk.RadioButton(self.more_effects, _("Only 12"))
         if PGlobs.num_effects == 24:
             self.more_effects.clicked()
@@ -1036,7 +1037,7 @@ class mixprefs:
         
         # ReplayGain controls
         
-        frame = gtk.Frame(" %s " % _('Music Loudness Compensation'))
+        frame = gtk.Frame(" %s " % _('Player Loudness Normalisation'))
         frame.set_border_width(3)
         outervbox.pack_start(frame, False, False, 0)
         vbox = gtk.VBox()
@@ -1048,8 +1049,8 @@ class mixprefs:
         
         self.rg_indicate = gtk.CheckButton(
                             _('Indicate which tracks have loudness metadata'))
-        set_tip(self.rg_indicate,
-                        _('Shows a marker in the playlists next to each track. Either a green circle or a red triangle.'))
+        set_tip(self.rg_indicate, _('Shows a marker in the playlists next to'
+                    ' each track. Either a green circle or a red triangle.'))
         self.rg_indicate.connect("toggled", self.cb_rg_indicate)
         vbox.pack_start(self.rg_indicate, False, False, 0)
         self.rg_indicate.show()
@@ -1061,30 +1062,46 @@ class mixprefs:
         vbox.pack_start(self.rg_adjust, False, False, 0)
         self.rg_adjust.show()
         
-        table = gtk.Table(1, 6)
+        table = gtk.Table(2, 6)
         table.set_col_spacings(3)
-        label = gtk.Label(_('Untagged'))
-        label.set_alignment(1.0, 0.5)
-        rg_defaultgainadj = gtk.Adjustment(-8.0, -30.0, 10.0, 0.1)
-        self.rg_defaultgain = gtk.SpinButton(rg_defaultgainadj, 0.0, 1)
-        set_tip(self.rg_defaultgain, _('Set this so that any unmarked tracks are playing at a roughly similar loudness level as the marked ones.'))
-        table.attach(label, 0, 1, 0, 1)
-        table.attach(self.rg_defaultgain, 1, 2, 0, 1, gtk.SHRINK)
-        label = gtk.Label(_('ReplayGain'))
-        rg_boostadj = gtk.Adjustment(0.0, -10.0, 20.5, 0.5)
-        self.rg_boost = gtk.SpinButton(rg_boostadj, 0.0, 1)
-        set_tip(self.rg_boost, _('It may not be desirable to use the default level since it is rather quiet. This should be set 4 or 5 dB lower than the R128 setting.'))
-        table.attach(label, 2, 3, 0, 1, gtk.SHRINK)
-        table.attach(self.rg_boost, 3, 4, 0, 1, gtk.SHRINK)
         label = gtk.Label(_('R128'))
+        label.set_alignment(1.0, 0.5)
         r128_boostadj = gtk.Adjustment(4.0, -5.0, 25.5, 0.5)
         self.r128_boost = gtk.SpinButton(r128_boostadj, 0.0, 1)
-        set_tip(self.r128_boost, _('It may not be desirable to use the default level since it is rather quiet. This should be set 4 or 5 dB higher than the ReplayGain setting.'))
-        table.attach(label, 4, 5, 0, 1, gtk.SHRINK)
-        table.attach(self.r128_boost, 5, 6, 0, 1, gtk.SHRINK)
+        set_tip(self.r128_boost, _('It may not be desirable to use the '
+                    'default level since it is rather quiet. This should be'
+                    ' set 4 or 5 dB higher than the ReplayGain setting.'))
+        table.attach(label, 0, 1, 0, 1)
+        table.attach(self.r128_boost, 1, 2, 0, 1)
+        label = gtk.Label(_('ReplayGain'))
+        label.set_alignment(1.0, 0.5)
+        rg_boostadj = gtk.Adjustment(0.0, -10.0, 20.5, 0.5)
+        self.rg_boost = gtk.SpinButton(rg_boostadj, 0.0, 1)
+        set_tip(self.rg_boost, _('It may not be desirable to use the default'
+                        ' level since it is rather quiet. This should be set'
+                        ' 4 or 5 dB lower than the R128 setting.'))
+        table.attach(label, 2, 3, 0, 1)
+        table.attach(self.rg_boost, 3, 4, 0, 1)
+        label = gtk.Label(_('Untagged'))
+        label.set_alignment(1.0, 0.5)
+        rg_defaultgainadj = gtk.Adjustment(-8.0, -30.0, 10.0, 0.5)
+        self.rg_defaultgain = gtk.SpinButton(rg_defaultgainadj, 0.0, 1)
+        set_tip(self.rg_defaultgain, _('Set this so that any unmarked tracks'
+        ' are playing at a roughly similar loudness level as the marked ones.'))
+        table.attach(label, 4, 5, 0, 1)
+        table.attach(self.rg_defaultgain, 5, 6, 0, 1)
+
+        label = gtk.Label(_('All'))
+        label.set_alignment(1.0, 0.5)
+        all_boostadj = gtk.Adjustment(0.0, -10.0, 10.0, 0.5)
+        self.all_boost = gtk.SpinButton(all_boostadj, 0.0, 1)
+        set_tip(self.all_boost, _('A master level control for the media players.'))
+        table.attach(label, 0, 1, 1, 2)
+        table.attach(self.all_boost, 1, 2, 1, 2)
+        
         vbox.pack_start(table, False)
-        table.set_col_spacing(1, 8)
-        table.set_col_spacing(3, 8)
+        table.set_col_spacing(1, 7)
+        table.set_col_spacing(3, 7)
         table.show_all()
 
         # Miscellaneous Features
@@ -1455,7 +1472,7 @@ class mixprefs:
             "str_meters"    : self.show_stream_meters,
             "mic_meters"    : self.show_microphones,
             "mic_meters_no_void" : self.no_mic_void_space,
-            "players_visible"    : self.parent.menu.playersmenu_i,
+            "players_visible"    : self.parent.menu.playersmenu_i
             }
             
         for each in itertools.chain(mic_controls, 
@@ -1476,6 +1493,7 @@ class mixprefs:
             "rg_default"    : self.rg_defaultgain,
             "rg_boost"      : self.rg_boost,
             "r128_boost"    : self.r128_boost,
+            "all_boost"    : self.all_boost
             }
 
         for each in itertools.chain(mic_controls, (opener_settings,
@@ -1487,7 +1505,7 @@ class mixprefs:
             "rtfilerqdir"   : self.parent.player_right.file_requester_start_dir,
             "main_full_wst" : self.parent.full_wst,
             "main_min_wst"  : self.parent.min_wst,
-            "prefs_wst"   : self.wst,
+            "prefs_wst"   : self.wst
             }
 
         for each in itertools.chain(mic_controls, (opener_settings,
