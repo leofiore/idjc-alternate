@@ -59,8 +59,9 @@ default = "default"
 
 # Regular expressions of files to copy when cloning a profile.
 config_files = ("config", "controls", "left_session", "main_session",
-    "main_session_files_played", "main_session_tracks", "playerdefaults",
-    "right_session", "s_data", "ports_.+_.+")
+    "main_session_files_played", "playerdefaults",
+    "right_session", "interlude_session", "effects[12]_session", "s_data",
+    "ports-.+-.+")
 
 
 class ArgumentParserError(Exception):
