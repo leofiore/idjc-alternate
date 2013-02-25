@@ -289,14 +289,18 @@ void agc_process_stage2(struct agc *s, int mic_is_mute)
                 {
                 duck_amp = 1.0f - s->limit;
                 }
-            
+
             /* ducker is "opened" fast (same rate as agc -> 10ms)
              * but closed more slowly...
              */
             if (s->df < duck_amp)
                 {
                 if (s->ducker_hold_timer == 0)
+                    {
                     s->df += s->ducker_release;
+                    if (s->df > 1.0f)
+                        s->df = 1.0f;
+                    }
                 else
                     s->ducker_hold_timer--;
                 }
@@ -304,6 +308,8 @@ void agc_process_stage2(struct agc *s, int mic_is_mute)
                 {
                 s->df -= s->ducker_attack;
                 s->ducker_hold_timer = s->ducker_hold_timer_resetval;
+                if (s->df < 0.00000001f)
+                    s->df = 0.00000001f;
                 }
             }
 

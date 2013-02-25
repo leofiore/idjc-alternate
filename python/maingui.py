@@ -1921,10 +1921,8 @@ class MainWindow(dbus.service.Object):
                         self.crossadj.get_value(),
                         self.jingles.jvol_adj[0].get_value(),
                         self.jingles.jmute_adj[0].get_value(),
-
                         self.jingles.jvol_adj[1].get_value(),
                         self.jingles.jmute_adj[1].get_value(),
-
                         self.jingles.ivol_adj.get_value(),
                         self.mixbackadj.get_value(),
                         self.jingles.playing,

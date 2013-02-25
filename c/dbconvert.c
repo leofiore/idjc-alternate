@@ -127,12 +127,12 @@ void free_signallookup_table() {};
 /* the more accurate but more cpu intensive method */
 float level2db(float signal)
     {
-    return (float)(log10f(signal) * 20.0F);
+    return log10f(signal) * 20.0f;
     }
-        
+
 float db2level(float signal)
     {
-    return powf(10.0F, signal * 0.05F);
+    return powf(10.0f, signal * 0.05f);
     }
     
 #endif

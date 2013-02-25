@@ -4202,8 +4202,9 @@ class IDJC_Media_Player:
         if name == "interlude":
             self.force.show()
         set_tip(self.force,
-                _("When selected the output from this player doesn't mute"
-                " whenever either of the main players are active."))
+                _("When selected this player will be treated like a main player.\n"
+                "It will be affected by microphone ducking and won't mute when"
+                " a main player is operating."))
 
         # hbox2 is now filled so lets show it
         self.hbox2.show()
