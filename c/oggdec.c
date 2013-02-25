@@ -642,8 +642,6 @@ static int opus_get_samplerate(struct oggdec_vars *self)
                     {
                     if (preskip >= final_granulepos - initial_granulepos)
                         FAIL("no samples to decode after accounting for initial granulepos");
-                    fprintf(stderr, "initial granulepos is %u, samples is %d\n", initial_granulepos, samples);
-                    fprintf(stderr, "first page pos is %u\n", self->op.granulepos);
                     if (initial_granulepos % samples)
                         WARN("can't assign initial granulepos to a specific page");
                     else
