@@ -84,11 +84,11 @@ class PlayerRow(namedtuple("PlayerRow",
     def __nonzero__(self):
         return self.rsmeta != "<s>valid</s>"
 
-# Playlist value indicating a file isn't valid.
-NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", 0.0, None, "", "")
-
 # ReplayGain value to indicate default.
 RGDEF = "0 DEFAULT"
+
+# Playlist value indicating a file isn't valid.
+NOTVALID = PlayerRow("<s>valid</s>", "", 0, "", "latin1", "", "", RGDEF, None, "", "")
 
 # Delay in milliseconds between progress bar updates.
 PROGRESS_TIMEOUT = 200
@@ -116,7 +116,7 @@ class IndexingIterator(object):
 
 
 class CueSheetListStore(gtk.ListStore):
-    _columns = (str, int, int, int, str, str, int, int, float)
+    _columns = (str, int, int, int, str, str, int, int, str)
     assert len(_columns) == len(CueSheetTrack._fields)
 
     def __init__(self):
