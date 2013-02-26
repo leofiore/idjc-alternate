@@ -1376,7 +1376,10 @@ class IDJC_Media_Player:
                     if not playlist_entry or self.playlist_todo:
                         self.playlist_todo.append(playlist_entry.filename)
                     else:
-                        self.liststore.append(playlist_entry)
+                        try:
+                            self.liststore.append(playlist_entry)
+                        except TypeError:
+                            self.playlist_todo.append(playlist_entry.filename)
                 if line.startswith("select="):
                     path = line[7:-1]
                     try:
