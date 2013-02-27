@@ -1994,37 +1994,35 @@ class MainWindow(dbus.service.Object):
         # get metadata from left (meta == 0) or right (meta == 1) player
         target = (self.player_left, self.player_right,
                                             self.jingles.interlude, None)[meta]
+        meta_context = None
         if target is None:
             self.songname = self.artist = self.title = self.album = ""
-            self.meta_context = None
             self.music_filename = ""
-            self.cuesheet_track_title = self.cuesheet_track_performer = ""
-            self.cs_element = None
         else:
+            if target.element:
+                self.artist = target.cuesheet_track_performer or ""
+                self.title = target.cuesheet_track_title or ""
+                self.album = target.title
+            else:
+                self.artist = target.artist
+                self.title = target.title
+                self.album = target.album
+
             self.songname = target.songname
-            self.artist = target.artist
-            self.title = target.title
-            self.album = target.album
-            self.cs_element = target.element
-            self.cuesheet_track_title = target.cuesheet_track_title
-            self.cuesheet_track_performer = target.cuesheet_track_performer
             self.music_filename = target.music_filename
-            self.meta_context = target, target.player_cid, \
-                    self.cuesheet_track_title, self.cuesheet_track_performer, \
+            meta_context = target, target.player_cid, \
                     self.artist, self.title, self.album, self.music_filename
-                                
+                               
         # update metadata on stream if it has changed
-        if self.meta_context != self.old_meta_context:
-            self.old_meta_context = self.meta_context
+        if meta_context != self.old_meta_context:
+            self.old_meta_context = meta_context
             if self.songname:
-                if self.title and self.cuesheet_track_title and \
-                                                self.cuesheet_track_performer:
-                    if "(" in self.title or ")" in self.title:
+                if target.element:
+                    if "(" in self.album or ")" in self.album:
                         form = "%s - %s - [%s]"
                     else:
                         form = "%s - %s - (%s)"
-                    self.songname = form % (self.cuesheet_track_performer,
-                                        self.cuesheet_track_title, self.title)
+                    self.songname = form % (self.artist, self.title, self.album)
 
                 self.window.set_title("%s :: IDJC%s" % (self.songname,
                                                             pm.title_extra))
@@ -2047,11 +2045,8 @@ class MainWindow(dbus.service.Object):
                         print "unable to append to file \"history.log\""
                     file.close()
 
-                self._track_metadata_changed(
-                                self.cuesheet_track_performer or self.artist,
-                                self.cuesheet_track_title or self.title,
-                                self.title if self.cs_element else self.album,
-                                self.songname, self.music_filename)
+                self._track_metadata_changed(self.artist, self.title,
+                        self.album, self.songname, self.music_filename)
             else:
                 self.window.set_title(self.appname + pm.title_extra)
 

@@ -1357,12 +1357,9 @@ class StreamTab(Tab):
         if self.format_control.finalised:
             fallback = self.metadata_fallback.get_text()
             songname = self.scg.parent.songname.encode("utf-8") or fallback
-            if self.scg.parent.cs_element is not None:
-                refs = "cuesheet_track_performer", "cuesheet_track_title", "title"
-            else:
-                refs = "artist", "title", "album"
             table = [("%%", "%")] + zip(("%r", "%t", "%l"), ((
-                getattr(self.scg.parent, x) or fallback) for x in refs))
+                            getattr(self.scg.parent, x) or fallback) for x in (
+                            "artist", "title", "album")))
             table.append(("%s", songname))
             raw_cm = self.metadata.get_text().encode("utf-8", "replace").strip()
             cm = string_multireplace(raw_cm, table)

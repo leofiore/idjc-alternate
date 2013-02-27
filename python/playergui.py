@@ -1260,6 +1260,7 @@ class IDJC_Media_Player:
     def expire_metadata(self):
         if not self.is_playing:
             self.songname = self.title = self.artist = self.album = ""
+            self.element = None
             self.cuesheet_track_title = self.cuesheet_track_performer = None
 
     # Shut down our media players when we exit.
