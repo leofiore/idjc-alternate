@@ -237,12 +237,19 @@ class JackMenu(MenuMixin):
         self.submenu(self.othermenu_i, "other")
         
         out2_in2 = itertools.cycle(("_out_",)*2 + ("_in_",)*2)
+        out2_in1 = itertools.cycle(("_out_",)*2 + ("_in_",)*1)
         lr = itertools.cycle("lr")
         dj2_str2 = itertools.cycle(("dj",)*2 + ("str",)*2)
     
-        for prefix in "pl pr pi pj".split():
+        for prefix in "pl pr pi".split():
             for each in zip((prefix,) * 4, out2_in2, lr):
                 self.add_port(self.playersmenu, "".join(each))
+
+        for prefix in "pe01-12 pe13-24".split():
+            for each in zip((prefix,) * 2, ("_out_", ) * 2, lr):
+                self.add_port(self.playersmenu, "".join(each))
+        for each in zip(("pe_in_", ) * 2, lr):
+            self.add_port(self.playersmenu, "".join(each))
 
         for each in zip(("voip",) * 4, out2_in2, lr):
             self.add_port(self.voipmenu, "".join(each))
@@ -420,6 +427,10 @@ class JackMenu(MenuMixin):
                     ["{client_id}:pi_out_r", ["{client_id}:pi_in_r"]],
                     ["{client_id}:pj_out_l", ["{client_id}:pj_in_l"]],
                     ["{client_id}:pj_out_r", ["{client_id}:pj_in_r"]],
+                    ["{client_id}:pe01-12_out_l", ["{client_id}:pe_in_l"]],
+                    ["{client_id}:pe01-12_out_r", ["{client_id}:pe_in_r"]],
+                    ["{client_id}:pe13-24_out_l", ["{client_id}:pe_in_l"]],
+                    ["{client_id}:pe13-24_out_r", ["{client_id}:pe_in_r"]],
                     ["{client_id}:ch_in_1", ["system:capture_1"]],
                     ["{client_id}:ch_in_2", ["system:capture_2"]],
                     ["{client_id}:dj_out_l", ["system:playback_1"]],

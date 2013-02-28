@@ -46,16 +46,18 @@ struct jack_ports
     jack_port_t *pr_out_r;
     jack_port_t *pi_out_l;
     jack_port_t *pi_out_r;
-    jack_port_t *pj_out_l;
-    jack_port_t *pj_out_r;
+    jack_port_t *pe1_out_l;
+    jack_port_t *pe1_out_r;
+    jack_port_t *pe2_out_l;
+    jack_port_t *pe2_out_r;
     jack_port_t *pl_in_l;
     jack_port_t *pl_in_r;
     jack_port_t *pr_in_l;
     jack_port_t *pr_in_r;
     jack_port_t *pi_in_l;
     jack_port_t *pi_in_r;
-    jack_port_t *pj_in_l;
-    jack_port_t *pj_in_r;
+    jack_port_t *pe_in_l;
+    jack_port_t *pe_in_r;
     
     jack_port_t *midi_port;
         

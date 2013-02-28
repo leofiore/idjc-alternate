@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Each effects bank now has its own dedicated JACK output port.
+
 Copying profiles now copies the port connections.
 
 Playlist mode list in background tracks no longer shows unusable modes. This saves screen space.
