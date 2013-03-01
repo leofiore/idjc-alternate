@@ -1555,7 +1555,6 @@ class IDJC_Media_Player:
                                                             "utf-8", "replace")
             self.album = unicode(model.get_value(iter, 9)).encode(
                                                             "utf-8", "replace")
-            self.parent.send_new_mixer_stats()
         # rt is the run time in seconds of our song
         rt = model.get_value(iter, 2)
         if rt < 0:
