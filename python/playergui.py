@@ -1608,13 +1608,17 @@ class IDJC_Media_Player:
             self.element = None
             self.cuesheet_track_title = self.cuesheet_track_performer = None
 
-        self.gain = model.get_value(iter, 7).split(" ")
-        if len(self.gain) == 2:
-            self.gaintype = self.gain[1]
-            self.gain = float(self.gain[0])
-        else:
-            self.gaintype = "DEFAULT"
-            self.gain = 0.0
+        try:
+            sgain, self.gaintype = model.get_value(iter, 7).split()
+        except (AttributeError, ValueError):
+            # This column type changed to str from int. Handle the change.
+            row = self.get_media_metadata(model.get_value(iter, 1))
+            if row:
+                model.set_value(iter, 7, row[7])
+                sgain, self.gaintype = row[7].split()
+            else:
+                sgain, self.gaintype = RGDEF.split()
+        self.gain = float(sgain)
         
         if self.parent.prefs_window.rg_adjust.get_active():
             if self.gaintype == "DEFAULT":
