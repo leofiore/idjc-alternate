@@ -1006,14 +1006,25 @@ class FormatCodecOpusPostGain(FormatDropdown):
             _("A gain adjustment for the player to apply."))
 
 
+class FormatCodecOpusVariability(FormatDropdown):
+    """Set VBR, CBR, etc."""
+    
+    def __init__(self, prev_object):
+        FormatDropdown.__init__(self, prev_object, _('Variability'), "variability", (
+            dict(display_text=_('CBR *'), value="cbr", default=True, chain="FormatCodecOpusPostGain"),
+            dict(display_text=_('CVBR'), value="cvbr", chain="FormatCodecOpusPostGain"),
+            dict(display_text=_('VBR'), value="vbr", chain="FormatCodecOpusPostGain")), 0,
+            _("A higher frame size may sound better on very low bitrates."))
+
+
 class FormatCodecOpusFrameSize(FormatDropdown):
     """Size of Opus frames in milliseconds."""
     
     def __init__(self, prev_object):
         FormatDropdown.__init__(self, prev_object, _('Frame Size'), "framesize", (
-            dict(display_text=_('60 ms'), value="60", chain="FormatCodecOpusPostGain"),
-            dict(display_text=_('40 ms'), value="40", chain="FormatCodecOpusPostGain"),
-            dict(display_text=_('20 ms'), value="20", default=True, chain="FormatCodecOpusPostGain")), 0,
+            dict(display_text=_('60 ms'), value="60", chain="FormatCodecOpusVariability"),
+            dict(display_text=_('40 ms'), value="40", chain="FormatCodecOpusVariability"),
+            dict(display_text=_('20 ms'), value="20", default=True, chain="FormatCodecOpusVariability")), 0,
             _("A higher frame size may sound better on very low bitrates."))
 
 
@@ -1021,10 +1032,10 @@ class FormatCodecOpusComplexity(FormatDropdown):
     """Opus cpu usage selection."""
     
     def __init__(self, prev_object):
-        FormatDropdown.__init__(self, prev_object, _('Complexity'), "complexity", 
-            tuple(dict(display_text=str(x), value=str(x), chain="FormatCodecOpusFrameSize", default=(x==5))
+        FormatDropdown.__init__(self, prev_object, _('CPU'), "complexity", 
+            tuple(dict(display_text=str(x), value=str(x), chain="FormatCodecOpusFrameSize", default=(x==10))
                                                             for x in range(10, -1, -1)), 0,
-            _('A quality setting that affects how heavily the CPU is used.'))
+            _('The encoder complexity setting which affects CPU load.'))
 
 
 class FormatCodecOpusBitRate(FormatSpin):

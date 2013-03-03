@@ -40,6 +40,8 @@ struct local_data {
     int postgain;
     int framesamples;
     int lookahead;
+    int vbr;
+    int vbr_constraint;
     opus_int32 pagepackets;
     opus_int32 pagepackets_max;
     ogg_int64_t granulepos;
@@ -90,9 +92,15 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
             goto bailout;
             }
            
-        if (opus_encoder_ctl(s->enc_st, OPUS_SET_VBR(0)) != OPUS_OK)
+        if (opus_encoder_ctl(s->enc_st, OPUS_SET_VBR(s->vbr)) != OPUS_OK)
             {
             fprintf(stderr, "live_oggopus_encoder_main: failure: failed to set cbr/vbr\n");
+            goto bailout;
+            }
+            
+        if (opus_encoder_ctl(s->enc_st, OPUS_SET_VBR_CONSTRAINT(s->vbr_constraint)) != OPUS_OK)
+            {
+            fprintf(stderr, "live_oggopus_encoder_main: failure: failed to set vbr constraint\n");
             goto bailout;
             }
             
@@ -377,11 +385,29 @@ int live_oggopus_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
         fprintf(stderr, "live_oggopus_encoder: malloc failure\n");
         return FAILED;
         }
-        
+
     s->complexity = atoi(ev->complexity);
     s->postgain = atoi(ev->postgain);
     s->framesamples = atoi(ev->framesize) * 48;
     s->pagepackets_max = 48000 / s->framesamples;
+    if (!strcmp(ev->variability, "cbr"))
+        s->vbr = 0;
+    else
+        {
+        s->vbr = 1;
+        if (!strcmp(ev->variability, "cvbr"))
+            s->vbr_constraint = 1;
+        else
+            {
+            s->vbr_constraint = 0;
+            if (strcmp(ev->variability, "vbr"))
+                {
+                fprintf(stderr, "live_gggopus_encoder: bad variability setting\n");
+                free(s);
+                return FAILED;
+                }
+            }
+        }
     
     if (!(s->inbuf = malloc(sizeof (float) * encoder->n_channels * s->framesamples)))
         {
