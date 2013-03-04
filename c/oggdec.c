@@ -1224,7 +1224,8 @@ int oggdecode_get_metainfo(char *pathname, char **artist, char **title, char **a
             *artist = realloc(*artist, 1);
             *title  = realloc(*title, 1);
             *album  = realloc(*album, 1);
-            *artist[0] = *title[0] = *album[0] = '\0';
+            *replaygain = realloc(*replaygain, 1);
+            *artist[0] = *title[0] = *album[0] = *replaygain[0] = '\0';
             }
         else
             {

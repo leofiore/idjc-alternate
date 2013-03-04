@@ -469,7 +469,7 @@ struct encoder_op *encoder_register_client(struct threads_info *ti, int numeric_
         fprintf(stderr, "encoder_register_client: malloc failure\n");
         return NULL;
         }
-    if (!(op->packet_rb = jack_ringbuffer_create(24000)))
+    if (!(op->packet_rb = jack_ringbuffer_create(65536)))
         {
         fprintf(stderr, "encoder_register_client: malloc failure\n");
         free(op);

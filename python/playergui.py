@@ -1103,10 +1103,10 @@ class IDJC_Media_Player:
                     length = int(float(line[11:].strip()))
                 if line.startswith("OIR:REPLAYGAIN_TRACK_GAIN="):
                     val = line[26:].rstrip(" dB\n")
-                    if val:
-                        rg = line[26:].rstrip(" dB\n") + " RG"
-                    else:
+                    if not val:
                         rg = RGDEF
+                    else:
+                        rg = val + " RG"
                 if line == "OIR:end\n":
                     break
         elif filext == ".aac":

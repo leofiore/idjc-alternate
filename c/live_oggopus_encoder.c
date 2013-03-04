@@ -52,6 +52,7 @@ struct local_data {
     size_t outbuf_siz;
     unsigned char *outbuf;
     struct vtag_block metadata_block;
+    int fillbytes;
 };
 
 /* create a multiplexed pcm stream */
@@ -225,7 +226,6 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
         {
         struct encoder_ip_data *id;
         opus_int32 enc_bytes;
-        int (*paging_function)(ogg_stream_state *, ogg_page *);
         float *inbuf;
 
         if (encoder->new_metadata || !encoder->run_request_f || encoder->flush)
@@ -254,21 +254,23 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
                 op.packetno = s->packetno++;
                 ogg_stream_packetin(&s->os, &op);
                 
-                if (++s->pagepackets == s->pagepackets_max || op.e_o_s)
+                s->fillbytes += enc_bytes;
+                if (++s->pagepackets == s->pagepackets_max)
                     {
                     s->pagepackets = 0;
-                    paging_function = ogg_stream_flush;
-                    }
-                else
-                    paging_function = ogg_stream_pageout;
-                
-                while (paging_function(&s->os, &og))
-                    {
-                    if (!live_ogg_write_packet(encoder, &og, s->pflags))
+                    if (ogg_stream_flush_fill(&s->os, &og, s->fillbytes))
                         {
-                        fprintf(stderr, "live_oggopus_encoder_main: failed to write packet\n");
-                        goto bailout;
+                        if (!live_ogg_write_packet(encoder, &og, s->pflags))
+                            {
+                            fprintf(stderr, "live_oggopus_encoder_main: failed to write packet\n");
+                            goto bailout;
+                            }
+                            
+                        if ((s->fillbytes -= og.body_len))
+                            fprintf(stderr, "!!! packet size limit exceeded\n");
                         }
+                    else
+                        fprintf(stderr, "live_oggopus_encoder_main: failed to flush page\n");
                     }
                 }
             else
@@ -284,7 +286,6 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
     if (encoder->encoder_state == ES_STOPPING)
         {
         opus_int32 enc_bytes;
-        int (*paging_function)(ogg_stream_state *, ogg_page *);
 
         fprintf(stderr, "live_oggopus_encoder_main: flushing\n");
 
@@ -315,22 +316,24 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
                 op.b_o_s = 0;
                 op.packetno = s->packetno++;
                 ogg_stream_packetin(&s->os, &op);
-                
+
+                s->fillbytes += enc_bytes;
                 if (++s->pagepackets == s->pagepackets_max || op.e_o_s)
                     {
                     s->pagepackets = 0;
-                    paging_function = ogg_stream_flush;
-                    }
-                else
-                    paging_function = ogg_stream_pageout;
-                
-                while (paging_function(&s->os, &og))
-                    {
-                    if (!live_ogg_write_packet(encoder, &og, s->pflags))
+                    if (ogg_stream_flush_fill(&s->os, &og, s->fillbytes))
                         {
-                        fprintf(stderr, "live_oggopus_encoder_main: failed to write packet\n");
-                        goto bailout;
+                        if (!live_ogg_write_packet(encoder, &og, s->pflags))
+                            {
+                            fprintf(stderr, "live_oggopus_encoder_main: failed to write packet\n");
+                            goto bailout;
+                            }
+                            
+                        if ((s->fillbytes -= og.body_len))
+                            fprintf(stderr, "!!! packet size limit exceeded\n");
                         }
+                    else
+                        fprintf(stderr, "live_oggopus_encoder_main: failed to flush page\n");
                     }
                 }
             else
@@ -347,7 +350,7 @@ static void live_oggopus_encoder_main(struct encoder *encoder)
             {
             opus_encoder_destroy(s->enc_st);
             ogg_stream_clear(&s->os);
-            s->granulepos = s->packetno = 0;
+            s->granulepos = s->packetno = s->pagepackets = s->fillbytes = 0;
             fprintf(stderr, "live_oggopus_encoder_main: minimal clean up\n");
             encoder->encoder_state = ES_STARTING;
             }
@@ -389,7 +392,7 @@ int live_oggopus_encoder_init(struct encoder *encoder, struct encoder_vars *ev)
     s->complexity = atoi(ev->complexity);
     s->postgain = atoi(ev->postgain);
     s->framesamples = atoi(ev->framesize) * 48;
-    s->pagepackets_max = 48000 / s->framesamples;
+    s->pagepackets_max = 48000 / s->framesamples / 5;
     if (!strcmp(ev->variability, "cbr"))
         s->vbr = 0;
     else

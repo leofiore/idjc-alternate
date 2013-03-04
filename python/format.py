@@ -1047,7 +1047,7 @@ class FormatCodecOpusBitRate(FormatSpin):
         bounds = (6 * channels, 256 * channels)
         FormatSpin.__init__(self, prev_object, _('Bitrate'), "bitrate",
             ((64, 96)[channels - 1],) + bounds + (1, 10), 0, " kbps", "FormatCodecOpusComplexity",
-            (256 * channels, 128 * channels, 64 * channels, 32 * channels, 16 * channels))
+            (256 * channels, 128 * channels, 64 * channels, 48 * channels, 32 * channels, 16 * channels))
 
 
 class FormatCodecOpusMode(FormatDropdown):
