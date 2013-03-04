@@ -1214,19 +1214,14 @@ class FlatPage(PageCommon):
         return True
 
 
-class MediaPane(gtk.Frame):
+class MediaPane(gtk.VBox):
     """Database song details are displayed in this widget."""
 
     def __init__(self):
-        gtk.Frame.__init__(self)
+        gtk.VBox.__init__(self)
 
-        self.set_shadow_type(gtk.SHADOW_IN)
-        self.set_border_width(6)
-        self.set_label_align(0.5, 0.5)
-        main_vbox = gtk.VBox()
-        self.add(main_vbox)
         self.notebook = gtk.Notebook()
-        main_vbox.pack_start(self.notebook)
+        self.pack_start(self.notebook)
         
         self._tree_page = TreePage(self.notebook)
         self._flat_page = FlatPage(self.notebook)
@@ -1235,7 +1230,12 @@ class MediaPane(gtk.Frame):
         if have_songdb:
             self.prefs_controls.bind(self._dbtoggle)
 
-        main_vbox.show_all()
+        spc = gtk.VBox()
+        spc.set_border_width(2)
+        self.pack_start(spc, False)
+        spc.show()
+
+        self.notebook.show_all()
 
     def repair_focusability(self):
         self._tree_page.repair_focusability()

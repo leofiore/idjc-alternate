@@ -1193,7 +1193,7 @@ class MicOpener(gtk.HBox):
         self.connect("destroy", lambda w: glib.source_remove(timeout))
         self.opener_settings = OpenerSettings()
         self.opener_settings.connect("changed", self.cb_reconfigure)
-        
+
 
 class PaddedVBox(gtk.VBox):
     def vbox_pack_start(self, *args, **kwargs):
@@ -1219,12 +1219,11 @@ class PaddedVBox(gtk.VBox):
         h.pack_end(d, False, False, r)
         d.show()
         self.vbox = gtk.VBox()
-        self.vbox.set_spacing(6)
+        self.vbox.set_spacing(s)
         h.pack_start(self.vbox)
         self.vbox.show()        
         self.pack_start = self.vbox_pack_start
         self.add = self.vbox_add
-
 
 
 def make_meter_scale():         # A logarithmic meter scale for a 'VU' meter
@@ -3010,11 +3009,11 @@ class MainWindow(dbus.service.Object):
         self.window.set_gravity(gtk.gdk.GRAVITY_STATIC)
         self.window_group.add_window(self.window)
         self.window.set_title(self.appname + pm.title_extra)
-        self.window.set_border_width(8)
+        #self.window.set_border_width(8)
         self.window.connect("delete_event",self.delete_event)
         self.hbox10 = gtk.HBox(False)
-        self.hbox10.set_border_width(2)
-        self.hbox10.set_spacing(7)
+        #self.hbox10.set_border_width(2)
+        self.hbox10.set_spacing(6)
         self.paned = gtk.HPaned()
         self.leftpane = gtk.VPaned()
         self.paned.pack1(self.leftpane)
@@ -3038,12 +3037,8 @@ class MainWindow(dbus.service.Object):
         menuhbox = gtk.HBox()
         self.vbox8.pack_start(menuhbox, False)
         menuhbox.show()
-        #dummymenu = gtk.MenuBar()
-        #menuhbox.pack_start(dummymenu)
-        #dummymenu.show()
-        #dummymenu.set_visible(False)
         self.menu = MainMenu()
-        self.menu.set_border_width(6)
+        #self.menu.set_border_width(6)
         menuhbox.pack_start(self.menu)
         self.menu.show()
         self.rightpane.pack_start(self.vbox8, True, True ,0)
@@ -3052,7 +3047,7 @@ class MainWindow(dbus.service.Object):
         self.paned.show()
         
         self.player_nb = gtk.Notebook()
-        self.player_nb.set_border_width(6)
+        #self.player_nb.set_border_width(6)
         main_label = gtk.Label()
         self.label_subst.add_widget(main_label, "mainplayerslabel", _('Main Players'))
         self.vbox6 = gtk.VBox(False, 0)
@@ -3062,17 +3057,25 @@ class MainWindow(dbus.service.Object):
         self.player_nb.show()
         # add box 7 to box 8
         self.hbox7 = gtk.HBox(True)
-        self.hbox7.set_spacing(5)
-        self.hbox7.set_border_width(3)
+        #self.hbox7.set_spacing(5)
+        #self.hbox7.set_border_width(3)
         
-        self.frame2 = gtk.Frame()
-        self.frame2.set_border_width(6)
-        self.frame2.set_shadow_type(gtk.SHADOW_IN)
-        self.frame2.add(self.hbox10)
+        #self.frame2 = gtk.Frame()
+        #self.frame2.set_border_width(2)
+        #self.frame2.set_shadow_type(gtk.SHADOW_NONE)
+        #self.frame2.add(self.hbox10)
         self.hbox10.show()
-        self.frame2.show()
+        #self.frame2.show()
   
-        self.vbox8.pack_start(self.frame2, False, False, 0)
+        spc = gtk.HBox()
+        self.vbox8.pack_start(spc, False, padding=3)
+        spc.show()
+  
+        self.vbox8.pack_start(self.hbox10, False, False, 0)
+        
+        spc = gtk.HBox()
+        self.vbox8.pack_start(spc, False, padding=2)
+        spc.show()
         
         # show box 8 now that it's finished
         self.vbox8.show()               
@@ -3176,7 +3179,7 @@ class MainWindow(dbus.service.Object):
         self.volframe.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         self.volframe.add(self.vboxvol)
         self.volframe.show()
-        self.hbox4.pack_start(self.volframe, False, True, 4)
+        self.hbox4.pack_start(self.volframe, False, True, 3)
               
         # A pictoral volume label above horizontally-stacked volume control(s)
         image = gtk.Image()
@@ -3598,12 +3601,12 @@ class MainWindow(dbus.service.Object):
         self.metereventbox.show()
 
         # Box contains stream peak, vu and connection status, listener stats.
-        self.streammeterbox = PaddedVBox(4, 2, 0, 1, 6)
+        self.streammeterbox = PaddedVBox(3, 2, 0, 0, 5)
         self.meterbox.pack_start(self.streammeterbox, False, False, 0)
         self.streammeterbox.show()
 
         # Table that contains 1, 2, or 4 microphone meters.
-        self.micmeterbox = PaddedVBox(4, 2, 0, 1, 6)
+        self.micmeterbox = PaddedVBox(3, 2, 0, 0, 5)
         self.meterbox.pack_start(self.micmeterbox, False, False, 0)
         self.micmeterbox.show()
         

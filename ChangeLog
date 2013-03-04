@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Reduced border sizes in the main application window.
+
 Fixes for directory choosers in the stream recorders and the "external playlist" playlist mode.
 
 Each effects bank now has its own dedicated JACK output port.

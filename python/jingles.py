@@ -443,8 +443,8 @@ class ExtraPlayers(gtk.HBox):
         parent.label_subst.add_widget(self.nb_label, "jingles_tabtext", _('Jingles'))
             
         gtk.HBox.__init__(self)
-        self.set_border_width(6)
-        self.set_spacing(15)
+        self.set_border_width(4)
+        self.set_spacing(10)
         self.viewlevels = (5,)
 
         esbox = gtk.VBox()
