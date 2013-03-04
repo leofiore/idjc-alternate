@@ -52,7 +52,7 @@ from .mutagentagger import *
 from .utils import SlotObject
 from .utils import LinkUUIDRegistry
 from .utils import PathStr
-from .gtkstuff import threadslock
+from .gtkstuff import threadslock, DirectoryChooserButton
 from .prelims import *
 from .tooltips import set_tip
 
@@ -398,7 +398,7 @@ class ExternalPL(gtk.Frame):
         radio.set_active(True)
 
     def make_line(self, radio, dialog):
-        button = gtk.FileChooserButton(dialog)
+        button = DirectoryChooserButton(dialog)
         dialog.set_current_folder(os.path.expanduser("~"))
         hbox = gtk.HBox()
         hbox.pack_start(radio, False, False, 0)

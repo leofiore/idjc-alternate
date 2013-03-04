@@ -560,3 +560,21 @@ class LabelSubst(gtk.Frame):
         else:
             widget.set_text(entry.get_text())
             entry.grab_focus()
+
+
+class DirectoryChooserButton(gtk.FileChooserButton):
+    """FileChooserButton broken in PyGTK for directories."""
+
+    def __init__(self, *args, **kwargs):
+        gtk.FileChooserButton.__init__(self, *args, **kwargs)
+        self._folder = self.get_current_folder()
+        self.connect("current-folder-changed", self._on_current_folder_changed)
+        self.connect("file-set", self._on_file_set)
+        
+    def _on_current_folder_changed(self, widget):
+        self._folder = self.get_current_folder()
+        
+    def _on_file_set(self, widget):
+        # Prevent infinite loop.
+        if self.get_current_folder() != self._folder:
+            self.set_current_folder(self._folder)

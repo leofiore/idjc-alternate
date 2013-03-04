@@ -41,7 +41,8 @@ import gobject
 
 from idjc import FGlobs, PGlobs
 from .utils import string_multireplace
-from .gtkstuff import DefaultEntry, threadslock, HistoryEntry, WindowSizeTracker
+from .gtkstuff import DefaultEntry, threadslock, HistoryEntry
+from .gtkstuff import WindowSizeTracker, DirectoryChooserButton
 from .dialogs import *
 from .irc import IRCPane
 from .format import FormatControl, FormatCodecMPEG
@@ -1800,7 +1801,7 @@ class RecordTab(Tab):
                             num_id = -1
                         self.parentobject.send("record_source=%d\n"
                             "record_folder=%s\ncommand=recorder_start\n" % (
-                            num_id, sd.file_chooser_button.folder))
+                            num_id, sd.file_chooser_button.get_current_folder()))
                         sd.set_sensitive(False)
                         self.parentobject.time_indicator.set_sensitive(True)
                         self.recording = True
@@ -1939,8 +1940,7 @@ class RecordTab(Tab):
 
 
         def cb_new_folder(self, filechooser):
-            filechooser.folder = filechooser.get_filename()
-            self.cansave = os.access(filechooser.folder, os.W_OK)
+            self.cansave = os.access(filechooser.get_current_folder(), os.W_OK)
             self.source_combo.emit("changed")
 
 
@@ -1968,7 +1968,7 @@ class RecordTab(Tab):
             file_dialog.set_title(_('Select the folder to record to'
                                                             ) + pm.title_extra)
             file_dialog.set_do_overwrite_confirmation(True)
-            self.file_chooser_button = gtk.FileChooserButton(file_dialog)
+            self.file_chooser_button = DirectoryChooserButton(file_dialog)
             self.file_chooser_button.connect("current-folder-changed",
                                                             self.cb_new_folder)
             self.file_chooser_button.set_current_folder(os.environ["HOME"])
@@ -2495,9 +2495,9 @@ class SourceClientGui(dbus.service.Object):
                             elif method == "current_page":
                                 rvalue = str(widget.get_current_page())
                             elif method == "directory":
-                                rvalue = widget.folder or ""
+                                rvalue = widget.get_current_folder() or ""
                             elif method == "filename":
-                                rvalue = widget.folder or ""
+                                rvalue = widget.get_filename() or ""
                             elif method == "marshall":
                                 rvalue = widget.marshall()
                             else:
