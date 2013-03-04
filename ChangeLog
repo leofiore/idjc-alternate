@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Fixes for directory choosers in the stream recorders and the "external playlist" playlist mode.
+
 Each effects bank now has its own dedicated JACK output port.
 
 Copying profiles now copies the port connections.
