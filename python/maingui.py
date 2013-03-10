@@ -3336,20 +3336,17 @@ class MainWindow(dbus.service.Object):
         smvbox.add(label)
         label.show()
         
-        frame = gtk.Frame()
-        frame.set_shadow_type(gtk.SHADOW_NONE)
         smhbox = gtk.HBox()
+        smhbox.set_border_width(1)
         self.listen_dj = gtk.RadioButton(None, _('DJ'))
         smhbox.add(self.listen_dj)
         self.listen_dj.show()
         self.listen_stream = gtk.RadioButton(self.listen_dj, _('Stream'))
         smhbox.add(self.listen_stream)
         self.listen_stream.show()
-        frame.add(smhbox)
         smhbox.show()
-        smvbox.add(frame)
-        frame.show()
-        sg3.add_widget(frame)
+        smvbox.add(smhbox)
+        sg3.add_widget(smhbox)
         
         self.listen_stream.connect("toggled", self.cb_toggle, "stream-mon")
         # TC: Context {0}, {1}, {2} = Monitor Mix, Stream, DJ
