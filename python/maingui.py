@@ -425,8 +425,6 @@ class JackMenu(MenuMixin):
                     ["{client_id}:pr_out_r", ["{client_id}:pr_in_r"]],
                     ["{client_id}:pi_out_l", ["{client_id}:pi_in_l"]],
                     ["{client_id}:pi_out_r", ["{client_id}:pi_in_r"]],
-                    ["{client_id}:pj_out_l", ["{client_id}:pj_in_l"]],
-                    ["{client_id}:pj_out_r", ["{client_id}:pj_in_r"]],
                     ["{client_id}:pe01-12_out_l", ["{client_id}:pe_in_l"]],
                     ["{client_id}:pe01-12_out_r", ["{client_id}:pe_in_r"]],
                     ["{client_id}:pe13-24_out_l", ["{client_id}:pe_in_l"]],
