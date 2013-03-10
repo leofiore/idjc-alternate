@@ -1206,15 +1206,21 @@ int mixer_main()
     void dis_connect(char *str, int (*fn)(jack_client_t *, const char *, const char *))
         {
         const char **jackports, **jp;
+        jack_port_t *port;
         
         if (!strcmp(action, str))
             {
             if (strlen(jackport2))
                 {
-                if (jack_port_flags(jack_port_by_name(g.client, jackport)) & JackPortIsOutput)
-                    fn(g.client, jackport, jackport2);
+                if ((port = jack_port_by_name(g.client, jackport)))
+                    {
+                    if (jack_port_flags(port) & JackPortIsOutput)
+                        fn(g.client, jackport, jackport2);
+	            else
+	                fn(g.client, jackport2, jackport);
+                    }
                 else
-                    fn(g.client, jackport2, jackport);
+                    fprintf(stderr, "port %s does not exist\n", jackport);
                 }
             else
                 {
@@ -1224,7 +1230,12 @@ int mixer_main()
                     if ((jackports = jack_get_ports(g.client, jackport, NULL, 0L)))
                         {
                         for (jp = jackports; *jp; ++jp)
-                            jack_port_disconnect(g.client, jack_port_by_name(g.client, *jp));
+                            {
+                            if ((port = jack_port_by_name(g.client, *jp)))
+                                jack_port_disconnect(g.client, port);
+                            else
+                                fprintf(stderr, "port %s does not exist\n", jackport);
+                            }
 
                         jack_free(jackports);
                         }
