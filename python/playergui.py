@@ -994,11 +994,11 @@ class IDJC_Media_Player:
 
         return element
 
-    def get_media_metadata(self, filename):
+    def get_media_metadata(self, filename, get_length=False):
         artist = u""
         title = u""
         album = u""
-        length = 0
+        length = 0.0
         artist_retval = u""
         title_retval = u""
         album_retval = u""
@@ -1073,7 +1073,7 @@ class IDJC_Media_Player:
                 if line == "idjcmixer: sndfileinfo Not Valid\n" or line == "":
                     return NOTVALID._replace(filename=filename)
                 if line.startswith("idjcmixer: sndfileinfo length="):
-                    length = int(line[30:-1])
+                    length = float(line[30:-1])
                 if line.startswith("idjcmixer: sndfileinfo artist="):
                     artist = line[30:-1]
                 if line.startswith("idjcmixer: sndfileinfo title="):
@@ -1100,7 +1100,7 @@ class IDJC_Media_Player:
                 if line.startswith("OIR:ALBUM="):
                     album = line[10:].strip()
                 if line.startswith("OIR:LENGTH="):
-                    length = int(float(line[11:].strip()))
+                    length = float(line[11:].strip())
                 if line.startswith("OIR:REPLAYGAIN_TRACK_GAIN="):
                     val = line[26:].rstrip(" dB\n")
                     if not val:
@@ -1113,12 +1113,12 @@ class IDJC_Media_Player:
             try:
                 id3 = ID3(filename)
                 try:
-                    length = int(id3["TLEN"].text[0]) / 1000
+                    length = float(id3["TLEN"].text[0]) / 1000.0
                 except (KeyError, ValueError, IndexError):
                     print "unknown track length -- add a TLEN tag if you know it"
                     raise Exception
             except Exception:
-                length = 0
+                length = 0.0
         else:
             # Mutagen used for all remaining formats.
             try:
@@ -1128,7 +1128,7 @@ class IDJC_Media_Player:
             except Exception:
                 return NOTVALID._replace(filename=filename)
             else:
-                length = int(audio.info.length)
+                length = float(audio.info.length)
                 if isinstance(audio, MP4):
                     try:
                         artist = audio["\xa9ART"][0]
@@ -1216,9 +1216,11 @@ class IDJC_Media_Player:
         assert(isinstance(title, unicode))
         assert(isinstance(album, unicode))
 
-        if length == 0:
-            length = 1
+        if get_length:
+            # Used if only requesting the length of the track
+            return length
 
+        length = 1 if length < 1.0 else float(length)
         uuid_ = str(uuid.uuid4())
 
         def player_row(meta_name):
@@ -3849,6 +3851,8 @@ class IDJC_Media_Player:
 
     def __init__(self, pbox, name, parent):
         self.parent = parent
+        if pbox == None and name == None:
+            return
         self.playername = name
         self.exiting = False
         # A box for the Stop/Start/Pause widgets

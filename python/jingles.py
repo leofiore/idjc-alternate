@@ -17,11 +17,13 @@
 
 
 import os
+import time
 import gettext
 import json
 import uuid
 
 import gtk
+import gobject
 import itertools
 
 from idjc import *
@@ -30,6 +32,7 @@ from .prelims import *
 from .gtkstuff import LEDDict
 from .gtkstuff import WindowSizeTracker
 from .gtkstuff import DefaultEntry
+from .gtkstuff import threadslock
 from .tooltips import set_tip
 from .utils import LinkUUIDRegistry
 
@@ -43,7 +46,6 @@ link_uuid_reg = LinkUUIDRegistry()
 LED = LEDDict(9)
 
 
-
 class Effect(gtk.HBox):
     """A trigger button for an audio effect or jingle.
     
@@ -51,9 +53,7 @@ class Effect(gtk.HBox):
     L.E.D., stop, and config button.
     """
 
-
     dndtargets = [("IDJC_EFFECT_BUTTON", gtk.TARGET_SAME_APP, 6)]
-
 
     def __init__(self, num, others, parent):
         self.num = num
@@ -89,6 +89,15 @@ class Effect(gtk.HBox):
         self.trigger = gtk.Button()
         self.trigger.set_size_request(80, -1)
         self.pack_start(self.trigger)
+        self.trigger_label = gtk.Label()
+        self.trigger.add(self.trigger_label)
+
+        pvbox = gtk.VBox()
+        self.progress = gtk.ProgressBar()
+        pvbox.pack_start(self.progress, padding=1)
+        self.progress.set_orientation(gtk.PROGRESS_BOTTOM_TO_TOP)
+        self.progress.set_size_request(5, 0)
+        self.pack_start(pvbox, False)
         self.trigger.connect("clicked", self._on_trigger)
         self.trigger.drag_dest_set(gtk.DEST_DEFAULT_ALL,
             self.dndtargets, gtk.gdk.ACTION_DEFAULT | gtk.gdk.ACTION_MOVE)
@@ -118,12 +127,13 @@ class Effect(gtk.HBox):
         self.dialog = EffectConfigDialog(self, parent.window)
         self.dialog.connect("response", self._on_dialog_response)
         self.dialog.emit("response", gtk.RESPONSE_NO)
-
+        self.timeout_source_id = None
+        self.interlude = IDJC_Media_Player(None, None, parent)
+        self.effect_length = 0.0
 
     def _drag_get_data(self, widget, context, selection, target_id, etime):
         selection.set(selection.target, 8, str(self.num))
         return True
-
 
     def _drag_data_received(self, widget, context, x, y, dragged, info, etime):
         other = self.others[int(dragged.data)]
@@ -137,15 +147,13 @@ class Effect(gtk.HBox):
                 self._swap(other)
         return True
         
-        
     def _swap(self, other):
         new_pathname = other.pathname
-        new_text = other.trigger.get_label() or ""
+        new_text = other.trigger_label.get_text() or ""
         new_level = other.level
 
-        other._set(self.pathname, self.trigger.get_label() or "", self.level)
+        other._set(self.pathname, self.trigger_label.get_text() or "", self.level)
         self._set(new_pathname, new_text, new_level)
-        
         
     def _set(self, pathname, button_text, level):
         try:
@@ -156,42 +164,70 @@ class Effect(gtk.HBox):
         self.dialog.button_entry.set_text(button_text)
         self.dialog.gain_adj.set_value(level)
         self._on_dialog_response(self.dialog, gtk.RESPONSE_ACCEPT, pathname)
-
         
     def _on_config(self, widget):
         self.stop.clicked()
         if self.pathname and os.path.isfile(self.pathname):
             self.dialog.select_filename(self.pathname)
-        self.dialog.button_entry.set_text(self.trigger.get_label() or "")
+        self.dialog.button_entry.set_text(self.trigger_label.get_text() or "")
         self.dialog.gain_adj.set_value(self.level)
         self.dialog.show()
-
 
     def _on_trigger(self, widget):
         self._repeat_works = True
         if self.pathname:
+            if not self.timeout_source_id:
+                if self.effect_length == 0.0:
+                    self.effect_length = self.interlude.get_media_metadata(self.pathname, True)
+                self.effect_start = time.time()
+                self.timeout_source_id = gobject.timeout_add(playergui.PROGRESS_TIMEOUT,
+                                self._progress_timeout)
+            else: # Restarted the effect
+                self.effect_start = time.time()
             self.approot.mixer_write(
                             "EFCT=%d\nPLRP=%s\nRGDB=%f\nACTN=playeffect\nend\n" % (
                             self.num, self.pathname, self.level))
-
+            self.trigger_label.set_use_markup(True)
+            self.trigger_label.set_label("<b>" + self.trigger_label.get_text() + "</b>")
 
     def _on_stop(self, widget):
         self._repeat_works = False
         self.approot.mixer_write("EFCT=%d\nACTN=stopeffect\nend\n" % self.num)
 
+    @threadslock
+    def _progress_timeout(self):
+        now = time.time()
+        played = now - self.effect_start
+        try:
+            ratio = min(played / self.effect_length, 1.0)
+        except ZeroDivisionError:
+            pass
+        else:
+            self.progress.set_fraction(ratio)
+        return True
+
+    def _stop_progress(self):
+        if self.timeout_source_id:
+            now = time.time()
+            played = now - self.effect_start
+            if played > self.effect_length: # Effect was longer that media_info gave
+                print "Adjusting effect length from %.2f to %.2f" % (self.effect_length, played)
+                self.effect_length = played
+            gobject.source_remove(self.timeout_source_id)
+            self.timeout_source_id = None
+            self.progress.set_fraction(0.0)
 
     def _on_dialog_response(self, dialog, response_id, pathname=None):
         if response_id in (gtk.RESPONSE_ACCEPT, gtk.RESPONSE_NO):
             self.pathname = pathname or dialog.get_filename()
             text = dialog.button_entry.get_text() if self.pathname and \
                                         os.path.isfile(self.pathname) else ""
-            self.trigger.set_label(text.strip())
+            self.trigger_label.set_text(text.strip())
             self.level = dialog.gain_adj.get_value()
             
             sens = self.pathname is not None and os.path.isfile(self.pathname)
             if response_id == gtk.RESPONSE_ACCEPT and pathname is not None:
                 self.uuid = str(uuid.uuid4())
-            
             
     def marshall(self):
         link = link_uuid_reg.get_link_filename(self.uuid)
@@ -202,8 +238,7 @@ class Effect(gtk.HBox):
             self.pathname = PM.basedir / link
             if not self.dialog.get_visible():
                 self.dialog.set_filename(self.pathname)
-        return json.dumps([self.trigger.get_label(), (link or self.pathname), self.level, self.uuid])
-
+        return json.dumps([self.trigger_label.get_text(), (link or self.pathname), self.level, self.uuid])
 
     def unmarshall(self, data):
         try:
@@ -225,7 +260,6 @@ class Effect(gtk.HBox):
         self._on_dialog_response(self.dialog, gtk.RESPONSE_ACCEPT, pathname)
         self.pathname = pathname
 
-
     def update_led(self, val):
         if val != self.old_ledval:
             self.led.set_from_pixbuf(self.green if val else self.clear)
@@ -233,7 +267,8 @@ class Effect(gtk.HBox):
 
             if not val and self._repeat_works and self.repeat.get_active():
                 self.trigger.clicked()
-
+            elif not val:
+                self._stop_progress()
 
 
 class EffectConfigDialog(gtk.FileChooserDialog):

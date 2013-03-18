@@ -37,7 +37,7 @@ int sndfileinfo(char *pathname)
     title = sf_get_string(handle, SF_STR_TITLE);
     album = sf_get_string(handle, SF_STR_ALBUM);
  
-    fprintf(g.out, "idjcmixer: sndfileinfo length=%d\n", (int)(sfinfo.frames / sfinfo.samplerate));
+    fprintf(g.out, "idjcmixer: sndfileinfo length=%f\n", (float)sfinfo.frames / sfinfo.samplerate);
     if (artist && title)
         {
         fprintf(g.out, "idjcmixer: sndfileinfo artist=%s\n", artist);

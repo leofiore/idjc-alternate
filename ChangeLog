@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Effects players now have a progress meter. (patch: bmillham)
+
 Reduced border sizes in the main application window.
 
 Fixes for directory choosers in the stream recorders and the "external playlist" playlist mode.
