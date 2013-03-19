@@ -190,10 +190,14 @@ class ArgumentParserImplementation(object):
                 help=_("the voip mode at startup"))
         group.add_argument("-P", "--players", dest="players", nargs="+",
                 metavar="p",
-                help="the players to start among values {1,2}")
+                help="the players to start among values {1,2,3}")
         group.add_argument("-s", "--servers", dest="servers", nargs="+",
                 metavar="s",
                 help=_("attempt connection with the specified servers"))
+        group.add_argument("-k", "--kicksources", dest="kicksources", nargs="+",
+                metavar="k",
+                help=_("""kick sources on servers -- note that this will be
+                done before any server connection attempts are made"""))
         group.add_argument("-x", "--crossfader", dest="crossfader",
                 choices=("1", "2"),
                 help=_("position the crossfader for the specified player"))

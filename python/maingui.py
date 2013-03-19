@@ -3883,8 +3883,23 @@ class MainWindow(dbus.service.Object):
             elif args.voip == ["private"]:
                 self.redphone.set_active(True)
 
+        if args.kicksources is not None:
+            servtabs = self.server_window.streamtabframe.tabs
+            for n in range(len(servtabs)):
+                if chr(n + ord("1")) in args.kicksources:
+                    servtabs[n].kick_incumbent.clicked()
+            time.sleep(0.1)
+
         if args.servers is not None:
             servtabs = self.server_window.streamtabframe.tabs
+            for n in range(len(servtabs)):
+                if chr(n + ord("1")) in args.servers:
+                    servtabs[n].server_connect.set_active(True)
+            time.sleep(0.1)
+            for n in range(len(servtabs)):
+                if chr(n + ord("1")) in args.servers:
+                    servtabs[n].server_connect.set_active(False)
+            time.sleep(0.1)
             for n in range(len(servtabs)):
                 if chr(n + ord("1")) in args.servers:
                     servtabs[n].server_connect.set_active(True)
@@ -3900,6 +3915,8 @@ class MainWindow(dbus.service.Object):
                 self.player_left.play.clicked()
             if "2" in args.players:
                 self.player_right.play.clicked()
+            if "3" in args.players:
+                self.jingles.interlude.play.clicked()
                     
     def main(self):
         gtk.main()
