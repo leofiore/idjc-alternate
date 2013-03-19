@@ -208,11 +208,6 @@ class Effect(gtk.HBox):
 
     def _stop_progress(self):
         if self.timeout_source_id:
-            now = time.time()
-            played = now - self.effect_start
-            if played > self.effect_length: # Effect was longer that media_info gave
-                print "Adjusting effect length from %.2f to %.2f" % (self.effect_length, played)
-                self.effect_length = played
             gobject.source_remove(self.timeout_source_id)
             self.timeout_source_id = None
             self.progress.set_fraction(0.0)
@@ -228,7 +223,8 @@ class Effect(gtk.HBox):
             sens = self.pathname is not None and os.path.isfile(self.pathname)
             if response_id == gtk.RESPONSE_ACCEPT and pathname is not None:
                 self.uuid = str(uuid.uuid4())
-            
+            self.effect_length = 0.0 # Force effect length to be read again.
+
     def marshall(self):
         link = link_uuid_reg.get_link_filename(self.uuid)
         if link is not None:
