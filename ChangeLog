@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Added a command line server kick option and improved automatic connection.
+
 Effects players now have a progress meter. (patch: bmillham)
 
 Reduced border sizes in the main application window.
