@@ -1486,6 +1486,8 @@ class mixprefs:
             "effects1_muting" : self.parent.jingles.jmute_adj[0],
             "effects2_vol"    : self.parent.jingles.jvol_adj[1],
             "effects2_muting" : self.parent.jingles.jmute_adj[1],
+            "voiplevel"     : self.parent.voipgainadj,
+            "voipmixback"   : self.parent.mixbackadj,
             "interlude_vol" : self.parent.jingles.ivol_adj,
             "passspeed"     : self.parent.passspeed_adj,
             "djvolume"      : self.dj_aud_adj,

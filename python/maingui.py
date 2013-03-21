@@ -2310,13 +2310,19 @@ class MainWindow(dbus.service.Object):
         self.player_right.listen.set_sensitive(sens)
         self.mic_opener.force_all_on(mode == self.PUBLIC_PHONE)
         if mode == self.PRIVATE_PHONE:
+            self.voiplevsbox.show()
             self.spacerbox.show()
-            self.pbphoneimage.show()
-            self.mixback.show()
+            self.voipgainvbox.show()
+            self.mixbackvbox.show()
+        elif mode == self.PUBLIC_PHONE:
+            self.voiplevsbox.show()
+            self.spacerbox.show()
+            self.voipgainvbox.show()
+            self.mixbackvbox.hide()
         else:
+            self.voiplevsbox.hide()
             self.spacerbox.hide()
-            self.pbphoneimage.hide()
-            self.mixback.hide()
+            
         self.send_new_mixer_stats()
 
 
@@ -3007,10 +3013,8 @@ class MainWindow(dbus.service.Object):
         self.window.set_gravity(gtk.gdk.GRAVITY_STATIC)
         self.window_group.add_window(self.window)
         self.window.set_title(self.appname + pm.title_extra)
-        #self.window.set_border_width(8)
         self.window.connect("delete_event",self.delete_event)
         self.hbox10 = gtk.HBox(False)
-        #self.hbox10.set_border_width(2)
         self.hbox10.set_spacing(6)
         self.paned = gtk.HPaned()
         self.leftpane = gtk.VPaned()
@@ -3036,7 +3040,6 @@ class MainWindow(dbus.service.Object):
         self.vbox8.pack_start(menuhbox, False)
         menuhbox.show()
         self.menu = MainMenu()
-        #self.menu.set_border_width(6)
         menuhbox.pack_start(self.menu)
         self.menu.show()
         self.rightpane.pack_start(self.vbox8, True, True ,0)
@@ -3045,7 +3048,6 @@ class MainWindow(dbus.service.Object):
         self.paned.show()
         
         self.player_nb = gtk.Notebook()
-        #self.player_nb.set_border_width(6)
         main_label = gtk.Label()
         self.label_subst.add_widget(main_label, "mainplayerslabel", _('Main Players'))
         self.vbox6 = gtk.VBox(False, 0)
@@ -3053,17 +3055,8 @@ class MainWindow(dbus.service.Object):
         main_label.show()
         self.vbox8.pack_start(self.player_nb, True, True, 0)
         self.player_nb.show()
-        # add box 7 to box 8
         self.hbox7 = gtk.HBox(True)
-        #self.hbox7.set_spacing(5)
-        #self.hbox7.set_border_width(3)
-        
-        #self.frame2 = gtk.Frame()
-        #self.frame2.set_border_width(2)
-        #self.frame2.set_shadow_type(gtk.SHADOW_NONE)
-        #self.frame2.add(self.hbox10)
         self.hbox10.show()
-        #self.frame2.show()
   
         spc = gtk.HBox()
         self.vbox8.pack_start(spc, False, padding=3)
@@ -3153,13 +3146,9 @@ class MainWindow(dbus.service.Object):
                             ' pausing between tracks. The active playlist is'
                             ' defined by the placement of the crossfader.'))
         
-        # we are done messing with hbox7 so lets show it
         self.hbox7.show()
-        # ditto
         self.hbox10.show()
         
-        # Now to the interesting stuff.
-
         self.hbox4 = gtk.HBox(False, 0)
         self.vbox6.pack_start(self.hbox4, True, True, 0)
         
@@ -3195,7 +3184,7 @@ class MainWindow(dbus.service.Object):
         self.deckvol.set_update_policy(gtk.UPDATE_CONTINUOUS)
         self.deckvol.set_draw_value(False)
         self.deckvol.set_inverted(True)
-        hboxvol.pack_start(self.deckvol, False, False, 6)
+        hboxvol.pack_start(self.deckvol, False, False, 4)
         self.deckvol.show()
         set_tip(self.deckvol,
                         _('The volume control shared by both music players.'))
@@ -3207,28 +3196,59 @@ class MainWindow(dbus.service.Object):
         self.deck2vol.set_update_policy(gtk.UPDATE_CONTINUOUS)
         self.deck2vol.set_draw_value(False)
         self.deck2vol.set_inverted(True)
-        hboxvol.pack_start(self.deck2vol, False, False, 0)
+        hboxvol.pack_start(self.deck2vol, False)
         set_tip(self.deck2vol,
                         _('The volume control for the right music player.'))
 
         self.spacerbox = gtk.VBox()
-        self.spacerbox.set_size_request(1, 5)
-        self.vboxvol.pack_start(self.spacerbox, False, False, 0)
+        self.vboxvol.pack_start(self.spacerbox, False, padding=3)
+
+        self.voiplevsbox = gtk.HBox(True, 0)
+        self.vboxvol.pack_start(self.voiplevsbox, True)
+
+        self.voipgainvbox = gtk.VBox()
+        self.voipgainvbox.set_spacing(1)
+        self.voiplevsbox.pack_start(self.voipgainvbox, False)
+        self.voipgainvbox.show()
+
+        pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "greenphone.png")
+        pixbuf = pixbuf.scale_simple(20, 17, gtk.gdk.INTERP_HYPER)
+        greenphoneimage = gtk.Image()
+        greenphoneimage.set_from_pixbuf(pixbuf)
+        self.voipgainvbox.pack_start(greenphoneimage, False)
+        greenphoneimage.show()
+        
+        self.voipgainadj = gtk.Adjustment(64.0, 0.0, 127.0, 1.0, 6.0)
+        self.voipgainadj.connect("value_changed", self.cb_deckvol)
+        voipgain = gtk.VScale(self.voipgainadj)
+        voipgain.set_update_policy(gtk.UPDATE_CONTINUOUS)
+        voipgain.set_draw_value(False)
+        voipgain.set_inverted(True)
+        self.voipgainvbox.pack_start(voipgain)
+        voipgain.show()
+        set_tip(self.voipgainvbox, _('VoIP level adjustment.'))
+
+        self.mixbackvbox = gtk.VBox()
+        self.mixbackvbox.set_spacing(1)
+        self.voiplevsbox.pack_start(self.mixbackvbox, False)
+        self.mixbackvbox.show()
          
         pixbuf = gtk.gdk.pixbuf_new_from_file(FGlobs.pkgdatadir / "pbphone.png")
         pixbuf = pixbuf.scale_simple(20, 17, gtk.gdk.INTERP_HYPER)
-        self.pbphoneimage = gtk.Image()
-        self.pbphoneimage.set_from_pixbuf(pixbuf)
-        self.vboxvol.pack_start(self.pbphoneimage, False, False, 0)
+        pbphoneimage = gtk.Image()
+        pbphoneimage.set_from_pixbuf(pixbuf)
+        self.mixbackvbox.pack_start(pbphoneimage, False)
+        pbphoneimage.show()
         
         self.mixbackadj = gtk.Adjustment(64.0, 0.0, 127.0, 1.0, 6.0)
         self.mixbackadj.connect("value_changed", self.cb_deckvol)
-        self.mixback = gtk.VScale(self.mixbackadj)
-        self.mixback.set_update_policy(gtk.UPDATE_CONTINUOUS)
-        self.mixback.set_draw_value(False)
-        self.mixback.set_inverted(True)
-        self.vboxvol.pack_start(self.mixback, True, True, 0)
-        set_tip(self.mixback,
+        mixback = gtk.VScale(self.mixbackadj)
+        mixback.set_update_policy(gtk.UPDATE_CONTINUOUS)
+        mixback.set_draw_value(False)
+        mixback.set_inverted(True)
+        self.mixbackvbox.pack_start(mixback)
+        mixback.show()
+        set_tip(self.mixbackvbox,
         _('The stream volume level to send to the voice over IP connection.'))
         
         self.vboxvol.show()
@@ -3267,7 +3287,6 @@ class MainWindow(dbus.service.Object):
         history_hbox = gtk.HBox()
         self.history_vbox.pack_start(history_hbox, True, True, 0)
         self.vbox6.pack_start(self.history_vbox, True, True, 0)
-        #self.history_vbox.show()
         history_hbox.show()
         history_frame = gtk.Frame()
         history_hbox.pack_start(history_frame, True, True, 6)
@@ -3288,7 +3307,6 @@ class MainWindow(dbus.service.Object):
         history_clear_box.pack_start(self.history_clear, True, False, 0)
         self.history_clear.show()
         self.history_vbox.pack_start(history_clear_box, False, False, 1)
-        #history_clear_box.show()
         
         spacer = gtk.VBox()
         self.history_vbox.pack_start(spacer, False, False, 1)
