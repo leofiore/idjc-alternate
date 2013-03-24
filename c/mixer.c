@@ -73,7 +73,7 @@ unsigned long sr = 44100;
 
 /* values of the volume sliders in the GUI */
 static int volume, volume2, crossfade, jinglesvolume1, jinglesheadroom1;
-static int jinglesvolume2, jinglesheadroom2, interludevol, mixbackvol, crosspattern;
+static int jinglesvolume2, jinglesheadroom2, interludevol, mixbackvol, voipvol, crosspattern;
 /* back and forth status indicators re. jingles */
 static int jingles_playing;
 /* the player audio feed buttons */
@@ -84,7 +84,7 @@ static int mic_on, mixermode = NO_PHONE;
 /* simple mixer mode: uses less space on the screen and less cpu as well */
 static int simple_mixer;
 /* currentvolumes are used to implement volume smoothing */
-static int current_crossfade, currentmixbackvol, current_crosspattern;
+static int current_crossfade, currentmixbackvol, currentvoipvol, current_crosspattern;
 /* value of the stream mon. button */
 static int stream_monitor = 0;
 /* when this is set the end of track alarm is started */
@@ -135,10 +135,14 @@ static struct compressor stream_limiter =
     }, phone_limiter =
     {
     0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0, 0.0
+    }, incoming_phone_limiter =
+    {
+    0.0, -0.05, -0.2, INFINITY, 1, 1.0F/4000.0F, 0.0, 0.0, 1, 1, 0.0, 0.0, 0.0
     };
             
 /* media player mixback level for when in RedPhone mode */
 static sample_t mb_lc_aud = 1.0, mb_rc_aud = 1.0;
+static sample_t voip_lc_aud = 1.0, voip_rc_aud = 1.0;
 static sample_t current_headroom;      /* the amount of mic headroom being applied */
 static sample_t *eot_alarm_table;      /* the wave table for the DJ alarm */
             
@@ -369,6 +373,15 @@ static void update_smoothed_volumes()
         else
             currentmixbackvol--;
         mb_lc_aud = mb_rc_aud = powf(10.0F, (currentmixbackvol - 127) * 0.0141F);
+        }
+
+    if (voipvol != currentvoipvol)
+        {
+        if (voipvol > currentvoipvol)
+            currentvoipvol++;
+        else
+            currentvoipvol--;
+        voip_lc_aud = voip_rc_aud = powf(10.0F, (currentvoipvol - 64) * 0.05F);
         }
 
     /* mic headroom application */
@@ -731,17 +744,19 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
 
                 COMMON_MIX();
 
-                /* do the phone send mix */
+                /* do the phone mix */
                 *lpsp = lc_s_micmix + e_ls;
                 *rpsp = rc_s_micmix + e_rs;
+                compressor_gain = db2level(limiter(&phone_limiter, *lpsp, *rpsp));
+                *lpsp *= compressor_gain;
+                *rpsp *= compressor_gain;
+                compressor_gain = db2level(limiter(&incoming_phone_limiter, *lprp *= voip_lc_aud, *rprp *= voip_rc_aud));
+                *lprp *= compressor_gain;
+                *rprp *= compressor_gain;
 
                 /* The main mix */
                 *dolp = (plr_l->ls_str + plr_r->ls_str) * *jh * df + *lprp + *lpsp + lc_s_auxmix + plr_i->ls_str * idf * *jhi;
                 *dorp = (plr_l->rs_str + plr_r->rs_str) * *jh * df + *rprp + *rpsp + rc_s_auxmix + plr_i->rs_str * idf * *jhi;
-                
-                compressor_gain = db2level(limiter(&phone_limiter, *lpsp, *rpsp));
-                *lpsp *= compressor_gain;
-                *rpsp *= compressor_gain;
 
                 /* hard limit the levels if they go outside permitted limits */
                 /* note this is not the same as clipping */
@@ -811,6 +826,9 @@ int mixer_process_audio(jack_nframes_t nframes, void *arg)
                     compressor_gain = db2level(limiter(&phone_limiter, *lpsp, *rpsp));
                     *lpsp *= compressor_gain;
                     *rpsp *= compressor_gain;
+                    compressor_gain = db2level(limiter(&incoming_phone_limiter, *lprp *= voip_lc_aud, *rprp *= voip_rc_aud));
+                    *lprp *= compressor_gain;
+                    *rprp *= compressor_gain;
                     
                     COMMON_MIX2();
 
@@ -1407,14 +1425,14 @@ int mixer_main()
         if(sscanf(mixer_string,
                  ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d"
                  "%1d%1d:%1d%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f"
-                 ":%d:%d:%d:%1d:%1d:%1d:%f:",
+                 ":%d:%d:%d:%1d:%1d:%1d:%f:%03d:",
                  &volume, &volume2, &crossfade, &jinglesvolume1, &jinglesheadroom1,
                  &jinglesvolume2, &jinglesheadroom2 ,&interludevol, &mixbackvol, &jingles_playing,
                  &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
                  &s.new_left_pause, &s.new_right_pause, &s.flush_left, &s.flush_right, &s.flush_jingles, &s.flush_interlude,
                  &simple_mixer, &eot_alarm_set, &mixermode, &s.fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed),
                  &speed_variance, &dj_audio_level, &crosspattern, &s.use_dsp, &s.new_inter_pause,
-                 &inter_stream, &inter_audio, &inter_force, &alarm_audio_level) !=37)
+                 &inter_stream, &inter_audio, &inter_force, &alarm_audio_level, &voipvol) !=38)
             {
             fprintf(stderr, "mixer got bad mixer string\n");
             return TRUE;
