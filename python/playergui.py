@@ -2485,7 +2485,7 @@ class IDJC_Media_Player:
             return
 
         for each in items:
-            if each[0] not in (">transfer", ">crossfade", ">normalspeed"):
+            if each[0] not in (">transfer", ">crossfade"):
                 yield each
 
     def file_destroy(self, widget):
@@ -3227,24 +3227,25 @@ class IDJC_Media_Player:
                  "Jump To Top Control"       : ">jumptotop",
         }
         if dict.has_key(text) and self.pl_mode.get_active() == 0:
-            if iter is not None:
-                iter = model.insert_after(iter)
-            else:
-                iter = model.append()
-            model.set_value(iter, 0, dict[text])
-            model.set_value(iter, 1, "")
-            model.set_value(iter, 2, -11)
-            model.set_value(iter, 3, "")
-            model.set_value(iter, 4, "")
-            model.set_value(iter, 5, "")
-            model.set_value(iter, 6, "")
-            self.treeview.get_selection().select_iter(iter)
+            for ctl in self.filter_allowed_controls(((dict[text], ), )):
+                if iter is not None:
+                    iter = model.insert_after(iter)
+                else:
+                    iter = model.append()
+                model.set_value(iter, 0, ctl[0])
+                model.set_value(iter, 1, "")
+                model.set_value(iter, 2, -11)
+                model.set_value(iter, 3, "")
+                model.set_value(iter, 4, "")
+                model.set_value(iter, 5, "")
+                model.set_value(iter, 6, "")
+                self.treeview.get_selection().select_iter(iter)
 
-            if text == "Announcement Control":
-                # brand new announcement dialog
-                dia = AnnouncementDialog(self, model, iter, "initial")
-                dia.show()
-            return
+                if text == "Announcement Control":
+                    # brand new announcement dialog
+                    dia = AnnouncementDialog(self, model, iter, "initial")
+                    dia.show()
+                return
 
         if text == "MetaTag":
             try:
@@ -4251,12 +4252,11 @@ class IDJC_Media_Player:
         self.control_menu = gtk.Menu()
 
         # TC: Insert playlist control to set playback speed to normal.
-        if name in ("left", "right"):
-            self.control_normal_speed_control = gtk.MenuItem(_('Normal Speed'))
-            self.control_normal_speed_control.connect("activate",
-                                    self.menuitem_response, "Normal Speed Control")
-            self.control_menu.append(self.control_normal_speed_control)
-            self.control_normal_speed_control.show()
+        self.control_normal_speed_control = gtk.MenuItem(_('Normal Speed'))
+        self.control_normal_speed_control.connect("activate",
+                                self.menuitem_response, "Normal Speed Control")
+        self.control_menu.append(self.control_normal_speed_control)
+        self.control_normal_speed_control.show()
 
         # TC: Insert playlist control to stop the player.
         self.control_menu_stop_control = gtk.MenuItem(_('Player Stop'))

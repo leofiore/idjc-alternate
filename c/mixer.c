@@ -1425,14 +1425,14 @@ int mixer_main()
         if(sscanf(mixer_string,
                  ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:%d:%1d%1d%1d"
                  "%1d%1d:%1d%1d:%1d%1d%1d%1d:%1d:%1d:%1d:%1d:%1d:%f:%f:%1d:%f"
-                 ":%d:%d:%d:%1d:%1d:%1d:%f:%03d:",
+                 ":%d:%d:%d:%1d:%1d:%1d:%f:%03d:%f:",
                  &volume, &volume2, &crossfade, &jinglesvolume1, &jinglesheadroom1,
                  &jinglesvolume2, &jinglesheadroom2 ,&interludevol, &mixbackvol, &jingles_playing,
                  &left_stream, &left_audio, &right_stream, &right_audio, &stream_monitor,
                  &s.new_left_pause, &s.new_right_pause, &s.flush_left, &s.flush_right, &s.flush_jingles, &s.flush_interlude,
                  &simple_mixer, &eot_alarm_set, &mixermode, &s.fadeout_f, &main_play, &(plr_l->newpbspeed), &(plr_r->newpbspeed),
                  &speed_variance, &dj_audio_level, &crosspattern, &s.use_dsp, &s.new_inter_pause,
-                 &inter_stream, &inter_audio, &inter_force, &alarm_audio_level, &voipvol) !=38)
+                 &inter_stream, &inter_audio, &inter_force, &alarm_audio_level, &voipvol, &(plr_i->newpbspeed)) !=39)
             {
             fprintf(stderr, "mixer got bad mixer string\n");
             return TRUE;
@@ -1443,7 +1443,7 @@ int mixer_main()
         for (struct xlplayer **p = plr_j; *p; ++p)
             (*p)->fadeout_f = s.fadeout_f;
             
-        plr_l->use_sv = plr_r->use_sv = speed_variance;
+        plr_l->use_sv = plr_r->use_sv = plr_i->use_sv = speed_variance;
 
         if (s.use_dsp != using_dsp)
             using_dsp = s.use_dsp;

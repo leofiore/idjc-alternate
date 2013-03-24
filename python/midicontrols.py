@@ -39,7 +39,6 @@ _ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
 pm = ProfileManager()
 
 
-
 control_methods= {
     # TC: Control method. Please keep it as Target:Action.
     'c_tips': _('Tooltips enable'),
@@ -140,7 +139,6 @@ control_methods= {
     'r_on': _('Recorder set recording'),
 }
 
-
 control_targets= {
     'p': _('Player'),
     'm': _('Channel'),
@@ -149,7 +147,6 @@ control_targets= {
     'r': _('Recorder')
 }
 
-
 control_targets_players= (
     _('Left player'),
     _('Right player'),
@@ -157,7 +154,6 @@ control_targets_players= (
     _('Focused player'),
     _('Fadered player')
 )
-
 
 control_targets_effects_bank= (
     _('Effects bank 1'),
@@ -1529,7 +1525,7 @@ class BindingEditor(gtk.Dialog):
         group= method[:1]
         if group=='p':
             self.target_field.set_adjustment(PlayerAdjustment())
-        if group=='b':
+        elif group=='b':
             self.target_field.set_adjustment(EffectsBankAdjustment())
         elif group in 'mksr':
             self.target_field.set_adjustment(TargetAdjustment(group))

@@ -1923,7 +1923,7 @@ class MainWindow(dbus.service.Object):
 
         string_to_send = ":%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:%03d:" \
                         "%d:%d%d%d%d%d:%d%d:%d%d%d%d:%d:%d:%d:%d:%d:%f:%f:" \
-                        "%d:%f:%d:%d:%d:%d:%d:%d:%d:%03d:" % (
+                        "%d:%f:%d:%d:%d:%d:%d:%d:%d:%03d:%f:" % (
                         deckadj,
                         deck2adj,
                         self.crossadj.get_value(),
@@ -1962,7 +1962,8 @@ class MainWindow(dbus.service.Object):
                         self.jingles.interlude.listen.get_active(),
                         self.jingles.interlude.force.get_active(),
                         self.prefs_window.alarm_aud_adj.get_value(),
-                        self.voipgainadj.get_value()
+                        self.voipgainadj.get_value(),
+                        1.0 / self.jingles.interlude.pbspeedfactor
                         )
         self.mixer_write("MIXR=%s\nACTN=mixstats\nend\n" % string_to_send)
 
