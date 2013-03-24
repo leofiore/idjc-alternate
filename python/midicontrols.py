@@ -118,6 +118,8 @@ control_methods= {
     # TC: Control method. Please keep it as Target:Action.
     'v_vol': _('VoIP set volume'),
     # TC: Control method. Please keep it as Target:Action.
+    'v_mixback': _('VoIP set mixback'),
+    # TC: Control method. Please keep it as Target:Action.
     'v_gain': _('VoIP set gain'),
     # TC: Control method. Please keep it as Target:Action.
     'v_pan': _('VoIP set balance'),
@@ -977,9 +979,15 @@ class Controls(object):
         s= not phone.get_active() if isd else v>=0x40
         phone.set_active(s)
 
-    #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
-    #def v_vol(self, n, v, isd):
-    #   pass # XXX
+    @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
+    def v_vol(self, n, v, isd):
+       vol = self.owner.voipgainadj.get_value() + v if isd else v
+       self.owner.voipgainadj.set_value(vol)
+
+    @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
+    def v_mixback(self, n, v, isd):
+       vol = self.owner.mixbackadj.get_value() + v if isd else v
+       self.owner.mixbackadj.set_value(vol)
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def v_gain(self, n, v, isd):

@@ -1,5 +1,11 @@
 * Changes in version 0.8.9 *
 
+Added speed/pitch controls to the background tracks player.
+
+Added binding to the VoIP mixback level.
+
+Added VoIP level control with binding.
+
 Added a command line server kick option and improved automatic connection.
 
 Effects players now have a progress meter. (patch: bmillham)

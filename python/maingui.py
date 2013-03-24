@@ -3228,7 +3228,7 @@ class MainWindow(dbus.service.Object):
         voipgain.set_inverted(True)
         self.voipgainvbox.pack_start(voipgain)
         voipgain.show()
-        set_tip(self.voipgainvbox, _('VoIP level adjustment.'))
+        set_tip(self.voipgainvbox, _('VoIP level adjustment. 0dB gain is at the mid point.'))
 
         self.mixbackvbox = gtk.VBox()
         self.mixbackvbox.set_spacing(1)
