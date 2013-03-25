@@ -949,9 +949,15 @@ class Controls(object):
             s = not button.get_active() if isd else v>=0x40
             button.set_active(s)
         
-    #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
-    #def m_vol(self, n, v, isd):
-    #   pass # XXX
+    @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
+    def m_vol(self, n, v, isd):
+        agc = getattr(self.owner.prefs_window, 'mic_control_%d'%n)
+        vol = agc.valuesdict[agc.commandname+'_gain'].get_adjustment()
+        if isd:
+            v += vol.props.value()
+        else:
+            v = v / 127.0 * (vol.props.upper - vol.props.lower) + vol.props.lower
+        vol.set_value(v)
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def m_gain(self, n, v, isd):

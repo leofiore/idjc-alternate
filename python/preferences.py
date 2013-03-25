@@ -1302,6 +1302,7 @@ class mixprefs:
                 n = i * 2 + j
                 micname = "mic_control_%d" % n
                 c = AGCControl(self.parent, str(n + 1), micname, n)
+                setattr(self, micname, c)
                 uhbox.add(c)
                 c.show()
                 parent.mic_opener.add_mic(c)

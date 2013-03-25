@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Fixed binding for channel pan and added binding for channel level.
+
 Added speed/pitch controls to the background tracks player.
 
 Added binding to the VoIP mixback level.
