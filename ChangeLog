@@ -1,5 +1,9 @@
 * Changes in version 0.8.9 *
 
+Added patch for playing effects to be listed on the effects tab when effects tab is not the one active.
+
+Jingles tab renamed to effects tab.
+
 Fixed binding for channel pan and added binding for channel level.
 
 Added speed/pitch controls to the background tracks player.

@@ -130,6 +130,24 @@ class Effect(gtk.HBox):
         self.timeout_source_id = None
         self.interlude = IDJC_Media_Player(None, None, parent)
         self.effect_length = 0.0
+        # Create the widget that will be used in the tab
+        self.tabwidget = gtk.HBox()
+        self.tabwidget.set_spacing(3)
+        sep = gtk.VSeparator()
+        self.tabwidget.pack_start(sep)
+        vb = gtk.VBox()
+        self.tabwidget.pack_start(vb)
+        hb = gtk.HBox()
+        hb.set_spacing(3)
+        self.tabeffectname = gtk.Label()
+        self.tabeffecttime = gtk.Label()
+        hb.pack_start(self.tabeffectname)
+        hb.pack_start(self.tabeffecttime)
+        vb.pack_start(hb)
+        self.tabeffectprog = gtk.ProgressBar()
+        self.tabeffectprog.set_size_request(-0, 3)
+        vb.pack_start(self.tabeffectprog)
+        self.tabwidget.show_all()
 
     def _drag_get_data(self, widget, context, selection, target_id, etime):
         selection.set(selection.target, 8, str(self.num))
@@ -182,6 +200,10 @@ class Effect(gtk.HBox):
                 self.effect_start = time.time()
                 self.timeout_source_id = gobject.timeout_add(playergui.PROGRESS_TIMEOUT,
                                 self._progress_timeout)
+                self.tabeffectname.set_text(self.trigger_label.get_text())
+                self.tabeffecttime.set_text('0.0')
+                self.tabeffectprog.set_fraction(0.0)
+                self.approot.jingles.nb_effects_box.pack_start(self.tabwidget)
             else: # Restarted the effect
                 self.effect_start = time.time()
             self.approot.mixer_write(
@@ -204,6 +226,8 @@ class Effect(gtk.HBox):
             pass
         else:
             self.progress.set_fraction(ratio)
+            self.tabeffectprog.set_fraction(ratio)
+            self.tabeffecttime.set_text("%4.1f" % (self.effect_length - played))
         return True
 
     def _stop_progress(self):
@@ -211,6 +235,7 @@ class Effect(gtk.HBox):
             gobject.source_remove(self.timeout_source_id)
             self.timeout_source_id = None
             self.progress.set_fraction(0.0)
+            self.approot.jingles.nb_effects_box.remove(self.tabwidget)
 
     def _on_dialog_response(self, dialog, response_id, pathname=None):
         if response_id in (gtk.RESPONSE_ACCEPT, gtk.RESPONSE_NO):
@@ -470,9 +495,17 @@ class ExtraPlayers(gtk.HBox):
     def __init__(self, parent):
         self.approot = parent
 
-        self.nb_label = gtk.Label()
-        parent.label_subst.add_widget(self.nb_label, "jingles_tabtext", _('Jingles'))
-            
+        self.nb_label = gtk.HBox(False, 0)
+        vb = gtk.VBox()
+        lbl = gtk.Label(_('Effects'))
+        lbl.set_padding(0, 2)
+        vb.pack_start(lbl)
+        vb.show()
+        self.nb_label.pack_start(vb)
+        self.nb_effects_box = gtk.HBox(False, 5)
+        self.nb_label.pack_start(self.nb_effects_box)
+        self.nb_label.show_all()
+        self.nb_effects_box.hide()
         gtk.HBox.__init__(self)
         self.set_border_width(4)
         self.set_spacing(10)
@@ -538,6 +571,16 @@ class ExtraPlayers(gtk.HBox):
 
         self.show_all()
         interlude_box.show()
+        self.approot.player_nb.connect('switch-page',
+                                       self._on_nb_switch_page,
+                                       self.nb_effects_box)
+
+    def _on_nb_switch_page(self, notebook, page, page_num, box):
+        page_widget = notebook.get_nth_page(page_num)
+        if isinstance(page_widget, ExtraPlayers):
+            box.hide()
+        else:
+            box.show()
 
     def restore_session(self):
         for each in self.effect_banks:
