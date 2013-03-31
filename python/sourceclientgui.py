@@ -28,6 +28,7 @@ import urllib2
 import base64
 import gettext
 import traceback
+import datetime
 import xml.dom.minidom as mdom
 import xml.etree.ElementTree
 import ctypes
@@ -1799,9 +1800,15 @@ class RecordTab(Tab):
                             num_id = sd.streamtab.numeric_id
                         else:
                             num_id = -1
+   
+                        filename = datetime.datetime.today().strftime(self.parentobject.scg.parent.prefs_window.recorder_filename.get_text().strip())
+                        table = (("$$", "$"), ("$r", "%02d" % (self.parentobject.numeric_id + 1)))
+                        filename = string_multireplace(filename, table)
                         self.parentobject.send("record_source=%d\n"
+                            "record_filename=%s\n"
                             "record_folder=%s\ncommand=recorder_start\n" % (
-                            num_id, sd.file_chooser_button.get_current_folder()))
+                            num_id, filename,
+                            sd.file_chooser_button.get_current_folder()))
                         sd.set_sensitive(False)
                         self.parentobject.time_indicator.set_sensitive(True)
                         self.recording = True

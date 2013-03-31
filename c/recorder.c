@@ -858,7 +858,8 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
                 
         }
 
-    if (!(self->pathname = malloc(pathname_size = strlen(rv->record_folder) + strlen(file_extension) + TIMESTAMP_SIZ + 9)))
+    if (!(self->pathname = malloc(pathname_size = strlen(rv->record_folder) + 1
+            + strlen(rv->record_filename) + strlen(file_extension) + 1)))
         {
         fprintf(stderr, "recorder_start: malloc failure\n");
         if (self->encoder_op)
@@ -870,7 +871,9 @@ int recorder_start(struct threads_info *ti, struct universal_vars *uv, void *oth
     tm = localtime(&t);
     strftime(timestamp, TIMESTAMP_SIZ, "[%Y-%m-%d][%H:%M:%S]", tm);
     self->timestamp = strdup(timestamp);
-    snprintf(self->pathname, pathname_size, "%s/idjc.%s.%02d%s", rv->record_folder, timestamp, uv->tab+1, file_extension);
+    snprintf(self->pathname, pathname_size, "%s/%s%s", rv->record_folder, rv->record_filename, file_extension);
+
+    fprintf(stderr, "%s\n", self->pathname);
 
     base = strlen(self->pathname) - strlen(file_extension);
     self->cuepathname = malloc(base + 5);

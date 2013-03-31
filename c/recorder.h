@@ -30,6 +30,7 @@ struct recorder_vars
     {
     char *record_source;
     char *record_folder;
+    char *record_filename;
     char *pause_button;
     char *auto_pause_button;
     };

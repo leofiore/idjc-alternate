@@ -29,7 +29,7 @@ from idjc import FGlobs, PGlobs
 from . import licence_window
 from . import songdb
 from . import midicontrols
-from .gtkstuff import WindowSizeTracker
+from .gtkstuff import WindowSizeTracker, DefaultEntry
 from .prelims import ProfileManager
 from .utils import PathStr
 from .tooltips import set_tip, MAIN_TIPS
@@ -1104,6 +1104,24 @@ class mixprefs:
         table.set_col_spacing(3, 7)
         table.show_all()
 
+        # Recorder filename format may be desirable to change for FAT32 compatibility
+
+        frame = gtk.Frame(" %s " % _('Recorder Filename (excluding the file extension)'))
+        set_tip(frame, _("The specifiers are $r for the number of the "
+        "recorder with the rest being documented in the strftime man page.\n"
+        "Users may wish to alter this to make filenames that are compatible with particular filesystems."))
+        frame.set_border_width(3)
+        align = gtk.Alignment()
+        align.props.xscale = 1.0
+        self.recorder_filename = DefaultEntry("idjc.[%Y-%m-%d][%H:%M:%S].$r")
+        align.add(self.recorder_filename)
+        self.recorder_filename.show()
+        align.set_border_width(3)
+        frame.add(align)
+        align.show()
+        outervbox.pack_start(frame, True)
+        frame.show()
+
         # Miscellaneous Features
         
         frame = gtk.Frame(" " + _('Miscellaneous Features') + " ")
@@ -1508,7 +1526,8 @@ class mixprefs:
             "rtfilerqdir"   : self.parent.player_right.file_requester_start_dir,
             "main_full_wst" : self.parent.full_wst,
             "main_min_wst"  : self.parent.min_wst,
-            "prefs_wst"   : self.wst
+            "prefs_wst"     : self.wst,
+            "rec_filename"  : self.recorder_filename
             }
 
         for each in itertools.chain(mic_controls, (opener_settings,
