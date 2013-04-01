@@ -52,7 +52,7 @@ from .mutagentagger import *
 from .utils import SlotObject
 from .utils import LinkUUIDRegistry
 from .utils import PathStr
-from .gtkstuff import threadslock, DirectoryChooserButton
+from .gtkstuff import threadslock, FolderChooserButton
 from .prelims import *
 from .tooltips import set_tip
 
@@ -397,9 +397,9 @@ class ExternalPL(gtk.Frame):
     def cb_newselection(self, widget, radio):
         radio.set_active(True)
 
-    def make_line(self, radio, dialog):
-        button = DirectoryChooserButton(dialog)
-        dialog.set_current_folder(os.path.expanduser("~"))
+    def make_line(self, radio, dialog, widget):
+        button = widget(dialog)
+        button.set_current_folder(os.path.expanduser("~"))
         hbox = gtk.HBox()
         hbox.pack_start(radio, False, False, 0)
         hbox.pack_start(button, True, True, 0)
@@ -448,9 +448,9 @@ class ExternalPL(gtk.Frame):
         self.directorychooser.connect("selection-changed", self.cb_newselection,
                                                         self.radio_directory)
 
-        fbox = self.make_line(self.radio_file, self.filechooser)
+        fbox = self.make_line(self.radio_file, self.filechooser, gtk.FileChooserButton)
         set_tip(fbox, _('Choose a playlist file.'))
-        dbox = self.make_line(self.radio_directory, self.directorychooser)
+        dbox = self.make_line(self.radio_directory, self.directorychooser, FolderChooserButton)
         set_tip(dbox, _('Choose a folder/directory of music.'))
 
         self.vbox.pack_start(fbox, True, True, 0)

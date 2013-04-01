@@ -562,19 +562,104 @@ class LabelSubst(gtk.Frame):
             entry.grab_focus()
 
 
-class DirectoryChooserButton(gtk.FileChooserButton):
-    """FileChooserButton broken in PyGTK for directories."""
+class FolderChooserButton(gtk.Button):
+    """Replaces the now-broken gtk.FileChosserButton for folder selection.
+    
+    The old chooser also had some issues with being able to visually select
+    unmounted partitions that resulted in no change from the last valid
+    selection. This button fixes that by dispensing with the drop down list
+    entirely.
+    
+    In order to work properly this button's dialog must be in folder select
+    mode.
+    """
 
-    def __init__(self, *args, **kwargs):
-        gtk.FileChooserButton.__init__(self, *args, **kwargs)
-        self._folder = self.get_current_folder()
-        self.connect("current-folder-changed", self._on_current_folder_changed)
-        self.connect("file-set", self._on_file_set)
+    __gsignals__ = { 'current-folder-changed' : (gobject.SIGNAL_RUN_FIRST,
+        gobject.TYPE_NONE, (gobject.TYPE_STRING,))
+    }
+
+    def __init__(self, dialog=None):
+        gtk.Button.__init__(self)
+        self._current_folder = None
+        self._handler_ids = []
+        hbox = gtk.HBox()
+        hbox.set_spacing(3)
+        self.add(hbox)
+        self._icon = gtk.image_new_from_stock(gtk.STOCK_DIRECTORY, gtk.ICON_SIZE_MENU)
+        hbox.pack_start(self._icon, False)
+        # TC: FolderChooserButton text for null -- no directory is set.
+        self._label = gtk.Label(_("(none)"))
+        self._label.set_alignment(0.0, 0.5)
+        self._label.set_ellipsize(pango.ELLIPSIZE_END)
+        hbox.pack_start(self._label)
+        self._label.show()
+        self.set_dialog(dialog)
+        self.connect("clicked", self._on_clicked)
+        self.get_child().show_all()
+
+    def set_dialog(self, dialog):
+        self._disconnect_from_dialog()
+
+        if dialog is None:
+            self._update_visual()
+        else:
+            self._connect_to_dialog(dialog)
+            self.set_current_folder(dialog.get_current_folder())
+
+    def get_dialog(self):
+        return self._dialog
+
+    def get_current_folder(self):
+        return self._dialog and self._current_folder
         
-    def _on_current_folder_changed(self, widget):
-        self._folder = self.get_current_folder()
+    def set_current_folder(self, new_folder):
+        """Call this, not the underlying dialog."""
         
-    def _on_file_set(self, widget):
-        # Prevent infinite loop.
-        if self.get_current_folder() != self._folder:
-            self.set_current_folder(self._folder)
+        if new_folder is not None:
+            new_folder = new_folder.strip()
+            if new_folder != os.sep:
+                new_folder = new_folder.rstrip(os.sep)
+            
+            if new_folder != self._current_folder:
+                self._dialog.set_current_folder(new_folder)
+                self.emit("current-folder-changed", new_folder)
+
+    def _update_visual(self):
+        folder_name = self.get_current_folder()
+        if not folder_name:
+            folder_name = _("(none)")
+        else:
+            folder_name = os.path.split(folder_name)[1]
+        self._label.set_text(folder_name)
+
+    def _disconnect_from_dialog(self):
+        for hid in self._handler_ids:
+            self._dialog.handler_disconnect(hid)
+        del self._handler_ids[:]
+        self._dialog = None
+
+    def _connect_to_dialog(self, dialog):
+        app = self._handler_ids.append
+        app(dialog.connect("destroy", self._on_dialog_destroy))
+        self._dialog = dialog
+        
+    def _on_dialog_destroy(self, dialog):
+        del self._handler_ids[:]
+        self._dialog = None
+        if not self.flags() & gtk.IN_DESTRUCTION:
+            self._update_visual()
+
+    def _on_clicked(self, button):
+        if self._dialog is not None:
+            self._dialog.set_current_folder(self._current_folder or "")
+            if self._dialog.run() == gtk.RESPONSE_ACCEPT:
+                new_folder = self._dialog.get_current_folder()
+                if new_folder != self._current_folder:
+                    self.emit('current-folder-changed', new_folder)
+            else:
+                self._dialog.set_current_folder(self._current_folder or "")
+            self._dialog.hide()
+
+    def do_current_folder_changed(self, new_folder):
+        self._current_folder = new_folder
+        self._update_visual()

@@ -43,7 +43,7 @@ import gobject
 from idjc import FGlobs, PGlobs
 from .utils import string_multireplace
 from .gtkstuff import DefaultEntry, threadslock, HistoryEntry
-from .gtkstuff import WindowSizeTracker, DirectoryChooserButton
+from .gtkstuff import WindowSizeTracker, FolderChooserButton
 from .dialogs import *
 from .irc import IRCPane
 from .format import FormatControl, FormatCodecMPEG
@@ -72,7 +72,6 @@ lame_enabled = False
 
 class SmallLabel(gtk.Label):
     """A gtk.Label with small text size."""
-    
 
     def __init__(self, text=None):
         gtk.Label.__init__(self, text)
@@ -81,12 +80,10 @@ class SmallLabel(gtk.Label):
         self.set_attributes(attrlist)
 
 
-
 class HistoryEntryWithMenu(HistoryEntry):
     def __init__(self):
         HistoryEntry.__init__(self, initial_text=("", "%s", "%r - %t"))
         self.child.connect("populate-popup", self._on_populate_popup)
-        
         
     def _on_populate_popup(self, entry, menu):
         attr_menu_item = gtk.MenuItem(_('Insert Attribute'))
@@ -101,12 +98,10 @@ class HistoryEntryWithMenu(HistoryEntry):
         menu.append(attr_menu_item)
         attr_menu_item.show_all()
 
-
     def _on_menu_activate(self, mi, entry, subst):
         p = entry.get_position()
         entry.insert_text(subst, p)
         entry.set_position(p + len(subst))
-
 
 
 class ModuleFrame(gtk.Frame):
@@ -118,19 +113,16 @@ class ModuleFrame(gtk.Frame):
         self.vbox.show()
 
 
-
 class CategoryFrame(gtk.Frame):
     def __init__(self, frametext = None):
         gtk.Frame.__init__(self, frametext)
         gtk.Frame.set_shadow_type(self, gtk.SHADOW_IN)
-
 
  
 class SubcategoryFrame(gtk.Frame):
     def __init__(self, frametext = None):
         gtk.Frame.__init__(self, frametext)
         gtk.Frame.set_shadow_type(self, gtk.SHADOW_ETCHED_IN)
-
 
 
 class ConnectionDialog(gtk.Dialog):
@@ -774,26 +766,20 @@ class ConnectionPane(gtk.VBox):
         self.timer = ActionTimer(40, self.stats_commence, self.stats_collate)
 
 
-
 class TimeEntry(gtk.HBox):
     """A 24-hour-time entry widget with a checkbutton."""
-    
     
     def time_valid(self):
         return self.seconds_past_midnight >= 0
 
-
     def get_seconds_past_midnight(self):
         return self.seconds_past_midnight
-
 
     def set_active(self, boolean):
         self.check.set_active(boolean and True or False)
 
-
     def get_active(self):
         return self.check.get_active() and self.time_valid
-
 
     def __entry_activate(self, widget):
         boolean = widget.get_active()
@@ -801,14 +787,12 @@ class TimeEntry(gtk.HBox):
         if boolean:
             self.entry.grab_focus()
 
-
     def __key_validator(self, widget, event):
         if event.keyval < 128:
             if event.string == ":":
                 return False
             if event.string < "0" or event.string > "9":
                 return True
-
 
     def __time_updater(self, widget):
         text = widget.get_text()
@@ -825,7 +809,6 @@ class TimeEntry(gtk.HBox):
                     self.seconds_past_midnight = -1
         else:
             self.seconds_past_midnight = -1
-
 
     def __init__(self, labeltext):
         gtk.HBox.__init__(self)
@@ -845,7 +828,6 @@ class TimeEntry(gtk.HBox):
         self.seconds_past_midnight = -1
 
 
-
 class AutoAction(gtk.HBox):
     def activate(self):
         if self.get_active():
@@ -853,18 +835,14 @@ class AutoAction(gtk.HBox):
                 if radio.get_active():
                     action()
 
-
     def get_active(self):
         return self.check_button.get_active()
-
 
     def set_active(self, boolean):
         self.check_button.set_active(boolean)
 
-
     def get_radio_index(self):
         return self.radio_active
-
 
     def set_radio_index(self, value):
         try:
@@ -875,17 +853,14 @@ class AutoAction(gtk.HBox):
             except:
                 pass
 
-
     def __set_sensitive(self, widget):
         boolean = widget.get_active()
         for radio, action in self.action_lookup:
             radio.set_sensitive(boolean)
 
-
     def __handle_radioclick(self, widget, which):
         if widget.get_active():
             self.radio_active = which
-
 
     def __init__(self, labeltext, names_actions):
         gtk.HBox.__init__(self)
@@ -907,10 +882,8 @@ class AutoAction(gtk.HBox):
             self.action_lookup.append((radio, action))
 
 
-
 class FramedSpin(gtk.Frame):
     """A framed spin button that can be disabled"""
-
 
     def get_value(self):
         if self.check.get_active():
@@ -918,21 +891,17 @@ class FramedSpin(gtk.Frame):
         else:
             return -1
 
-
     def get_cooked_value(self):
         if self.check.get_active():
             return self.spin.get_value() * self.adj_basis.get_value() / 100
         else:
             return -1
 
-
     def set_value(self, new_value):
         self.spin.set_value(new_value)
 
-
     def cb_toggled(self, widget):
         self.spin.set_sensitive(widget.get_active())
-
 
     def __init__(self, text, adj, adj_basis):
         self.adj_basis = adj_basis
@@ -954,18 +923,14 @@ class FramedSpin(gtk.Frame):
         self.check.connect("toggled", self.cb_toggled)
 
 
-
 class SimpleFramedSpin(gtk.Frame):
     """A framed spin button"""
-
 
     def get_value(self):
         return self.spin.get_value()
 
-
     def set_value(self, new_value):
         self.spin.set_value(new_value)
-
 
     def __init__(self, text, adj):
         gtk.Frame.__init__(self)
@@ -984,10 +949,8 @@ class SimpleFramedSpin(gtk.Frame):
         vbox.show()
 
 
-
 class Tab(gtk.VBox):
     """Base class for the widget in which each streamer and recorder appears."""
-    
     
     def show_indicator(self, colour):
         thematch = self.indicator_lookup[colour]
@@ -996,15 +959,12 @@ class Tab(gtk.VBox):
             if indicator is not thematch:
                 indicator.hide()
 
-
     def send(self, stringtosend):
         self.source_client_gui.send("tab_id=%d\n%s" % (
                                                 self.numeric_id, stringtosend))
 
-
     def receive(self):
         return self.source_client_gui.receive()
-
 
     def __init__(self, scg, numeric_id, indicator_lookup):
         self.indicator_lookup = indicator_lookup
@@ -1015,10 +975,8 @@ class Tab(gtk.VBox):
         gtk.VBox.show(self)
 
 
-
 class Troubleshooting(gtk.VBox):
     """Server connection management control widget."""
-
 
     def __init__(self):
         gtk.VBox.__init__(self)
@@ -1095,14 +1053,11 @@ class Troubleshooting(gtk.VBox):
             "sbf_reconnect": (self.sbf_reconnect, "active"),
         }
         
-        
     def _on_custom_user_agent(self, widget):
         self.user_agent_entry.set_sensitive(widget.get_active())
         
-        
     def _on_automatic_reconnection(self, widget, reconbox):
         reconbox.set_sensitive(widget.get_active())
-
 
 
 class StreamTab(Tab):
@@ -1112,7 +1067,6 @@ class StreamTab(Tab):
             combobox.append_text(each)
         return combobox
 
-
     def make_radio(self, qty):
         listofradiobuttons = []
         for iteration in range(qty):
@@ -1121,7 +1075,6 @@ class StreamTab(Tab):
                 listofradiobuttons[iteration].set_group(listofradiobuttons[0])
         return listofradiobuttons
 
-
     def make_radio_with_text(self, labels):
         listofradiobuttons = []
         for count, label in enumerate(labels):
@@ -1129,7 +1082,6 @@ class StreamTab(Tab):
             if count > 0:
                 listofradiobuttons[count].set_group(listofradiobuttons[0])
         return listofradiobuttons
-
 
     def make_notebook_tab(self, notebook, labeltext, tooltip = None):
         label = gtk.Label(labeltext)
@@ -1141,10 +1093,8 @@ class StreamTab(Tab):
         vbox.show()
         return vbox
 
-
     def item_item_layout(self, item_item_pairs, sizegroup):
         """Widget packing method."""
-        
         
         vbox = gtk.VBox()
         vbox.set_spacing(2)
@@ -1166,7 +1116,6 @@ class StreamTab(Tab):
     def item_item_layout2(self, item_item_pairs, sizegroup):
         """Widget packing method."""
         
-        
         rhs_size = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
         vbox = gtk.VBox()
         vbox.set_spacing(2)
@@ -1184,7 +1133,6 @@ class StreamTab(Tab):
             vbox.pack_start(hbox, False, False, 0)
             hbox.show()
         return vbox
-
 
     def item_item_layout3(self, leftitems, rightitems):
         outer = gtk.HBox()
@@ -1220,10 +1168,8 @@ class StreamTab(Tab):
             rvi.pack_start(item, True, False, 0)
         return outer
 
-
     def label_item_layout(self, label_item_pairs, sizegroup):
         """Widget packing method."""
-
 
         hbox = gtk.HBox()
         vbox_left = gtk.VBox()
@@ -1255,21 +1201,16 @@ class StreamTab(Tab):
         vbox_right.show()
         return hbox
 
-
-
     def send(self, string_to_send):
         Tab.send(self, "dev_type=streamer\n" + string_to_send)
 
-
     def receive(self):
         return Tab.receive(self)
-
 
     def cb_servertype(self, widget):
         sens = bool(widget.get_active())
         for each in (self.mount_entry, self.login_entry):
             each.set_sensitive(sens)
-
     
     def server_reconnect(self):
         if self.connection_string:
@@ -1278,7 +1219,6 @@ class StreamTab(Tab):
             time.sleep(0.25)
             self.send(self.connection_string)
             self.receive()
-
 
     def cb_server_connect(self, widget):
         if widget.get_active():
@@ -1328,7 +1268,6 @@ class StreamTab(Tab):
             self.connection_string = None
             self.connection_pane.streaming_set(False)
 
-
     def cb_test_monitor(self, widget):
         if widget.get_active():
             self.start_stop_encoder(ENCODER_START)
@@ -1337,7 +1276,6 @@ class StreamTab(Tab):
             self.send("command=monitor_stop\n")
             self.start_stop_encoder(ENCODER_STOP)
 
-
     def start_stop_encoder(self, command):
         """Reference counting starter and stopper for the encoder."""
                 
@@ -1345,7 +1283,6 @@ class StreamTab(Tab):
             self.format_control.start_encoder_rc()
         elif command == ENCODER_STOP:
             self.format_control.stop_encoder_rc()
-
     
     def server_type_cell_data_func(self, celllayout, cell, model, iter):
         text = model.get_value(iter, 0)
@@ -1457,7 +1394,6 @@ class StreamTab(Tab):
                 post_action()
       
         Thread(target=threaded).start()
-
 
     def __init__(self, scg, numeric_id, indicator_lookup):
         Tab.__init__(self, scg, numeric_id, indicator_lookup)
@@ -1688,7 +1624,6 @@ class StreamTab(Tab):
         stream_details_pane.set_border_width(10)
         vbox.add(stream_details_pane)
         stream_details_pane.show()
-        
 
         vbox = gtk.VBox()
         alhbox = gtk.HBox()
@@ -1786,7 +1721,6 @@ class StreamTab(Tab):
         self.reconnection_dialog = ReconnectionDialog(self)
 
 
-
 class RecordTab(Tab):
     class RecordButtons(CategoryFrame):
         def cb_recbuttons(self, widget, userdata):
@@ -1844,14 +1778,12 @@ class RecordTab(Tab):
                     self.parentobject.send("command=recorder_unpause\n")
                 self.parentobject.receive()
 
-
         def path2image(self, pathname):
             pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(pathname, 14, 14)
             image = gtk.Image()
             image.set_from_pixbuf(pixbuf)
             image.show()
             return image
-
 
         def __init__(self, parent):
             CategoryFrame.__init__(self)
@@ -1884,7 +1816,6 @@ class RecordTab(Tab):
             self.add(hbox)
             hbox.show()
 
-
     class TimeIndicator(gtk.Entry):
         def set_value(self, seconds):
             if self.oldvalue != seconds:
@@ -1899,10 +1830,8 @@ class RecordTab(Tab):
                 else:
                     self.set_text("%02d:%02d:%02d" % (hours, minutes, seconds))
 
-
         def button_press_cancel(self, widget, event):
             return True
-
 
         def __init__(self, parent):
             self.parentobject = parent
@@ -1915,15 +1844,12 @@ class RecordTab(Tab):
             self.connect("button-press-event", self.button_press_cancel)
             set_tip(self, _('Recording time elapsed.'))
 
-
     class SourceDest(CategoryFrame):
         cansave = False
-
 
         def set_sensitive(self, boolean):
             self.source_combo.set_sensitive(boolean)
             self.file_chooser_button.set_sensitive(boolean)
-
 
         def cb_source_combo(self, widget):
             sens = self.parentobject.record_buttons.record_button.set_sensitive
@@ -1945,11 +1871,9 @@ class RecordTab(Tab):
                 tab.format_control.connect("notify::cap-recordable",
                                 lambda w, v: self.source_combo.emit("changed"))
 
-
-        def cb_new_folder(self, filechooser):
-            self.cansave = os.access(filechooser.get_current_folder(), os.W_OK)
+        def cb_new_folder(self, folder_chooser_button, path):
+            self.cansave = os.access(path, os.W_OK)
             self.source_combo.emit("changed")
-
 
         def __init__(self, parent):
             self.parentobject = parent
@@ -1975,7 +1899,7 @@ class RecordTab(Tab):
             file_dialog.set_title(_('Select the folder to record to'
                                                             ) + pm.title_extra)
             file_dialog.set_do_overwrite_confirmation(True)
-            self.file_chooser_button = DirectoryChooserButton(file_dialog)
+            self.file_chooser_button = FolderChooserButton(file_dialog)
             self.file_chooser_button.connect("current-folder-changed",
                                                             self.cb_new_folder)
             self.file_chooser_button.set_current_folder(os.environ["HOME"])
@@ -1993,20 +1917,16 @@ class RecordTab(Tab):
             ' you need to select a directory to which you have adequate '
             'write permission.'))
 
-
     def send(self, string_to_send):
         Tab.send(self, "dev_type=recorder\n" + string_to_send)
 
-
     def receive(self):
         return Tab.receive(self)
-
 
     def show_indicator(self, colour):
         Tab.show_indicator(self, colour)
         self.scg.parent.recording_panel.indicator[self.numeric_id
                                                         ].set_indicator(colour)
-        
         
     def __init__(self, scg, numeric_id, indicator_lookup):
         Tab.__init__(self, scg, numeric_id, indicator_lookup)
@@ -2063,38 +1983,31 @@ class TabFrame(ModuleFrame):
             set_tip(labelbox, tab_tip_text)
 
 
-
 class StreamTabFrame(TabFrame):
     def forall(self, widget, f, *args):
         for cb, tab in zip(self.togglelist, self.tabs):
             if cb.get_active():
                 f(tab, *args)
 
-
     def cb_metadata_group_set(self, tab):
         tab.metadata.set_text(self.metadata_group.get_text())
-
                 
     def cb_metadata_group_update(self, tab):
         self.cb_metadata_group_set(tab)
         tab.metadata_update.clicked()
                 
-
     def cb_connect_toggle(self, tab, val):
         if tab.server_connect.flags() & gtk.SENSITIVE:
             tab.server_connect.set_active(val)
 
-
     def cb_kick_group(self, tab):
         tab.kick_incumbent.clicked()
                 
-
     def cb_group_safety(self, widget):
         sens = widget.get_active()
         for each in (self.disconnect_group, self.kick_group):
             each.set_sensitive(sens)
             
-
     def __init__(self, scg, frametext, q_tabs, tabtype, indicatorlist,
                                                                 tab_tip_text):
         TabFrame.__init__(self, scg, frametext, q_tabs, tabtype,
@@ -2615,7 +2528,6 @@ class SourceClientGui(dbus.service.Object):
             else:
                 traceback.print_exc()
 
-
     def cb_after_realize(self, widget):
         self.wst.apply()
         #widget.resize(int(self.win_x), 1)
@@ -2834,4 +2746,3 @@ class SourceClientGui(dbus.service.Object):
         
         dbus.service.Object.__init__(self,
                     pm.dbus_bus_name, PGlobs.dbus_objects_basename + "/output")
-        
