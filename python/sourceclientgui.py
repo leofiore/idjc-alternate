@@ -2586,7 +2586,7 @@ class SourceClientGui(dbus.service.Object):
                 stop = tab.record_buttons.stop_button
                 sens = rec.get_sensitive()
                 src = tab.source_dest.source_combo.get_active_text().strip()
-                dest = tab.source_dest.file_chooser_button.get_filename()
+                dest = tab.source_dest.file_chooser_button.get_current_folder()
                 mi = gtk.CheckMenuItem()
                 label = gtk.Label()
                 label.set_alignment(0.0, 0.5)
