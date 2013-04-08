@@ -546,7 +546,7 @@ class ExtraPlayers(gtk.HBox):
             base += max_rows
         estable.attach(effects_hbox, 0, 2, 0, 1)
 
-        interlude_frame = gtk.Frame()
+        self.interlude_frame = interlude_frame = gtk.Frame()
         parent.label_subst.add_widget(interlude_frame, "bgplayername",
                                                         _('Background Tracks'))
         self.pack_start(interlude_frame)

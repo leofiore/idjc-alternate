@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+The button bar and background player can now be hidden.
+
 Added ability to change the recorder filename.
 
 Added patch for playing effects to be listed on the effects tab when effects tab is not the one active.

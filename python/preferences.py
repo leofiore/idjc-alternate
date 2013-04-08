@@ -1002,26 +1002,44 @@ class mixprefs:
                 target.show()
             else:
                 target.hide()
-        frame = gtk.Frame(" %s " % _('Meters'))
+        frame = gtk.Frame(" %s " % _('View'))
         frame.set_border_width(3)
+        hbox = gtk.HBox(3, True)
+        hbox.set_border_width(10)
+        frame.add(hbox)
+        hbox.show()
+
         vbox = gtk.VBox()
-        vbox.set_border_width(10)
-        frame.add(vbox)
+        hbox.pack_start(vbox)
         vbox.show()
         self.show_stream_meters = gtk.CheckButton()
         self.show_stream_meters.set_active(True)
         self.show_stream_meters.connect(
                                     "toggled", showhide, parent.streammeterbox)
-        vbox.pack_start(self.show_stream_meters, False, False)
+        vbox.pack_start(self.show_stream_meters, False)
         self.show_stream_meters.show()
+
+        self.show_background_tracks_player = gtk.CheckButton()
+        self.show_background_tracks_player.set_active(True)
+        self.show_background_tracks_player.connect(
+                            "toggled", showhide, parent.jingles.interlude_frame)
+        vbox.pack_start(self.show_background_tracks_player, False)
+        self.show_background_tracks_player.show()
         
-        hbox = gtk.HBox()
-        vbox.pack_start(hbox, False, False)
-        hbox.show()
+        self.show_button_bar = gtk.CheckButton()
+        self.show_button_bar.set_active(True)
+        self.show_button_bar.connect("toggled", showhide, parent.hbox10)
+        self.show_button_bar.connect("toggled", showhide, parent.hbox10spc)
+        vbox.pack_start(self.show_button_bar, False)
+        self.show_button_bar.show()
+
+        vbox = gtk.VBox()
+        hbox.pack_start(vbox)
+        vbox.show()
         self.show_microphones = gtk.CheckButton()
         self.show_microphones.set_active(True)
         self.show_microphones.connect("toggled", showhide, parent.micmeterbox)
-        hbox.pack_start(self.show_microphones, False, False)
+        vbox.pack_start(self.show_microphones, False)
         self.show_microphones.show()                
         
         self.no_mic_void_space = gtk.CheckButton(
@@ -1029,7 +1047,7 @@ class mixprefs:
         self.no_mic_void_space.set_active(True)
         for meter in parent.mic_meters:
             self.no_mic_void_space.connect("toggled", meter.always_show)
-        hbox.pack_end(self.no_mic_void_space, False)
+        vbox.pack_start(self.no_mic_void_space, False)
         self.no_mic_void_space.show()
         
         outervbox.pack_start(frame, False, False, 0)
@@ -1465,6 +1483,8 @@ class mixprefs:
 
         self.parent.menu.strmetersmenu_a.connect_proxy(self.show_stream_meters)
         self.parent.menu.chmetersmenu_a.connect_proxy(self.show_microphones)
+        self.parent.menu.backgroundtracksmenu_a.connect_proxy(self.show_background_tracks_player)
+        self.parent.menu.buttonbarmenu_a.connect_proxy(self.show_button_bar)
 
         self.show_stream_meters.set_active(True)
         self.show_microphones.set_active(True)

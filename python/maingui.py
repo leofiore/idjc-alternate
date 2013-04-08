@@ -94,20 +94,16 @@ class FreewheelButton(gtk.Button):
         set_tip(self, _('Toggle JACK freewheel mode.'))
         self._active = None
         self.set_meter_value(False)
-
     
     def _cb_toggle(self):
         self._mixer_write("ACTN=freewheel_toggle\nend\n")
-        
         
     def set_active(self, active):
         self._mixer_write(
                         "ACTN=freewheel_%s\nend\n" % ("on" if active else "off"))
 
-
     def _cb_enabler(self, widget):
         self.set_visible(widget.get_active())
-
 
     @property
     def enabler(self):
@@ -115,13 +111,11 @@ class FreewheelButton(gtk.Button):
         
         return self._enabler
 
-
     @property
     def activedict(self):
         """Info for save/restore."""
         
         return {"freewheel_button_enable": self._enabler}
-
 
     def set_meter_value(self, active):
         """Indicator of freewheel mode to be set using this method."""
@@ -129,7 +123,6 @@ class FreewheelButton(gtk.Button):
         if active != self._active:
             self._active = active
             self._indicator.set_from_pixbuf(self.LED["red" if active else "clear"])
-
 
 
 class MenuMixin(object):
@@ -167,7 +160,6 @@ class MenuMixin(object):
         mi.get_submenu().foreach(lambda w: w.destroy())
 
 
-
 class MainMenu(gtk.MenuBar, MenuMixin):
     def __init__(self):
         gtk.MenuBar.__init__(self)
@@ -191,9 +183,9 @@ class MainMenu(gtk.MenuBar, MenuMixin):
         mkitems(zip("output prefs profiles".split(" "),
                 (_('Output'), _('Preferences'), _('Profiles'))))
         self.sep(self.viewmenu)
-        mkitems(zip("songdb chmeters strmeters players".split(" "),
+        mkitems(zip("songdb chmeters strmeters players backgroundtracks buttonbar".split(" "),
                 (_('Music Database'), _('Channel Meters'), _('Output Meters'),
-                 _('Media Players'))), gtk.CheckMenuItem)
+                 _('Tabbed Area'), _('Background Tracks'), _('Button Bar'))), gtk.CheckMenuItem)
 
         if not songdb.have_songdb:
             self.songdbmenu_i.hide()
@@ -209,6 +201,7 @@ class MainMenu(gtk.MenuBar, MenuMixin):
     def cb_filemenu_activate(self, menuitem):
         self.streamsmenu_i.emit("activate")
         self.recordersmenu_i.emit("activate")
+
 
 class JackMenu(MenuMixin):
     def __init__(self, menu, write, read):
@@ -3060,9 +3053,9 @@ class MainWindow(dbus.service.Object):
         self.hbox7 = gtk.HBox(True)
         self.hbox10.show()
   
-        spc = gtk.HBox()
-        self.vbox8.pack_start(spc, False, padding=3)
-        spc.show()
+        self.hbox10spc = gtk.HBox()
+        self.vbox8.pack_start(self.hbox10spc, False, padding=3)
+        self.hbox10spc.show()
   
         self.vbox8.pack_start(self.hbox10, False, False, 0)
         
