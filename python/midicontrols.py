@@ -22,10 +22,13 @@ import os.path
 import time
 import collections
 import gettext
+import functools
 
 import gobject
 import gtk
 import pango
+import dbus
+import dbus.service
 
 from idjc import FGlobs, PGlobs
 from .gtkstuff import threadslock
@@ -36,7 +39,7 @@ from .tooltips import set_tip
 _ = gettext.translation(FGlobs.package_name, FGlobs.localedir,
                                                         fallback=True).gettext
 
-pm = ProfileManager()
+PM = ProfileManager()
 
 
 control_methods= {
@@ -478,6 +481,9 @@ def action_method(*modes):
     return wrap
 
 
+dbusify = functools.partial(dbus.service.method, dbus_interface=PGlobs.dbus_bus_basename)
+
+
 # Controls ___________________________________________________________________
 
 
@@ -532,7 +538,7 @@ class RepeatCache(collections.MutableSet):
             del self._cache[key]
 
 
-class Controls(object):
+class Controls(dbus.service.Object):
     """Dispatch and implementation of input events to action methods.
     """
     # List of controls set up, empty by default. Mapping of input ID to list
@@ -541,6 +547,7 @@ class Controls(object):
     settings= {}
 
     def __init__(self, owner):
+        dbus.service.Object.__init__(self, PM.dbus_bus_name, PGlobs.dbus_objects_basename + "/controls")
         self.owner= owner
         self.learner= None
         self.editing= None
@@ -588,7 +595,7 @@ class Controls(object):
     def save_prefs(self, where=None):
         """Store bindings list to prefs file
         """
-        fp= open((where or pm.basedir) / 'controls', 'w')
+        fp= open((where or PM.basedir) / 'controls', 'w')
         for binding in self.bindings:
             fp.write(str(binding)+'\n')
         fp.close()
@@ -596,7 +603,7 @@ class Controls(object):
     def load_prefs(self):
         """Reload bindings list from prefs file
         """
-        cpn = pm.basedir / 'controls'
+        cpn = PM.basedir / 'controls'
         if os.path.isfile(cpn):
             fp= open(cpn)
             self.bindings= []
@@ -708,6 +715,15 @@ class Controls(object):
         if isd:
             v= 0 if control.get_active() else 127
         control.set_active(v>=64)
+        
+    @dbusify(in_signature='b')
+    def set_enable_tooltips(self, enabled):
+        self.owner.prefs_window.enable_tooltips.set_active(enabled)
+        
+    @dbusify(out_signature='b')
+    def get_enable_tooltips(self):
+        return self.owner.prefs_window.enable_tooltips.get_active()
+
 
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT)
     def c_sdjmix(self, n, v, isd):
@@ -717,6 +733,23 @@ class Controls(object):
         else:
             self.owner.listen_stream.set_active(True)
 
+    @dbusify()
+    def set_listen_dj_mix(self):
+        self.owner.listen_dj.set_active(True)
+        
+    @dbusify(out_signature='b')
+    def get_listen_dj_mix(self):
+        return self.owner.listen_dj.get_active()
+
+    @dbusify()
+    def set_listen_stream_mix(self):
+        self.owner.listen_stream.set_active(True)
+
+    @dbusify(out_signature='b')
+    def get_listen_stream_mix(self):
+        return self.owner.listen_stream.get_active()
+
+
     # Player
     #
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT)
@@ -724,11 +757,15 @@ class Controls(object):
         player= self._get_player(n)
         if player is None: return
         is_playing= player.is_playing
-        if not is_playing:
+        if not is_playing and (isd or v >= 0x40):
             player.play.set_active(True)
-        if is_playing if isd else (
-                                not is_playing or player.is_paused)==(v>=0x40):
+        if is_playing if isd else (player.is_paused == (v >= 0x40)):
             player.pause.set_active(not player.pause.get_active())
+
+    @dbusify(in_signature='ubb')
+    def player_set_playpause(self, index, play, toggle):
+        self.p_pp(index, 127 if play else 0, toggle)
+
 
     @action_method(Binding.MODE_PULSE)
     def p_stop(self, n, v, isd):
