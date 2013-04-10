@@ -763,7 +763,7 @@ class Controls(dbus.service.Object):
             player.pause.set_active(not player.pause.get_active())
 
     @dbusify(in_signature='ubb')
-    def player_set_playpause(self, index, play, toggle):
+    def player_playpause(self, index, play, toggle):
         self.p_pp(index, 127 if play else 0, toggle)
 
 
@@ -773,17 +773,32 @@ class Controls(dbus.service.Object):
         if player is None: return
         player.stop.clicked()
 
+    @dbusify(in_signature='u')
+    def player_stop(self, index):
+        self.p_stop(index, 0, 0)
+
+
     @action_method(Binding.MODE_PULSE)
     def p_advance(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
         player.advance()
+        
+    @dbusify(in_signature='u')
+    def player_advance(self, index):
+        self.p_advance(index, 0, 0)
+        
 
     @action_method(Binding.MODE_PULSE)
     def p_prev(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
         player.prev.clicked()
+        
+    @dbusify(in_signature='u')
+    def player_previous(self, index):
+        self.p_prev(index, 0, 0)
+
 
     @action_method(Binding.MODE_PULSE)
     def p_next(self, n, v, isd):
@@ -791,23 +806,43 @@ class Controls(dbus.service.Object):
         if player is None: return
         player.next.clicked()
 
+    @dbusify(in_signature='u')
+    def player_next(self, index):
+        self.p_next(index, 0, 0)
+
+
     @action_method(Binding.MODE_PULSE)
     def p_sprev(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
         treeview_selectprevious(player.treeview)
 
+    @dbusify(in_signature='u')
+    def player_select_previous(self, index):
+        self.p_sprev(index, 0, 0)
+        
+
     @action_method(Binding.MODE_PULSE)
     def p_snext(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
         treeview_selectnext(player.treeview)
+        
+    @dbusify(in_signature='u')
+    def player_select_next(self, index):
+        self.p_snext(index, 0, 0)
+
 
     @action_method(Binding.MODE_PULSE)
     def p_sfire(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
         player.cb_doubleclick(player.treeview, None, None, None)
+
+    @dbusify(in_signature='u')
+    def player_play_selected(self, index):
+        self.p_sfire(index, 0, 0)
+
 
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def p_stream(self, n, v, isd):
@@ -816,12 +851,22 @@ class Controls(dbus.service.Object):
         active= not player.stream.get_active() if isd else v>=0x40
         player.stream.set_active(active)
 
+    @dbusify(in_signature='ubb')
+    def player_set_streammix(self, index, value, toggle):
+        self.p_stream(index, 127 if value else 0, toggle)
+
+
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def p_listen(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
         active= not player.listen.get_active() if isd else v>=0x40
         player.listen.set_active(active)
+
+    @dbusify(in_signature='ubb')
+    def player_set_djmix(self, index, value, toggle):
+        self.p_listen(index, 127 if value else 0, toggle)
+
 
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def p_prep(self, n, v, isd):
@@ -860,6 +905,11 @@ class Controls(dbus.service.Object):
             deckadj = self.owner.jingles.ivol_adj
         cross= deckadj.get_value()+v if isd else v
         deckadj.set_value(cross)
+        
+    @dbusify(in_signature='uib')
+    def player_set_volume(self, index, value, delta):
+        self.p_vol(index, value, delta)
+
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def p_gain(self, n, v, isd):
@@ -877,9 +927,14 @@ class Controls(dbus.service.Object):
     def p_pitch(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
-        v= v/127.0*24-12
+        v= v/127.0*24.0-12.0
         speed= player.pbspeedbar.get_value()+v if isd else v
         player.pbspeedbar.set_value(speed)
+
+    @dbusify(in_signature='uib')
+    def player_set_pitch(self, index, value, delta):
+        self.p_pitch(index, value, delta)
+
 
     # Playlist methods, to reproduce previous idjcmedia shortcuts
     #
@@ -954,15 +1009,30 @@ class Controls(dbus.service.Object):
         v= v/127.0*100
         cross= self.owner.crossadj.get_value()+v if isd else v
         self.owner.crossadj.set_value(cross)
+        
+    @dbusify(in_signature='ib')
+    def crossfade_set(self, value, delta):
+        self.x_fade(0, value, delta) 
+    
 
     @action_method(Binding.MODE_PULSE)
     def x_pass(self, n, v, isd):
         self.owner.passbutton.clicked()
 
+    @dbusify()
+    def crossfade_pass(self):
+        self.x_pass(0, 0, 0)
+
+
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def x_pitch(self, n, v, isd):
         checkbox= self.owner.prefs_window.speed_variance
         checkbox.set_active(not checkbox.get_active() if isd else v>=0x40)
+
+    @dbusify(in_signature='bb')
+    def pitch_enable(self, value, toggle):
+        self.x_pitch(0, 127 if value else 0, toggle)
+
 
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def x_focus(self, n, v, isd):
@@ -976,6 +1046,11 @@ class Controls(dbus.service.Object):
                                                         self.owner.player_left
         player.treeview.grab_focus()
 
+    @dbusify(in_signature='ub')
+    def main_player_focus(self, index, toggle):
+        self.x_focus(0, 127 if index else 0, toggle)
+
+
     # Channel
     #
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
@@ -985,16 +1060,26 @@ class Controls(dbus.service.Object):
         if button is not None:
             s = not button.get_active() if isd else v>=0x40
             button.set_active(s)
+
+    @dbusify(in_signature='ubb')
+    def channel_open(self, index, value, toggle):
+        self.m_on(index, 127 if value else 0, toggle)
+
         
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def m_vol(self, n, v, isd):
         agc = getattr(self.owner.prefs_window, 'mic_control_%d'%n)
         vol = agc.valuesdict[agc.commandname+'_gain'].get_adjustment()
         if isd:
-            v += vol.props.value()
+            v += vol.props.value
         else:
             v = v / 127.0 * (vol.props.upper - vol.props.lower) + vol.props.lower
         vol.set_value(v)
+
+    @dbusify(in_signature='uib')
+    def channel_gain(self, index, value, delta):
+        self.m_vol(index, value, delta)
+
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def m_gain(self, n, v, isd):
@@ -1008,6 +1093,11 @@ class Controls(dbus.service.Object):
         v= pan.get_value()+v if isd else v
         pan.set_value(v)
 
+    @dbusify(in_signature='uib')
+    def channel_pan(self, index, value, delta):
+        self.m_pan(index, value, delta)
+
+
     # VoIP
     #
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
@@ -1016,21 +1106,41 @@ class Controls(dbus.service.Object):
         s= not phone.get_active() if isd else v>=0x40
         phone.set_active(s)
 
+    @dbusify(in_signature='bb')
+    def voip_mode_public(self, value, toggle):
+        self.v_on(0, 127 if value else 0, toggle)
+
+
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
     def v_prep(self, n, v, isd):
         phone= self.owner.redphone
         s= not phone.get_active() if isd else v>=0x40
         phone.set_active(s)
 
+    @dbusify(in_signature='bb')
+    def voip_mode_private(self, value, toggle):
+        self.v_prep(0, 127 if value else 0, toggle)
+
+
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def v_vol(self, n, v, isd):
-       vol = self.owner.voipgainadj.get_value() + v if isd else v
-       self.owner.voipgainadj.set_value(vol)
+        vol = self.owner.voipgainadj.get_value() + v if isd else v
+        self.owner.voipgainadj.set_value(vol)
+
+    @dbusify(in_signature='ib')
+    def voip_set_gain(self, value, delta):
+        self.v_vol(0, value, delta)
+
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def v_mixback(self, n, v, isd):
        vol = self.owner.mixbackadj.get_value() + v if isd else v
        self.owner.mixbackadj.set_value(vol)
+
+    @dbusify(in_signature='ib')
+    def voip_set_mixback_level(self, value, delta):
+        self.v_mixback(0, value, delta)
+    
 
     #@action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     #def v_gain(self, n, v, isd):
@@ -1046,6 +1156,11 @@ class Controls(dbus.service.Object):
     def k_fire(self, n, v, isd):
         self.owner.jingles.all_effects[n].trigger.clicked()
 
+    @dbusify(in_signature='u')
+    def effect_trigger(self, index):
+        self.k_fire(index, 0, 0)
+
+
     # Jingles player in general
     #
     @action_method(Binding.MODE_PULSE)
@@ -1058,6 +1173,12 @@ class Controls(dbus.service.Object):
             if len(banks) > 1:
                 banks[1].stop()
 
+    @dbusify(in_signature='bb')
+    def effect_bank_stop(self, first, second):
+        if first or second:
+            self.b_stop(2 if first and second else (0, 1)[second], 0, 0)
+
+
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def b_vol1(self, n, v, isd):
         if n < 2:
@@ -1067,6 +1188,11 @@ class Controls(dbus.service.Object):
         else:
             self.b_vol1(0, v, isd)
             self.b_vol1(1, v, isd)
+
+    @dbusify(in_signature='uib')
+    def effect_bank_gain(self, index, value, delta):
+        self.b_vol1(index, value, delta)
+
 
     @action_method(Binding.MODE_DIRECT, Binding.MODE_SET, Binding.MODE_ALTER)
     def b_vol2(self, n, v, isd):
@@ -1078,6 +1204,11 @@ class Controls(dbus.service.Object):
             self.b_vol2(0, v, isd)
             self.b_vol2(1, v, isd)
 
+    @dbusify(in_signature='uib')
+    def effect_bank_headroom(self, index, value, delta):
+        self.b_vol2(index, value, delta)
+
+
     # Stream connection
     #
     @action_method(Binding.MODE_PULSE, Binding.MODE_DIRECT, Binding.MODE_SET)
@@ -1085,6 +1216,11 @@ class Controls(dbus.service.Object):
         connect= self.owner.server_window.streamtabframe.tabs[n].server_connect
         s= not connect.get_active() if isd else v>=0x40
         connect.set_active(s)
+
+    @dbusify(in_signature='ubb')
+    def stream_set_connected(self, index, value, toggle):
+        self.s_on(index, 127 if value else 0, toggle)
+
 
     # Recorder
     #
@@ -1096,6 +1232,10 @@ class Controls(dbus.service.Object):
             buttons.record_button.set_active(s)
         else:
             buttons.stop_button.clicked()
+
+    @dbusify(in_signature='ubb')
+    def recorder_set_recording(self, index, value, toggle):
+        self.r_on(index, 127 if value else 0, toggle)
 
 
 # Generic GTK utilities ______________________________________________________
