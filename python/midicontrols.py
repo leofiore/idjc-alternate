@@ -953,6 +953,10 @@ class Controls(dbus.service.Object):
                                 player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Stop Control')
 
+    @dbusify(in_signature='u')
+    def playlist_insert_stop_control(self, index):
+        self.p_istop(index, 0, 0)
+
     @action_method(Binding.MODE_PULSE)
     def p_istop2(self, n, v, isd): #s
         player= self._get_player(n)
@@ -960,6 +964,10 @@ class Controls(dbus.service.Object):
         player.menu_model, player.menu_iter= \
                                 player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Stop Control 2')
+
+    @dbusify(in_signature='u')
+    def playlist_insert_stop_control_2(self, index):
+        self.p_istop2(index, 0, 0)
 
     @action_method(Binding.MODE_PULSE)
     def p_ianno(self, n, v, isd): #u
@@ -977,6 +985,10 @@ class Controls(dbus.service.Object):
                                 player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Transfer Control')
 
+    @dbusify(in_signature='u')
+    def playlist_insert_transfer_control(self, index):
+        self.p_itrans(index, 0, 0)
+
     @action_method(Binding.MODE_PULSE)
     def p_ifade(self, n, v, isd): #f
         player= self._get_player(n)
@@ -984,6 +996,11 @@ class Controls(dbus.service.Object):
         player.menu_model, player.menu_iter= \
                                 player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Crossfade Control')
+
+    @dbusify(in_signature='u')
+    def playlist_insert_crossfade_control(self, index):
+        self.p_ifade(index, 0, 0)
+
 
     @action_method(Binding.MODE_PULSE)
     def p_ipitch(self, n, v, isd): #n
@@ -993,6 +1010,11 @@ class Controls(dbus.service.Object):
                                 player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Normal Speed Control')
 
+    @dbusify(in_signature='u')
+    def playlist_insert_normal_speed_control(self, index):
+        self.p_ipitch(index, 0, 0)
+
+
     @action_method(Binding.MODE_PULSE)
     def p_igotop(self, n, v, isd):
         player= self._get_player(n)
@@ -1000,6 +1022,28 @@ class Controls(dbus.service.Object):
         player.menu_model, player.menu_iter= \
                                 player.treeview.get_selection().get_selected()
         player.menuitem_response(None, 'Jump To Top Control')
+
+    @dbusify(in_signature='u')
+    def playlist_insert_jump_to_top_control(self, index):
+        self.p_igotop(index, 0, 0)
+
+
+    @dbusify(in_signature='us')
+    def playlist_insert_pathname(self, index, pathname):
+        player = self._get_player(index)
+        if player is None: return
+        model, iter = player.treeview.get_selection().get_selected()
+        row = player.get_media_metadata(pathname)
+        if row:
+            model.insert_after(iter, row)
+            self.player_select_next(index)
+        
+    @dbusify()
+    def playlist_clear(self, index):
+        player = self._get_player(index)
+        if player is None: return
+        player.liststore.clear()
+
 
     # Both players
     #
