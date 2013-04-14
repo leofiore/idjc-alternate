@@ -1,6 +1,12 @@
 * Changes in version 0.8.9 *
 
+Added extra dbus functions to replace old idjcctrl functionality.
+
+Player speed pitch controls now display their speed value.
+
 The button bar and background player can now be hidden.
+
+Added new volume control for the VoIP level.
 
 Added ability to change the recorder filename.
 
