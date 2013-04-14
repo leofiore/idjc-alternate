@@ -716,11 +716,11 @@ class mixprefs:
                           
     def cb_pbspeed(self, widget):
         if widget.get_active():
-            self.parent.player_left.pbspeedbar.set_value(0)
-            self.parent.player_right.pbspeedbar.set_value(0)
+            self.parent.player_left.pbspeedbar.set_value(64.0)
+            self.parent.player_right.pbspeedbar.set_value(64.0)
             self.parent.player_left.pbspeedbox.show()
             self.parent.player_right.pbspeedbox.show()
-            self.parent.jingles.interlude.pbspeedbar.set_value(0)
+            self.parent.jingles.interlude.pbspeedbar.set_value(64.0)
             self.parent.jingles.interlude.pbspeedbox.show()
         else:
             self.parent.player_left.pbspeedbox.hide()

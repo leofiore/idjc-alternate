@@ -927,7 +927,6 @@ class Controls(dbus.service.Object):
     def p_pitch(self, n, v, isd):
         player= self._get_player(n)
         if player is None: return
-        v= v/127.0*24.0-12.0
         speed= player.pbspeedbar.get_value()+v if isd else v
         player.pbspeedbar.set_value(speed)
 

@@ -2070,8 +2070,6 @@ class IDJC_Media_Player:
 
     def statusbar_update(self, newtext):
         if newtext != self.oldstatusbartext:
-            if self.pbspeedfactor < 0.999 or self.pbspeedfactor > 1.001:
-                newtext = ("%03.1f%% | " % (self.pbspeedfactor * 100)) + newtext
             self.pl_statusbar.push(1, newtext)
             self.oldstatusbartext = newtext
 
@@ -2380,7 +2378,7 @@ class IDJC_Media_Player:
 
     def callback(self, widget, data):
         if data == "pbspeedzero":
-            self.pbspeedbar.set_value(0.0)
+            self.pbspeedbar.set_value(64.0)
 
         if data == "Arrow Up":
             self.arrow_up()
@@ -2682,10 +2680,6 @@ class IDJC_Media_Player:
             else:
                 if self.pause.get_active():
                     self.pause.set_active(False)
-
-    def cb_pbspeed(self, widget, data=None):
-        self.pbspeedfactor = pow(10.0, widget.get_value() * 0.05)
-        self.parent.send_new_mixer_stats()
 
     def digiprogress_click(self):
         self.digiprogress_type = not self.digiprogress_type
@@ -3846,9 +3840,14 @@ class IDJC_Media_Player:
     def popupwindow_inhibit(self):
         """Block popup window if the menu is displayed."""
         
-        
         return self.pl_menu.flags() & gtk.MAPPED
 
+    def pbspeedbar_format(self, scale, value):
+        return "%.1f%%" % (2.0 ** ((value - 64.0) / 32.0) * 100.0)
+
+    def cb_pbspeed(self, widget, data=None):
+        self.pbspeedfactor = 2.0 ** ((widget.get_value() - 64.0) / 32.0)
+        self.parent.send_new_mixer_stats()
 
     def __init__(self, pbox, name, parent):
         self.parent = parent
@@ -4024,13 +4023,11 @@ class IDJC_Media_Player:
         pbox.pack_start(self.pbspeedbox, False, False, 0)
 
         # The playback speed control
-        self.pbspeedadj = gtk.Adjustment(0.0, -12.0, 12.0, 0.0125, 0.0, 0.0)
+        self.pbspeedadj = gtk.Adjustment(64.0, 0.0, 127.0, 0.1, 0.0, 0.0)
         self.pbspeedadj.connect("value_changed", self.cb_pbspeed)
         self.pbspeedbar = gtk.HScale(self.pbspeedadj)
         self.pbspeedbar.set_update_policy(gtk.UPDATE_CONTINUOUS)
-        self.pbspeedbar.set_digits(1)
-        self.pbspeedbar.set_value_pos(gtk.POS_TOP)
-        self.pbspeedbar.set_draw_value(False)
+        self.pbspeedbar.connect("format-value", self.pbspeedbar_format)
         self.pbspeedbox.pack_start(self.pbspeedbar, True, True, 0)
         self.pbspeedbar.show()
         set_tip(self.pbspeedbar,
