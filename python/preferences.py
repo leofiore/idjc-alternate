@@ -1488,6 +1488,7 @@ class mixprefs:
 
         self.show_stream_meters.set_active(True)
         self.show_microphones.set_active(True)
+        self.show_button_bar.set_active(True)
 
         self.activedict = {  # Widgets to save that have the get_active method.
             "startmini"   : self.startmini,
