@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Fixes for deprecation warnings in build system.
+
 Fixed potentially corrupt loader shebang bug at the expense of versioning hardness.
 
 Added extra dbus functions to replace old idjcctrl functionality.
