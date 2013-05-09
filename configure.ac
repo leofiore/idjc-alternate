@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([idjc], [0.8.9_development], 
+AC_INIT([idjc], [0.8.9], 
                 [http://idjc.sourceforge.net])
-AC_SUBST(COPYRIGHT_YEAR, [2012])
+AC_SUBST(COPYRIGHT_YEAR, [2013])
 AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
