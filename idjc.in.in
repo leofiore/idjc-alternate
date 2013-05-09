@@ -1,8 +1,8 @@
-#! @PYTHON@@PYTHON_VERSION@
+#! @PYTHON@
 
 """idjc(.in.in): Application launcher of IDJC"""
    
-#  Copyright (C) 2011-2012 Stephen Fairchild (s-fairchild@users.sourceforge.net)
+#  Copyright (C) 2011-2013 Stephen Fairchild (s-fairchild@users.sourceforge.net)
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation, either version 2 of the License, or
@@ -18,12 +18,17 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 
 
-
 import locale
 locale.setlocale(locale.LC_ALL, "")
 
 import sys
 sys.path.insert(0, """@pythondir@""")
 
-import idjc
-exit(idjc.main())
+try:
+    import idjc
+except ImportError:
+    print "failed to import the idjc module"
+    print "python interpreter version is %s, installation went to %s" % (
+                                    sys.version[:3], """@PYTHON_VERSION@""")
+else:
+    exit(idjc.main())

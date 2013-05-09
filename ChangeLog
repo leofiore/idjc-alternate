@@ -1,5 +1,7 @@
 * Changes in version 0.8.9 *
 
+Fixed potentially corrupt loader shebang bug at the expense of versioning hardness.
+
 Added extra dbus functions to replace old idjcctrl functionality.
 
 Player speed pitch controls now display their speed value.
