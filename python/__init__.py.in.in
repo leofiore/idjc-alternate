@@ -21,20 +21,15 @@ Generated from file __init__.py.in.in -- edit the original.
 
 import os
 import gettext
+import ctypes
 
 import pygtk
 pygtk.require("2.0")
 import glib
-import ctypes
 
 from .utils import FixedAttributes
 from .utils import PolicedAttributes
 from .utils import PathStr
-
-
-# pylint: disable=R0903
-#
-# namespace classes typically have no public methods
 
 
 def lib_probe(at_runtime, names):
