@@ -7,7 +7,7 @@ AC_INIT([idjc], [0.8.9],
 AC_SUBST(COPYRIGHT_YEAR, [2013])
 AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 # Generate python installation stuff
 AM_PATH_PYTHON([2.7])
