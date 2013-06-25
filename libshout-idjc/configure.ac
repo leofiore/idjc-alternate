@@ -9,7 +9,7 @@ m4_define(libshout_version, libshout_major.libshout_minor.libshout_micro)
 AC_INIT([libshout-idjc], libshout_version, [s-fairchild@users.sourceforge.net])
 AC_PREREQ([2.54])
 AC_CONFIG_SRCDIR([src/shout.c])
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS(config.h)
 # config.h guard
 AH_TOP([#ifndef __CONFIG_H__
 #define __CONFIG_H__ 1])
